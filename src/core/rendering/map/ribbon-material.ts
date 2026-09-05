@@ -8,6 +8,7 @@ const VERTEX_SHADER = /* glsl */ `
   attribute vec3 color;
 
   uniform vec2 resolution;
+  uniform float widthScale;
 
   varying vec3 vColor;
 
@@ -27,7 +28,7 @@ const VERTEX_SHADER = /* glsl */ `
     direction = normalize(direction);
 
     vec2 normal = vec2(-direction.y, direction.x);
-    vec2 offset = normal * lineWidth * 0.5 * side;
+    vec2 offset = normal * lineWidth * widthScale * 0.5 * side;
     currentClip.xy += offset * 2.0 / resolution * currentClip.w;
 
     gl_Position = currentClip;
@@ -56,6 +57,7 @@ export class MapRibbonMaterial extends ShaderMaterial {
     super({
       uniforms: {
         resolution: { value: new Vector2(Math.max(1, width), Math.max(1, height)) },
+        widthScale: { value: 1 },
         strokeColor: { value: new Color(color) },
         strokeOpacity: { value: opacity },
       },
@@ -72,5 +74,9 @@ export class MapRibbonMaterial extends ShaderMaterial {
   setResolution(width: number, height: number): void {
     const resolution = this.uniforms.resolution.value as Vector2
     resolution.set(Math.max(1, width), Math.max(1, height))
+  }
+
+  setWidthScale(scale: number): void {
+    this.uniforms.widthScale.value = Math.max(0, scale)
   }
 }

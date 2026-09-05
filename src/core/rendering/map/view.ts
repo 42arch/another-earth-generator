@@ -47,6 +47,7 @@ interface MapLayerResource {
   objects: Object3D[]
   geometry: BufferGeometry
   material: Material
+  zoomResponsiveWidth: boolean
 }
 
 const SETTLEMENT_MARKER_COLOR = {
@@ -66,6 +67,7 @@ const SETTLEMENT_MARKER_SIZE = {
 
 const COASTLINE_MAP_WIDTH = 1.4
 const RIVER_MAP_WIDTH_SCALE = 7.2
+const RIVER_REFERENCE_ZOOM = 4
 const ROAD_MAP_WIDTH = 1.25
 const SHIPPING_ROUTE_MAP_WIDTH = 1.15
 
@@ -411,7 +413,15 @@ export class MapView {
       this.data.landMask,
       hiddenRegionMask,
     )
-    this.addRibbonLayer(rivers.paths, 0x4688CB, 0.9, 0.36, 6, RIVER_MAP_WIDTH_SCALE)
+    this.addRibbonLayer(
+      rivers.paths,
+      0x4688CB,
+      0.9,
+      0.36,
+      6,
+      RIVER_MAP_WIDTH_SCALE,
+      true,
+    )
   }
 
   private addRoutes(): void {
@@ -660,6 +670,7 @@ export class MapView {
     z: number,
     renderOrder: number,
     widthScale = 1,
+    zoomResponsiveWidth = false,
   ): void {
     const geometry = this.ribbonGeometryBuilder.create(
       paths,
@@ -678,9 +689,11 @@ export class MapView {
       this.viewportWidth,
       this.viewportHeight,
     )
+    if (zoomResponsiveWidth)
+      material.setWidthScale(this.getZoomResponsiveWidthScale())
     const layer = new Mesh(geometry, material)
     layer.renderOrder = renderOrder
-    this.addWrappedLayer(layer, geometry, material)
+    this.addWrappedLayer(layer, geometry, material, zoomResponsiveWidth)
   }
 
   private addProjectedSourceGeometry(
@@ -719,6 +732,7 @@ export class MapView {
     layer: Object3D,
     geometry: BufferGeometry,
     material: Material,
+    zoomResponsiveWidth = false,
   ): void {
     const objects: Object3D[] = []
     const worldOffsets = this.projection.wrapX
@@ -730,7 +744,7 @@ export class MapView {
       this.scene.add(object)
       objects.push(object)
     }
-    this.overlayResources.push({ objects, geometry, material })
+    this.overlayResources.push({ objects, geometry, material, zoomResponsiveWidth })
   }
 
   private createSourceGeometry(
@@ -866,6 +880,11 @@ export class MapView {
 
   update(): void {
     this.controls.update()
+    const zoomWidthScale = this.getZoomResponsiveWidthScale()
+    for (const resource of this.overlayResources) {
+      if (resource.zoomResponsiveWidth && resource.material instanceof MapRibbonMaterial)
+        resource.material.setWidthScale(zoomWidthScale)
+    }
     const visibleHalfWidth = (this.camera.right - this.camera.left)
       / Math.max(this.camera.zoom * 2, Number.EPSILON)
     const maximumX = Math.max(0, this.projection.worldWidth * 0.5 - visibleHalfWidth)
@@ -895,6 +914,12 @@ export class MapView {
     this.controls.target.set(0, 0, 0)
     this.camera.updateProjectionMatrix()
     this.controls.update()
+  }
+
+  private getZoomResponsiveWidthScale(): number {
+    // Ribbon 宽度以屏幕像素表达，因此需要乘以相机缩放值，才能像地图
+    // 中的地理要素一样随视角同步缩放。zoom=4 保留既有的近景河宽。
+    return Math.max(1, this.camera.zoom) / RIVER_REFERENCE_ZOOM
   }
 
   destroy(): void {
