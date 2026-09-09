@@ -1,39 +1,26 @@
 <script lang='ts'>
-  import {
-    Globe,
-    Sparkles,
-  } from '@lucide/svelte'
+  import { Dices, Globe2 } from '@lucide/svelte'
   import { uiState } from '@/ui/state/ui-state.svelte'
 </script>
 
-<header class='pointer-events-none fixed top-3 inset-x-4 z-40 flex items-center justify-between'>
-  <!-- 左侧：Logo 与标题 -->
-  <div class='pointer-events-auto flex items-center gap-2'>
-    <div class='obs-panel flex items-center gap-2.5 px-3 py-1.5 rounded-lg shadow-lg border border-white/[0.08] bg-[#08120d]/80 backdrop-blur-md'>
-      <Globe class='w-4 h-4 text-obs-amber shrink-0' />
-      <div class='flex flex-col'>
-        <h1 class='font-heading text-xs font-bold tracking-wider uppercase text-obs-text-main leading-tight m-0'>
-          Another Earth
-        </h1>
-        <span class='text-[9px] font-sans text-obs-text-dim tracking-wide'>
-          Planet Simulator
-        </span>
-      </div>
-    </div>
+<header class='pointer-events-none fixed inset-x-4 top-3 z-40 flex items-center justify-between gap-3'>
+  <div class='pointer-events-auto flex h-10 items-center gap-2.5 rounded-lg border border-white/12 bg-[#20252b]/96 px-3 shadow-md'>
+    <Globe2 class='h-4 w-4 text-obs-amber' />
+    <h1 class='m-0 text-sm font-semibold tracking-wide text-white'>Another Earth</h1>
   </div>
 
-  <!-- 右侧：世界概况与种子统计 -->
-  <div class='pointer-events-auto flex items-center gap-3 obs-panel px-3.5 py-1.5 rounded-lg shadow-lg border border-white/[0.08] bg-[#08120d]/80 backdrop-blur-md text-xs text-obs-text-muted select-none'>
-    <div class='flex items-center gap-1.5 font-mono text-obs-amber-light text-[11px] font-semibold'>
-      <Sparkles class='w-3 h-3 text-obs-amber' />
-      <span>#{uiState.params.seed}</span>
-    </div>
-    <span class='text-white/10'>|</span>
-    <span>{uiState.worldSummary.settlementCount} 聚落</span>
-    <span class='text-white/10 hidden sm:inline'>|</span>
-    <span class='hidden sm:inline'>{uiState.worldSummary.lakeCount} 湖泊</span>
-    <span class='text-white/10 hidden md:inline'>|</span>
-    <span class='hidden md:inline'>{uiState.worldSummary.riverSourceCount} 水系源头</span>
+  <div class='pointer-events-auto flex h-10 items-center gap-3 rounded-lg border border-white/12 bg-[#20252b]/96 px-2 pl-3 text-xs text-obs-text-muted shadow-md select-none'>
+    <span class='font-mono text-white'>#{uiState.appliedSeed}</span>
+    <span class='hidden sm:inline'>{uiState.worldSummary.settlementCount} 个聚落</span>
+    <span class='hidden md:inline'>{uiState.worldSummary.lakeCount} 个湖泊</span>
+    {#if uiState.hasPendingChanges}
+      <button type='button' onclick={() => uiState.openSettings()} class='rounded bg-amber-300/12 px-2 py-1 text-amber-200 hover:bg-amber-300/20'>
+        {uiState.changedParamCount} 项待应用
+      </button>
+    {/if}
+    <button type='button' onclick={() => uiState.createRandomWorld()} disabled={uiState.isGenerating} class='flex h-7 items-center gap-1.5 rounded-md border border-white/12 bg-white/6 px-2.5 text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40' title='使用随机种子生成一个新世界'>
+      <Dices class='h-3.5 w-3.5' />
+      <span class='hidden sm:inline'>新建世界</span>
+    </button>
   </div>
 </header>
-

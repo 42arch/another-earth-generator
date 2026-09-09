@@ -18,27 +18,27 @@
   const region = $derived(uiState.selectedRegion)
 </script>
 
-<aside class='pointer-events-none fixed left-4 bottom-18 z-30 w-[calc(100vw-2rem)] max-w-sm max-h-[calc(100dvh-6.5rem)]'>
+<aside class='pointer-events-none fixed bottom-18 right-4 z-30 max-h-[calc(100dvh-6.5rem)] w-[calc(100vw-2rem)] max-w-sm'>
   <div class='pointer-events-auto max-h-[calc(100dvh-6.5rem)] overflow-y-auto custom-scrollbar'>
     <CivPanel
-      title='区域侦测详报'
+      title='区域信息'
       icon={Radio}
       bind:open={uiState.inspectorOpen}
     >
       {#if !region}
         <div class='py-3 text-center text-obs-text-dim text-xs flex flex-col items-center gap-1.5'>
           <Compass class='w-5 h-5 text-obs-amber/60 animate-pulse' />
-          <span>点击球体任意区域以侦测地学详报</span>
+          <span>点击地图查看区域信息</span>
         </div>
       {:else}
         <div transition:slide={{ duration: 150 }} class='flex flex-col gap-2 text-xs'>
           <!-- 区域标题与坐标徽章 -->
           <div class='flex items-center justify-between border-b border-white/[0.06] pb-2'>
             <div>
-              <span class='font-mono text-obs-text-main font-bold text-sm'>
-                Region #{region.region}
+              <span class='block text-sm font-semibold text-obs-text-main'>
+                {region.settlement?.name ?? region.polity?.name ?? region.biome}
               </span>
-              <span class='text-[11px] text-obs-text-dim ml-1.5 font-mono'>
+              <span class='font-mono text-[11px] text-obs-text-dim'>
                 {region.latitude.toFixed(1)}°{region.latitude >= 0 ? 'N' : 'S'}, {Math.abs(region.longitude).toFixed(1)}°{region.longitude >= 0 ? 'E' : 'W'}
               </span>
             </div>
@@ -46,9 +46,6 @@
             <div class='flex items-center gap-1'>
               <CivBadge variant={region.feature === '海洋' ? 'blue' : region.feature === '湖泊' ? 'emerald' : 'amber'}>
                 {region.feature}
-              </CivBadge>
-              <CivBadge variant='slate'>
-                板块 #{region.plate}
               </CivBadge>
             </div>
           </div>
@@ -66,7 +63,7 @@
               <Mountain class='w-4 h-4 text-obs-amber shrink-0' />
               <div class='flex flex-col'>
                 <span class='text-[10px] text-obs-text-dim uppercase'>海拔 / 高程</span>
-                <span class='text-obs-text-main font-mono text-xs leading-tight'>{region.climateElevationMeters.toFixed(0)}m ({region.elevation.toFixed(2)})</span>
+                <span class='font-mono text-xs leading-tight text-obs-text-main'>{region.climateElevationMeters.toFixed(0)}m</span>
               </div>
             </div>
           </div>
@@ -169,6 +166,7 @@
               </div>
               <div class='flex items-center justify-between text-obs-text-muted font-mono'>
                 <span>状态: {lake.iceState}</span>
+                <span>最大深度: {lake.depthMeters.toFixed(0)}m</span>
                 <span>盐度: <strong class='text-blue-300'>{(lake.salinity * 100).toFixed(0)}%</strong></span>
                 <span>蓄水率: <strong class='text-blue-300'>{(lake.fillRatio * 100).toFixed(0)}%</strong></span>
               </div>
@@ -195,9 +193,9 @@
 
           <!-- 宜居度与地缘指标 -->
           <div class='flex items-center justify-between text-[10px] text-obs-text-dim border-t border-white/[0.06] pt-1.5 font-mono'>
+            <span>区域 #{region.region}</span>
+            <span>板块 #{region.plate}</span>
             <span>宜居性: {(region.habitability * 100).toFixed(0)}%</span>
-            <span>可达性: {(region.accessibility * 100).toFixed(0)}%</span>
-            <span>大陆性: {(region.continentality * 100).toFixed(0)}%</span>
           </div>
         </div>
       {/if}

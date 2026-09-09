@@ -1,99 +1,22 @@
+import type { GenerationStage } from '@/core/world/generation-plan'
+import type { SelectedRegionInfo, WorldSummaryInfo } from '@/core/world/world-view-data'
 import type WorldEngine from '@/core/world/world-engine'
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
 import type { GlobeDisplayMode, GlobeGenParams } from '@/core/spherical/config'
-import { tick } from 'svelte'
 import { cloneGlobeGenParams, DEFAULT_GLOBE_GEN_PARAMS } from '@/core/spherical/config'
+import { PARAMETER_STAGE, planGeneration } from '@/core/world/generation-plan'
+import type { AnalysisLayerKey, LayerKey, SettingsContext } from '@/ui/state/layer-settings'
+import { ANALYSIS_LAYERS } from '@/ui/state/layer-settings'
 
-export interface SelectedRegionInfo {
-  region: number
-  feature: '海洋' | '湖泊' | '陆地'
-  latitude: number
-  longitude: number
-  elevation: number
-  climateElevationMeters: number
-  temperature: number
-  warmestMonthTemperature: number
-  coldestMonthTemperature: number
-  annualPrecipitationMm: number
-  precipitationSeasonality: number
-  runoff: number
-  biome: string
-  moisture: number
-  continentality: number
-  habitability: number
-  accessibility: number
-  plate: number
-  flowRatio: number
-  // 河流
-  isRiver: boolean
-  isSeasonalRiver: boolean
-  riverSeasonality: number
-  // 聚落
-  settlement?: {
-    id: number
-    name: string
-    type: '营地' | '村落' | '城镇' | '城市'
-    population: number
-    prosperity: number
-    isPort: boolean
-  }
-  // 文化语言与政治信仰
-  culture?: {
-    id: number
-    name: string
-    language: string
-    languageFamily: string
-    influence: number
-    isCore: boolean
-  }
-  polity?: {
-    id: number
-    name: string
-    control: number
-    isCapital: boolean
-  }
-  religion?: {
-    id: number
-    name: string
-    influence: number
-    isHolySite: boolean
-  }
-  // 湖泊
-  lake?: {
-    id: number
-    iceState: string
-    isEndorheic: boolean
-    isSeasonal: boolean
-    areaShare: number
-    depth: number
-    fillRatio: number
-    salinity: number
-    inflowEvapRatio: number
-  }
-  // 海洋
-  ocean?: {
-    sst: number
-    sstAnomaly: number
-    currentSpeed: number
-  }
-}
+export type { SelectedRegionInfo, WorldSummaryInfo } from '@/core/world/world-view-data'
 
-export interface WorldSummaryInfo {
-  lakeCount: number
-  endorheicCount: number
-  seasonalLakeCount: number
-  frozenLakeCount: number
-  subglacialLakeCount: number
-  riverSourceCount: number
-  riverSegmentCount: number
-  seasonalRiverSegmentCount: number
-  settlementCount: number
-}
+export type { AnalysisLayerKey } from '@/ui/state/layer-settings'
 
 export class UIState {
   engine: WorldEngine | null = null
   params: GlobeGenParams = $state(cloneGlobeGenParams(DEFAULT_GLOBE_GEN_PARAMS))
+  appliedParams: GlobeGenParams = $state(cloneGlobeGenParams(DEFAULT_GLOBE_GEN_PARAMS))
   selectedRegion = $state<SelectedRegionInfo | null>(null)
   worldSummary = $state<WorldSummaryInfo>({
     lakeCount: 0,
@@ -108,12 +31,15 @@ export class UIState {
   })
 
   // 面板开关与生成状态
+  generationError = $state<string | null>(null)
+  private generationRequest = 0
+  private hasGenerated = false
   isGenerating = $state(true)
-  loadingStageText = $state('正在推演大陆板块与创世水系…')
-  codexDrawerOpen = $state(false)
+  loadingStageText = $state('正在生成世界…')
   layerDrawerOpen = $state(false)
   inspectorOpen = $state(false)
-  activeTab = $state<'tectonics' | 'land' | 'climate' | 'hydrology' | 'human'>('tectonics')
+  generalSettingsOpen = $state(false)
+  settingsContext = $state<SettingsContext>({ kind: 'theme', key: 'terrain' })
   viewMode = $state<WorldViewMode>('globe')
   mapProjection = $state<MapProjectionId>('mercator')
 
@@ -123,164 +49,49 @@ export class UIState {
     this.engine.setMapProjection(this.mapProjection)
   }
 
-  setGenerating(generating: boolean, text = '正在铸就新世界…') {
+  get changedParamCount(): number {
+    let count = 0
+    for (const key of Object.keys(PARAMETER_STAGE) as (keyof GlobeGenParams)[]) {
+      if (PARAMETER_STAGE[key] !== null && this.params[key] !== this.appliedParams[key])
+        count++
+    }
+    return count
+  }
+
+  get hasPendingChanges(): boolean {
+    return this.changedParamCount > 0
+  }
+
+  get appliedSeed(): number {
+    return this.appliedParams.seed
+  }
+
+  get activeAnalysisLayer(): AnalysisLayerKey | null {
+    return ANALYSIS_LAYERS.find(key => this.params[key]) ?? null
+  }
+
+  setGenerating(generating: boolean, text = '正在生成世界…') {
     this.isGenerating = generating
     if (text)
       this.loadingStageText = text
   }
 
-  private updateDebounceTimer: ReturnType<typeof setTimeout> | null = null
-
-  updateParam<K extends keyof GlobeGenParams>(key: K, value: GlobeGenParams[K], immediate = true) {
+  updateParam<K extends keyof GlobeGenParams>(key: K, value: GlobeGenParams[K], _immediate = true) {
     this.params[key] = value
     if (!this.engine)
       return
 
-    // 1. 瞬时外观/显示层切换（无计算开销，立即响应 0ms）
-    const isAppearanceParam = [
-      'displayMode',
-      'showGraticule',
-      'showRivers',
-      'showSettlements',
-      'showMapLabels',
-      'showRoads',
-      'showShippingRoutes',
-      'showCultureBoundaries',
-      'showReligionBoundaries',
-      'showHolySites',
-      'showPoliticalBoundaries',
-      'showTemperature',
-      'showMoisture',
-      'showWind',
-      'showOceanCurrents',
-      'showSeaSurfaceTemperature',
-      'showPrecipitation',
-      'showFlux',
-      'showCoastlines',
-      'showPlateBoundaries',
-      'wireframe',
-      'autoRotate',
-    ].includes(key)
-
-    if (isAppearanceParam) {
-      this.engine.updateParams(this.params)
+    const stage = PARAMETER_STAGE[key]
+    if (stage === null) {
+      this.engine.updateParams(this.runtimeParams())
       this.engine.updateAppearance()
-      return
-    }
-
-    if (this.updateDebounceTimer) {
-      clearTimeout(this.updateDebounceTimer)
-      this.updateDebounceTimer = null
-    }
-
-    const executeRecalculation = () => {
-      if (!this.engine)
-        return
-      this.engine.updateParams(this.params)
-
-      // 分级智能增量重算
-      switch (key) {
-        case 'seed':
-        case 'subdivision':
-        case 'plateCount':
-        case 'continentCount':
-        case 'landCoverage':
-        case 'sizeVariety':
-        case 'spread':
-        case 'compactness':
-        case 'elongation':
-        case 'coastlineRoughness':
-        case 'islandCount':
-        case 'islandLandShare':
-        case 'islandClustering':
-        case 'islandTectonicBias':
-          this.engine.generateWorld()
-          break
-        case 'mountainStrength':
-        case 'noiseStrength':
-          this.engine.regenerateElevation()
-          break
-        case 'equatorTemperature':
-        case 'poleTemperature':
-        case 'latitudeTemperatureExponent':
-        case 'axialTilt':
-        case 'elevationLapseRate':
-        case 'temperatureNoiseStrength':
-        case 'windPerturbation':
-        case 'oceanCurrentStrength':
-        case 'oceanHeatTransport':
-        case 'oceanEvaporation':
-        case 'landEvaporation':
-        case 'moistureIterations':
-        case 'moistureRetention':
-        case 'basePrecipitation':
-        case 'equatorialRainStrength':
-        case 'subtropicalDryness':
-        case 'midlatitudeRainStrength':
-        case 'orographicStrength':
-        case 'evapotranspirationStrength':
-        case 'infiltration':
-          this.engine.regenerateClimate()
-          break
-        case 'lakeDensity':
-        case 'lakeMinDepth':
-        case 'lakeMinRegionCount':
-        case 'lakeMinCoastDistance':
-        case 'lakeMaxLandCoverage':
-        case 'lakeEvaporationStrength':
-        case 'lakeOverflowThreshold':
-        case 'lakeMinFillRatio':
-          this.engine.regenerateLakes()
-          break
-        case 'riverBasinThreshold':
-        case 'riverMinSourceElevation':
-        case 'riverMinLength':
-          this.engine.regenerateRivers()
-          break
-        case 'settlementDensity':
-          this.engine.regenerateHuman()
-          break
-        case 'roadDensity':
-        case 'shippingRouteDensity':
-        case 'shippingMaxRange':
-        case 'shippingCurrentInfluence':
-        case 'shippingWindInfluence':
-        case 'shippingOpenOceanRisk':
-          this.engine.regenerateTransport()
-          break
-        case 'tradeActivity':
-        case 'tradeSpecialization':
-          this.engine.regenerateTrade()
-          break
-        case 'cultureCount':
-        case 'culturalBlending':
-          this.engine.regenerateCultures()
-          break
-        case 'polityCount':
-        case 'politicalCohesion':
-        case 'overseasExpansion':
-          this.engine.regeneratePolities()
-          break
-        case 'religionCount':
-        case 'religiousProselytism':
-          this.engine.regenerateReligions()
-          break
-      }
-    }
-
-    if (immediate) {
-      executeRecalculation()
-    }
-    else {
-      this.updateDebounceTimer = setTimeout(() => {
-        this.updateDebounceTimer = null
-        executeRecalculation()
-      }, 160)
     }
   }
 
   setDisplayMode(mode: GlobeDisplayMode) {
     this.updateParam('displayMode', mode)
+    this.settingsContext = { kind: 'theme', key: mode }
+    this.generalSettingsOpen = false
   }
 
   setViewMode(mode: WorldViewMode) {
@@ -303,25 +114,135 @@ export class UIState {
     )
   }
 
-  toggleLayer(layerKey: keyof GlobeGenParams) {
-    if (typeof this.params[layerKey] === 'boolean')
-      this.updateParam(layerKey, !this.params[layerKey] as GlobeGenParams[typeof layerKey])
+  toggleLayer(layerKey: LayerKey) {
+    this.setLayerVisibility(layerKey, !this.params[layerKey])
   }
 
-  async regenerateWorld(text = '正在推演大陆板块与创世水系…') {
+  selectLayer(layerKey: LayerKey) {
+    this.setLayerVisibility(layerKey, true)
+    this.settingsContext = { kind: 'layer', key: layerKey }
+    this.generalSettingsOpen = false
+  }
+
+  setLayerVisibility(layerKey: LayerKey, visible: boolean) {
+    if ((ANALYSIS_LAYERS as readonly LayerKey[]).includes(layerKey)) {
+      if (visible)
+        this.setAnalysisLayer(layerKey as AnalysisLayerKey)
+      else if (this.activeAnalysisLayer === layerKey)
+        this.setAnalysisLayer(null)
+    }
+    else {
+      this.updateParam(layerKey, visible)
+      if (visible) {
+        this.settingsContext = { kind: 'layer', key: layerKey }
+        this.generalSettingsOpen = false
+      }
+    }
+  }
+
+  setAnalysisLayer(layer: AnalysisLayerKey | null) {
+    for (const key of ANALYSIS_LAYERS)
+      this.params[key] = key === layer
+    if (layer) {
+      this.settingsContext = { kind: 'layer', key: layer }
+      this.generalSettingsOpen = false
+    }
+    if (this.engine) {
+      this.engine.updateParams(this.runtimeParams())
+      this.engine.updateAppearance()
+    }
+  }
+
+  openSettings() {
+    this.layerDrawerOpen = true
+  }
+
+  toggleMapDisplay() {
+    this.layerDrawerOpen = !this.layerDrawerOpen
+  }
+
+  closePanels() {
+    this.layerDrawerOpen = false
+    this.inspectorOpen = false
+  }
+
+  discardChanges() {
+    for (const key of Object.keys(PARAMETER_STAGE) as (keyof GlobeGenParams)[]) {
+      if (PARAMETER_STAGE[key] !== null)
+        this.assignParam(key, this.appliedParams[key])
+    }
+  }
+
+  resetWorldSettings() {
+    for (const key of Object.keys(PARAMETER_STAGE) as (keyof GlobeGenParams)[]) {
+      if (PARAMETER_STAGE[key] !== null)
+        this.assignParam(key, DEFAULT_GLOBE_GEN_PARAMS[key])
+    }
+  }
+
+  randomizeDraftSeed() {
+    this.params.seed = Math.floor(Math.random() * 9000) + 1000
+  }
+
+  async applyChanges() {
+    const stage = planGeneration(this.appliedParams, this.params)
+    if (stage)
+      await this.runGeneration(stage, '正在应用世界设置…')
+  }
+
+  async regenerateWorld(text = '正在重新生成世界…') {
+    await this.runGeneration('world', text)
+  }
+
+  async retryGeneration() {
+    if (!this.hasGenerated)
+      await this.regenerateWorld()
+    else if (this.hasPendingChanges)
+      await this.applyChanges()
+    else
+      await this.regenerateWorld()
+  }
+
+  private async runGeneration(stage: GenerationStage, text = '正在更新世界…') {
     if (!this.engine)
       return
-    if (this.updateDebounceTimer) {
-      clearTimeout(this.updateDebounceTimer)
-      this.updateDebounceTimer = null
-    }
+    const request = ++this.generationRequest
+    const generationParams = cloneGlobeGenParams(this.params)
+    this.generationError = null
     this.setGenerating(true, text)
-    await this.waitForLoadingPaint()
-    this.engine.updateParams(this.params)
-    this.engine.generateWorld()
-    setTimeout(() => {
-      this.setGenerating(false)
-    }, 150)
+    try {
+      this.engine.updateParams(generationParams)
+      await this.engine.regenerate(stage, (message) => {
+        if (request === this.generationRequest)
+          this.loadingStageText = message
+      })
+      if (request === this.generationRequest) {
+        this.appliedParams = generationParams
+        this.hasGenerated = true
+        this.engine.updateParams(this.runtimeParams())
+        this.engine.updateAppearance()
+      }
+    }
+    catch (error) {
+      if (request === this.generationRequest)
+        this.generationError = error instanceof Error ? error.message : '世界生成失败，请重试。'
+    }
+    finally {
+      if (request === this.generationRequest)
+        this.isGenerating = false
+    }
+  }
+
+  cancelGeneration() {
+    this.generationRequest++
+    this.engine?.cancelGeneration()
+    this.isGenerating = false
+  }
+
+  destroy() {
+    this.cancelGeneration()
+    this.engine?.destroy()
+    this.engine = null
   }
 
   resetCamera() {
@@ -329,19 +250,26 @@ export class UIState {
       this.engine.resetCamera()
   }
 
-  randomizeSeed() {
-    const newSeed = Math.floor(Math.random() * 9000) + 1000
-    this.params.seed = newSeed
-    this.regenerateWorld(`正在根据新种子 #${newSeed} 铸就世界…`)
+  createRandomWorld() {
+    this.randomizeDraftSeed()
+    void this.regenerateWorld(`正在生成世界 #${this.params.seed}…`)
   }
 
-  private async waitForLoadingPaint(): Promise<void> {
-    await tick()
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve())
-      })
-    })
+  private runtimeParams(): GlobeGenParams {
+    const result = cloneGlobeGenParams(this.appliedParams)
+    for (const key of Object.keys(PARAMETER_STAGE) as (keyof GlobeGenParams)[]) {
+      if (PARAMETER_STAGE[key] === null)
+        this.assignParamOn(result, key, this.params[key])
+    }
+    return result
+  }
+
+  private assignParam<K extends keyof GlobeGenParams>(key: K, value: GlobeGenParams[K]) {
+    this.params[key] = value
+  }
+
+  private assignParamOn<K extends keyof GlobeGenParams>(target: GlobeGenParams, key: K, value: GlobeGenParams[K]) {
+    target[key] = value
   }
 }
 

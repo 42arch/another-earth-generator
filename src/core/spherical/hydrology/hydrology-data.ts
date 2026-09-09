@@ -29,10 +29,13 @@ export type LakeIceStateCode
 export interface SphericalLakeData {
   lakeMask: Uint8Array
   regionLakeId: Int32Array
+  /** Lake water level and basin bottom, metres relative to sea level. */
   surfaceElevation: Float32Array
   bottomElevation: Float32Array
+  /** Solid angle, steradians; multiply by physicalRadiusMeters squared for m². */
   area: Float32Array
-  volume: Float32Array
+  /** Actual stored volume, cubic metres. */
+  volume: Float64Array
   outletRegion: Int32Array
   outletTarget: Int32Array
   inflow: Float32Array

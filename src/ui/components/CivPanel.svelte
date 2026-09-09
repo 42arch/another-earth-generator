@@ -28,7 +28,7 @@
 {#if collapsible}
   <Collapsible.Root
     bind:open
-    class='obs-panel rounded-lg overflow-hidden transition-all duration-200 {className}'
+    class='obs-panel overflow-hidden rounded-lg transition-all duration-200 {className}'
   >
     {#if title}
       <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/[0.02] border-b border-white/[0.06] select-none'>
@@ -46,7 +46,7 @@
                 {/if}
               </span>
             {/if}
-            <h3 class='m-0 font-heading text-xs font-semibold tracking-wider uppercase text-obs-text-main group-hover:text-obs-amber-light transition-colors'>
+            <h3 class='m-0 text-xs font-semibold text-obs-text-main transition-colors group-hover:text-white'>
               {title}
             </h3>
           </div>
@@ -90,7 +90,7 @@
               {/if}
             </span>
           {/if}
-          <h3 class='m-0 font-heading text-xs font-semibold tracking-wider uppercase text-obs-text-main'>
+          <h3 class='m-0 text-xs font-semibold text-obs-text-main'>
             {title}
           </h3>
         </div>

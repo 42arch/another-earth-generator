@@ -5,10 +5,11 @@ import type {
   SphericalRiverData,
 } from '@/core/spherical/hydrology/hydrology-data'
 import { MinPriorityQueue } from '@/core/spherical/algorithms/priority-queue'
+import { riverSourceElevationMeters } from '@/core/spherical/geology/elevation-scale'
 import { deterministicUnit } from '@/core/spherical/geometry/spherical-math'
 import { CLIMATE_SEASON_COUNT } from '@/core/spherical/climate/climate-data'
 
-const DRAINAGE_EPSILON = 1e-5
+const DRAINAGE_EPSILON = 0.01
 const DRAINAGE_TIE_SEED = 104729
 const HEADWATER_FLOW_RATIO = 0.18
 const SEASONAL_RIVER_DRY_FLOW_RATIO = 0.25
@@ -87,7 +88,7 @@ export class SphericalRiverGenerator {
       downstreamRegion,
       flowAccumulation,
       thresholdFlow,
-      params.riverMinSourceElevation,
+      riverSourceElevationMeters(params.riverMinSourceElevation),
       params.riverMinLength,
       lakeOutflowMask,
     )

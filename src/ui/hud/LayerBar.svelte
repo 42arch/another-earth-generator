@@ -1,287 +1,142 @@
 <script lang='ts'>
-  import {
-    Activity,
-    Castle,
-    CloudRain,
-    Grid,
-    Layers,
-    Languages,
-    Mountain,
-    Orbit,
-    Thermometer,
-    Trees,
-    Waves,
-    Wind,
-    Workflow,
-    X,
-  } from '@lucide/svelte'
+  import type { GlobeDisplayMode } from '@/core/spherical/config'
+  import type { AnalysisLayerKey, LayerKey } from '@/ui/state/layer-settings'
+  import { Check, ChevronRight, Dices, Layers3, X } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
+  import CivButton from '@/ui/components/CivButton.svelte'
+  import ParameterFields from '@/ui/hud/ParameterFields.svelte'
+  import { ANALYSIS_LAYERS, DISPLAY_MODES, getContextSettings, LAYER_GROUPS, LAYER_SETTINGS, PARAMETER_GROUPS } from '@/ui/state/layer-settings'
   import { uiState } from '@/ui/state/ui-state.svelte'
 
-  const displayModes = [
-    { mode: 'terrain' as const, label: '自然地貌', icon: Mountain },
-    { mode: 'biomes' as const, label: '生态群落', icon: Trees },
-    { mode: 'elevation' as const, label: '高程图', icon: Activity },
-    { mode: 'contours' as const, label: '等高线', icon: Layers },
-    { mode: 'plates' as const, label: '板块构造', icon: Workflow },
-    { mode: 'trade' as const, label: '贸易网络', icon: Activity },
-    { mode: 'cultures' as const, label: '文化圈', icon: Trees },
-    { mode: 'religions' as const, label: '宗教圈', icon: Orbit },
-    { mode: 'polities' as const, label: '政体疆域', icon: Castle },
-  ]
+  const context = $derived(getContextSettings(uiState.settingsContext))
+  let parameterScroll: HTMLDivElement | undefined = $state()
+  $effect(() => {
+    // A new selection starts at its first parameter, regardless of the old scroll position.
+    const selection = uiState.settingsContext
+    if (selection && parameterScroll)
+      parameterScroll.scrollTop = 0
+  })
+  const contextVisible = $derived(uiState.settingsContext.kind === 'theme'
+    ? uiState.params.displayMode === uiState.settingsContext.key
+    : uiState.params[uiState.settingsContext.key])
+  const selectClass = 'min-w-0 flex-1 rounded border border-white/15 bg-[#20252b] px-2 py-1.5 text-xs text-white outline-none focus-visible:ring-2 focus-visible:ring-obs-amber'
+
+  function isSelected(key: LayerKey) {
+    return uiState.settingsContext.kind === 'layer' && uiState.settingsContext.key === key
+  }
+
+  function updateSeed(event: Event) {
+    const input = event.currentTarget as HTMLInputElement
+    if (input.value === '' || !Number.isFinite(input.valueAsNumber))
+      return
+    uiState.updateParam('seed', Math.max(1, Math.min(9999, Math.round(input.valueAsNumber))))
+  }
 </script>
 
 {#if uiState.layerDrawerOpen}
-  <aside
-    transition:fly={{ x: 300, duration: 200 }}
-    class='pointer-events-auto fixed right-4 top-16 bottom-20 z-40 w-64 max-w-[calc(100vw-32px)] obs-panel rounded-xl shadow-2xl flex flex-col text-obs-text-main overflow-hidden border border-white/[0.1] bg-[#08120d]/90 backdrop-blur-xl'
-  >
-    <!-- 头部 -->
-    <header class='flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-white/[0.02] select-none'>
-      <div class='flex items-center gap-2'>
-        <Layers class='w-4 h-4 text-obs-amber' />
-        <div>
-          <h2 class='font-heading text-sm font-bold tracking-wider uppercase text-obs-text-main m-0 leading-tight'>
-            图层与视界
-          </h2>
-          <span class='text-[10px] text-obs-text-dim tracking-wide'>
-            Layer & Perspectives
-          </span>
-        </div>
-      </div>
-
-      <button
-        type='button'
-        onclick={() => uiState.layerDrawerOpen = false}
-        class='text-obs-text-dim hover:text-obs-text-main p-1 rounded-md hover:bg-white/[0.06] transition-colors cursor-pointer'
-        title='关闭图层面板'
-      >
-        <X class='w-4 h-4' />
-      </button>
+  <aside in:fly={{ x: -24, duration: 160 }} class='pointer-events-auto fixed bottom-18 left-4 top-16 z-40 flex w-96 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-white/12 bg-[#20252b]/98 text-obs-text-main shadow-xl' aria-label='图层与设置'>
+    <header class='flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3'>
+      <div class='flex items-center gap-2'><Layers3 class='h-4 w-4 text-obs-amber' /><h2 class='m-0 text-sm font-semibold'>图层与设置</h2></div>
+      <button type='button' onclick={() => uiState.layerDrawerOpen = false} class='rounded p-1 text-obs-text-dim hover:bg-white/8 hover:text-white' aria-label='关闭图层与设置'><X class='h-4 w-4' /></button>
     </header>
 
-    <!-- 滚动内容区 -->
-    <div class='flex-1 overflow-y-auto p-3.5 flex flex-col gap-3 custom-scrollbar text-xs'>
-      <!-- 着色模式 -->
-      <div class='flex flex-col gap-1.5'>
-        <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>
-          着色模式 (Display Mode)
-        </span>
-        <div class='flex flex-col gap-1'>
-          {#each displayModes as item}
-            {@const Icon = item.icon}
-            <button
-              type='button'
-              onclick={() => uiState.setDisplayMode(item.mode)}
-              class="flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-all text-left cursor-pointer border {uiState.params.displayMode === item.mode ? 'bg-obs-amber/15 text-obs-amber-light border-obs-amber/50 font-semibold shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
-            >
-              <div class='flex items-center gap-2'>
-                <Icon class="w-3.5 h-3.5 {uiState.params.displayMode === item.mode ? 'text-obs-amber' : 'text-obs-text-dim'}" />
-                <span>{item.label}</span>
+    <!-- Keep layer navigation reachable while the parameter section scrolls. -->
+    <div class='custom-scrollbar max-h-[34%] shrink-0 space-y-2 overflow-y-auto border-b border-white/10 px-4 py-3 text-xs'>
+      <div class='flex items-center gap-2'>
+        <label for='map-theme' class='w-12 shrink-0 text-obs-text-muted'>主题</label>
+        <select id='map-theme' class={selectClass} value={uiState.params.displayMode} onchange={event => uiState.setDisplayMode(event.currentTarget.value as GlobeDisplayMode)}>
+          {#each DISPLAY_MODES as mode}<option value={mode.key}>{mode.label}</option>{/each}
+        </select>
+        <button type='button' onclick={() => uiState.setDisplayMode(uiState.params.displayMode)} class='rounded px-2 py-1.5 text-obs-text-muted hover:bg-white/6 hover:text-white' aria-label='编辑当前主题参数'>参数</button>
+      </div>
+      <div class='flex items-center gap-2'>
+        <label for='analysis-layer' class='w-12 shrink-0 text-obs-text-muted'>分析</label>
+        <select id='analysis-layer' class={selectClass} value={uiState.activeAnalysisLayer ?? ''} onchange={event => uiState.setAnalysisLayer(event.currentTarget.value as AnalysisLayerKey || null)}>
+          <option value=''>无分析叠加</option>
+          {#each ANALYSIS_LAYERS as key}<option value={key}>{LAYER_SETTINGS[key].label}</option>{/each}
+        </select>
+        <button type='button' disabled={!uiState.activeAnalysisLayer} onclick={() => uiState.setAnalysisLayer(uiState.activeAnalysisLayer)} class='rounded px-2 py-1.5 text-obs-text-muted hover:bg-white/6 hover:text-white disabled:opacity-30' aria-label='编辑当前分析参数'>参数</button>
+      </div>
+      <p class='pt-1 text-[11px] text-obs-text-dim'>勾选控制显示 · 点击名称打开相关设置</p>
+      {#each LAYER_GROUPS as group}
+        <section>
+          <h3 class='mb-1 text-[11px] font-normal text-obs-text-dim'>{group.label}</h3>
+          <div class='grid grid-cols-2 gap-x-2 gap-y-0.5'>
+            {#each group.keys as key}
+              {@const disabled = key === 'autoRotate' && uiState.viewMode === 'map'}
+              <div class="flex items-center rounded border {isSelected(key) ? 'border-obs-amber/50 bg-obs-amber/10' : 'border-transparent hover:bg-white/5'}">
+                <input type='checkbox' checked={uiState.params[key]} onchange={event => uiState.setLayerVisibility(key, event.currentTarget.checked)} {disabled} aria-label={`显示${LAYER_SETTINGS[key].label}`} class='ml-2 h-3.5 w-3.5 cursor-pointer accent-obs-amber disabled:opacity-30' />
+                <button type='button' onclick={() => uiState.selectLayer(key)} {disabled} aria-pressed={isSelected(key)} class='flex min-w-0 flex-1 items-center justify-between py-1.5 pl-2 pr-1 text-left text-obs-text-muted hover:text-white disabled:opacity-30'>
+                  {LAYER_SETTINGS[key].label}
+                  {#if isSelected(key)}<ChevronRight class='h-3 w-3 text-obs-amber' />{/if}
+                </button>
               </div>
-              {#if uiState.params.displayMode === item.mode}
-                <span class='w-1.5 h-1.5 rounded-full bg-obs-amber shadow-[0_0_6px_rgba(16,185,129,0.8)]'></span>
-              {/if}
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <!-- 地理要素 -->
-      <div class='flex flex-col gap-1.5 border-t border-white/[0.06] pt-3'>
-        <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>
-          地理要素 (Features)
-        </span>
-        <div class='grid grid-cols-2 gap-1.5 text-[11px]'>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showCoastlines')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showCoastlines ? 'bg-obs-blue/20 border-obs-blue/50 text-blue-300 shadow-[0_0_8px_rgba(56,189,248,0.15)]' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Waves class='w-3.5 h-3.5 text-obs-blue shrink-0' />
-            <span>海岸线</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showRivers')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showRivers ? 'bg-obs-blue/20 border-obs-blue/50 text-blue-300 shadow-[0_0_8px_rgba(56,189,248,0.15)]' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Workflow class='w-3.5 h-3.5 text-obs-blue shrink-0' />
-            <span>河流水系</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showSettlements')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showSettlements ? 'bg-obs-amber/20 border-obs-amber/50 text-obs-amber-light shadow-[0_0_8px_rgba(16,185,129,0.2)]' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Castle class='w-3.5 h-3.5 text-obs-amber shrink-0' />
-            <span>文明聚落</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showPlateBoundaries')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showPlateBoundaries ? 'bg-obs-rose/20 border-obs-rose/50 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.15)]' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Orbit class='w-3.5 h-3.5 text-obs-rose shrink-0' />
-            <span>板块边界</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 气象与流场 -->
-      <div class='flex flex-col gap-1.5 border-t border-white/[0.06] pt-3'>
-        <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>
-          气象与洋流 (Climate & Currents)
-        </span>
-        <div class='grid grid-cols-2 gap-1.5 text-[11px]'>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showTemperature')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showTemperature ? 'bg-obs-rose/20 border-obs-rose/50 text-rose-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Thermometer class='w-3.5 h-3.5 text-obs-rose shrink-0' />
-            <span>地表气温</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showPrecipitation')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showPrecipitation ? 'bg-obs-blue/20 border-obs-blue/50 text-blue-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <CloudRain class='w-3.5 h-3.5 text-obs-blue shrink-0' />
-            <span>降水分布</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showFlux')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showFlux ? 'bg-obs-amber/20 border-obs-amber/50 text-amber-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Activity class='w-3.5 h-3.5 text-obs-amber shrink-0' />
-            <span>汇流强度</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showWind')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showWind ? 'bg-obs-cyan/20 border-obs-cyan/50 text-cyan-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Wind class='w-3.5 h-3.5 text-obs-cyan shrink-0' />
-            <span>盛行风场</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showOceanCurrents')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showOceanCurrents ? 'bg-obs-blue/20 border-obs-blue/50 text-blue-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Waves class='w-3.5 h-3.5 text-obs-blue shrink-0' />
-            <span>大洋环流</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showSeaSurfaceTemperature')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showSeaSurfaceTemperature ? 'bg-obs-amber/20 border-obs-amber/50 text-amber-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Thermometer class='w-3.5 h-3.5 text-obs-amber shrink-0' />
-            <span>海表温度</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showGraticule')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showGraticule ? 'bg-white/[0.12] border-white/[0.25] text-obs-text-main font-medium' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Grid class='w-3.5 h-3.5 text-obs-text-muted shrink-0' />
-            <span>经纬网</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 文明与交通 -->
-      <div class='flex flex-col gap-1.5 border-t border-white/[0.06] pt-3'>
-        <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>
-          文明与交通 (Civilization)
-        </span>
-        <div class='grid grid-cols-2 gap-1.5 text-[11px]'>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showRoads')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showRoads ? 'bg-obs-amber/20 border-obs-amber/50 text-amber-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Workflow class='w-3.5 h-3.5 text-obs-amber shrink-0' />
-            <span>陆路网络</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showShippingRoutes')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showShippingRoutes ? 'bg-obs-blue/20 border-obs-blue/50 text-blue-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Waves class='w-3.5 h-3.5 text-obs-blue shrink-0' />
-            <span>海运航线</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showPoliticalBoundaries')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showPoliticalBoundaries ? 'bg-obs-rose/20 border-obs-rose/50 text-rose-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Castle class='w-3.5 h-3.5 text-obs-rose shrink-0' />
-            <span>政体边界</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showCultureBoundaries')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showCultureBoundaries ? 'bg-obs-amber/20 border-obs-amber/50 text-amber-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Trees class='w-3.5 h-3.5 text-obs-amber shrink-0' />
-            <span>文化边界</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showReligionBoundaries')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showReligionBoundaries ? 'bg-violet-400/15 border-violet-300/40 text-violet-200' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Orbit class='w-3.5 h-3.5 text-violet-300 shrink-0' />
-            <span>宗教边界</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('showHolySites')}
-            class="px-2 py-1.5 border rounded-lg flex items-center gap-1.5 cursor-pointer transition-all {uiState.params.showHolySites ? 'bg-obs-amber/20 border-obs-amber/50 text-amber-300' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Mountain class='w-3.5 h-3.5 text-obs-amber shrink-0' />
-            <span>圣地标记</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 渲染与交互 -->
-      <div class='flex flex-col gap-1.5 border-t border-white/[0.06] pt-3'>
-        <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>
-          视界辅助 (Display)
-        </span>
-        <button
-          type='button'
-          onclick={() => uiState.toggleLayer('showMapLabels')}
-          class="w-full py-1.5 border rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all text-[11px] {uiState.params.showMapLabels ? 'border-obs-amber/60 bg-obs-amber/15 text-obs-amber-light font-medium' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-        >
-          <Languages class='w-3 h-3' />
-          <span>地图标签</span>
-        </button>
-        <div class='flex items-center justify-between text-[11px] gap-2'>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('autoRotate')}
-            class="flex-1 py-1.5 border rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all {uiState.params.autoRotate ? 'border-obs-amber/60 bg-obs-amber/15 text-obs-amber-light font-medium' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Orbit class='w-3 h-3' />
-            <span>自动自转</span>
-          </button>
-          <button
-            type='button'
-            onclick={() => uiState.toggleLayer('wireframe')}
-            class="flex-1 py-1.5 border rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all {uiState.params.wireframe ? 'border-obs-amber/60 bg-obs-amber/15 text-obs-amber-light font-medium' : 'border-white/[0.06] text-obs-text-dim hover:text-obs-text-muted hover:bg-white/[0.03]'}"
-          >
-            <Grid class='w-3 h-3' />
-            <span>网格线框</span>
-          </button>
-        </div>
-      </div>
+            {/each}
+          </div>
+        </section>
+      {/each}
     </div>
+
+    <div bind:this={parameterScroll} class='custom-scrollbar min-h-0 flex-1 overflow-y-auto text-xs'>
+      <details bind:open={uiState.generalSettingsOpen} class='border-b border-white/10 px-4'>
+        <summary class='cursor-pointer py-3 font-medium text-obs-text-muted'>通用设置 <span class='ml-1 text-[11px] font-normal text-obs-text-dim'>种子、精度与基础地形</span></summary>
+        <div class='space-y-3 pb-4'>
+          <p class='text-[11px] leading-relaxed text-obs-text-dim'>用于整个世界，调整后统一应用。</p>
+          <label for='world-seed' class='block text-obs-text-muted'>世界种子</label>
+          <div class='flex gap-2'>
+            <input id='world-seed' type='number' min='1' max='9999' step='1' value={uiState.params.seed} oninput={updateSeed} class='min-w-0 flex-1 rounded border border-white/15 bg-black/15 px-2 py-1.5 font-mono outline-none focus-visible:ring-2 focus-visible:ring-obs-amber' />
+            <button type='button' onclick={() => uiState.randomizeDraftSeed()} class='flex items-center gap-1 rounded border border-white/15 px-2 hover:bg-white/5'><Dices class='h-3.5 w-3.5' />随机</button>
+          </div>
+          <div class='flex items-center gap-3'>
+            <label for='world-quality' class='text-obs-text-muted'>地图精度</label>
+            <select id='world-quality' class={selectClass} value={uiState.params.subdivision} onchange={event => uiState.updateParam('subdivision', Number(event.currentTarget.value))}>
+              <option value={4}>快速预览</option><option value={5}>均衡</option><option value={6}>高精度（耗时较长）</option>
+            </select>
+          </div>
+          <ParameterFields keys={PARAMETER_GROUPS.terrain.keys} />
+          <details>
+            <summary class='cursor-pointer py-2 text-obs-text-muted'>行星尺度</summary>
+            <ParameterFields keys={['physicalRadiusMeters']} />
+          </details>
+          <button type='button' onclick={() => uiState.resetWorldSettings()} class='rounded border border-white/15 px-2 py-1.5 text-obs-text-muted hover:bg-white/5'>恢复全部生成参数默认值</button>
+        </div>
+      </details>
+
+      {#key `${uiState.settingsContext.kind}:${uiState.settingsContext.key}`}
+        <section class='space-y-3 p-4' aria-label={`${context.label}设置`}>
+          <div class='flex items-center justify-between gap-2'>
+            <h3 class='text-sm font-semibold text-white'>{context.label}设置</h3>
+            {#if uiState.settingsContext.kind === 'layer'}
+              <span class='text-[11px] text-obs-text-dim'>{contextVisible ? '图层已显示' : '图层已隐藏'}</span>
+            {/if}
+          </div>
+          <p class='text-[11px] leading-relaxed text-obs-text-dim'>{context.note}</p>
+          {#each context.groups as key}
+            <div>
+              <h4 class='mb-2 text-xs font-medium text-obs-text-muted'>{PARAMETER_GROUPS[key].label}</h4>
+              <ParameterFields keys={PARAMETER_GROUPS[key].keys} />
+            </div>
+          {/each}
+          {#each context.shared as key}
+            <details class='border-t border-white/10'>
+              <summary class='cursor-pointer py-3 text-obs-text-muted'>{PARAMETER_GROUPS[key].label}<span class='ml-2 text-[10px] text-obs-text-dim'>共享参数</span></summary>
+              <ParameterFields keys={PARAMETER_GROUPS[key].keys} />
+            </details>
+          {/each}
+        </section>
+      {/key}
+    </div>
+
+    <footer class='shrink-0 border-t border-white/10 bg-black/15 p-3'>
+      <p class='mb-2 text-[11px] text-obs-text-dim'>{uiState.hasPendingChanges ? `共 ${uiState.changedParamCount} 项待应用，包含其他图层中的修改` : '显示切换即时生效，生成参数修改后统一应用'}</p>
+      <div class='flex items-center justify-end gap-2'>
+        {#if uiState.hasPendingChanges}
+          <CivButton variant='secondary' size='sm' onclick={() => uiState.discardChanges()}>放弃全部修改</CivButton>
+        {/if}
+        <CivButton variant='amber' size='sm' disabled={!uiState.hasPendingChanges || uiState.isGenerating} onclick={() => void uiState.applyChanges()}>
+          <Check class='mr-1 h-3.5 w-3.5' />{uiState.hasPendingChanges ? '应用全部更改' : '已应用'}
+        </CivButton>
+      </div>
+    </footer>
   </aside>
 {/if}

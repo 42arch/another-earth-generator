@@ -1,4 +1,4 @@
-import { mount } from 'svelte'
+import { mount, unmount } from 'svelte'
 import WorldEngine from '@/core/world/world-engine'
 import AppUI from '@/ui/AppUI.svelte'
 import { uiState } from '@/ui/state/ui-state.svelte'
@@ -31,19 +31,19 @@ function main() {
   uiState.init(worldEngine)
 
   // 挂载 Svelte 5 游戏 UI
-  mount(AppUI, { target: appContainer })
+  const app = mount(AppUI, { target: appContainer })
 
-  uiState.setGenerating(true, '正在构建球面网格与地壳板块…')
-  requestAnimationFrame(() => {
-    worldEngine.generateWorld()
-    setTimeout(() => {
-      uiState.setGenerating(false)
-    }, 200)
+  void uiState.regenerateWorld('正在生成初始世界…')
+
+  const cleanup = () => {
+    uiState.destroy()
+    void unmount(app)
+  }
+  window.addEventListener('beforeunload', cleanup, { once: true })
+  import.meta.hot?.dispose(() => {
+    window.removeEventListener('beforeunload', cleanup)
+    cleanup()
   })
-
-  window.addEventListener('beforeunload', () => {
-    worldEngine.destroy()
-  }, { once: true })
 }
 
 try {

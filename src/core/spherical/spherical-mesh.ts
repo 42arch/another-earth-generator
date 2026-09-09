@@ -1,3 +1,4 @@
+import type { SphericalVoronoiData } from '@/core/spherical/mesh/spherical-voronoi'
 import type { SphericalMeshData } from '@/core/spherical/mesh/icosphere-builder'
 import { clamp, dot3 } from '@/core/spherical/geometry/spherical-math'
 import { SphericalVoronoi, SphericalVoronoiBuilder } from '@/core/spherical/mesh/spherical-voronoi'
@@ -15,7 +16,7 @@ export default class SphericalMesh implements SphericalMeshData {
   readonly triangles: Uint32Array
   readonly voronoi: SphericalVoronoi
 
-  constructor(data: SphericalMeshData) {
+  constructor(data: SphericalMeshData, voronoi?: SphericalVoronoiData) {
     this.numRegions = data.numRegions
     this.numTriangles = data.numTriangles
     this.regionPosition = data.regionPosition
@@ -24,7 +25,7 @@ export default class SphericalMesh implements SphericalMeshData {
     this.neighborOffsets = data.neighborOffsets
     this.neighbors = data.neighbors
     this.triangles = data.triangles
-    this.voronoi = new SphericalVoronoi(new SphericalVoronoiBuilder().build(data))
+    this.voronoi = new SphericalVoronoi(voronoi ?? new SphericalVoronoiBuilder().build(data))
     this.regionArea = this.voronoi.cellArea
   }
 

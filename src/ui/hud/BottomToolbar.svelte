@@ -1,171 +1,69 @@
 <script lang='ts'>
-  import {
-    Compass,
-    Dices,
-    Globe,
-    Grid,
-    Layers,
-    Map,
-    Orbit,
-    Radio,
-    RotateCcw,
-    SlidersHorizontal,
-  } from '@lucide/svelte'
-  import CivTooltip from '@/ui/components/CivTooltip.svelte'
+  import { Compass, Globe2, Info, Layers3, Map } from '@lucide/svelte'
   import { uiState } from '@/ui/state/ui-state.svelte'
+
+  const baseButton = 'inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-white/70'
 </script>
 
 <nav
-  class='pointer-events-auto fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-1.5 rounded-xl obs-panel shadow-2xl backdrop-blur-xl border border-white/[0.1] bg-[#08120d]/90 select-none text-xs transition-all'
-  aria-label='主操作工具栏'
+  class='pointer-events-auto fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 rounded-lg border border-white/12 bg-[#20252b]/96 p-1.5 shadow-lg select-none'
+  aria-label='地图工具'
 >
-  <!-- 1. 面板抽屉控制组 -->
-  <div class='flex items-center gap-1'>
-    <!-- 参数面板开关 -->
-    <CivTooltip content='行星参数控制台 (Codex)'>
-      <button
-        type='button'
-        onclick={() => uiState.codexDrawerOpen = !uiState.codexDrawerOpen}
-        class="flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg transition-all duration-150 cursor-pointer border {uiState.codexDrawerOpen ? 'bg-obs-amber/20 border-obs-amber/60 text-obs-amber-light shadow-[0_0_12px_rgba(16,185,129,0.25)] font-semibold' : 'border-transparent text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06]'}"
-      >
-        <SlidersHorizontal class="w-4 h-4 {uiState.codexDrawerOpen ? 'text-obs-amber' : 'text-obs-text-dim'}" />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>参数</span>
-      </button>
-    </CivTooltip>
-
-    <!-- 图层面板开关 -->
-    <CivTooltip content='图层与视界控制 (Layers)'>
-      <button
-        type='button'
-        onclick={() => uiState.layerDrawerOpen = !uiState.layerDrawerOpen}
-        class="flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg transition-all duration-150 cursor-pointer border {uiState.layerDrawerOpen ? 'bg-obs-amber/20 border-obs-amber/60 text-obs-amber-light shadow-[0_0_12px_rgba(16,185,129,0.25)] font-semibold' : 'border-transparent text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06]'}"
-      >
-        <Layers class="w-4 h-4 {uiState.layerDrawerOpen ? 'text-obs-amber' : 'text-obs-text-dim'}" />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>图层</span>
-      </button>
-    </CivTooltip>
-
-    <!-- 区域探测面板开关 -->
-    <CivTooltip content='地表侦测详报 (Inspector)'>
-      <button
-        type='button'
-        onclick={() => uiState.inspectorOpen = !uiState.inspectorOpen}
-        class="flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg transition-all duration-150 cursor-pointer border {uiState.inspectorOpen ? 'bg-obs-amber/20 border-obs-amber/60 text-obs-amber-light shadow-[0_0_12px_rgba(16,185,129,0.25)] font-semibold' : 'border-transparent text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06]'}"
-      >
-        <Radio class="w-4 h-4 {uiState.inspectorOpen ? 'text-obs-amber' : 'text-obs-text-dim'}" />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>侦测</span>
-      </button>
-    </CivTooltip>
-  </div>
-
-  <!-- 分割线 -->
-  <div class='w-px h-6 bg-white/[0.08] mx-0.5 self-center'></div>
-
-  <!-- 2. 核心演化与生成组 -->
-  <div class='flex items-center gap-1'>
-    <!-- 随机种子 -->
-    <CivTooltip content='随机演化全新种子 (Random Seed)'>
-      <button
-        type='button'
-        onclick={() => uiState.randomizeSeed()}
-        class='flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg text-obs-text-muted hover:text-obs-amber-light hover:bg-white/[0.06] border border-white/[0.06] hover:border-obs-amber/40 transition-all duration-150 cursor-pointer active:scale-95'
-      >
-        <Dices class='w-4 h-4 text-obs-amber' />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>随机</span>
-      </button>
-    </CivTooltip>
-
-    <!-- 重新演化 (核心高亮按钮) -->
-    <CivTooltip content='按当前参数重新演算世界 (Regenerate)'>
-      <button
-        type='button'
-        onclick={() => uiState.regenerateWorld()}
-        class='flex flex-col items-center justify-center min-w-12 py-1 px-2.5 rounded-lg font-heading text-slate-950 font-bold bg-gradient-to-b from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.4)] border border-emerald-200 transition-all duration-150 cursor-pointer active:scale-95'
-      >
-        <RotateCcw class='w-4 h-4 stroke-[2.5]' />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>演化</span>
-      </button>
-    </CivTooltip>
-  </div>
-
-  <!-- 分割线 -->
-  <div class='w-px h-6 bg-white/[0.08] mx-0.5 self-center'></div>
-
-  <!-- 3. 视角与显示辅助组 -->
-  <div class='flex items-center gap-1'>
-    <CivTooltip content={uiState.viewMode === 'globe' ? '切换至二维世界地图' : '切换至三维星球'}>
-      <button
-        type='button'
-        onclick={() => uiState.toggleViewMode()}
-        class='flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg border border-obs-amber/40 bg-obs-amber/10 text-obs-amber-light hover:bg-obs-amber/20 transition-all duration-150 cursor-pointer active:scale-95'
-        aria-label={uiState.viewMode === 'globe' ? '切换至二维地图' : '切换至三维星球'}
-        aria-pressed={uiState.viewMode === 'map'}
-      >
-        {#if uiState.viewMode === 'globe'}
-          <Globe class='w-4 h-4 text-obs-amber' />
-          <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>3D</span>
-        {:else}
-          <Map class='w-4 h-4 text-obs-amber' />
-          <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>2D</span>
-        {/if}
-      </button>
-    </CivTooltip>
-
-    {#if uiState.viewMode === 'map'}
-      <CivTooltip content={uiState.mapProjection === 'mercator' ? '切换至 Equal Earth 等面积投影，完整显示两极' : '切换至 Web Mercator 投影，适合连续平移与局部浏览'}>
-        <button
-          type='button'
-          onclick={() => uiState.toggleMapProjection()}
-          class='flex flex-col items-center justify-center min-w-12 py-1 px-2 rounded-lg border border-sky-400/35 bg-sky-400/10 text-sky-100 hover:bg-sky-400/20 transition-all duration-150 cursor-pointer active:scale-95'
-          aria-label={uiState.mapProjection === 'mercator' ? '当前为 Web Mercator，切换至 Equal Earth' : '当前为 Equal Earth，切换至 Web Mercator'}
-          aria-pressed={uiState.mapProjection === 'equal-earth'}
-        >
-          <Map class='w-4 h-4 text-sky-300' />
-          <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>
-            {uiState.mapProjection === 'mercator' ? '墨卡托' : '等面积'}
-          </span>
-        </button>
-      </CivTooltip>
+  <button
+    type='button'
+    onclick={() => uiState.toggleMapDisplay()}
+    aria-label='图层与设置'
+    aria-expanded={uiState.layerDrawerOpen}
+    class="{baseButton} {uiState.layerDrawerOpen ? 'border-obs-amber bg-obs-amber/12 text-white' : 'border-transparent text-obs-text-muted hover:bg-white/6 hover:text-white'}"
+  >
+    <Layers3 class='h-4 w-4' />
+    <span class='hidden sm:inline'>图层与设置</span>
+    {#if uiState.hasPendingChanges}
+      <span class='rounded-full bg-obs-amber px-1.5 text-[10px] font-semibold text-slate-950'>{uiState.changedParamCount}</span>
     {/if}
+  </button>
 
-    <!-- 自动自转 -->
-    <CivTooltip content={uiState.viewMode === 'map' ? '二维地图不使用自动自转' : uiState.params.autoRotate ? '停止行星自转' : '开启行星自转'}>
-      <button
-        type='button'
-        onclick={() => uiState.toggleLayer('autoRotate')}
-        disabled={uiState.viewMode === 'map'}
-        class="flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg transition-all duration-150 border {uiState.viewMode === 'map' ? 'cursor-not-allowed opacity-35 border-transparent text-obs-text-dim' : uiState.params.autoRotate ? 'cursor-pointer bg-obs-amber/20 border-obs-amber/60 text-obs-amber-light shadow-[0_0_10px_rgba(16,185,129,0.25)] font-semibold' : 'cursor-pointer border-transparent text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06]'}"
-        aria-label='自动自转'
-      >
-        <Orbit class="w-4 h-4 {uiState.params.autoRotate ? 'text-obs-amber' : 'text-obs-text-dim'}" />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>自转</span>
-      </button>
-    </CivTooltip>
+  {#if uiState.selectedRegion}
+    <button
+      type='button'
+      onclick={() => uiState.inspectorOpen = !uiState.inspectorOpen}
+      aria-label='区域信息'
+      aria-expanded={uiState.inspectorOpen}
+      class="{baseButton} {uiState.inspectorOpen ? 'border-obs-amber bg-obs-amber/12 text-white' : 'border-transparent text-obs-text-muted hover:bg-white/6 hover:text-white'}"
+    >
+      <Info class='h-4 w-4' />
+      <span class='hidden md:inline'>区域信息</span>
+    </button>
+  {/if}
 
-    <!-- 经纬网格 -->
-    <CivTooltip content={uiState.params.showGraticule ? '隐藏经纬网格' : '显示经纬网格'}>
-      <button
-        type='button'
-        onclick={() => uiState.toggleLayer('showGraticule')}
-        class="flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg transition-all duration-150 cursor-pointer border {uiState.params.showGraticule ? 'bg-obs-amber/20 border-obs-amber/60 text-obs-amber-light shadow-[0_0_10px_rgba(16,185,129,0.25)] font-semibold' : 'border-transparent text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06]'}"
-        aria-label='经纬网'
-      >
-        <Grid class="w-4 h-4 {uiState.params.showGraticule ? 'text-obs-amber' : 'text-obs-text-dim'}" />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>网格</span>
-      </button>
-    </CivTooltip>
+  <span class='mx-1 h-5 w-px bg-white/10'></span>
 
-    <!-- 复位视角 -->
-    <CivTooltip content='复位相机视角至初始位置'>
-      <button
-        type='button'
-        onclick={() => uiState.resetCamera()}
-        class='flex flex-col items-center justify-center min-w-11 py-1 px-2 rounded-lg border border-transparent text-obs-text-muted hover:text-obs-amber hover:bg-white/[0.06] transition-all duration-150 cursor-pointer active:scale-95'
-        aria-label='复位视角'
-      >
-        <Compass class='w-4 h-4 text-obs-text-dim' />
-        <span class='font-heading text-[10px] tracking-wide mt-0.5 leading-none'>复位</span>
-      </button>
-    </CivTooltip>
+  <div class='flex rounded-md bg-black/20 p-0.5' aria-label='视图模式'>
+    <button
+      type='button'
+      onclick={() => uiState.setViewMode('globe')}
+      aria-pressed={uiState.viewMode === 'globe'}
+      class="flex h-8 items-center gap-1.5 rounded px-2.5 text-xs transition-colors {uiState.viewMode === 'globe' ? 'bg-white/12 text-white' : 'text-obs-text-dim hover:text-white'}"
+    >
+      <Globe2 class='h-3.5 w-3.5' />3D
+    </button>
+    <button
+      type='button'
+      onclick={() => uiState.setViewMode('map')}
+      aria-pressed={uiState.viewMode === 'map'}
+      class="flex h-8 items-center gap-1.5 rounded px-2.5 text-xs transition-colors {uiState.viewMode === 'map' ? 'bg-white/12 text-white' : 'text-obs-text-dim hover:text-white'}"
+    >
+      <Map class='h-3.5 w-3.5' />2D
+    </button>
   </div>
+
+  {#if uiState.viewMode === 'map'}
+    <button type='button' onclick={() => uiState.toggleMapProjection()} class='{baseButton} border-transparent text-obs-text-muted hover:bg-white/6 hover:text-white' title='切换地图投影'>
+      {uiState.mapProjection === 'mercator' ? '墨卡托' : '等面积'}
+    </button>
+  {/if}
+
+  <button type='button' onclick={() => uiState.resetCamera()} class='{baseButton} border-transparent px-2 text-obs-text-muted hover:bg-white/6 hover:text-white' title='重置视角' aria-label='重置视角'>
+    <Compass class='h-4 w-4' />
+  </button>
 </nav>

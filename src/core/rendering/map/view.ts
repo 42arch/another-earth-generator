@@ -1,3 +1,4 @@
+import type { GenerationStage } from '@/core/world/generation-plan'
 import type { GlobeGenParams } from '@/core/spherical/config'
 import type { MapProjection, MapProjectionId } from '@/core/projections/map-projection'
 import type { SphericalStrokePath } from '@/core/spherical/geometry/spherical-polyline'
@@ -27,6 +28,8 @@ import { MapPicker } from '@/core/rendering/map/picker'
 import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
 import { MapRibbonMaterial } from '@/core/rendering/map/ribbon-material'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
+import { LayerCache } from '@/core/rendering/shared/layer-cache'
+import { isLayerAffected } from '@/core/rendering/shared/layer-dependencies'
 import { SphericalContourGeometry } from '@/core/rendering/shared/spherical-contour-geometry'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/spherical-graticule-geometry'
 import { SphericalWindGeometry } from '@/core/rendering/shared/spherical-wind-geometry'
@@ -98,6 +101,9 @@ export class MapView {
   })
   private surface: Mesh | null = null
   private surfaceCopies: Mesh[] = []
+  private readonly layerCache = new LayerCache<Object3D>()
+  private readonly layerResources = new Map<string, MapLayerResource[]>()
+  private colorsDirty = false
   private overlayResources: MapLayerResource[] = []
   private mesh: SphericalMesh | null = null
   private data: SphericalWorldData | null = null
@@ -157,32 +163,25 @@ export class MapView {
     }
   }
 
-  updateAppearance(params: GlobeGenParams): void {
+  updateWorldData(data: SphericalWorldData): void {
+    this.data = data
+  }
+
+  updateAppearance(params: GlobeGenParams, dataChanged = false, stage: GenerationStage = 'world'): void {
+    const previous = this.params
     this.params = { ...params }
-    if (!this.active) {
-      if (this.surface && this.data) {
-        const material = this.surface.material as MeshBasicMaterial
-        material.wireframe = params.wireframe
-        this.geometryBuilder.updateColors(
-          this.surface.geometry,
-          this.colorizer.build(this.data, params.displayMode),
-        )
-      }
-      this.overlaysDirty = true
-      this.labelsDirty = true
+    this.colorsDirty ||= dataChanged || previous.displayMode !== params.displayMode
+    this.labelsDirty ||= dataChanged || previous.displayMode !== params.displayMode
+      || previous.showMapLabels !== params.showMapLabels
+      || previous.showSettlements !== params.showSettlements
+    this.overlaysDirty = true
+    if (dataChanged)
+      this.layerCache.invalidate(key => isLayerAffected(key, stage))
+    if (!this.active)
       return
-    }
     this.ensureSurface()
-    if (!this.surface || !this.data)
-      return
-    const material = this.surface.material as MeshBasicMaterial
-    material.wireframe = params.wireframe
-    this.geometryBuilder.updateColors(
-      this.surface.geometry,
-      this.colorizer.build(this.data, params.displayMode),
-    )
-    this.rebuildOverlays()
-    this.rebuildLabels()
+    this.ensureOverlays()
+    this.ensureLabels()
   }
 
   setActive(active: boolean): void {
@@ -267,23 +266,54 @@ export class MapView {
     for (const surface of this.surfaceCopies)
       this.scene.add(surface)
     this.surfaceDirty = false
+    this.colorsDirty = false
+  }
+
+  private syncLayer(key: string, visible: boolean, build: () => void, revision: unknown = 0): void {
+    this.layerCache.sync(key, visible, revision, () => {
+      const old = this.layerResources.get(key) ?? []
+      for (const resource of old) {
+        for (const object of resource.objects)
+          this.scene.remove(object)
+        resource.geometry.dispose()
+        resource.material.dispose()
+      }
+      this.overlayResources = this.overlayResources.filter(resource => !old.includes(resource))
+      const start = this.overlayResources.length
+      build()
+      const resources = this.overlayResources.slice(start)
+      this.layerResources.set(key, resources)
+      return resources.flatMap(resource => resource.objects)
+    })
   }
 
   private rebuildOverlays(): void {
-    this.disposeOverlays()
     if (!this.mesh || !this.data)
       return
-
-    this.addClimateLayers()
-    this.addCoastlines()
-    this.addContours()
-    this.addRivers()
-    this.addRoutes()
-    this.addBoundaries()
-    this.addVectorFields()
-    this.addGraticule()
-    this.addSettlements()
-    this.addHolySites()
+    const p = this.params
+    for (const key of ['showTemperature', 'showMoisture', 'showPrecipitation', 'showFlux', 'showSeaSurfaceTemperature'] as const)
+      this.syncLayer(key, p[key], () => this.addClimateLayers(key))
+    this.syncLayer('coastlines', p.showCoastlines, () => this.addCoastlines())
+    this.syncLayer('contours', p.displayMode === 'contours', () => this.addContours())
+    this.syncLayer('rivers', p.showRivers, () => this.addRivers())
+    this.syncLayer('roads', p.showRoads, () => this.addRoutes('road'))
+    this.syncLayer('shipping', p.showShippingRoutes, () => this.addRoutes('shipping'))
+    this.syncLayer('trade', p.displayMode === 'trade', () => this.addRoutes('trade'))
+    for (const [key, opacity] of [['roads', p.displayMode === 'trade' ? 0.06 : 0.72], ['shipping', p.displayMode === 'trade' ? 0.06 : 0.68]] as const) {
+      for (const resource of this.layerResources.get(key) ?? []) {
+        if (resource.material instanceof MapRibbonMaterial)
+          resource.material.uniforms.strokeOpacity.value = opacity
+        else
+          resource.material.opacity = opacity
+      }
+    }
+    for (const key of ['showPlateBoundaries', 'showCultureBoundaries', 'showReligionBoundaries', 'showPoliticalBoundaries'] as const)
+      this.syncLayer(key, p[key], () => this.addBoundaries(key))
+    for (const key of ['showWind', 'showOceanCurrents'] as const)
+      this.syncLayer(key, p[key], () => this.addVectorFields(key))
+    this.syncLayer('graticule', p.showGraticule, () => this.addGraticule())
+    this.syncLayer('settlements', p.showSettlements, () => this.addSettlements())
+    this.syncLayer('holySites', p.showHolySites, () => this.addHolySites())
     this.overlaysDirty = false
   }
 
@@ -294,14 +324,14 @@ export class MapView {
     this.labelsDirty = false
   }
 
-  private addClimateLayers(): void {
+  private addClimateLayers(key: keyof GlobeGenParams): void {
     if (!this.mesh || !this.data)
       return
     const oceanMask = new Uint8Array(this.mesh.numRegions)
     for (let region = 0; region < this.mesh.numRegions; region++)
       oceanMask[region] = this.data.baseLandMask[region] === 0 ? 1 : 0
 
-    if (this.params.showSeaSurfaceTemperature) {
+    if (key === 'showSeaSurfaceTemperature') {
       this.addSurfaceLayer(
         this.colorizer.buildSeaSurfaceTemperatureColors(this.data),
         0.72,
@@ -309,21 +339,21 @@ export class MapView {
         oceanMask,
       )
     }
-    if (this.params.showTemperature) {
+    if (key === 'showTemperature') {
       this.addSurfaceLayer(
         this.colorizer.buildTemperatureColors(this.data),
         0.68,
         0.12,
       )
     }
-    if (this.params.showMoisture) {
+    if (key === 'showMoisture') {
       this.addSurfaceLayer(
         this.colorizer.buildMoistureColors(this.data),
         0.58,
         0.13,
       )
     }
-    if (this.params.showPrecipitation) {
+    if (key === 'showPrecipitation') {
       this.addSurfaceLayer(
         this.colorizer.buildPrecipitationColors(this.data),
         0.56,
@@ -331,7 +361,7 @@ export class MapView {
         this.data.landMask,
       )
     }
-    if (this.params.showFlux) {
+    if (key === 'showFlux') {
       this.addSurfaceLayer(
         this.colorizer.buildFluxColors(this.data),
         0.52,
@@ -424,11 +454,11 @@ export class MapView {
     )
   }
 
-  private addRoutes(): void {
+  private addRoutes(kind: 'road' | 'shipping' | 'trade'): void {
     if (!this.mesh || !this.data)
       return
     const tradeMode = this.params.displayMode === 'trade'
-    if (this.params.showRoads) {
+    if (kind === 'road') {
       const paths = this.routeSource.createNetwork(
         this.mesh,
         this.data.human.transport.routes,
@@ -444,7 +474,7 @@ export class MapView {
         ROAD_MAP_WIDTH,
       )
     }
-    if (this.params.showShippingRoutes) {
+    if (kind === 'shipping') {
       const paths = this.routeSource.createNetwork(
         this.mesh,
         this.data.human.transport.routes,
@@ -460,7 +490,7 @@ export class MapView {
         SHIPPING_ROUTE_MAP_WIDTH,
       )
     }
-    if (tradeMode) {
+    if (kind === 'trade') {
       const paths = this.routeSource.createTrade(
         this.mesh,
         this.data.human.transport.routes,
@@ -471,12 +501,12 @@ export class MapView {
     }
   }
 
-  private addBoundaries(): void {
+  private addBoundaries(key: keyof GlobeGenParams): void {
     if (!this.mesh || !this.data)
       return
-    if (this.params.showPlateBoundaries)
+    if (key === 'showPlateBoundaries')
       this.addPlateBoundaries()
-    if (this.params.showCultureBoundaries) {
+    if (key === 'showCultureBoundaries') {
       this.addHumanBoundaries(
         this.data.human.culture.regionCulture,
         0xFFF0B8,
@@ -484,7 +514,7 @@ export class MapView {
         0.42,
       )
     }
-    if (this.params.showReligionBoundaries) {
+    if (key === 'showReligionBoundaries') {
       this.addHumanBoundaries(
         this.data.human.religion.regionReligion,
         0xE8C8FF,
@@ -492,7 +522,7 @@ export class MapView {
         0.43,
       )
     }
-    if (this.params.showPoliticalBoundaries) {
+    if (key === 'showPoliticalBoundaries') {
       this.addHumanBoundaries(
         this.data.human.politics.regionPolity,
         0x25152D,
@@ -547,10 +577,10 @@ export class MapView {
     this.addProjectedLineLayer(positions, color, opacity, z, 8)
   }
 
-  private addVectorFields(): void {
+  private addVectorFields(key: keyof GlobeGenParams): void {
     if (!this.mesh || !this.data)
       return
-    if (this.params.showWind) {
+    if (key === 'showWind') {
       const geometry = this.windGeometryBuilder.create(
         this.mesh,
         this.data.climate.wind,
@@ -558,7 +588,7 @@ export class MapView {
       )
       this.addProjectedSourceGeometry(geometry, 0xD8FAFF, 0.82, 0.46, 10)
     }
-    if (this.params.showOceanCurrents) {
+    if (key === 'showOceanCurrents') {
       const oceanMask = new Uint8Array(this.mesh.numRegions)
       for (let region = 0; region < this.mesh.numRegions; region++)
         oceanMask[region] = this.data.baseLandMask[region] === 0 ? 1 : 0
@@ -878,8 +908,8 @@ export class MapView {
     this.camera.updateProjectionMatrix()
   }
 
-  update(): void {
-    this.controls.update()
+  update(): boolean {
+    const changed = this.controls.update()
     const zoomWidthScale = this.getZoomResponsiveWidthScale()
     for (const resource of this.overlayResources) {
       if (resource.zoomResponsiveWidth && resource.material instanceof MapRibbonMaterial)
@@ -906,6 +936,7 @@ export class MapView {
       this.controls.target.y += yShift
       this.camera.position.y += yShift
     }
+    return changed || Math.abs(xShift) > Number.EPSILON || Math.abs(yShift) > Number.EPSILON
   }
 
   resetCamera(): void {
@@ -962,6 +993,13 @@ export class MapView {
   private ensureSurface(): void {
     if (this.surfaceDirty || !this.surface)
       this.rebuildSurface()
+    if (this.surface && this.data) {
+      const material = this.surface.material as MeshBasicMaterial
+      material.wireframe = this.params.wireframe
+      if (this.colorsDirty)
+        this.geometryBuilder.updateColors(this.surface.geometry, this.colorizer.build(this.data, this.params.displayMode))
+      this.colorsDirty = false
+    }
   }
 
   private ensureOverlays(): void {
@@ -975,6 +1013,8 @@ export class MapView {
   }
 
   private disposeOverlays(): void {
+    this.layerCache.clear()
+    this.layerResources.clear()
     for (const resource of this.overlayResources) {
       for (const object of resource.objects)
         this.scene.remove(object)

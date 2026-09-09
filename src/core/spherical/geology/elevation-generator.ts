@@ -3,7 +3,7 @@ import type SphericalMesh from '@/core/spherical/spherical-mesh'
 import type { SphericalTectonicData } from '@/core/spherical/geology/geology-data'
 import alea from 'alea'
 import { createNoise3D } from 'simplex-noise'
-import { SEA_LEVEL } from '@/constants'
+import { physicalElevationToRender } from '@/core/spherical/geology/elevation-scale'
 import { PLATE_BOUNDARY } from '@/core/spherical/geology/plate-boundary'
 import { MinPriorityQueue } from '@/core/spherical/algorithms/priority-queue'
 import {
@@ -21,10 +21,7 @@ import {
 const TERRAIN_NOISE_OFFSET = 6203
 const BATHYMETRY_NOISE_OFFSET = 6607
 const ELEVATION_TIE_BREAK_OFFSET = 6911
-const LAND_EPSILON = 1e-4
 const MAX_CLIMATE_ELEVATION_METERS = 6000
-const MAX_LAND_ELEVATION_METERS = 9000
-const MAX_OCEAN_DEPTH_METERS = 9000
 const MOUNTAIN_HEIGHT_SCALE_METERS = 18000
 const INLAND_SCALE_ANGLE = referenceCellsToAngle(18)
 const OCEAN_BASIN_SCALE_ANGLE = referenceCellsToAngle(22)
@@ -247,7 +244,7 @@ export class SphericalElevationGenerator {
           - physicalOceanTectonicRelief[region]
           + naturalOceanTectonicRelief[region]
         : physicalElevation
-      renderElevation[region] = this.mapPhysicalElevationToRender(physicalElevation)
+      renderElevation[region] = physicalElevationToRender(physicalElevation)
       if (selection.landMask[region] === 0)
         continue
       climateElevationMeters[region] = clamp(
@@ -309,32 +306,6 @@ export class SphericalElevationGenerator {
       landMask,
       seaLevelMeters: (lowestLand + highestOcean) * 0.5,
     }
-  }
-
-  private mapPhysicalElevationToRender(physicalElevationMeters: number): number {
-    if (physicalElevationMeters >= 0) {
-      const normalized = clamp(
-        physicalElevationMeters / MAX_LAND_ELEVATION_METERS,
-        0,
-        1,
-      )
-      return clamp(
-        SEA_LEVEL + LAND_EPSILON
-        + normalized ** 0.62 * (1 - SEA_LEVEL - LAND_EPSILON),
-        SEA_LEVEL + LAND_EPSILON,
-        1,
-      )
-    }
-    const normalizedDepth = clamp(
-      -physicalElevationMeters / MAX_OCEAN_DEPTH_METERS,
-      0,
-      1,
-    )
-    return clamp(
-      SEA_LEVEL * (1 - normalizedDepth ** 0.72),
-      0,
-      SEA_LEVEL - LAND_EPSILON,
-    )
   }
 
   private getIslandRelief(type: number, age: number, noise: number): number {

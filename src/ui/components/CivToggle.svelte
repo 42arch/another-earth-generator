@@ -20,16 +20,16 @@
   }: Props = $props()
 
   const glowColors = {
-    amber: 'bg-obs-amber border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.6)]',
-    emerald: 'bg-obs-emerald border-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.6)]',
-    blue: 'bg-obs-blue border-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.6)]',
-    rose: 'bg-obs-rose border-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.6)]',
+    amber: 'bg-obs-amber border-obs-amber',
+    emerald: 'bg-obs-emerald border-obs-emerald',
+    blue: 'bg-obs-blue border-obs-blue',
+    rose: 'bg-obs-rose border-obs-rose',
   }
 </script>
 
 <div class='flex items-center justify-between py-1 text-obs-text-main'>
   <div class='flex flex-col pr-2'>
-    <span class='font-sans text-[11px] text-obs-text-muted'>
+    <span class='font-sans text-xs text-obs-text-muted'>
       {label}
     </span>
     {#if description}

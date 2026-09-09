@@ -31,7 +31,7 @@
 </script>
 
 <span
-  class='inline-flex items-center gap-1 font-heading font-medium tracking-wide border rounded-md select-none {sizeStyles[size]} {variantStyles[variant]} {className}'
+  class='inline-flex items-center gap-1 rounded-md border font-sans font-medium select-none {sizeStyles[size]} {variantStyles[variant]} {className}'
 >
   {#if children}
     {@render children()}

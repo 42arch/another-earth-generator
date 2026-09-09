@@ -12,7 +12,9 @@ export type GlobeDisplayMode
 export interface GlobeGenParams {
   seed: number
   subdivision: number
+  /** Radius used only by the renderer. */
   planetRadius: number
+  physicalRadiusMeters: number
   plateCount: number
   continentCount: number
   landCoverage: number
@@ -40,6 +42,7 @@ export interface GlobeGenParams {
   landEvaporation: number
   moistureIterations: number
   moistureRetention: number
+  precipitationCalibration: number
   basePrecipitation: number
   equatorialRainStrength: number
   subtropicalDryness: number
@@ -48,7 +51,7 @@ export interface GlobeGenParams {
   evapotranspirationStrength: number
   infiltration: number
   lakeDensity: number
-  lakeMinDepth: number
+  lakeMinDepthMeters: number
   lakeMinRegionCount: number
   lakeMinCoastDistance: number
   lakeMaxLandCoverage: number
@@ -102,6 +105,7 @@ export const DEFAULT_GLOBE_GEN_PARAMS: GlobeGenParams = {
   seed: 2501,
   subdivision: 6,
   planetRadius: 100,
+  physicalRadiusMeters: 6371000,
   plateCount: 18,
   continentCount: 5,
   landCoverage: 0.34,
@@ -129,6 +133,7 @@ export const DEFAULT_GLOBE_GEN_PARAMS: GlobeGenParams = {
   landEvaporation: 0.006,
   moistureIterations: 56,
   moistureRetention: 0.97,
+  precipitationCalibration: 1,
   basePrecipitation: 0.016,
   equatorialRainStrength: 0.052,
   subtropicalDryness: 0.55,
@@ -137,7 +142,7 @@ export const DEFAULT_GLOBE_GEN_PARAMS: GlobeGenParams = {
   evapotranspirationStrength: 0.38,
   infiltration: 0.1,
   lakeDensity: 0.6,
-  lakeMinDepth: 0.008,
+  lakeMinDepthMeters: 72,
   lakeMinRegionCount: 2,
   lakeMinCoastDistance: 2,
   lakeMaxLandCoverage: 0.025,

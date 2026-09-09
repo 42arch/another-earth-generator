@@ -19,7 +19,7 @@ const HIGH_LATITUDE_BOUNDARY = 60 * Math.PI / 180
 const MIN_VECTOR_LENGTH = 1e-8
 const MAX_LOCAL_RAIN_FRACTION = 0.65
 const MAX_OROGRAPHIC_RAIN_FRACTION = 0.72
-const OROGRAPHIC_SLOPE_SCALE = 0.18
+const OROGRAPHIC_SLOPE_SCALE = 100
 const EQUATORIAL_RAIN_WIDTH = 10 * Math.PI / 180
 const SUBTROPICAL_DRY_CENTER = 28 * Math.PI / 180
 const SUBTROPICAL_DRY_WIDTH = 9 * Math.PI / 180
@@ -79,15 +79,13 @@ export class SphericalClimateGenerator {
   private readonly biomeClassifier = new SphericalBiomeClassifier()
   private readonly oceanCurrentGenerator = new SphericalOceanCurrentGenerator()
 
-  generate(
+  prepareBackground(
     mesh: SphericalMesh,
-    elevation: Float32Array,
     climateElevationMeters: Float32Array,
     continentality: Float32Array,
-    landMask: Uint8Array,
     climateLandMask: Uint8Array,
     params: GlobeGenParams,
-  ): SphericalClimateData {
+  ) {
     const oceanWind = this.generateAnnualWind(mesh, params)
     const ocean = this.oceanCurrentGenerator.generate(
       mesh,
@@ -108,6 +106,22 @@ export class SphericalClimateGenerator {
       surfaceTemperatureAnomaly,
       params,
     )
+    return { ocean, temperature }
+  }
+
+  generate(
+    mesh: SphericalMesh,
+    physicalElevationMeters: Float32Array,
+    climateElevationMeters: Float32Array,
+    continentality: Float32Array,
+    landMask: Uint8Array,
+    climateLandMask: Uint8Array,
+    params: GlobeGenParams,
+    background?: ReturnType<SphericalClimateGenerator['prepareBackground']>,
+  ): SphericalClimateData {
+    const { ocean, temperature } = background ?? this.prepareBackground(
+      mesh, climateElevationMeters, continentality, climateLandMask, params,
+    )
     const {
       moisture,
       precipitation,
@@ -122,7 +136,7 @@ export class SphericalClimateGenerator {
       seasonalWind,
     } = this.generateSeasonalMoisture(
       mesh,
-      elevation,
+      physicalElevationMeters,
       landMask,
       temperature.monthly,
       params,
@@ -198,7 +212,7 @@ export class SphericalClimateGenerator {
 
   private generateSeasonalMoisture(
     mesh: SphericalMesh,
-    elevation: Float32Array,
+    physicalElevationMeters: Float32Array,
     landMask: Uint8Array,
     monthlyTemperature: Float32Array,
     params: GlobeGenParams,
@@ -229,7 +243,7 @@ export class SphericalClimateGenerator {
       )
       const transport = this.transportMoisture(
         mesh,
-        elevation,
+        physicalElevationMeters,
         landMask,
         seasonTemperature,
         seasonWind,
@@ -261,6 +275,7 @@ export class SphericalClimateGenerator {
       mesh,
       annualPrecipitationRate,
       landMask,
+      params.precipitationCalibration,
     )
     const annualPrecipitationMm = new Float32Array(numRegions)
     const seasonalPrecipitationMm = new Float32Array(
@@ -622,7 +637,7 @@ export class SphericalClimateGenerator {
 
   private transportMoisture(
     mesh: SphericalMesh,
-    elevation: Float32Array,
+    physicalElevationMeters: Float32Array,
     landMask: Uint8Array,
     temperature: Float32Array,
     wind: Float32Array,
@@ -632,9 +647,10 @@ export class SphericalClimateGenerator {
   ): MoistureTransportData {
     const { downwindWeight, uphillSlope } = this.buildTransportEdges(
       mesh,
-      elevation,
+      physicalElevationMeters,
       landMask,
       wind,
+      params.physicalRadiusMeters,
     )
     const iterationCount = Math.max(4, Math.floor(iterations))
     const spinUpIterations = Math.floor(iterationCount / 2)
@@ -700,8 +716,9 @@ export class SphericalClimateGenerator {
             MAX_OROGRAPHIC_RAIN_FRACTION,
           )
           const orographicRain = transportedMoisture * orographicFraction
-          rainThisStep[neighbor] += orographicRain
-          nextMoisture[neighbor] += transportedMoisture - orographicRain
+          const areaRatio = mesh.regionArea[region] / mesh.regionArea[neighbor]
+          rainThisStep[neighbor] += orographicRain * areaRatio
+          nextMoisture[neighbor] += (transportedMoisture - orographicRain) * areaRatio
         }
       }
 
@@ -728,9 +745,10 @@ export class SphericalClimateGenerator {
 
   private buildTransportEdges(
     mesh: SphericalMesh,
-    elevation: Float32Array,
+    physicalElevationMeters: Float32Array,
     landMask: Uint8Array,
     wind: Float32Array,
+    physicalRadiusMeters: number,
   ) {
     const downwindWeight = new Float32Array(mesh.neighbors.length)
     const uphillSlope = new Float32Array(mesh.neighbors.length)
@@ -776,8 +794,8 @@ export class SphericalClimateGenerator {
         weightSum += weight
 
         if (landMask[neighbor] !== 0) {
-          const rise = Math.max(0, elevation[neighbor] - elevation[region])
-          const distance = Math.acos(clamp(radialProjection, -1, 1))
+          const rise = Math.max(0, physicalElevationMeters[neighbor] - Math.max(0, physicalElevationMeters[region]))
+          const distance = Math.acos(clamp(radialProjection, -1, 1)) * physicalRadiusMeters
           uphillSlope[edge] = distance > MIN_VECTOR_LENGTH ? rise / distance : 0
         }
       }
@@ -796,6 +814,7 @@ export class SphericalClimateGenerator {
     mesh: SphericalMesh,
     precipitationRate: Float32Array,
     landMask: Uint8Array,
+    calibration: number,
   ): Float32Array {
     const landRegions: number[] = []
     let totalLandArea = 0
@@ -873,6 +892,10 @@ export class SphericalClimateGenerator {
           MAX_ANNUAL_PRECIPITATION_MM,
         )
       }
+      // Fixed conversion preserves source-strength changes when calibration is zero.
+      const absoluteMillimetres = Math.min(MAX_ANNUAL_PRECIPITATION_MM, rate * 70000)
+      const strength = clamp(calibration, 0, 1)
+      annualMillimetres = absoluteMillimetres * (1 - strength) + annualMillimetres * strength
       precipitation[region] = clamp(
         annualMillimetres / MAX_ANNUAL_PRECIPITATION_MM,
         0,

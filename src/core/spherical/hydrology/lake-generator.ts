@@ -1,19 +1,19 @@
 import type { GlobeGenParams } from '@/core/spherical/config'
 import type SphericalMesh from '@/core/spherical/spherical-mesh'
 import type {
-  LakeIceStateCode,
   SphericalLakeData,
 } from '@/core/spherical/hydrology/hydrology-data'
 import type { SphericalClimateData } from '@/core/spherical/climate/climate-data'
 import { MinPriorityQueue } from '@/core/spherical/algorithms/priority-queue'
+import { lakeThermalState } from '@/core/spherical/hydrology/lake-thermal-state'
 import { clamp } from '@/core/spherical/geometry/spherical-math'
 import {
   LAKE_ICE_STATE,
 } from '@/core/spherical/hydrology/hydrology-data'
-import { CLIMATE_SEASON_COUNT } from '@/core/spherical/climate/climate-data'
+import { CLIMATE_MONTH_COUNT, CLIMATE_SEASON_COUNT } from '@/core/spherical/climate/climate-data'
 
-const FLOOD_EPSILON = 1e-5
-const MIN_BASIN_DEPTH = 1e-4
+const FLOOD_EPSILON = 0.01
+const MIN_BASIN_DEPTH = 0.1
 // Climate precipitation is normalized to an annual 0-1 scale, while the
 // moisture transport evaporation control is a per-iteration source term.
 const LAKE_EVAPORATION_NORMALIZATION = 12.5
@@ -100,7 +100,7 @@ export class SphericalLakeGenerator {
     const surfaceElevation = new Float32Array(selected.length)
     const bottomElevation = new Float32Array(selected.length)
     const area = new Float32Array(selected.length)
-    const volume = new Float32Array(selected.length)
+    const volume = new Float64Array(selected.length)
     const outletRegion = new Int32Array(selected.length).fill(-1)
     const outletTarget = new Int32Array(selected.length).fill(-1)
     const lakeElevation = new Float32Array(elevation)
@@ -109,7 +109,7 @@ export class SphericalLakeGenerator {
       surfaceElevation[lake] = candidate.surfaceElevation
       bottomElevation[lake] = candidate.bottomElevation
       area[lake] = candidate.area
-      volume[lake] = candidate.volume
+      volume[lake] = candidate.volume * params.physicalRadiusMeters ** 2
       outletRegion[lake] = candidate.outletRegion
       outletTarget[lake] = candidate.outletTarget
       for (const region of candidate.regions)
@@ -153,8 +153,7 @@ export class SphericalLakeGenerator {
     baseLandMask: Uint8Array,
     topographic: SphericalLakeResult,
     inflow: Float32Array,
-    temperature: Float32Array,
-    warmestMonthTemperature: Float32Array,
+    climate: SphericalClimateData,
     params: GlobeGenParams,
   ): SphericalLakeResult {
     const fullLakes = topographic.lakes
@@ -196,32 +195,22 @@ export class SphericalLakeGenerator {
         continue
 
       let weightedTemperature = 0
-      let weightedWarmestMonthTemperature = 0
+      const monthlyTemperature = new Float64Array(CLIMATE_MONTH_COUNT)
       let temperatureArea = 0
       for (const region of regions) {
         const regionArea = mesh.regionArea[region]
-        weightedTemperature += temperature[region] * regionArea
-        weightedWarmestMonthTemperature += warmestMonthTemperature[region]
-          * regionArea
+        weightedTemperature += climate.temperature[region] * regionArea
+        for (let month = 0; month < CLIMATE_MONTH_COUNT; month++)
+          monthlyTemperature[month] += climate.monthlyTemperature[month * mesh.numRegions + region] * regionArea
         temperatureArea += regionArea
       }
       const meanTemperature = temperatureArea > 0
         ? weightedTemperature / temperatureArea
         : 0
-      const meanWarmestMonthTemperature = temperatureArea > 0
-        ? weightedWarmestMonthTemperature / temperatureArea
-        : 0
-      const iceState: LakeIceStateCode = meanWarmestMonthTemperature < 0
-        ? LAKE_ICE_STATE.Subglacial
-        : meanWarmestMonthTemperature < 4
-          ? LAKE_ICE_STATE.SeasonallyFrozen
-          : LAKE_ICE_STATE.OpenWater
+      for (let month = 0; month < CLIMATE_MONTH_COUNT; month++)
+        monthlyTemperature[month] /= Math.max(temperatureArea, Number.EPSILON)
+      const { iceState, openWaterFraction } = lakeThermalState(monthlyTemperature)
       const warmFactor = clamp((meanTemperature + 5) / 35, 0, 1)
-      const openWaterFraction = iceState === LAKE_ICE_STATE.Subglacial
-        ? 0
-        : iceState === LAKE_ICE_STATE.SeasonallyFrozen
-          ? clamp(meanWarmestMonthTemperature / 4, 0, 1)
-          : 1
       const evaporationRate = Math.max(1e-6, params.oceanEvaporation)
         * (0.35 + warmFactor * 0.65)
         * evaporationStrength
@@ -277,7 +266,7 @@ export class SphericalLakeGenerator {
       surfaces.push(surface)
       bottoms.push(bottom)
       areas.push(area)
-      volumes.push(volume)
+      volumes.push(volume * params.physicalRadiusMeters ** 2)
       outlets.push(isOverflowing ? fullLakes.outletRegion[oldLakeId] : -1)
       outletTargets.push(isOverflowing ? fullLakes.outletTarget[oldLakeId] : -1)
       inflows.push(lakeInflow)
@@ -302,7 +291,7 @@ export class SphericalLakeGenerator {
         surfaceElevation: new Float32Array(surfaces),
         bottomElevation: new Float32Array(bottoms),
         area: new Float32Array(areas),
-        volume: new Float32Array(volumes),
+        volume: new Float64Array(volumes),
         outletRegion: new Int32Array(outlets),
         outletTarget: new Int32Array(outletTargets),
         inflow: new Float32Array(inflows),
@@ -524,7 +513,7 @@ export class SphericalLakeGenerator {
     coastDistance: Int16Array,
     params: GlobeGenParams,
   ): LakeCandidate[] {
-    const minimumDepth = Math.max(MIN_BASIN_DEPTH, params.lakeMinDepth)
+    const minimumDepth = Math.max(MIN_BASIN_DEPTH, params.lakeMinDepthMeters)
     const basinEdgeDepth = Math.max(MIN_BASIN_DEPTH, minimumDepth * 0.12)
     const minimumRegionCount = Math.max(1, Math.floor(params.lakeMinRegionCount))
     const minimumCoastDistance = Math.max(0, Math.floor(params.lakeMinCoastDistance))
@@ -586,7 +575,7 @@ export class SphericalLakeGenerator {
         continue
       }
 
-      const surfaceElevation = clamp(outletCost, bottomElevation, 1)
+      const surfaceElevation = Math.max(outletCost, bottomElevation)
       let volume = 0
       for (const region of regions) {
         volume += mesh.regionArea[region]

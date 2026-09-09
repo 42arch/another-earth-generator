@@ -46,7 +46,7 @@
 
 <div class='flex flex-col gap-1 py-1 text-obs-text-main {className}'>
   {#if label}
-    <span class='font-sans text-[11px] text-obs-text-muted'>
+    <span class='font-sans text-xs text-obs-text-muted'>
       {label}
     </span>
   {/if}
@@ -59,7 +59,7 @@
     items={options.map(opt => ({ value: String(opt.value), label: opt.label }))}
   >
     <Select.Trigger
-      class='flex items-center justify-between w-full bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.1] hover:border-white/[0.2] rounded-md px-2.5 py-1.5 font-sans text-xs text-obs-text-main focus:outline-hidden focus:border-obs-amber/60 focus:ring-1 focus:ring-obs-amber/30 cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none group'
+      class='flex items-center justify-between w-full bg-black/15 hover:bg-white/[0.07] border border-white/[0.12] hover:border-white/[0.24] rounded-md px-2.5 py-2 font-sans text-xs text-obs-text-main focus:outline-hidden focus:border-obs-amber focus:ring-1 focus:ring-obs-amber cursor-pointer transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none group'
     >
       <span class='truncate {selectedOption ? "text-obs-text-main font-medium" : "text-obs-text-dim"}'>
         {selectedOption ? selectedOption.label : placeholder}
@@ -71,7 +71,7 @@
 
     <Select.Portal>
       <Select.Content
-        class='z-50 min-w-[var(--bits-select-anchor-width)] max-h-60 overflow-y-auto rounded-lg border border-white/[0.12] bg-[#08120d]/95 p-1 text-obs-text-main shadow-2xl backdrop-blur-xl outline-hidden select-none'
+        class='z-50 min-w-[var(--bits-select-anchor-width)] max-h-60 overflow-y-auto rounded-lg border border-white/[0.14] bg-[#20252b] p-1 text-obs-text-main shadow-xl outline-hidden select-none'
         sideOffset={4}
       >
         <Select.Viewport class='p-0.5 flex flex-col gap-0.5'>

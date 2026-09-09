@@ -1,9 +1,11 @@
+import type { SelectedRegionInfo, WorldSummaryInfo } from '@/core/world/world-view-data'
 import type { GlobeGenParams } from '@/core/spherical/config'
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
-import type SphericalMesh from '@/core/spherical/spherical-mesh'
 import type { SphericalWorldData } from '@/core/spherical/spherical-world-data'
+import type { GenerationStage } from '@/core/world/generation-plan'
 import { GlobeRenderer } from '@/core/rendering/globe/renderer'
+import SphericalMesh from '@/core/spherical/spherical-mesh'
 import { REGION_FEATURE } from '@/core/spherical/geography/region-feature'
 import { cloneGlobeGenParams, DEFAULT_GLOBE_GEN_PARAMS } from '@/core/spherical/config'
 import {
@@ -13,15 +15,36 @@ import {
   TRADE_GOOD_COUNT,
   TRADE_GOOD_NAME,
 } from '@/core/spherical/spherical-world-data'
-import { SphericalWorldGenerator } from '@/core/spherical/spherical-world-generator'
+import { GenerationClient } from '@/core/world/generation-client'
+
+const GENERATION_MESSAGES: Record<string, string> = {
+  mesh: '正在构建球面网格…',
+  tectonics: '正在推演板块与大陆…',
+  elevation: '正在生成高程与地貌…',
+  lakes: '正在求解湖泊水量平衡…',
+  climate: '正在计算季节气候与降水…',
+  rivers: '正在计算径流与河网…',
+  human: '正在生成聚落…',
+  transport: '正在规划道路与航线…',
+  trade: '正在计算贸易网络…',
+  cultures: '正在生成文化分布…',
+  polities: '正在生成国家与疆界…',
+  religions: '正在生成信仰与圣地…',
+  naming: '正在生成语言与地名…',
+  complete: '正在传输世界数据…',
+}
 
 export interface WorldEngineCallbacks {
-  onRegionSelected?: (info: any) => void
-  onWorldSummary?: (summary: any) => void
+  onRegionSelected?: (info: SelectedRegionInfo | null) => void
+  onWorldSummary?: (summary: WorldSummaryInfo) => void
 }
 
 export default class WorldEngine {
-  private readonly generator = new SphericalWorldGenerator()
+  private readonly generator = new GenerationClient()
+  private selectedRegion = -1
+  private generationRequest = 0
+  private destroyed = false
+  lastGenerationTimings: Record<string, number> = {}
   private readonly renderer: GlobeRenderer
   private mesh: SphericalMesh | null = null
   private data: SphericalWorldData | null = null
@@ -43,115 +66,82 @@ export default class WorldEngine {
     this.callbacks = callbacks
   }
 
-  generateWorld(): void {
-    const generated = this.generator.generate(this.params)
-    this.mesh = generated.mesh
-    this.data = generated.data
-    this.renderer.setWorld(generated.mesh, generated.data, this.params)
-    // 首次生成也走一遍与控制面板相同的外观同步路径，
-    // 确保默认 terrain、海岸线、河流等显示开关立即生效。
-    this.renderer.updateAppearance(this.params)
+  async regenerate(stage: GenerationStage, progress: (message: string) => void = () => {}): Promise<void> {
+    const request = ++this.generationRequest
+    const result = await this.generator.generate(this.params, stage, phase => {
+      progress(GENERATION_MESSAGES[phase] ?? '正在更新世界…')
+    })
+    if (!result || this.destroyed || request !== this.generationRequest)
+      return
+    const started = performance.now()
+    const meshChanged = !!result.mesh
+    if (result.mesh)
+      this.mesh = new SphericalMesh(result.mesh, result.mesh.voronoi)
+    if (!this.mesh)
+      throw new Error('生成结果缺少球面网格，请重新生成。')
+    this.data = result.data
+    progress('正在更新地图图层…')
+    if (meshChanged) {
+      this.selectedRegion = -1
+      this.callbacks?.onRegionSelected?.(null)
+      this.renderer.setWorld(this.mesh, this.data, this.params)
+    }
+    else {
+      this.renderer.updateWorldData(this.data, this.params, result.stage ?? 'world')
+      if (this.selectedRegion >= 0)
+        this.handleRegionSelected(this.selectedRegion)
+    }
+    this.lastGenerationTimings = { ...result.timings, presentation: performance.now() - started }
     this.showWorldSummary()
   }
 
-  regenerateElevation(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateElevation(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  cancelGeneration(): void {
+    this.generationRequest++
+    this.generator.cancel()
   }
 
-  regenerateRivers(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateRivers(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  generateWorld(): Promise<void> {
+    return this.regenerate('world')
   }
 
-  regenerateHuman(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateHuman(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateElevation(): Promise<void> {
+    return this.regenerate('elevation')
   }
 
-  regeneratePolities(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regeneratePolities(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateRivers(): Promise<void> {
+    return this.regenerate('rivers')
   }
 
-  regenerateCultures(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateCultures(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateHuman(): Promise<void> {
+    return this.regenerate('human')
   }
 
-  regenerateReligions(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateReligions(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regeneratePolities(): Promise<void> {
+    return this.regenerate('polities')
   }
 
-  regenerateTransport(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateTransport(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateCultures(): Promise<void> {
+    return this.regenerate('cultures')
   }
 
-  regenerateTrade(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateTrade(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateReligions(): Promise<void> {
+    return this.regenerate('religions')
   }
 
-  regenerateLakes(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateLakes(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateTransport(): Promise<void> {
+    return this.regenerate('transport')
   }
 
-  regenerateClimate(): void {
-    if (!this.mesh || !this.data) {
-      this.generateWorld()
-      return
-    }
-    this.generator.regenerateClimate(this.mesh, this.data, this.params)
-    this.renderer.updateAppearance(this.params)
-    this.showWorldSummary()
+  regenerateTrade(): Promise<void> {
+    return this.regenerate('trade')
+  }
+
+  regenerateLakes(): Promise<void> {
+    return this.regenerate('hydrology')
+  }
+
+  regenerateClimate(): Promise<void> {
+    return this.regenerate('hydrology')
   }
 
   updateParams(params: GlobeGenParams): void {
@@ -175,6 +165,11 @@ export default class WorldEngine {
   }
 
   destroy(): void {
+    if (this.destroyed)
+      return
+    this.destroyed = true
+    this.generationRequest++
+    this.generator.destroy()
     this.renderer.destroy()
     this.mesh = null
     this.data = null
@@ -234,6 +229,9 @@ export default class WorldEngine {
   private handleRegionSelected = (region: number) => {
     if (!this.mesh || !this.data)
       return
+    if (region < 0 || region >= this.mesh.numRegions)
+      return
+    this.selectedRegion = region
     this.renderer.selectRegion(region)
     const feature = this.data.regionFeature[region] === REGION_FEATURE.Ocean
       ? '海洋'
@@ -280,7 +278,7 @@ export default class WorldEngine {
           this.data.lakes.isEndorheic[lakeId] !== 0 ? '内流湖' : '外流湖',
           this.data.lakes.isSeasonal[lakeId] !== 0 ? '季节性湖泊' : '常年湖泊',
           `湖泊面积占陆地 ${(this.data.lakes.area[lakeId] / Math.max(this.data.landArea, Number.EPSILON) * 100).toFixed(2)}%`,
-          `湖泊深度 ${(this.data.lakes.surfaceElevation[lakeId] - this.data.lakes.bottomElevation[lakeId]).toFixed(3)}`,
+          `湖泊深度 ${(this.data.lakes.surfaceElevation[lakeId] - this.data.lakes.bottomElevation[lakeId]).toFixed(1)}m`,
           `湖泊填充率 ${(this.data.lakes.fillRatio[lakeId] * 100).toFixed(0)}%`,
           `枯水季填充率 ${(minimumSeasonalLakeFill * 100).toFixed(0)}%`,
           `入流 / 蒸发 ${this.data.lakes.evaporation[lakeId] > Number.EPSILON
@@ -472,7 +470,7 @@ export default class WorldEngine {
             isEndorheic: this.data.lakes.isEndorheic[lakeId] !== 0,
             isSeasonal: this.data.lakes.isSeasonal[lakeId] !== 0,
             areaShare: this.data.lakes.area[lakeId] / Math.max(this.data.landArea, Number.EPSILON),
-            depth: this.data.lakes.surfaceElevation[lakeId] - this.data.lakes.bottomElevation[lakeId],
+            depthMeters: this.data.lakes.surfaceElevation[lakeId] - this.data.lakes.bottomElevation[lakeId],
             fillRatio: this.data.lakes.fillRatio[lakeId],
             salinity: this.data.lakes.salinity[lakeId],
             inflowEvapRatio: lakeBalanceRatio,

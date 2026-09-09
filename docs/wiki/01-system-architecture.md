@@ -2,6 +2,8 @@
 
 本章系统阐述奇幻地图生成器的总体架构哲学、全要素生成流水线的生命周期、底层高性能数据结构设计以及增量式交互重算机制。
 
+当前由 `GenerationClient` 调度 Worker，`GenerationRuntime` 根据上次成功参数计算依赖，主线程恢复快照并更新视图。水文反馈最多迭代 4 轮。请求合并、取消和缓存失效规则见[实现记录](../generation-optimization.md)。
+
 ---
 
 ## 1. 架构哲学：球面作为唯一权威真源
@@ -29,7 +31,7 @@ $$\text{Elevation, Climate, Hydrology}: S^2 \to \mathbb{R}^n$$
                ▼               ▼
    ┌───────────────────────┐ ┌─────────────────────────┐
    │    3D Globe 渲染器    │ │  2D 投影转换与地图导出  │
-   │ (WebGL / Pixi.js v8)  │ │ (Equirectangular / etc.)│
+   │ (Three.js / WebGL)   │ │ (Web Mercator / Equal Earth)│
    └───────────────────────┘ └─────────────────────────┘
 ```
 

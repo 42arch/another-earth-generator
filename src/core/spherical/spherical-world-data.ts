@@ -1,3 +1,4 @@
+import type { HydrologyDiagnostics } from '@/core/spherical/hydrology/coupling-data'
 import type { SphericalBiomeCode, SphericalClimateData } from '@/core/spherical/climate/climate-data'
 import type { SphericalTectonicData } from '@/core/spherical/geology/geology-data'
 import type { RegionFeatureCode } from '@/core/spherical/geography/region-feature'
@@ -14,6 +15,9 @@ export * from '@/core/spherical/society/society-data'
  * generators; this file intentionally owns only cross-domain composition.
  */
 export interface SphericalWorldData {
+  hydrologyDiagnostics: HydrologyDiagnostics
+  /** Physical bedrock with lake cells raised to water level, in metres. */
+  hydrologyElevationMeters: Float32Array
   baseElevation: Float32Array
   elevation: Float32Array
   /** Authoritative bedrock elevation relative to sea level, in metres. */

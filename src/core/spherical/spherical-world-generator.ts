@@ -1,3 +1,4 @@
+import type { HydrologyDiagnostics } from '@/core/spherical/hydrology/coupling-data'
 import type { GlobeGenParams } from '@/core/spherical/config'
 import type { SphericalClimateData } from '@/core/spherical/climate/climate-data'
 import type { SphericalLakeData, SphericalRiverData } from '@/core/spherical/hydrology/hydrology-data'
@@ -6,9 +7,11 @@ import type { SphericalWorldData } from '@/core/spherical/spherical-world-data'
 import { SphericalClimateGenerator } from '@/core/spherical/climate/climate-generator'
 import { SphericalFeatureGenerator } from '@/core/spherical/geography/feature-generator'
 import { SphericalElevationGenerator } from '@/core/spherical/geology/elevation-generator'
+import { physicalElevationToRender } from '@/core/spherical/geology/elevation-scale'
 import { SphericalLandmassGenerator } from '@/core/spherical/geology/landmass-generator'
 import { SphericalPlateGenerator } from '@/core/spherical/geology/plate-generator'
 import { SphericalLakeGenerator } from '@/core/spherical/hydrology/lake-generator'
+import { HYDROLOGY_INFLOW_TOLERANCE, MAX_HYDROLOGY_ITERATIONS } from '@/core/spherical/hydrology/coupling-data'
 import { SphericalRiverGenerator } from '@/core/spherical/hydrology/river-generator'
 import { SphericalCultureGenerator } from '@/core/spherical/society/culture-generator'
 import { SphericalHumanGenerator } from '@/core/spherical/society/human-generator'
@@ -27,6 +30,8 @@ export interface GeneratedSphericalWorld {
 }
 
 interface SphericalHydrologyResult {
+  hydrologyElevationMeters: Float32Array
+  diagnostics: HydrologyDiagnostics
   elevation: Float32Array
   landMask: Uint8Array
   lakes: SphericalLakeData
@@ -38,6 +43,8 @@ interface SphericalHydrologyResult {
 }
 
 export class SphericalWorldGenerator {
+  onProgress?: (stage: string) => void
+
   private readonly meshBuilder = new IcosphereBuilder()
   private readonly climateGenerator = new SphericalClimateGenerator()
   private readonly cultureGenerator = new SphericalCultureGenerator()
@@ -56,9 +63,11 @@ export class SphericalWorldGenerator {
   private readonly transportGenerator = new SphericalTransportGenerator()
 
   generate(params: GlobeGenParams): GeneratedSphericalWorld {
+    this.onProgress?.('mesh')
     const mesh = new SphericalMesh(
       this.meshBuilder.build(params.subdivision, params.seed),
     )
+    this.onProgress?.('tectonics')
     const tectonics = this.plateGenerator.generate(mesh, params)
     const provisionalLandmasses = this.landmassGenerator.generate(
       mesh,
@@ -78,6 +87,7 @@ export class SphericalWorldGenerator {
       provisionalLandmasses.regionIslandAge,
       params.seed,
     )
+    this.onProgress?.('elevation')
     const elevationData = this.elevationGenerator.generate(
       mesh,
       tectonics,
@@ -102,6 +112,7 @@ export class SphericalWorldGenerator {
     const hydrology = this.generateHydrology(
       mesh,
       baseElevation,
+      elevationData.physicalElevationMeters,
       elevationData.climateElevationMeters,
       elevationData.continentality,
       landmasses.landMask,
@@ -116,6 +127,8 @@ export class SphericalWorldGenerator {
     const data: SphericalWorldData = {
       baseElevation: new Float32Array(baseElevation),
       elevation: hydrology.elevation,
+      hydrologyElevationMeters: hydrology.hydrologyElevationMeters,
+      hydrologyDiagnostics: hydrology.diagnostics,
       physicalElevationMeters: elevationData.physicalElevationMeters,
       naturalBathymetryMeters: elevationData.naturalBathymetryMeters,
       seaLevelMeters: elevationData.seaLevelMeters,
@@ -145,6 +158,8 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('tectonics')
+    data.tectonics = this.plateGenerator.generate(mesh, params)
     const provisionalLandmasses = this.landmassGenerator.generate(
       mesh,
       data.tectonics,
@@ -163,6 +178,7 @@ export class SphericalWorldGenerator {
       provisionalLandmasses.regionIslandAge,
       params.seed,
     )
+    this.onProgress?.('elevation')
     const elevationData = this.elevationGenerator.generate(
       mesh,
       data.tectonics,
@@ -205,11 +221,14 @@ export class SphericalWorldGenerator {
     const hydrology = this.generateHydrology(
       mesh,
       data.baseElevation,
+      data.physicalElevationMeters,
       data.climateElevationMeters,
       data.continentality,
       data.baseLandMask,
       params,
     )
+    data.hydrologyElevationMeters = hydrology.hydrologyElevationMeters
+    data.hydrologyDiagnostics = hydrology.diagnostics
     data.elevation = hydrology.elevation
     data.landMask = hydrology.landMask
     data.lakes = hydrology.lakes
@@ -236,7 +255,7 @@ export class SphericalWorldGenerator {
   ): void {
     data.rivers = this.riverGenerator.generate(
       mesh,
-      data.elevation,
+      data.hydrologyElevationMeters,
       data.landMask,
       data.climate.runoff,
       data.climate.seasonalRunoff,
@@ -268,6 +287,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('human')
     data.human = this.humanGenerator.generate(mesh, {
       elevation: data.elevation,
       climateElevationMeters: data.climateElevationMeters,
@@ -284,6 +304,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('transport')
     data.human.maritimeContacts = this.maritimeContactGenerator.generate(mesh, {
       landMask: data.landMask,
       regionFeature: data.regionFeature,
@@ -307,6 +328,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('trade')
     data.human.trade = this.tradeGenerator.generate(mesh, {
       elevation: data.elevation,
       climateElevationMeters: data.climateElevationMeters,
@@ -325,6 +347,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('cultures')
     data.human.culture = this.cultureGenerator.generate(mesh, {
       elevation: data.elevation,
       climateElevationMeters: data.climateElevationMeters,
@@ -341,6 +364,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('polities')
     data.human.politics = this.polityGenerator.generate(mesh, {
       elevation: data.elevation,
       landMask: data.landMask,
@@ -357,6 +381,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('religions')
     data.human.religion = this.religionGenerator.generate(mesh, {
       elevation: data.elevation,
       climateElevationMeters: data.climateElevationMeters,
@@ -373,6 +398,7 @@ export class SphericalWorldGenerator {
     data: SphericalWorldData,
     params: GlobeGenParams,
   ): void {
+    this.onProgress?.('naming')
     data.human.naming = this.namingGenerator.generate(mesh, {
       climateElevationMeters: data.climateElevationMeters,
       rivers: data.rivers,
@@ -383,88 +409,103 @@ export class SphericalWorldGenerator {
   private generateHydrology(
     mesh: SphericalMesh,
     baseElevation: Float32Array,
+    physicalElevationMeters: Float32Array,
     climateElevationMeters: Float32Array,
     continentality: Float32Array,
     baseLandMask: Uint8Array,
     params: GlobeGenParams,
   ): SphericalHydrologyResult {
-    const topographic = this.lakeGenerator.generate(
-      mesh,
-      baseElevation,
-      baseLandMask,
-      params,
+    this.onProgress?.('lakes')
+    const topographic = this.lakeGenerator.generate(mesh, physicalElevationMeters, baseLandMask, params)
+    this.onProgress?.('climate')
+    // Ocean circulation and temperature do not depend on the changing lake mask.
+    const background = this.climateGenerator.prepareBackground(
+      mesh, climateElevationMeters, continentality, baseLandMask, params,
     )
-    const provisionalClimate = this.climateGenerator.generate(
-      mesh,
-      topographic.elevation,
-      climateElevationMeters,
-      continentality,
-      topographic.landMask,
-      baseLandMask,
-      params,
-    )
-    const provisionalRivers = this.riverGenerator.generate(
-      mesh,
-      topographic.elevation,
-      topographic.landMask,
-      provisionalClimate.runoff,
-      provisionalClimate.seasonalRunoff,
-      params,
-      topographic.lakes,
-    )
-    const provisionalInflow = this.riverGenerator.calculateLakeInflow(
-      topographic.landMask,
-      topographic.lakes,
-      provisionalRivers,
-    )
-    const balanced = this.lakeGenerator.balanceWater(
-      mesh,
-      baseElevation,
-      baseLandMask,
-      topographic,
-      provisionalInflow,
-      provisionalClimate.temperature,
-      provisionalClimate.warmestMonthTemperature,
-      params,
-    )
+    let balanced = topographic
+    const calculateClimate = () => {
+      this.onProgress?.('climate')
+      return this.climateGenerator.generate(
+        mesh, balanced.elevation, climateElevationMeters, continentality,
+        balanced.landMask, baseLandMask, params, background,
+      )
+    }
+    let climate = calculateClimate()
+    const calculateRivers = () => {
+      this.onProgress?.('rivers')
+      return this.riverGenerator.generate(
+        mesh, balanced.elevation, balanced.landMask,
+        climate.runoff, climate.seasonalRunoff, params, balanced.lakes,
+      )
+    }
+    let rivers = calculateRivers()
+    let estimate = this.riverGenerator.calculateLakeInflow(balanced.landMask, balanced.lakes, rivers)
+    const diagnostics: HydrologyDiagnostics = {
+      iterations: 0, converged: estimate.length === 0,
+      maximumRelativeInflowChange: 0, changedLakeRegions: 0,
+    }
+    for (let iteration = 0; iteration < MAX_HYDROLOGY_ITERATIONS && estimate.length > 0; iteration++) {
+      const previousMask = balanced.lakes.lakeMask
+      this.onProgress?.('lakes')
+      balanced = this.lakeGenerator.balanceWater(
+        mesh, physicalElevationMeters, baseLandMask, topographic, estimate, climate, params,
+      )
+      climate = calculateClimate()
+      rivers = calculateRivers()
+      const actual = this.riverGenerator.calculateLakeInflow(balanced.landMask, balanced.lakes, rivers)
+      // Keep original basin IDs while L2 shrinks/removes and renumbers active lakes.
+      const activeToBasin = new Int32Array(balanced.lakes.area.length).fill(-1)
+      let changedRegions = 0
+      for (let region = 0; region < mesh.numRegions; region++) {
+        const lake = balanced.lakes.regionLakeId[region]
+        if (lake >= 0)
+          activeToBasin[lake] = topographic.lakes.regionLakeId[region]
+        changedRegions += previousMask[region] !== balanced.lakes.lakeMask[region] ? 1 : 0
+      }
+      // Dry basins can recover: evaluate their potential catchment under final rainfall.
+      const next = balanced.lakes.area.length === estimate.length
+        ? new Float32Array(estimate)
+        : this.riverGenerator.calculateLakeInflow(
+            topographic.landMask, topographic.lakes,
+            this.riverGenerator.generate(mesh, topographic.elevation, topographic.landMask,
+              climate.runoff, climate.seasonalRunoff, params, topographic.lakes),
+          )
+      for (let lake = 0; lake < actual.length; lake++) {
+        const basin = activeToBasin[lake]
+        if (basin >= 0)
+          next[basin] = actual[lake]
+      }
+      let residual = 0
+      for (let basin = 0; basin < estimate.length; basin++) {
+        residual = Math.max(residual, Math.abs(next[basin] - estimate[basin])
+          / Math.max(1e-6, next[basin], estimate[basin]))
+      }
+      diagnostics.iterations = iteration + 1
+      diagnostics.maximumRelativeInflowChange = residual
+      diagnostics.changedLakeRegions = changedRegions
+      diagnostics.converged = residual <= HYDROLOGY_INFLOW_TOLERANCE && changedRegions === 0
+      balanced.lakes.inflow = actual
+      if (diagnostics.converged)
+        break
+      // Damping limits wet/dry oscillations at discrete lake shores.
+      for (let basin = 0; basin < estimate.length; basin++)
+        next[basin] = (next[basin] + estimate[basin]) * 0.5
+      estimate = next
+    }
+    balanced.lakes.inflow = this.riverGenerator.calculateLakeInflow(balanced.landMask, balanced.lakes, rivers)
+    const seasonalInflow = this.riverGenerator.calculateSeasonalLakeInflow(balanced.landMask, balanced.lakes, rivers)
+    this.lakeGenerator.updateSeasonalWaterBalance(mesh, balanced.lakes, climate, seasonalInflow, params)
     const features = this.featureGenerator.generate(mesh, balanced.landMask)
-    const climate = this.climateGenerator.generate(
-      mesh,
-      balanced.elevation,
-      climateElevationMeters,
-      continentality,
-      balanced.landMask,
-      baseLandMask,
-      params,
-    )
-    const rivers = this.riverGenerator.generate(
-      mesh,
-      balanced.elevation,
-      balanced.landMask,
-      climate.runoff,
-      climate.seasonalRunoff,
-      params,
-      balanced.lakes,
-    )
-    balanced.lakes.inflow = this.riverGenerator.calculateLakeInflow(
-      balanced.landMask,
-      balanced.lakes,
-      rivers,
-    )
-    const seasonalInflow = this.riverGenerator.calculateSeasonalLakeInflow(
-      balanced.landMask,
-      balanced.lakes,
-      rivers,
-    )
-    this.lakeGenerator.updateSeasonalWaterBalance(
-      mesh,
-      balanced.lakes,
-      climate,
-      seasonalInflow,
-      params,
-    )
+    // Only the presentation field uses the non-linear elevation mapping.
+    const elevation = new Float32Array(baseElevation)
+    for (let region = 0; region < mesh.numRegions; region++) {
+      if (balanced.lakes.lakeMask[region])
+        elevation[region] = physicalElevationToRender(balanced.elevation[region])
+    }
     return {
-      elevation: balanced.elevation,
+      elevation,
+      hydrologyElevationMeters: balanced.elevation,
+      diagnostics,
       landMask: balanced.landMask,
       lakes: balanced.lakes,
       climate,
@@ -481,6 +522,7 @@ export class SphericalWorldGenerator {
     hydrology: SphericalHydrologyResult,
     params: GlobeGenParams,
   ): SphericalHumanData {
+    this.onProgress?.('human')
     return this.humanGenerator.generate(mesh, {
       elevation: hydrology.elevation,
       climateElevationMeters,

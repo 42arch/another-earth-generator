@@ -1,6 +1,6 @@
 # 第 8 章 · 封闭湖盆、水水平衡与湖泊演化
 
-湖泊（Lakes）是陆地水循环的关键节点与水下地貌。本章剖析奇幻地图生成器如何通过 **Priority-Flood 填洼算法** 与 **两阶段水文迭代模型（Two-Pass Hydrological Coupling）**，实现从封闭地形洼地提取、流域入流与蒸发水平衡收支，到外流/内流湖判定、盐度浓缩与季节性结冰的完整物理模拟。
+湖泊（Lakes）是陆地水循环的关键节点与水下地貌。本章描述 **Priority-Flood 填洼算法** 与 **L1 地形湖盆、L2 有界水文反馈**。当前 L2 最多迭代 4 轮，并记录收敛诊断；这是过程生成近似模型，尚未求解带真实时间步长的湖泊蓄水演化。具体实现与单位见[实现记录](../generation-optimization.md)。
 
 ---
 
@@ -46,7 +46,9 @@ $$\text{DepressionDepth}(r) = \operatorname{filledElevation}(r) - \operatorname{
 
 - 若 $\text{DepressionDepth}(r) > 0$，则该区域位于一个封闭集水洼地内部；
 - 候选湖盆的 **潜在库容（Volume Capacity）**：
-  $$V_{\text{potential}} = \sum_{r \in \text{Basin}} \text{RegionArea}(r) \cdot \text{DepressionDepth}(r)$$
+  $$V_{\text{potential}} = R_{\text{physical}}^2 \sum_{r \in \text{Basin}} \text{RegionArea}(r) \cdot \text{DepressionDepth}(r)$$
+
+其中高程和深度以米表示，`RegionArea` 是单位球面面积，物理半径以米表示，库容单位为立方米。
 
 ---
 
@@ -65,18 +67,20 @@ flowchart LR
 ```
 
 ### 3.1 湖面开放蒸发量计算
-对于湖泊 $L$，其年均蒸发量取决于所在纬度的湖面温度与干燥度：
+对于湖泊 $L$，当前年蒸发模型使用湖盆平均温度、开放水面月份比例和经验强度：
 
-$$E_{\text{lake}}(L) = \sum_{r \in L} \text{RegionArea}(r) \cdot \operatorname{clamp}\left(\frac{T_{\text{warmest}}(r) + 2.0}{18.0}, \, 0.05, \, 2.5\right) \cdot \text{EvapFactor}$$
+$$E_{\text{lake}} = A_L \cdot \max(10^{-6}, E_{\text{ocean}}) \cdot (0.35 + 0.65w) \cdot k_{\text{lake}} \cdot 12.5 \cdot f_{\text{open}}$$
+
+其中 $w=\operatorname{clamp}((\bar T+5)/35,0,1)$，$k_{\text{lake}}$ 为湖泊蒸发强度。这里的蒸发与入流是同一模型尺度的量，尚非真实体积通量。
 
 ### 3.2 湖泊充盈率（Fill Ratio）与状态判定
 
-$$\text{FillRatio} = \operatorname{clamp}\left( \frac{\text{Inflow}}{E_{\text{lake}}}, \, 0.0, \, 1.0 \right)$$
+设 $b=\text{Inflow}/\max(E_{\text{lake}},10^{-8})$，$q=\max(0.05,\text{lakeOverflowThreshold})$。非冰下湖在 $b\ge q$ 时充满并溢流；其余的充盈率为 $\operatorname{clamp}((b/q)^{0.65},0,0.995)$。低于 `lakeMinFillRatio` 的湖盆退出当前水体。
 
-1. **外流湖（$\text{FillRatio} \ge 0.95$）**：
+1. **外流湖（$b \ge q$）**：
    - 湖泊完全充满，多余水量通过溢流口漫出；
    - 湖泊标记为外流湖，水体保持淡水（$\text{Salinity} = 0.0$）；
-2. **内流萎缩湖（$\text{FillRatio} < 0.95$）**：
+2. **内流萎缩湖（$b < q$）**：
    - 湖泊入不敷出，出口干涸断流；
    - 水位下降，边缘浅水单元退出水体变回陆地。
 
@@ -96,6 +100,8 @@ $$\text{Salinity} = \operatorname{clamp}\left( (1.0 - \text{FillRatio})^{1.8} \c
 ### 4.2 湖泊热力结冰状态（Lake Ice State）
 
 根据最热月气温 $T_{\text{warmest}}$ 与最冷月气温 $T_{\text{coldest}}$，湖泊划分为三种冰冻状态：
+
+这两个极值来自湖盆面积加权的 12 个月平均温度序列；开放水面比例为月均温大于 0℃ 的月份占比。`Subglacial` 为显示分类，尚未模拟冰盖厚度与地热。
 
 | 冰冻状态分类 | 英文标识 | 判定条件 | 视觉与地理特征 |
 | :--- | :---: | :--- | :--- |

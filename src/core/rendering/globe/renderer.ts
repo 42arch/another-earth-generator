@@ -1,3 +1,5 @@
+import type { GenerationStage } from '@/core/world/generation-plan'
+import type { Object3D } from 'three'
 import type { GlobeGenParams } from '@/core/spherical/config'
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
@@ -36,6 +38,8 @@ import { GlobeRouteGeometry } from '@/core/rendering/globe/route-geometry'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
 import { GlobeTradeRouteGeometry } from '@/core/rendering/globe/trade-route-geometry'
 import { MapView } from '@/core/rendering/map/view'
+import { LayerCache } from '@/core/rendering/shared/layer-cache'
+import { isLayerAffected } from '@/core/rendering/shared/layer-dependencies'
 import { SphericalContourGeometry } from '@/core/rendering/shared/spherical-contour-geometry'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/spherical-graticule-geometry'
 import { SphericalWindGeometry } from '@/core/rendering/shared/spherical-wind-geometry'
@@ -43,6 +47,8 @@ import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
 import { PLATE_BOUNDARY } from '@/core/spherical/geology/plate-boundary'
 import { SphericalCoastlineSource } from '@/core/spherical/features/spherical-coastline-source'
 import { SPHERICAL_BIOME } from '@/core/spherical/spherical-world-data'
+
+const CLIMATE_LAYER_KEYS = ['showTemperature', 'showMoisture', 'showPrecipitation', 'showFlux', 'showWind', 'showOceanCurrents', 'showSeaSurfaceTemperature'] as const
 
 const COASTLINE_LINE_WIDTH = 0.275
 const TEMPERATURE_LAYER_OFFSET = 0.08
@@ -115,8 +121,10 @@ export class GlobeRenderer {
   private mesh: SphericalMesh | null = null
   private data: SphericalWorldData | null = null
   private params: GlobeGenParams
+  private needsRender = true
   private pointerStartX = 0
   private pointerStartY = 0
+  private readonly layerCache = new LayerCache<Object3D>()
   private viewMode: WorldViewMode = 'globe'
 
   constructor(
@@ -165,10 +173,12 @@ export class GlobeRenderer {
   }
 
   setWorld(mesh: SphericalMesh, data: SphericalWorldData, params: GlobeGenParams): void {
+    this.needsRender = true
     this.mesh = mesh
     this.data = data
     this.params = { ...params }
     this.disposeSurface()
+    this.controls.autoRotate = params.autoRotate
     const colors = this.colorizer.build(data, params.displayMode)
     this.surface = this.createSurface(
       this.geometryBuilder.create(mesh, params.planetRadius, colors),
@@ -178,28 +188,49 @@ export class GlobeRenderer {
     this.mapView.setWorld(mesh, data, params)
     this.selectionMarker.visible = false
     this.rebuildOverlays()
+    this.labelLayer.rebuild(mesh, data, params)
   }
 
-  updateAppearance(params: GlobeGenParams): void {
-    const displayModeChanged = this.params.displayMode !== params.displayMode
+  updateAppearance(params: GlobeGenParams, dataChanged = false, stage: GenerationStage = 'world'): void {
+    this.needsRender = true
+    const previous = this.params
     this.params = { ...params }
     this.controls.autoRotate = params.autoRotate
-    if (displayModeChanged && this.mesh && this.data) {
+    if (previous.planetRadius !== params.planetRadius && this.mesh && this.data) {
       this.setWorld(this.mesh, this.data, params)
       return
     }
     if (this.surface && this.data) {
       this.surface.material.wireframe = params.wireframe
-      this.geometryBuilder.updateColors(
-        this.surface.geometry,
-        this.colorizer.build(this.data, params.displayMode),
-      )
+      if (dataChanged || previous.displayMode !== params.displayMode) {
+        this.geometryBuilder.updateColors(
+          this.surface.geometry,
+          this.colorizer.build(this.data, params.displayMode),
+        )
+      }
     }
-    this.mapView.updateAppearance(params)
+    if (dataChanged) {
+      // The coastline seam carries the current thematic colors.
+      this.layerCache.invalidate(key => isLayerAffected(key, stage) || key === 'coastlines')
+    }
+    this.mapView.updateAppearance(params, dataChanged, stage)
     this.rebuildOverlays()
+    if (dataChanged || previous.displayMode !== params.displayMode
+      || previous.showMapLabels !== params.showMapLabels
+      || previous.showSettlements !== params.showSettlements) {
+      if (this.mesh && this.data)
+        this.labelLayer.rebuild(this.mesh, this.data, params)
+    }
+  }
+
+  updateWorldData(data: SphericalWorldData, params: GlobeGenParams, stage: GenerationStage): void {
+    this.data = data
+    this.mapView.updateWorldData(data)
+    this.updateAppearance(params, true, stage)
   }
 
   selectRegion(region: number): void {
+    this.needsRender = true
     if (!this.mesh)
       return
     const index = region * 3
@@ -214,6 +245,7 @@ export class GlobeRenderer {
   }
 
   setViewMode(mode: WorldViewMode): void {
+    this.needsRender = true
     if (this.viewMode === mode)
       return
     this.viewMode = mode
@@ -224,10 +256,12 @@ export class GlobeRenderer {
   }
 
   setMapProjection(id: MapProjectionId): void {
+    this.needsRender = true
     this.mapView.setProjection(id)
   }
 
   resetCamera(): void {
+    this.needsRender = true
     if (this.viewMode === 'map') {
       this.mapView.resetCamera()
       return
@@ -251,21 +285,35 @@ export class GlobeRenderer {
     this.renderer.dispose()
   }
 
+  private syncLayer(key: string, visible: boolean, build: () => void, revision: unknown = 0): void {
+    this.layerCache.sync(key, visible, revision, () => {
+      const before = new Set(this.scene.children)
+      build()
+      return this.scene.children.filter(object => !before.has(object))
+    })
+  }
+
   private rebuildOverlays(): void {
-    this.rebuildCoastlines()
-    this.rebuildContours()
-    this.rebuildClimateLayers()
-    this.rebuildRivers()
-    this.rebuildTransportRoutes()
-    this.rebuildSettlements()
-    this.rebuildBoundaries()
-    this.rebuildCultureBoundaries()
-    this.rebuildReligionBoundaries()
-    this.rebuildPoliticalBoundaries()
-    this.rebuildHolySites()
-    this.rebuildGraticule()
-    if (this.mesh && this.data)
-      this.labelLayer.rebuild(this.mesh, this.data, this.params)
+    const p = this.params
+    this.syncLayer('coastlines', p.showCoastlines, () => this.rebuildCoastlines(), p.displayMode)
+    this.syncLayer('contours', p.displayMode === 'contours', () => this.rebuildContours())
+    for (const key of CLIMATE_LAYER_KEYS)
+      this.syncLayer(key, p[key], () => this.rebuildClimateLayers(key))
+    this.syncLayer('rivers', p.showRivers, () => this.rebuildRivers())
+    this.syncLayer('roads', p.showRoads, () => this.rebuildTransportRoutes('road'))
+    this.syncLayer('shipping', p.showShippingRoutes, () => this.rebuildTransportRoutes('shipping'))
+    this.syncLayer('trade', p.displayMode === 'trade', () => this.rebuildTransportRoutes('trade'))
+    if (this.roadLayer)
+      this.roadLayer.material.opacity = p.displayMode === 'trade' ? 0.18 : 0.78
+    if (this.shippingRouteLayer)
+      this.shippingRouteLayer.material.opacity = p.displayMode === 'trade' ? 0.18 : 0.72
+    this.syncLayer('settlements', p.showSettlements, () => this.rebuildSettlements())
+    this.syncLayer('plates', p.showPlateBoundaries, () => this.rebuildBoundaries())
+    this.syncLayer('cultures', p.showCultureBoundaries, () => this.rebuildCultureBoundaries())
+    this.syncLayer('religions', p.showReligionBoundaries, () => this.rebuildReligionBoundaries())
+    this.syncLayer('polities', p.showPoliticalBoundaries, () => this.rebuildPoliticalBoundaries())
+    this.syncLayer('holySites', p.showHolySites, () => this.rebuildHolySites())
+    this.syncLayer('graticule', p.showGraticule, () => this.rebuildGraticule())
   }
 
   private rebuildGraticule(): void {
@@ -286,15 +334,19 @@ export class GlobeRenderer {
     this.scene.add(this.graticuleLayer)
   }
 
-  private rebuildClimateLayers(): void {
-    this.disposeClimateLayers()
+  private rebuildClimateLayers(key: typeof CLIMATE_LAYER_KEYS[number]): void {
     if (!this.mesh || !this.data)
       return
     const oceanMask = new Uint8Array(this.mesh.numRegions)
     for (let region = 0; region < this.mesh.numRegions; region++)
       oceanMask[region] = this.data.baseLandMask[region] === 0 ? 1 : 0
 
-    if (this.params.showSeaSurfaceTemperature) {
+    if (key === 'showSeaSurfaceTemperature') {
+      if (this.seaSurfaceTemperatureLayer) {
+        this.scene.remove(this.seaSurfaceTemperatureLayer)
+        this.seaSurfaceTemperatureLayer.geometry.dispose()
+        this.seaSurfaceTemperatureLayer.material.dispose()
+      }
       const geometry = this.geometryBuilder.create(
         this.mesh,
         this.params.planetRadius + SEA_SURFACE_TEMPERATURE_LAYER_OFFSET,
@@ -305,7 +357,12 @@ export class GlobeRenderer {
       this.scene.add(this.seaSurfaceTemperatureLayer)
     }
 
-    if (this.params.showTemperature) {
+    if (key === 'showTemperature') {
+      if (this.temperatureLayer) {
+        this.scene.remove(this.temperatureLayer)
+        this.temperatureLayer.geometry.dispose()
+        this.temperatureLayer.material.dispose()
+      }
       const geometry = this.geometryBuilder.create(
         this.mesh,
         this.params.planetRadius + TEMPERATURE_LAYER_OFFSET,
@@ -315,7 +372,12 @@ export class GlobeRenderer {
       this.scene.add(this.temperatureLayer)
     }
 
-    if (this.params.showMoisture) {
+    if (key === 'showMoisture') {
+      if (this.moistureLayer) {
+        this.scene.remove(this.moistureLayer)
+        this.moistureLayer.geometry.dispose()
+        this.moistureLayer.material.dispose()
+      }
       const geometry = this.geometryBuilder.create(
         this.mesh,
         this.params.planetRadius + MOISTURE_LAYER_OFFSET,
@@ -325,7 +387,12 @@ export class GlobeRenderer {
       this.scene.add(this.moistureLayer)
     }
 
-    if (this.params.showPrecipitation) {
+    if (key === 'showPrecipitation') {
+      if (this.precipitationLayer) {
+        this.scene.remove(this.precipitationLayer)
+        this.precipitationLayer.geometry.dispose()
+        this.precipitationLayer.material.dispose()
+      }
       const geometry = this.geometryBuilder.create(
         this.mesh,
         this.params.planetRadius + PRECIPITATION_LAYER_OFFSET,
@@ -336,7 +403,12 @@ export class GlobeRenderer {
       this.scene.add(this.precipitationLayer)
     }
 
-    if (this.params.showFlux) {
+    if (key === 'showFlux') {
+      if (this.fluxLayer) {
+        this.scene.remove(this.fluxLayer)
+        this.fluxLayer.geometry.dispose()
+        this.fluxLayer.material.dispose()
+      }
       const geometry = this.geometryBuilder.create(
         this.mesh,
         this.params.planetRadius + FLUX_LAYER_OFFSET,
@@ -347,7 +419,12 @@ export class GlobeRenderer {
       this.scene.add(this.fluxLayer)
     }
 
-    if (this.params.showWind) {
+    if (key === 'showWind') {
+      if (this.windLayer) {
+        this.scene.remove(this.windLayer)
+        this.windLayer.geometry.dispose()
+        this.windLayer.material.dispose()
+      }
       const geometry = this.windGeometryBuilder.create(
         this.mesh,
         this.data.climate.wind,
@@ -363,7 +440,12 @@ export class GlobeRenderer {
       this.scene.add(this.windLayer)
     }
 
-    if (this.params.showOceanCurrents) {
+    if (key === 'showOceanCurrents') {
+      if (this.oceanCurrentLayer) {
+        this.scene.remove(this.oceanCurrentLayer)
+        this.oceanCurrentLayer.geometry.dispose()
+        this.oceanCurrentLayer.material.dispose()
+      }
       const geometry = this.windGeometryBuilder.create(
         this.mesh,
         this.data.climate.oceanCurrent,
@@ -412,13 +494,18 @@ export class GlobeRenderer {
     this.scene.add(this.riverLayer)
   }
 
-  private rebuildTransportRoutes(): void {
-    this.disposeTransportRoutes()
+  private rebuildTransportRoutes(kind: 'road' | 'shipping' | 'trade'): void {
     if (!this.mesh || !this.data)
       return
     const tradeMode = this.params.displayMode === 'trade'
 
-    if (this.params.showRoads) {
+    if (kind === 'road') {
+      if (this.roadLayer) {
+        this.scene.remove(this.roadLayer)
+        this.roadLayer.geometry.dispose()
+        this.roadLayer.material.dispose()
+        this.roadLayer = null
+      }
       const geometry = this.routeGeometryBuilder.create(
         this.mesh,
         this.data.human.transport.routes,
@@ -440,7 +527,13 @@ export class GlobeRenderer {
       }
     }
 
-    if (this.params.showShippingRoutes) {
+    if (kind === 'shipping') {
+      if (this.shippingRouteLayer) {
+        this.scene.remove(this.shippingRouteLayer)
+        this.shippingRouteLayer.geometry.dispose()
+        this.shippingRouteLayer.material.dispose()
+        this.shippingRouteLayer = null
+      }
       const geometry = this.routeGeometryBuilder.create(
         this.mesh,
         this.data.human.transport.routes,
@@ -462,7 +555,13 @@ export class GlobeRenderer {
       }
     }
 
-    if (tradeMode) {
+    if (kind === 'trade') {
+      if (this.tradeRouteLayer) {
+        this.scene.remove(this.tradeRouteLayer)
+        this.tradeRouteLayer.geometry.dispose()
+        this.tradeRouteLayer.material.dispose()
+        this.tradeRouteLayer = null
+      }
       const geometry = this.tradeRouteGeometryBuilder.create(
         this.mesh,
         this.data.human.transport.routes,
@@ -816,6 +915,12 @@ export class GlobeRenderer {
       this.surface.material.dispose()
       this.surface = null
     }
+    this.disposeOverlays()
+    this.labelLayer.clear()
+  }
+
+  private disposeOverlays(): void {
+    this.layerCache.clear()
     this.disposeBoundaries()
     this.disposeCultureBoundaries()
     this.disposeReligionBoundaries()
@@ -1024,6 +1129,7 @@ export class GlobeRenderer {
   }
 
   private handleResize = () => {
+    this.needsRender = true
     const width = Math.max(1, this.canvas.clientWidth)
     const height = Math.max(1, this.canvas.clientHeight)
     this.renderer.setSize(width, height, false)
@@ -1055,8 +1161,13 @@ export class GlobeRenderer {
   }
 
   private render = () => {
+    if (document.hidden)
+      return
     if (this.viewMode === 'map') {
-      this.mapView.update()
+      const changed = this.mapView.update()
+      if (!changed && !this.needsRender)
+        return
+      this.needsRender = false
       this.renderer.render(this.mapView.scene, this.mapView.camera)
       this.mapView.renderLabels(
         Math.max(1, this.canvas.clientWidth),
@@ -1064,7 +1175,10 @@ export class GlobeRenderer {
       )
       return
     }
-    this.controls.update()
+    const changed = this.controls.update()
+    if (!changed && !this.needsRender)
+      return
+    this.needsRender = false
     this.renderer.render(this.scene, this.camera)
     this.labelLayer.render(
       this.camera,

@@ -148,7 +148,7 @@ export class SphericalMaritimeContactGenerator {
     const strength = clamp(
       reliability * 0.58
       + populationFactor * 0.24
-      + Math.min(sourceSettlement.prosperity, targetSettlement.prosperity) * 0.18,
+      + Math.min(sourceSettlement.baseProsperity, targetSettlement.baseProsperity) * 0.18,
       0.12,
       1,
     )
@@ -243,7 +243,7 @@ export class SphericalMaritimeContactGenerator {
       const landComponent = component[candidate.region]
       if (landComponent < 0 || oceanRegion < 0)
         continue
-      const score = Math.log1p(candidate.population) * (0.72 + candidate.prosperity * 0.28)
+      const score = Math.log1p(candidate.population) * (0.72 + candidate.baseProsperity * 0.28)
       const current = best.get(landComponent)
       if (!current || score > current.score) {
         best.set(landComponent, {

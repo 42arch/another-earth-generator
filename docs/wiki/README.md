@@ -2,6 +2,8 @@
 
 欢迎阅读 **奇幻地图生成器 (Fantasy Map Generator)** 的底层原理与要素生成技术 Wiki。
 
+当前实现变更见[生成、渲染与水文优化记录](../generation-optimization.md)，包含后台生成、图层缓存、参数单位迁移和模型边界。
+
 本项目是一个基于物理与地理学规律、利用现代计算几何与过程生成技术（Procedural Generation）构建的确定性虚拟地球生成系统。系统以球面网格为唯一权威真源，自底向上模拟板块构造、大陆漂移、地形抬升、大洋环流、大气三圈环流与季节气候、水文水系演化、生态群系分布以及人类文明聚落的孕育，并提供高性能的 WebGL 3D 渲染与多维图层可视化。
 
 ---
@@ -75,4 +77,4 @@ flowchart TD
 1. **球面第一原则 (Sphere as Single Source of Truth)**：世界生成彻底摆脱二维矩形边界，高程、气压、水汽和温度均定义在单位球面 $S^2$ 上，消除地图边界与经度经线伪影。
 2. **确定性过程生成 (Deterministic Procedural Generation)**：给定唯一的数值种子（`seed`）与参数集，利用伪随机数发生器（Alea）与 3D Simplex 噪声，保证每次生成的星球完全一致。
 3. **物理与地理自洽 (Physical Self-Consistency)**：山脉由板块碰撞抬升产生，暖流沿海岸前进提升沿岸降水，迎风坡形成丰沛降水并造就背风坡雨影荒漠，河网汇流雕琢地形，聚落自然依水而建。
-4. **高性能内存列式布局 (TypedArray Cache Locality)**：所有区域和顶点属性采用 `Float32Array`、`Int32Array` 和 `Uint8Array` 存储，杜绝高频垃圾回收（GC），保障大规模球面网格的毫秒级实时生成与增量重算。
+4. **连续数组布局 (TypedArray Cache Locality)**：区域与顶点数值字段主要使用 TypedArray，湖泊库容使用 `Float64Array`。生成在 Worker 中运行，并按参数依赖增量重算；实际耗时和内存开销需要按网格规模测量。
