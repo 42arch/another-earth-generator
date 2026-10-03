@@ -1,43 +1,37 @@
-# 第 2 章 · 球面网格与拓扑
+# 02 · Spherical Mesh and Topology
 
-> **核心内容：**Icosphere 递归细分、受控顶点扰动、确定性拓扑与 Voronoi 对偶区域生成。
+[English](./02-spherical-mesh.md) | [简体中文](./02-spherical-mesh.zh-CN.md)
 
-## 1. 空间骨架
+## Intuitive Understanding
 
-系统通过 **正二十面体递归 4 分面细分 (Icosphere) → 受控顶点扰动 → 确定性拓扑 Voronoi 区域** 建立无边界邻接图。细分等级决定区域数（`V = 10 × 4^L + 2`）；扰动降低规则采样纹理。区域中心、邻接、面积、三角面和 Voronoi 边是后续板块扩张、距离场、侵蚀与渲染共享的空间数据。
+The entire planet is first divided into many adjacent "blocks". Each block has a center, an area, and neighbors. Plate expansion, moisture propagation, and runoff convergence all run along this spherical adjacency graph, so map projection will not change the physical geography results.
 
-Icosphere 从 12 个正二十面体顶点和 20 个三角面出发，每次细分将每条边取中点并归一化到单位球面，一个三角变四个子三角。拓扑完全由细分规则决定，无需调用外部球面 Delaunay 库。
+## From Icosphere to Regions
 
-`detail` 表示 Icosphere 细分等级 (Level)。界面提供离散等级选择（Level 3–8），分别对应 642 至 655,362 个区域，默认 Level 7 (163,842)。
+The [IcosphereBuilder](../../src/core/mesh/icosphere-builder.ts) starts with a regular icosahedron, subdivides each triangle into four, and projects new vertices onto the unit sphere. At Level `L`, the number of vertices and regions is `10 × 4^L + 2`: Level 6 has 40,962 regions, and the default Level 7 has 163,842 regions. The vertices become the centers of Voronoi regions, and the triangular faces determine adjacency.
 
-`irregularity` 控制细分后顶点的球面切向扰动强度，取值范围为 `0–1`，默认值为 `0.75`。数值为 `0` 时 Voronoi Cell 为规则的六边形/五边形网格（含 12 个固定于正二十面体顶点的五边形）；数值越高，Cell 形状越有变化。该参数同时作用于参考网格和输出网格，因此改变它会重新建立参考网格、板块映射和输出拓扑。界面在"基础网格"分组中提供滑块，步长为 `0.05`。
+`irregularity` perturbs the region centers in the tangent plane. When the perturbation is non-zero, the code **rebuilds the triangulation** using stereographic projection and Delaunator, then calculates adjacency, latitude/longitude, and region areas. Therefore, "each block in an irregular grid has 5 or 6 neighbors" is not guaranteed by the code; do not treat the degree of a regular Icosphere as a universal constraint.
 
-## 2. 固定参考网格与输出网格
+The region area `regionArea` is the **unit sphere area**, and the global sum should be close to `4π`. When physical area is needed, multiply by the square of the physical radius. Adjacency is stored in CSR format: `neighborOffsets[i]` to `neighborOffsets[i+1]` is the slice of region `i`'s neighbors in `neighbors`. This avoids allocating independent arrays for each block when traversing a large number of regions.
 
-系统在 **Level 6 (40,962 区域) 的固定参考网格**上确定板块和大陆轮廓，再将宏观分类投射到用户选择的细节网格；提高细节等级不会重新决定大陆形状。输出网格负责更细的高程、侵蚀与显示。
+| Field | Meaning in each region | Typical use |
+| --- | --- | --- |
+| `regionPosition` | 3D center on unit sphere | Great circle distance, spherical tangent vector |
+| `regionLatitude` / `regionLongitude` | Lat/Lon of the center in radians | Climate latitudinal zones, map projection |
+| `regionArea` | Area on the unit sphere | Continent coverage, runoff weight |
+| `neighborOffsets` / `neighbors` | Adjacent region indices | Plate expansion, moisture propagation, drainage |
+| `triangles` | Triangular faces formed by region centers | Voronoi dual and geometry construction |
 
-```text
-seed + 宏观参数 → 固定参考网格 (Level 6) → 板块与候选海陆
-seed + 细节参数 → 输出网格 (Level L)      → 投射宏观分类 → 高程与地貌
-```
+The great circle angular distance between two unit directions `a` and `b` is `acos(clamp(a·b, −1, 1))`. If an algorithm requires a distance in km, multiply it by the physical radius; do not treat the rendering sphere radius as the physical earth radius.
 
-当前网格阶段使用相同种子构建固定 Level 6 的参考网格和由 `detail` 等级决定的输出网格；当两者等级相等时直接共用网格对象，但仍执行区域映射。映射时先以四层三维 Simplex FBM 扰动输出区域的查询位置，再用三维 KD 树寻找最近的参考区域。扰动幅度约为 1.5 个参考 Cell，在板块数很少时最多增至 2.5 个 Cell；这会打破规则投影边缘，同时保持确定性。参考网格的缓存仅在同一 Worker 生命周期内有效，当前每次重新生成世界都会新建 Worker。
+## Fixed Reference Mesh
 
-板块编号、候选大陆、大陆编号和地壳属性均通过同一条映射投射到输出网格，因此不会发生板块边界与大陆边界错位。切换 Detail 等级只重新采样宏观分类，不会重新生成参考板块或大陆。
+The [MeshStage](../../src/core/simulation/pipeline/stages/mesh-stage.ts) always builds a Level 6 reference mesh, and builds the output mesh according to detail parameters; they share the same object when the levels are identical. Plates, continents, and crust are first determined on the reference mesh, then projected to the output mesh via `outputToReference`. The mapping query points are perturbed by deterministic noise so macroscopic boundaries do not show regular sampling aliasing. Climate uses another purely geographic mapping to prevent climate fields from twisting along tectonic boundaries.
 
-## 3. 数据与尺度约束
+In high-detail mode, climate is still calculated on the coarser grid, and then projected to the output mesh; final drainage and rivers use the actual adjacency of the output mesh. Changing output precision will affect local shapes and numerical discretization, not guaranteeing that every block is identical.
 
-每个区域至少需要三维单位位置、纬经度、正面积及 CSR 邻接数组；三角形和 Voronoi 边／角点供几何构建。球面角距离为 `acos(clamp(dot(a,b), -1, 1))`，总区域面积应接近 `4π`。邻接必须双向且整个球面连通。
+Reference and output mappings use [ReferenceGridProjector](../../src/core/mesh/reference-grid-projector.ts). `outputToReference` is one reference region corresponding to each output region, used for discrete plate and candidate continent IDs. Continuous climate fields require multi-region weighted sampling, hence a [separate climate output projector](../../src/core/climate/climate-output-projector.ts) is used. Mixing these two mappings causes climate fields near coasts to shift along plate boundaries.
 
-系统按 `√(区域数 / 基准区域数)` 缩放以"邻接跳数"表示的地貌宽度，使山脉和陆架在不同分辨率下保持近似尺寸。若改用球面角距离，需重新标定这些宽度，不能混用两种单位。
+## Terminology and Checking
 
-参考网格上的板块已经包含欧拉运动参数，输出网格也已计算板块边界类型和构造高程。
-
-## 4. Icosphere 拓扑特征
-
-Icosphere 生成的网格具有以下特征：
-
-- **区域数**：离散值 `V = 10 × 4^L + 2`，每级增长 4 倍
-- **邻居数**：每个区域严格拥有 5 或 6 个邻居（12 个五边形位于原始正二十面体顶点，其余均为六边形）
-- **面积均匀性**：显著优于随机布点方案，面积差异 ~1-2%
-- **构建速度**：拓扑在细分过程中直接确定，无需外部 Delaunay 库，O(N) 时间复杂度
+A **Voronoi region** is the spherical extent "closest to this center"; the **dual triangulation** connects adjacent region centers; the **great circle distance** is the shortest arc length on the sphere. When checking the mesh, you should verify bi-directional adjacency, region connectivity, positive area, and total area sum. See [SphericalMesh](../../src/core/mesh/mesh.ts) and [Voronoi Builder](../../src/core/mesh/voronoi.ts) for related data structures.

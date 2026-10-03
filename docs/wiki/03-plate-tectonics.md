@@ -1,33 +1,35 @@
-# 第 3 章 · 板块划分、运动与应力
+# 03 · Plate Motion and Tectonics
 
-> **核心内容：**板块划分、欧拉运动、地壳密度与俯冲极性、双层边界应力及超级板块系统。
+[English](./03-plate-tectonics.md) | [简体中文](./03-plate-tectonics.zh-CN.md)
 
-## 1. 板块形状
+## Intuitive Understanding
 
-在固定参考网格上，以最远点原则选取分散的板块种子，并从最远的少数候选中随机选择，避免整齐划一。各板块轮流从边界扩张；方向偏好、生长速率控制和紧凑度惩罚共同抑制规则圆盘与狭长触须。填充完成后，进行多轮边界平滑和碎片重连。最后将板块编号投射到输出网格。
+Plates are moving crustal slabs. When adjacent plates move toward each other, mountains, volcanic arcs, and trenches may form; moving apart can create mid-ocean ridges or rift valleys; lateral sliding leaves strike-slip faults. The generator uses these relationships to provide large-scale "genetic skeletons" for topography.
 
-当前实现采用受约束的轮流洪泛扩张：从最远的三个候选中随机选种，逐板扩张时考虑生长速率、方向、面积和紧凑度，最后做边界多数平滑及碎片重连。板块编号规范化为连续区间，再通过统一的参考区域映射投射到输出网格。
+## How Plates Form
 
-## 2. 运动与碰撞
+The [PlateStage](../../src/core/simulation/pipeline/stages/plate-stage.ts) generates sub-plates on the reference mesh, then creates candidate continents and crust attributes based on the plate layout. Seeds are spread out as much as possible, plates grow by taking turns along adjacent regions, and then boundaries and fragmented pieces are processed. Each plate has an Euler rotation vector `ω`; the tangential velocity at a unit sphere position `p` is `v = ω × p`. This describes the local movement direction, not the true geological age or cm/yr speed.
 
-每块板保存旋转极及角速度。球面位置 `p` 的局部运动由 `v = ω × p` 得到。比较相邻板块在边界上的相对速度：相向运动为汇聚，背离为张裂，沿边界相对滑动为走滑。相对运动强度调节地形作用；汇聚边界还依据海洋／大陆属性及密度确定俯冲侧，使海沟和上盘造山出现在正确位置。
+The [PlatePhysicsProcessor](../../src/core/geology/plate-physics.ts) corrects initial motion based on area, crust, and boundary relationships. The [SuperPlateStage](../../src/core/simulation/pipeline/stages/super-plate-stage.ts) groups sub-plates into larger tectonic units, keeping major mountain belts and ridges continuous. The output retains `regionPlate` and `regionSuperPlate`: the former is useful for observing fine-grained plates, while the latter dominates large-scale boundaries.
 
-每块板首先生成一个均匀球面旋转极及带符号的 `0.5–2.0` 初始角速度。随后在固定参考网格上按板块球面面积和地壳属性修正运动：大陆板块承受较强阻力，小板块按面积幂律获得更高速度；初步边界分类后，地幔切向流先偏转欧拉极并对顺流板块加速；再按板块对的边界占比筛选海洋俯冲板块拉力与张裂洋脊推力。修正后的三分量角速度进入后续边界分析。
+## How Boundaries Affect Topography
 
-对输出网格的每条 Voronoi 共享边，边界分析在边中点计算两块板的局部速度，将相对速度投影到跨边法向和沿边切向：
+The [Boundary Analyzer](../../src/core/geology/plate-boundary-analyzer.ts) compares the velocities on both sides of a shared edge, splitting the relative motion into a normal component across the boundary and a tangential component along the boundary. Normal convergence, divergence, and tangential slip support the classification of convergence, rifting, and strike-slip, respectively. Regional stress and subduction sides are then aggregated from edge-level results. When oceanic crust meets continental crust, density and crust type determine subduction polarity.
 
-$$v_n=(v_B-v_A)\cdot n,\qquad v_s=\left|(v_B-v_A)\cdot t\right|$$
+Expressed with adjacent plate velocity difference `Δv`, cross-edge normal `n`, and along-edge tangent `t`, boundary diagnosis uses:
 
-`v_n < -0.003` 为汇聚，`v_n > 0.003` 为张裂，其余为走滑；`edgeStress=max(|v_n|,v_s)`。边级结果保存在 `edgeBoundaryType`、`edgeNormalVelocity`、`edgeShearVelocity` 和 `edgeStress`，区域级字段取相邻边中的最大应力结果。内部板块边保持 `None` 和零应力。
+```text
+normalVelocity = Δv · n
+shearVelocity  = |Δv · t|
+edgeStress     = max(|normalVelocity|, shearVelocity)
+```
 
-汇聚边界依据边界两侧**当地单元**的地壳类型与密度确定俯冲极性；海洋地壳与大陆地壳相遇时海洋侧进入下盘，两侧均为大陆地壳时不强制指定俯冲侧。这一点允许单个板块同时含大陆和海洋地壳。候选海陆仍与最终高程海陆分开保存。
+The code uses a normal threshold of `0.003` to distinguish obvious convergence and rifting; the remaining inter-plate boundaries fall into the strike-slip category. These are **relative motion thresholds** within the generator, not Earth's measured plate velocities. Edge-level fields retain direction and intensity, while region-level fields aggregate neighbor interactions. When determining subduction, local crust attributes on both sides of the boundary are used, so a single plate can contain both candidate continents and oceanic crust participating in the judgment.
 
-## 3. 应力传播与超级板块
+Boundary effects also decay inland instead of just being drawn on a single line. Tectonic elevation reads collision zones, ridges, faults, stress directions, and overriding/subducting sides to establish mountain belts, trenches, volcanic arcs, and rift valleys. A long-wave mantle field further modulates tectonic responses. See [Geology Data Types](../../src/core/geology/geology-data.ts) and [Tectonic Stage](../../src/core/simulation/pipeline/stages/tectonic-stage.ts) for related outputs.
 
-边界应力沿同一板块向内部衰减，俯冲上盘和下盘可使用不同的衰减范围。山地距离场只应从真正形成山脉的汇聚边界播种；若从所有存在微弱应力的陆地单元播种，整个大陆都会变成“活动区”。
+The [ProjectionStage](../../src/core/simulation/pipeline/stages/projection-stage.ts) analyzes the boundaries of both sub-plates and superplates simultaneously. The main tectonic types use superplate boundaries as a skeleton, while sub-plate stress and direction are used for local modulation; the code applies weights of `0.58` and `0.88` respectively to these two layers of stress. In this way, not all internal sub-plate seams become major mountain systems, but the details still affect the morphology of mountain belts.
 
-超级板块阶段在固定参考网格上构建细板块邻接图，先按板块的主要地壳类型求连通分量，再以面积加权的最远点种子和多源 Dijkstra 将大分量切分为最多约 20 个**超级板块构造单元**。超级板块的欧拉速度、平均地壳属性由成员板块按球面面积聚合，但单元级地壳类型和密度保留原值，供边界俯冲判定使用；并以 `1.6` 倍极点偏转强度执行板片拉力与洋脊推力修正。
+## How to Read the Map
 
-输出网格同时分析细板块和超级板块边界。超级板块完全决定边界类型以及山带／洋脊／断裂距离场的种子，细板块和超级板块的应力与俯冲因子则按设定权重 `0.58 / 0.88` 混合。这样内部细板块接缝不会切碎主山带，但仍能调制主构造带的强弱、方向及两侧不对称性。`regionPlate` 保存细板块，`regionSuperPlate` 保存主构造单元。
-
-实现时应逐层可视化板块、运动、边界、应力、俯冲侧和超级板块；检查板块连通性、边界两侧分类一致性，以及主要轮廓的跨分辨率稳定性。
+The "Plate Tectonics" layer in the interface is colored by sub-plate index. The index color only helps distinguish regions; it does not directly represent motion direction, stress, or crust type. Finer tectonic diagnosis fields are stored internally, but the layer bar does not expose all diagnostic modes currently.

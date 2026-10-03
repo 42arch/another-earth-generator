@@ -179,6 +179,15 @@
             <div class='flex items-center gap-2'><span>干旱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#b9a27a] via-[#8e8851] to-[#315b2b]'></i><span>湿润</span></div>
             <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#3b6230] via-[#777565] to-[#d5e0e5]'></i><span>高山雪线</span></div>
           </div>
+        {:else if appState.params.appearance.displayMode === 'terrain'}
+          <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
+            <div class='flex items-center gap-2'><span>深海</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#071324] via-[#1f4273] to-[#4c8eb5]'></i><span>浅滩</span></div>
+            <div class='flex items-center gap-2'><span>盆地</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#598c4b] via-[#d6c785] to-[#ffffff]'></i><span>高山</span></div>
+          </div>
+        {:else if appState.params.appearance.displayMode === 'heightmap'}
+          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
+            <span>低谷/深海</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-black to-white border border-white/20'></i><span>高山</span>
+          </div>
           <!--
         {:else if appState.params.appearance.displayMode === 'finalization'}
           <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>

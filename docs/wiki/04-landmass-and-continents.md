@@ -1,37 +1,31 @@
-# 第 4 章 · 候选大陆、海洋与岛屿
+# 04 · Landmasses, Coasts, and Islands
 
-> **核心内容：**基于板块邻接图的大陆生成、构造岛弧、热点岛链及最终海陆判定算法。
+[English](./04-landmass-and-continents.md) | [简体中文](./04-landmass-and-continents.zh-CN.md)
 
-## 1. 两次海陆判定
+## Intuitive Understanding
 
-算法先创建**候选海陆分布**，作为海岸距离、板块属性和基础高程的输入。构造抬升、火山作用及地貌后处理可能令局部区域跨过海平面；最终海岸线要由最终高程决定。因此候选掩码与最终掩码必须分开保存，不能在生成中途互相覆盖。
+Continents are not created by painting whole plates as land. The system first generates a **candidate land/sea** map for topography, then superimposes tectonic, island arc, and hotspot elevations; the regions ultimately above sea level become land. Therefore, the candidate coast and the visible coast can differ.
 
-```text
-板块 → 候选大陆／海洋 → 海岸及构造高程 → 地貌后处理 → 最终海陆
-```
+## Candidate Continents
 
-## 2. 大陆种子与面积
+The [CandidateLandGenerator](../../src/core/geography/candidate-land-generator.ts) first uses the plate layout to arrange the macroscopic positions of continents, then refines the edges on the reference mesh using distance fields and continuous noise. The target land ratio is given by `landCoverage`, default `0.30`, calculated by spherical region area. `continentCount` controls the number of major continent groups, and `continentSizeVariety` adjusts their area differences. Plates, candidate land/sea, continent IDs, and crust are projected to the output mesh via the same reference mapping, avoiding macroscopic attribute misalignment.
 
-大陆先以**构造板块**确定宏观位置，而不再以整块板块决定最终候选海岸。算法统计各板块的球面面积、质心、周长、紧凑度和邻接图，按最远点策略选择大陆种子，再让多个大陆在板块图上吸收邻板，并填充合适的内海。这得到一个临时板块级轮廓。随后在参考网格上计算轮廓两侧的球面距离，以确定性、连续的低频噪声扰动有符号距离，并按区域球面面积选取目标覆盖率的单元。海岸因此可以穿过板块内部；扩张到原海洋板块的陆地归入最近的原大陆。大陆数量、面积差异和目标覆盖率均为可调参数；默认目标陆地约 30%。
+The generation process can be divided into three scales: first, disperse continent seeds on the plate adjacency graph and expand them to determine the orientation of continent groups; then, calculate the distance from the reference mesh to these groups and redraw coasts using continuous noise so that coasts can cross plate interiors; finally, select candidate land approaching the target coverage ratio based on region **area** rather than region count. New candidate land expanding into former oceanic plates inherits neighboring continent IDs.
 
-在本项目的 Voronoi 网格上，陆地覆盖率应以 `regionArea` 累计，而不是直接计数。将参考网格结果投射到输出网格后，还要重新统计实际覆盖率及大陆连通分量。
+The target ratio here applies to **candidate** land and does not guarantee that final land is exactly 30%. Subsequent uplift and inundation will change the visible coastline. Oceanic crust and final sea level are also not the same concept: crust is a tectonic attribute, whereas land/sea depends on the elevation zero-line.
 
-当前实现已在固定 20,000 区域参考网格上完成板块图定位与连续海岸重绘，并以区域面积控制陆地覆盖率。默认板块数为 80。陆地覆盖率参数使用 `0–1` 范围、`0.01` 步长和 `0.30` 默认值；大陆数量和大小差异也由控制面板调节。候选掩码、大陆编号、板块编号和地壳属性共用同一个参考区域映射投射到输出网格；海陆和地壳边界一致，但不再必然与板块边界一致。
+## The Formation of Islands
 
-## 3. 构造产生的岛屿
+The [TectonicEdificeGenerator](../../src/core/geology/tectonic-edifice-generator.ts) adds elevation contributions such as island arcs, continental margin volcanic arcs, hotspot chains, and large igneous provinces to regions meeting tectonic conditions. `islandArcCount` is the upper limit for major island arc systems, `hotspotCount` controls the number of hotspot chains, and `islandDensity` affects island arc continuity and near-shore small island density. Parameters change the topographic genesis, not forcefully turn oceanic cells directly into land.
 
-候选大陆增长不负责全部岛屿。海洋—海洋汇聚边界的上盘可形成火山岛弧；热点由宽缓热隆起与局部火山峰叠加，随板块漂移形成年龄递增的岛链。海岸外散落岛、洋中脊和其他局部高程也可能露出水面。岛屿是否最终为陆地，仍由海平面与最终高程决定。
+After processing the topography, the [TerrainPostProcessor](../../src/core/geography/terrain-post-processor.ts) divides the final `landMask` at zero elevation. If island arcs or hotspots are uplifted high enough, they emerge above sea level; low-lying parts of candidate continents may also be covered by seawater. Subsequent climate, hydrology, and ecology use this final mask.
 
-当前流水线已同时保存候选海陆和最终 `landMask`。候选海洋上的岛弧、热点岛链及局部构造隆起可以在最终高程跨过海平面后成为岛屿；候选大陆中的沿海低地也可以在最终判定时成为浅海。
+| Field | When Generated | Applied To |
+| --- | --- | --- |
+| `candidateLandMask` | After projecting reference mesh continent layout | Tectonic elevation, coast distance, crust attributes |
+| `continentId` | When candidate continents generate | Tracking macroscopic continent affiliation |
+| `landMask` | After final topography post-processing | Climate land/sea boundary, hydrology land, biome classification |
 
-### 岛屿参数
+## Reading Tips
 
-岛屿生成按成因拆分为三个控制项，避免用一个概率同时改变所有类型的岛屿：
-
-| 参数 | 默认值 | 作用 |
-| --- | ---: | --- |
-| `islandArcCount` | 6 | 海洋—海洋汇聚边界上最多选取多少个主要岛弧系统；设为 `0` 可关闭构造岛弧。 |
-| `islandDensity` | 0.65 | 控制岛弧的连续程度、覆盖斑块大小及近岸散布岛出现概率；数值越高，岛群越密集。 |
-| `hotspotCount` | 5 | 全球热点火山链数量；设为 `0` 可关闭热点岛链。 |
-
-`islandArcCount` 只选择满足海洋地壳、汇聚边界及上盘条件的候选位置，因此它是上限，不保证每个种子都能形成露出海面的岛屿。`islandDensity` 也不会直接把随机海面抬成陆地，而是调节符合构造条件的岛弧斑块和大陆近岸小岛。最终是否出露仍由累计高程是否越过海平面决定。
+When increasing the detail level under the same seed, the macroscopic continent layout still comes from the fixed reference mesh, but local coasts may change. When comparing two precision levels, one should look at area and large-scale contours, not whether region-by-region indices are perfectly identical.

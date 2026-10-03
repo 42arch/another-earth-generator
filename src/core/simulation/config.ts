@@ -124,7 +124,7 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
     showAtmosphere: true,
     wireframe: false,
     autoRotate: false,
-    showDayNight: false,
+    showDayNight: true,
   },
 }
 
@@ -138,7 +138,7 @@ export function cloneWorldConfig(config: WorldConfig): WorldConfig {
       ...config.appearance,
       showRivers: config.appearance.showRivers ?? true,
       showClouds: config.appearance.showClouds ?? false,
-      showDayNight: config.appearance.showDayNight ?? false,
+      showDayNight: config.appearance.showDayNight ?? true,
     },
   }
 }

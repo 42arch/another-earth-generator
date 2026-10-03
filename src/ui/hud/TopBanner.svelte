@@ -39,13 +39,47 @@
     <div class='w-px h-4 bg-white/10 mx-1'></div>
 
     <!-- 视角操作 -->
-    <button
-      type='button'
-      onclick={() => appState.toggleViewMode()}
-      class="px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer {appState.viewMode === 'map' ? 'bg-obs-primary text-white' : 'text-obs-text-muted hover:text-white hover:bg-white/10'}"
-    >
-      地图
-    </button>
+    <Popover.Root>
+      <Popover.Trigger
+        class='px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer text-obs-text-muted hover:text-white hover:bg-white/10'
+      >
+        视图
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          sideOffset={8}
+          class='z-50 w-28 p-1.5 flex flex-col gap-0.5 rounded-xl bg-[#1e1e20]/95 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]'
+        >
+          <button
+            type='button'
+            onclick={() => appState.setViewMode('globe')}
+            class="px-3 py-2 text-left text-xs font-medium rounded-lg transition-colors cursor-pointer {appState.viewMode === 'globe' ? 'bg-obs-primary/15 text-obs-primary' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04]'}"
+          >
+            3D 星球
+          </button>
+          <button
+            type='button'
+            onclick={() => {
+              appState.setViewMode('map')
+              appState.setMapProjection('equal-earth')
+            }}
+            class="px-3 py-2 text-left text-xs font-medium rounded-lg transition-colors cursor-pointer {appState.viewMode === 'map' && appState.mapProjection === 'equal-earth' ? 'bg-obs-primary/15 text-obs-primary' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04]'}"
+          >
+            2D 等面积
+          </button>
+          <button
+            type='button'
+            onclick={() => {
+              appState.setViewMode('map')
+              appState.setMapProjection('mercator')
+            }}
+            class="px-3 py-2 text-left text-xs font-medium rounded-lg transition-colors cursor-pointer {appState.viewMode === 'map' && appState.mapProjection === 'mercator' ? 'bg-obs-primary/15 text-obs-primary' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04]'}"
+          >
+            2D 墨卡托
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
 
     <Popover.Root>
       <Popover.Trigger
@@ -112,16 +146,9 @@
     <button
       type='button'
       onclick={() => appState.randomizeSeed()}
-      class='px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer text-obs-text-muted hover:text-white hover:bg-white/10'
+      class='px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer bg-white/10 text-obs-text-muted hover:text-white hover:bg-white/20'
     >
       随机
-    </button>
-    <button
-      type='button'
-      onclick={() => appState.regenerateWorld()}
-      class='px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer bg-white/10 text-white hover:bg-white/20 ml-1'
-    >
-      演化
     </button>
 
   </div>
