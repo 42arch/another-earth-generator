@@ -5,6 +5,8 @@ import { appState } from '@/ui/state/app.svelte'
 import './style.css'
 
 function main() {
+  appState.restoreFromShareHash(window.location.hash)
+
   const appContainer = document.getElementById('app')
   const canvas = document.getElementById('globe-canvas')
   if (!(appContainer instanceof HTMLElement))

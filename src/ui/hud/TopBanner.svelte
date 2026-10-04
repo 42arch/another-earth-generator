@@ -2,6 +2,23 @@
   import { Popover } from 'bits-ui'
   import Toggle from '@/ui/components/Toggle.svelte'
   import { appState } from '@/ui/state/app.svelte'
+
+  let shareStatus = $state<'idle' | 'copied' | 'error'>('idle')
+  let shareStatusTimer: ReturnType<typeof setTimeout> | undefined
+
+  async function copyShareLink(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(appState.createShareUrl())
+      shareStatus = 'copied'
+    }
+    catch {
+      shareStatus = 'error'
+    }
+
+    if (shareStatusTimer)
+      clearTimeout(shareStatusTimer)
+    shareStatusTimer = setTimeout(() => shareStatus = 'idle', 2400)
+  }
 </script>
 
 <header class='pointer-events-none fixed top-4 inset-x-0 z-40 flex justify-center'>
@@ -149,6 +166,20 @@
       class='px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer bg-white/10 text-obs-text-muted hover:text-white hover:bg-white/20'
     >
       随机
+    </button>
+    <button
+      type='button'
+      onclick={() => void copyShareLink()}
+      class='flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer bg-white/10 text-obs-text-muted hover:text-white hover:bg-white/20'
+      title={shareStatus === 'error' ? '复制失败，请检查浏览器剪贴板权限' : '分享参数面板中的生成选项'}
+    >
+      {#if shareStatus === 'copied'}
+        <!-- <Check class='w-3.5 h-3.5' /> -->
+        <span>已复制</span>
+      {:else}
+        <!-- <Share2 class='w-3.5 h-3.5' /> -->
+        <span>{shareStatus === 'error' ? '复制失败' : '分享'}</span>
+      {/if}
     </button>
 
   </div>

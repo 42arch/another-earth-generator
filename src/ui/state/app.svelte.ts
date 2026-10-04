@@ -4,6 +4,7 @@ import type { GlobeDisplayMode, WorldConfig } from '@/core/simulation/config'
 import type { LayerStatistics } from '@/core/world/layer-statistics'
 import type WorldEngine from '@/core/world/world-engine'
 import { tick } from 'svelte'
+import { applyShareHash, createShareHash } from '@/core/sharing/share-link'
 import { cloneWorldConfig, DEFAULT_WORLD_CONFIG } from '@/core/simulation/config'
 
 export interface SelectedRegionInfo {
@@ -44,10 +45,12 @@ export class AppState {
     triangleCount: 0,
     plateCount: 0,
   })
+
   lastGeneratedParamsString = $state('')
 
   get hasUnappliedChanges(): boolean {
-    if (!this.lastGeneratedParamsString) return false
+    if (!this.lastGeneratedParamsString)
+return false
     const current = JSON.stringify({
       core: $state.snapshot(this.params.core),
       terrain: $state.snapshot(this.params.terrain),
@@ -70,6 +73,20 @@ export class AppState {
     this.engine = engine
     this.engine.setViewMode(this.viewMode)
     this.engine.setMapProjection(this.mapProjection)
+  }
+
+  restoreFromShareHash(hash: string): boolean {
+    return applyShareHash(this.params, hash)
+  }
+
+  createShareUrl(): string {
+    const url = new URL(window.location.href)
+    url.hash = createShareHash(this.params).slice(1)
+    return url.toString()
+  }
+
+  private syncShareUrlToAddressBar(): void {
+    window.history.replaceState(window.history.state, '', this.createShareUrl())
   }
 
   setGenerating(generating: boolean, text = '正在构建球面…') {
@@ -156,7 +173,7 @@ export class AppState {
     }
   }
 
-  async regenerateWorld(text = '正在构建球面拓扑网格…') {
+  async regenerateWorld(text = '正在构建球面拓扑网格…', updateAddressBar = false) {
     if (!this.engine)
       return
     if (this.updateDebounceTimer) {
@@ -171,7 +188,7 @@ export class AppState {
     if (requestId !== this.generationRequestId)
       return
     this.engine.updateParams(this.params)
-    
+
     this.lastGeneratedParamsString = JSON.stringify({
       core: $state.snapshot(this.params.core),
       terrain: $state.snapshot(this.params.terrain),
@@ -180,8 +197,12 @@ export class AppState {
 
     try {
       const generated = await this.engine.generateWorld()
-      if (generated && this.layerDrawerOpen)
-        this.refreshLayerStatistics()
+      if (generated) {
+        if (updateAddressBar)
+          this.syncShareUrlToAddressBar()
+        if (this.layerDrawerOpen)
+          this.refreshLayerStatistics()
+      }
     }
     catch (error) {
       console.error('World generation failed', error)

@@ -246,7 +246,7 @@
       <button
         type='button'
         class='flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-wider text-obs-amber-light border border-obs-amber/40 rounded-md bg-obs-amber/15 hover:bg-obs-amber/25 hover:border-obs-amber/70 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-        onclick={() => appState.regenerateWorld()}
+        onclick={() => appState.regenerateWorld(undefined, true)}
         disabled={appState.isGenerating}
       >
         <Play class='w-3 h-3 fill-current' />
