@@ -2,6 +2,7 @@ export type GlobeDisplayMode
   = | 'terrain'
     | 'heightmap'
     | 'plates'
+    | 'continents'
     // | 'crust'
     // | 'density'
     | 'subduction'

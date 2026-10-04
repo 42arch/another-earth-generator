@@ -44,6 +44,17 @@ export class AppState {
     triangleCount: 0,
     plateCount: 0,
   })
+  lastGeneratedParamsString = $state('')
+
+  get hasUnappliedChanges(): boolean {
+    if (!this.lastGeneratedParamsString) return false
+    const current = JSON.stringify({
+      core: $state.snapshot(this.params.core),
+      terrain: $state.snapshot(this.params.terrain),
+      geology: $state.snapshot(this.params.geology),
+    })
+    return current !== this.lastGeneratedParamsString
+  }
 
   // 面板开关与生成状态
   isGenerating = $state(true)
@@ -160,6 +171,13 @@ export class AppState {
     if (requestId !== this.generationRequestId)
       return
     this.engine.updateParams(this.params)
+    
+    this.lastGeneratedParamsString = JSON.stringify({
+      core: $state.snapshot(this.params.core),
+      terrain: $state.snapshot(this.params.terrain),
+      geology: $state.snapshot(this.params.geology),
+    })
+
     try {
       const generated = await this.engine.generateWorld()
       if (generated && this.layerDrawerOpen)

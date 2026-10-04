@@ -31,6 +31,15 @@ export class WorldColorizer {
       }
       plateColors = this.buildPlateColors(maxPlate + 1)
     }
+    let continentColors: Float32Array | null = null
+    if (mode === 'continents' && data.geography.continentId) {
+      let maxContinent = 0
+      for (let i = 0; i < numRegions; i++) {
+        if (data.geography.continentId[i] > maxContinent)
+          maxContinent = data.geography.continentId[i]
+      }
+      continentColors = this.buildPlateColors(maxContinent + 1)
+    }
     let maximumStress = 0
     if (mode === 'stress') {
       for (let region = 0; region < numRegions; region++)
@@ -57,6 +66,21 @@ export class WorldColorizer {
         colors[target] = plateColors[pIdx]
         colors[target + 1] = plateColors[pIdx + 1]
         colors[target + 2] = plateColors[pIdx + 2]
+        continue
+      }
+      else if (mode === 'continents' && continentColors && data.geography.continentId) {
+        const continent = data.geography.continentId[region]
+        if (continent < 0) {
+          colors[target] = 0.1
+          colors[target + 1] = 0.15
+          colors[target + 2] = 0.2
+        }
+        else {
+          const cIdx = continent * 3
+          colors[target] = continentColors[cIdx]
+          colors[target + 1] = continentColors[cIdx + 1]
+          colors[target + 2] = continentColors[cIdx + 2]
+        }
         continue
       }
       else if (mode === 'heightmap') {

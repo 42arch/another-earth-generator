@@ -44,6 +44,7 @@ const MODE_TITLES: Record<GlobeDisplayMode, string> = {
   'terrain': '地形',
   'heightmap': '陆地高度图',
   'plates': '板块构造',
+  'continents': '大陆区划',
   // 'crust': '地壳类型',
   // 'density': '地壳密度',
   'subduction': '俯冲极性',
@@ -150,6 +151,28 @@ export function buildLayerStatistics(
         {
           label: plate >= 0 ? `板块 #${plate}` : '未分配板块',
           color: plate >= 0 ? `hsl(${(plate * 137.508) % 360} 65% 55%)` : '#777b85',
+        },
+        count,
+        total,
+      )).sort((a, b) => b.count - a.count),
+    }
+  }
+
+  if (mode === 'continents') {
+    const counts = new Map<number, number>()
+    for (let region = 0; region < total; region++) {
+      const continent = geo.continentId[region]
+      counts.set(continent, (counts.get(continent) ?? 0) + 1)
+    }
+    return {
+      mode,
+      title: MODE_TITLES[mode],
+      totalCells: total,
+      rows: [...counts].map(([continent, count]) => row(
+        String(continent),
+        {
+          label: continent >= 0 ? `大陆 #${continent}` : '非大陆区域',
+          color: continent >= 0 ? `hsl(${(continent * 137.508) % 360} 65% 55%)` : '#1a2633',
         },
         count,
         total,

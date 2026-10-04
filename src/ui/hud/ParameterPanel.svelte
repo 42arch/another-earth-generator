@@ -1,5 +1,6 @@
 <script lang='ts'>
   import {
+    Play,
     SlidersHorizontal,
     X,
   } from '@lucide/svelte'
@@ -19,7 +20,7 @@
         <SlidersHorizontal class='w-4 h-4 text-obs-primary' />
         <div class='flex flex-col'>
           <h2 class='font-sans text-[13px] font-bold tracking-wide text-obs-text-main m-0 leading-none pt-[2px]'>
-            系统参数
+            参数设置
           </h2>
         </div>
       </div>
@@ -27,8 +28,8 @@
       <button
         type='button'
         onclick={() => appState.parameterPanelOpen = false}
-        class='text-obs-text-muted hover:text-white p-1 rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-transparent hover:border-white/10'
-        title='关闭'
+        class='text-obs-text-dim hover:text-obs-text-main p-1 rounded-md hover:bg-white/[0.06] transition-colors cursor-pointer'
+        title='关闭参数面板'
       >
         <X class='w-4 h-4' />
       </button>
@@ -54,7 +55,6 @@
           max={99999}
           step={1}
           decimals={0}
-          oncommit={val => appState.updateParam('core', 'seed', val)}
         />
         <Slider
           label='分辨率等级'
@@ -85,7 +85,6 @@
               return '高 (16万)'
             return '极高 (65万)'
           }}
-          oncommit={val => appState.updateParam('core', 'detail', val)}
         />
         <Slider
           label='网格规整度'
@@ -95,7 +94,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('core', 'irregularity', val)}
         />
         <Slider
           label='地形粗糙度'
@@ -105,7 +103,6 @@
           max={0.5}
           step={0.01}
           decimals={2}
-          oncommit={val => appState.updateParam('terrain', 'roughness', val)}
         />
         <Slider
           label='地形扭曲'
@@ -115,7 +112,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('terrain', 'terrainWarp', val)}
         />
         <Slider
           label='地形平滑'
@@ -125,7 +121,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('terrain', 'smoothing', val)}
         />
         <Slider
           label='冰川侵蚀'
@@ -135,7 +130,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('terrain', 'glacialErosion', val)}
         />
         <Slider
           label='水力侵蚀'
@@ -145,7 +139,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('terrain', 'hydraulicErosion', val)}
         />
 
         <Slider
@@ -156,7 +149,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('terrain', 'ridgeSharpening', val)}
         />
       </div>
 
@@ -176,17 +168,15 @@
           max={120}
           step={1}
           decimals={0}
-          oncommit={val => appState.updateParam('geology', 'plateCount', val)}
         />
         <Slider
           label='大陆数量'
           description='初始生成的大陆极点数量。影响全球宏观陆地斑块的数量和聚集程度。'
           bind:value={appState.params.geology.continentCount}
           min={1}
-          max={10}
+          max={30}
           step={1}
           decimals={0}
-          oncommit={val => appState.updateParam('geology', 'continentCount', val)}
         />
         <Slider
           label='陆地覆盖率'
@@ -196,7 +186,6 @@
           max={1}
           step={0.01}
           decimals={2}
-          oncommit={val => appState.updateParam('geology', 'landCoverage', val)}
         />
         <Slider
           label='面积差异'
@@ -206,7 +195,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('geology', 'continentSizeVariety', val)}
         />
       </div>
 
@@ -226,7 +214,6 @@
           max={12}
           step={1}
           decimals={0}
-          oncommit={val => appState.updateParam('geology', 'islandArcCount', val)}
         />
         <Slider
           label='岛屿密度'
@@ -236,7 +223,6 @@
           max={1}
           step={0.05}
           decimals={2}
-          oncommit={val => appState.updateParam('geology', 'islandDensity', val)}
         />
         <Slider
           label='热点数量'
@@ -246,9 +232,26 @@
           max={10}
           step={1}
           decimals={0}
-          oncommit={val => appState.updateParam('geology', 'hotspotCount', val)}
         />
       </div>
     </div>
+
+    <!-- 底部操作区 -->
+    <footer class='flex items-center justify-between px-4 py-2 border-t border-white/[0.06] bg-black/10'>
+      {#if appState.hasUnappliedChanges}
+        <span class='text-[10px] text-obs-amber font-medium'>参数已修改，等待执行</span>
+      {:else}
+        <span class='text-[10px] text-obs-text-dim'>调整参数后手动执行</span>
+      {/if}
+      <button
+        type='button'
+        class='flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-wider text-obs-amber-light border border-obs-amber/40 rounded-md bg-obs-amber/15 hover:bg-obs-amber/25 hover:border-obs-amber/70 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+        onclick={() => appState.regenerateWorld()}
+        disabled={appState.isGenerating}
+      >
+        <Play class='w-3 h-3 fill-current' />
+        <span>{appState.isGenerating ? '演化中...' : '开始演化'}</span>
+      </button>
+    </footer>
   </aside>
 {/if}
