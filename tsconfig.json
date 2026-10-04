@@ -12,7 +12,7 @@
         "./src/*"
       ]
     },
-    "types": ["vite/client", "svelte"],
+    "types": ["vite/client", "svelte", "vite-plugin-pwa/client", "vite-plugin-pwa/svelte"],
     "allowImportingTsExtensions": true,
     "strict": true,
 

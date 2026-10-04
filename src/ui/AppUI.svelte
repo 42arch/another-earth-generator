@@ -4,6 +4,7 @@
   import LayerBar from '@/ui/hud/LayerBar.svelte'
   import ParameterPanel from '@/ui/hud/ParameterPanel.svelte'
   import RegionInspector from '@/ui/hud/RegionInspector.svelte'
+  import ReloadPrompt from '@/ui/hud/ReloadPrompt.svelte'
   import TopBanner from '@/ui/hud/TopBanner.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
@@ -34,4 +35,7 @@
 
   <!-- 底部集成悬浮操作栏 -->
   <BottomToolbar />
+
+  <!-- PWA 更新提示 -->
+  <ReloadPrompt />
 </div>

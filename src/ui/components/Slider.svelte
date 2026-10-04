@@ -19,6 +19,8 @@
     oncommit?: (val: number) => void
   }
 
+  import { untrack } from 'svelte'
+
   let {
     label,
     value = $bindable(),
@@ -35,7 +37,7 @@
     oncommit,
   }: Props = $props()
 
-  let sliderValue = $state(toSlider ? toSlider(value) : value)
+  let sliderValue = $state(untrack(() => toSlider ? toSlider(value) : value))
 
   $effect(() => {
     const next = toSlider ? toSlider(value) : value
