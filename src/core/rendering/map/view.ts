@@ -297,7 +297,7 @@ export class MapView {
       this.viewportWidth,
       this.viewportHeight,
     )
-    material.setWidthScale(500)
+    // Width scale is updated dynamically in update() based on camera zoom.
     const layer = new Mesh(geometry, material)
     layer.renderOrder = 7
     this.addWrappedLayer(layer, geometry, material)
@@ -489,6 +489,13 @@ export class MapView {
 
   update(): void {
     this.controls.update()
+    for (const resource of this.overlayResources) {
+      if (resource.material instanceof MapRibbonMaterial) {
+        // Base scale 100 multiplied by zoom ensures rivers shrink when zooming out
+        // and grow proportionally when zooming in.
+        resource.material.setWidthScale(100 * this.camera.zoom)
+      }
+    }
     const visibleHalfWidth = (this.camera.right - this.camera.left)
       / Math.max(this.camera.zoom * 2, Number.EPSILON)
     const maximumX = Math.max(0, this.projection.worldWidth * 0.5 - visibleHalfWidth)

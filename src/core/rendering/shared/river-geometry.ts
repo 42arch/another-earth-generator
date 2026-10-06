@@ -75,10 +75,10 @@ export class RiverGeometry {
         const isPathSource = points.length === 0
         points.push({
           position: sourcePosition,
-          width: isPathSource ? 0 : sourceWidth,
+          width: isPathSource ? sourceWidth * 0.7 : sourceWidth,
           color: RIVER_COLOR,
           surfaceOffset: surfaceOffsets?.[region],
-          widthFloorScale: isPathSource ? 0 : 1,
+          widthFloorScale: isPathSource ? 0.7 : 1,
         })
 
         if (hydrology.outletMask[region] !== 0) {

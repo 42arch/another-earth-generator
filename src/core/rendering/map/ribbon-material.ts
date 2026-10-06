@@ -61,7 +61,7 @@ export class MapRibbonMaterial extends ShaderMaterial {
       uniforms: {
         resolution: { value: new Vector2(Math.max(1, width), Math.max(1, height)) },
         widthScale: { value: 1 },
-        minimumWidth: { value: 1.4 },
+        minimumWidth: { value: 0.4 },
         strokeColor: { value: new Color(color) },
         strokeOpacity: { value: opacity },
       },
