@@ -1,5 +1,11 @@
 # another-earth-generator
 
+## 1.3.1
+
+### Patch Changes
+
+- ab8111e: feat: smooth coastal regions to reduce terrain fragmentation. (平滑沿海区域以减少地形碎片化)
+
 ## 1.3.0
 
 ### Minor Changes
