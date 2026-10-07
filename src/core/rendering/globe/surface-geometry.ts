@@ -12,6 +12,7 @@ export class GlobeSurfaceGeometry {
     terrainScale = 0,
     oceanDepthScale = 1,
     cornerColors?: Float32Array,
+    cornerColorRegionMask?: Uint8Array,
   ): BufferGeometry {
     const displayElevations = terrainElevation?.length === mesh.numRegions
       ? this.buildDisplayElevations(terrainElevation)
@@ -42,6 +43,9 @@ export class GlobeSurfaceGeometry {
       const center = region * 3
       const start = mesh.voronoi.cellCornerOffsets[region]
       const end = mesh.voronoi.cellCornerOffsets[region + 1]
+      const useCornerColors = cornerColors !== undefined
+        && (!cornerColorRegionMask || cornerColorRegionMask[region] !== 0)
+      const regionCornerColors = useCornerColors ? cornerColors : colors
       for (let index = start; index < end; index++) {
         const cornerA = mesh.voronoi.cellCorners[index] * 3
         const cornerB = mesh.voronoi.cellCorners[index + 1 < end ? index + 1 : start] * 3
@@ -67,8 +71,8 @@ export class GlobeSurfaceGeometry {
           face * 9 + 3,
           mesh.voronoi.cornerPosition,
           cornerA,
-          cornerColors ?? colors,
-          cornerColors ? cornerA : center,
+          regionCornerColors,
+          useCornerColors ? cornerA : center,
           planetRadius + this.elevationOffset(
             cornerElevations?.[mesh.voronoi.cellCorners[index]] ?? 0,
             terrainScale,
@@ -82,8 +86,8 @@ export class GlobeSurfaceGeometry {
           face * 9 + 6,
           mesh.voronoi.cornerPosition,
           cornerB,
-          cornerColors ?? colors,
-          cornerColors ? cornerB : center,
+          regionCornerColors,
+          useCornerColors ? cornerB : center,
           planetRadius + this.elevationOffset(
             cornerElevations?.[mesh.voronoi.cellCorners[index + 1 < end ? index + 1 : start]] ?? 0,
             terrainScale,

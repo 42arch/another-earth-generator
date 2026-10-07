@@ -1,17 +1,14 @@
 import type { ClimateVectorDisplayData } from '@/core/climate/climate-data'
 import type SphericalMesh from '@/core/mesh/mesh'
 import { BufferAttribute, BufferGeometry, Color } from 'three'
-import { classifyOceanCurrentThermal, OCEAN_CURRENT_THERMAL_COLORS } from '@/core/climate/ocean-current-thermal'
+import { getOceanCurrentThermalColor } from '@/core/rendering/shared/climate-color-scale'
 
 type Vector3 = readonly [number, number, number]
 
-const MAX_ARROWS = 2400
+const MAX_ARROWS = 2800
+const MAX_WIND_ARROWS = 2400
+const WIND_ARROW_SAMPLE_RATIO = 0.9
 const MIN_STRENGTH = 0.05
-const THERMAL_COLORS = {
-  cold: new Color(OCEAN_CURRENT_THERMAL_COLORS.cold),
-  neutral: new Color(OCEAN_CURRENT_THERMAL_COLORS.neutral),
-  warm: new Color(OCEAN_CURRENT_THERMAL_COLORS.warm),
-}
 
 function normalize(x: number, y: number, z: number): Vector3 {
   const length = Math.hypot(x, y, z) || 1
@@ -54,7 +51,9 @@ export function createClimateVectorGeometry(
     throw new Error('Ocean-current thermal field does not match the output mesh')
   const positions: number[] = []
   const colors: number[] | undefined = vectors.kind === 'ocean-current' ? [] : undefined
-  const count = Math.min(MAX_ARROWS, mesh.numRegions)
+  const count = vectors.kind === 'wind'
+    ? Math.min(MAX_WIND_ARROWS, Math.max(1, Math.round(mesh.numRegions * WIND_ARROW_SAMPLE_RATIO)))
+    : Math.min(MAX_ARROWS, mesh.numRegions)
   const referenceStrength = vectors.kind === 'wind' ? 0.75 : 1.5
   for (let sample = 0; sample < count; sample++) {
     // Jitter within equal-area Fibonacci index bands to avoid longitude aliasing.
@@ -87,14 +86,14 @@ export function createClimateVectorGeometry(
       center[2] * tangent[0] - center[0] * tangent[2],
       center[0] * tangent[1] - center[1] * tangent[0],
     )
-    const length = 0.032 + 0.025 * Math.min(strength / referenceStrength, 1)
+    const length = (0.032 + 0.025 * Math.min(strength / referenceStrength, 1)) * 0.58
     const start = advance(center, tangent, -length * 0.5)
     const tip = advance(center, tangent, length * 0.5)
-    const base = advance(center, tangent, length * 0.18)
-    const headWidth = length * 0.15
+    const base = advance(center, tangent, length * 0.28)
+    const headWidth = length * 0.075
     const left = normalize(base[0] + side[0] * headWidth, base[1] + side[1] * headWidth, base[2] + side[2] * headWidth)
     const right = normalize(base[0] - side[0] * headWidth, base[1] - side[1] * headWidth, base[2] - side[2] * headWidth)
-    const color = colors ? THERMAL_COLORS[classifyOceanCurrentThermal(vectors.warmth![region])] : undefined
+    const color = colors ? new Color(getOceanCurrentThermalColor(vectors.warmth![region])) : undefined
     appendSegment(positions, start, tip, radius, colors, color)
     appendSegment(positions, tip, left, radius, colors, color)
     appendSegment(positions, tip, right, radius, colors, color)

@@ -141,8 +141,8 @@ export class GlobeRenderer {
     this.disposeSurface()
     const colors = this.colorizer.build(data, params.appearance.displayMode, mesh)
     const usesElevation = this.usesElevationGeometry(params)
-    const cornerColors = params.appearance.displayMode === 'heightmap'
-      ? this.colorizer.buildHeightmapCornerColors(mesh, data.geography.elevation)
+    const cornerColors = params.appearance.displayMode === 'dem'
+      ? this.colorizer.buildDEMCorners(mesh, data.geography.elevation, data.geography.landMask)
       : undefined
     this.surface = this.createSurface(
       this.geometryBuilder.create(
@@ -154,6 +154,7 @@ export class GlobeRenderer {
         this.getTerrainVerticalScale(params.core.planetRadius),
         OCEAN_DEPTH_SCALE,
         cornerColors,
+        params.appearance.displayMode === 'dem' ? data.geography.landMask : undefined,
       ),
     )
     this.scene.add(this.surface)
@@ -173,7 +174,7 @@ export class GlobeRenderer {
       this.setWorld(this.mesh, this.data, params)
       return
     }
-    if (this.surface && this.data && params.appearance.displayMode !== 'heightmap') {
+    if (this.surface && this.data && !this.isElevationColorMode(params.appearance.displayMode)) {
       this.geometryBuilder.updateColors(
         this.surface.geometry,
         this.colorizer.build(this.data, params.appearance.displayMode, this.mesh ?? undefined),
@@ -397,7 +398,7 @@ export class GlobeRenderer {
       return
     }
     const material = new LineBasicMaterial({
-      color: mode === 'wind' ? 0xFFE6A0 : 0xFFFFFF,
+      color: mode === 'wind' ? 0xA9FFF1 : 0xFFFFFF,
       vertexColors: mode === 'ocean-current',
       transparent: true,
       opacity: 0.92,
@@ -418,7 +419,7 @@ export class GlobeRenderer {
     }
 
     if (
-      (this.params.appearance.displayMode === 'terrain' || this.params.appearance.displayMode === 'satellite')
+      this.params.appearance.displayMode === 'satellite'
       && this.params.appearance.showAtmosphere
     ) {
       const planetRadius = this.params.core.planetRadius
@@ -523,7 +524,7 @@ export class GlobeRenderer {
 
   private rebuildAtmosphere(): void {
     this.disposeAtmosphere()
-    if (this.params.appearance.displayMode === 'heightmap' || !this.params.appearance.showAtmosphere)
+    if (this.isElevationColorMode(this.params.appearance.displayMode) || !this.params.appearance.showAtmosphere)
       return
 
     this.atmosphereLayer = new Atmosphere(this.params.core.planetRadius)
@@ -544,9 +545,13 @@ export class GlobeRenderer {
 
   private usesElevationGeometry(params: WorldConfig): boolean {
     return params.appearance.elevationDisplacement
-      && (params.appearance.displayMode === 'terrain'
+      && (params.appearance.displayMode === 'dem'
         || params.appearance.displayMode === 'heightmap'
         || params.appearance.displayMode === 'satellite')
+  }
+
+  private isElevationColorMode(mode: WorldConfig['appearance']['displayMode']): mode is 'dem' | 'heightmap' {
+    return mode === 'dem' || mode === 'heightmap'
   }
 
   private disposeCellBoundaries(): void {

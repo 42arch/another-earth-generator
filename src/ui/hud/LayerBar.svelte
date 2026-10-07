@@ -14,7 +14,18 @@
     X,
   } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
-  import { formatLayerStatistics } from '@/core/world/layer-statistics'
+  import {
+    getHeightmapLandColor,
+    getHeightmapOceanColor,
+    HEIGHTMAP_MAX_LAND_ELEVATION_KM,
+    HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
+  } from '@/core/rendering/shared/heightmap-color-scale'
+  import {
+    getOceanCurrentSpeedColor,
+    getOceanCurrentThermalColor,
+    getWindColor,
+  } from '@/core/rendering/shared/climate-color-scale'
+  import { formatLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
   import { appState } from '@/ui/state/app.svelte'
 
   const numberFormat = new Intl.NumberFormat('zh-CN')
@@ -43,8 +54,8 @@
 
   const displayModes = [
     { mode: 'satellite' as const, label: '卫星影像', icon: Satellite },
-    { mode: 'terrain' as const, label: '地形图', icon: Mountain },
-    { mode: 'heightmap' as const, label: '高程图', icon: Mountain },
+    { mode: 'heightmap' as const, label: '高度图', icon: Mountain },
+    { mode: 'dem' as const, label: 'DEM图', icon: Mountain },
     { mode: 'plates' as const, label: '板块构造', icon: Workflow },
     { mode: 'continents' as const, label: '大陆区划', icon: Map },
     // { mode: 'crust' as const, label: '地壳类型', icon: Layers },
@@ -65,6 +76,28 @@
     { mode: 'koppen' as const, label: '气候分类', icon: Layers },
     { mode: 'biome' as const, label: '生物群系', icon: Layers },
   ]
+
+  const heightmapOceanLegend = [8, 6, 4, 2, 0]
+    .map((depth) => {
+      const position = (HEIGHTMAP_MAX_OCEAN_DEPTH_KM - depth) / HEIGHTMAP_MAX_OCEAN_DEPTH_KM * 100
+      return `${getHeightmapOceanColor(depth)} ${position}%`
+    })
+    .join(', ')
+  const heightmapLandLegend = [0, 1, 2.5, 4.5, 6]
+    .map((elevation) => {
+      const position = elevation / HEIGHTMAP_MAX_LAND_ELEVATION_KM * 100
+      return `${getHeightmapLandColor(elevation)} ${position}%`
+    })
+    .join(', ')
+  const windStrengthLegend = [0, 0.25, 0.5, 0.75, 1]
+    .map((strength, index, values) => `${getWindColor(strength)} ${index / (values.length - 1) * 100}%`)
+    .join(', ')
+  const oceanCurrentSpeedLegend = [0, 0.25, 0.5, 0.75, 1]
+    .map((strength, index, values) => `${getOceanCurrentSpeedColor(strength)} ${index / (values.length - 1) * 100}%`)
+    .join(', ')
+  const oceanCurrentThermalLegend = [-1, -0.5, 0, 0.5, 1]
+    .map((warmth, index, values) => `${getOceanCurrentThermalColor(warmth)} ${index / (values.length - 1) * 100}%`)
+    .join(', ')
 
   const monthNames = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月']
 </script>
@@ -181,14 +214,14 @@
             <div class='flex items-center gap-2'><span>干旱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#b9a27a] via-[#8e8851] to-[#315b2b]'></i><span>湿润</span></div>
             <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#3b6230] via-[#777565] to-[#d5e0e5]'></i><span>高山雪线</span></div>
           </div>
-        {:else if appState.params.appearance.displayMode === 'terrain'}
-          <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <div class='flex items-center gap-2'><span>深海</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#071324] via-[#1f4273] to-[#4c8eb5]'></i><span>浅滩</span></div>
-            <div class='flex items-center gap-2'><span>盆地</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#598c4b] via-[#d6c785] to-[#ffffff]'></i><span>高山</span></div>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'heightmap'}
+        {:else if appState.params.appearance.displayMode === 'dem'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>低谷/深海</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-black to-white border border-white/20'></i><span>高山</span>
+          </div>
+        {:else if appState.params.appearance.displayMode === 'heightmap'}
+          <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
+            <div class='flex items-center gap-2'><span>深海</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${heightmapOceanLegend})`}></i><span>浅海</span></div>
+            <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${heightmapLandLegend})`}></i><span>高山</span></div>
           </div>
           <!--
         {:else if appState.params.appearance.displayMode === 'finalization'}
@@ -243,24 +276,23 @@
           </div>
         {:else if appState.params.appearance.displayMode === 'wind'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>弱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#102035] to-[#856b2e]'></i><span>强</span>
+            <span>弱</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${windStrengthLegend})`}></i><span>强</span>
           </div>
-          <div class='px-1 text-[9px] text-obs-text-dim'>箭头指向气流去向；颜色表示相对强度，非 m/s。</div>
+          <div class='px-1 text-[9px] leading-relaxed text-obs-text-dim'>底色表示相对风力并与地形融合；箭头表示气流方向。仅为相对值，非 m/s。</div>
         {:else if appState.params.appearance.displayMode === 'ocean-current'}
-          <div class='flex items-center justify-between px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='h-2 w-4 rounded-sm bg-[#8dd8ff]'></i>冷流</span>
-            <span class='flex items-center gap-1'><i class='h-2 w-4 rounded-sm bg-[#e4eef2]'></i>中性</span>
-            <span class='flex items-center gap-1'><i class='h-2 w-4 rounded-sm bg-[#ffa75e]'></i>暖流</span>
+          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
+            <span>冷</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${oceanCurrentThermalLegend})`}></i><span>暖</span>
           </div>
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>弱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#051124] to-[#1480bd]'></i><span>强</span>
+            <span>弱</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${oceanCurrentSpeedLegend})`}></i><span>强</span>
           </div>
-          <div class='px-1 text-[9px] text-obs-text-dim'>箭头颜色表示海温异常指标；底色亮度表示相对流速。指标非 °C，流速非 m/s。</div>
+          <div class='px-1 text-[9px] text-obs-text-dim'>箭头颜色表示海温异常指标；底色深浅表示相对流速。指标非 °C，流速非 m/s。</div>
         {/if}
       </div>
 
-      <!-- 图层统计 -->
-      <div class='flex flex-col gap-1.5 mt-2'>
+      {#if hasLayerStatistics(appState.params.appearance.displayMode)}
+        <!-- 图层统计 -->
+        <div class='flex flex-col gap-1.5 mt-2'>
         <div class='flex items-center justify-between'>
           <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>当前图层统计</span>
           <button
@@ -303,7 +335,8 @@
             <div class='py-4 text-center text-[10px] text-obs-text-dim'>世界生成完成后显示统计</div>
           {/if}
         </div>
-      </div>
+        </div>
+      {/if}
     </div>
   </aside>
 {/if}

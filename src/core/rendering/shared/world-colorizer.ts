@@ -5,12 +5,24 @@ import { KOPPEN_COLORS } from '@/core/climate/koppen-climate-classifier'
 import { BIOME_COLORS } from '@/core/ecology/biome-data'
 import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/geology/geology-data'
 import { clamp } from '@/core/math/math'
+import { getOceanCurrentSpeedColor, getWindColor } from '@/core/rendering/shared/climate-color-scale'
 import { SatelliteColorizer } from '@/core/rendering/shared/satellite-colorizer'
+import { Color } from 'three'
+import {
+  getHeightmapLandColor,
+  getHeightmapOceanColor,
+  HEIGHTMAP_MAX_LAND_ELEVATION_KM,
+  HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
+} from '@/core/rendering/shared/heightmap-color-scale'
 
 type Rgb = readonly [number, number, number]
 
 export class WorldColorizer {
   private readonly satelliteColorizer = new SatelliteColorizer()
+  private readonly heightmapOceanPalette = this.buildHeightmapOceanPalette()
+  private readonly heightmapLandPalette = this.buildHeightmapLandPalette()
+  private readonly windPalette = this.buildClimatePalette(getWindColor)
+  private readonly oceanCurrentSpeedPalette = this.buildClimatePalette(getOceanCurrentSpeedColor)
 
   build(data: WorldSimulationState, mode: GlobeDisplayMode, mesh?: SphericalMesh, mapHillshade = false): Float32Array {
     if (mode === 'satellite') {
@@ -82,6 +94,11 @@ export class WorldColorizer {
           colors[target + 2] = continentColors[cIdx + 2]
         }
         continue
+      }
+      else if (mode === 'dem') {
+        color = data.geography.landMask[region] === 0
+          ? [0, 0, 0]
+          : this.demColor(data.geography.elevation[region])
       }
       else if (mode === 'heightmap') {
         color = this.heightmapColor(data.geography.elevation[region])
@@ -157,15 +174,17 @@ export class WorldColorizer {
           : 0
         const land = data.geography.landMask[region] !== 0
         color = mode === 'wind'
-          ? land
-            ? this.mix([0.1, 0.13, 0.13], [0.52, 0.42, 0.18], clamp(strength / 0.9, 0, 1))
-            : this.mix([0.025, 0.075, 0.13], [0.08, 0.38, 0.48], clamp(strength / 0.9, 0, 1))
+          ? this.mix(
+              this.windContextColor(data, region),
+              this.climatePaletteColor(this.windPalette, strength / 0.9),
+              0.4,
+            )
           : land
-            ? [0.09, 0.13, 0.13]
-            : this.mix([0.02, 0.065, 0.14], [0.08, 0.5, 0.74], clamp(strength / 1.5, 0, 1))
+            ? [0.035, 0.055, 0.075]
+            : this.climatePaletteColor(this.oceanCurrentSpeedPalette, strength / 1.5)
       }
       else {
-        color = this.terrainColor(data, region)
+        color = [0, 0, 0]
       }
 
       colors[target] = color[0]
@@ -176,14 +195,17 @@ export class WorldColorizer {
     return colors
   }
 
-  buildHeightmapCornerColors(
+  buildDEMCorners(
     mesh: SphericalMesh,
     elevation: Float32Array,
+    landMask: Uint8Array,
   ): Float32Array {
     const cornerCount = mesh.voronoi.cornerPosition.length / 3
     const cornerElevation = new Float32Array(cornerCount)
     const cornerRegionCount = new Uint8Array(cornerCount)
     for (let region = 0; region < mesh.numRegions; region++) {
+      if (landMask[region] === 0)
+        continue
       const start = mesh.voronoi.cellCornerOffsets[region]
       const end = mesh.voronoi.cellCornerOffsets[region + 1]
       for (let index = start; index < end; index++) {
@@ -197,50 +219,91 @@ export class WorldColorizer {
     for (let corner = 0; corner < cornerCount; corner++) {
       const count = cornerRegionCount[corner]
       const value = count > 0 ? cornerElevation[corner] / count : 0
-      const shade = this.landHeightmapShade(value)
       const target = corner * 3
-      colors[target] = shade
-      colors[target + 1] = shade
-      colors[target + 2] = shade
+      const color = this.demColor(value)
+      colors[target] = color[0]
+      colors[target + 1] = color[1]
+      colors[target + 2] = color[2]
     }
     return colors
   }
 
-  private terrainColor(data: WorldSimulationState, region: number): Rgb {
-    const elevation = data.geography.elevation[region]
-    if (elevation < -4)
-      return [0.04, 0.06, 0.3]
-    if (elevation < -0.8) {
-      const t = (elevation + 4) / 3.2
-      return [0.04 + t * 0.07, 0.06 + t * 0.14, 0.3 + t * 0.18]
-    }
-    if (elevation < 0) {
-      const t = (elevation + 0.8) / 0.8
-      return [0.11 + t * 0.19, 0.2 + t * 0.22, 0.48 + t * 0.12]
-    }
-    if (elevation < 0.02) {
-      const t = elevation / 0.02
-      return [0.72 + t * 0.08, 0.68 - t * 0.02, 0.46 - t * 0.1]
-    }
-    if (elevation < 1) {
-      const t = (elevation - 0.02) / 0.98
-      return [0.2 - t * 0.06, 0.54 - t * 0.12, 0.12 + t * 0.08]
-    }
-    if (elevation < 2.5) {
-      const t = (elevation - 1) / 1.5
-      return [0.14 + t * 0.3, 0.42 - t * 0.14, 0.2 - t * 0.06]
-    }
-    if (elevation < 4.5) {
-      const t = (elevation - 2.5) / 2
-      return [0.44 + t * 0.16, 0.28 + t * 0.12, 0.14 + t * 0.18]
-    }
-    const t = Math.min(1, (elevation - 4.5) / 1.5)
-    return [0.6 + t * 0.35, 0.4 + t * 0.5, 0.32 + t * 0.6]
+  private demColor(elevation: number): Rgb {
+    const shade = clamp(elevation / HEIGHTMAP_MAX_LAND_ELEVATION_KM, 0, 1)
+    return [shade, shade, shade]
   }
 
   private heightmapColor(elevation: number): Rgb {
-    const shade = this.landHeightmapShade(elevation)
-    return [shade, shade, shade]
+    const isOcean = elevation < 0
+    const palette = isOcean ? this.heightmapOceanPalette : this.heightmapLandPalette
+    const scale = isOcean
+      ? -elevation / HEIGHTMAP_MAX_OCEAN_DEPTH_KM
+      : elevation / HEIGHTMAP_MAX_LAND_ELEVATION_KM
+    const paletteIndex = Math.round(clamp(scale, 0, 1) * 255)
+    const offset = paletteIndex * 3
+    return [
+      palette[offset],
+      palette[offset + 1],
+      palette[offset + 2],
+    ]
+  }
+
+  private windContextColor(data: WorldSimulationState, region: number): Rgb {
+    const elevation = data.geography.elevation[region]
+    if (data.geography.landMask[region] !== 0) {
+      const relief = Math.sqrt(clamp(elevation / HEIGHTMAP_MAX_LAND_ELEVATION_KM, 0, 1))
+      return this.mix([0.30, 0.28, 0.22], [0.48, 0.43, 0.33], relief)
+    }
+
+    const depth = Math.sqrt(clamp(-elevation / HEIGHTMAP_MAX_OCEAN_DEPTH_KM, 0, 1))
+    return this.mix([0.08, 0.27, 0.36], [0.025, 0.12, 0.23], depth)
+  }
+
+  private buildHeightmapOceanPalette(): Float32Array {
+    const palette = new Float32Array(256 * 3)
+    const color = new Color()
+    for (let index = 0; index < 256; index++) {
+      const depth = HEIGHTMAP_MAX_OCEAN_DEPTH_KM * index / 255
+      color.setStyle(getHeightmapOceanColor(depth))
+      const offset = index * 3
+      palette[offset] = color.r
+      palette[offset + 1] = color.g
+      palette[offset + 2] = color.b
+    }
+    return palette
+  }
+
+  private buildHeightmapLandPalette(): Float32Array {
+    const palette = new Float32Array(256 * 3)
+    const color = new Color()
+    for (let index = 0; index < 256; index++) {
+      const elevation = HEIGHTMAP_MAX_LAND_ELEVATION_KM * index / 255
+      color.setStyle(getHeightmapLandColor(elevation))
+      const offset = index * 3
+      palette[offset] = color.r
+      palette[offset + 1] = color.g
+      palette[offset + 2] = color.b
+    }
+    return palette
+  }
+
+  private buildClimatePalette(colorAt: (value: number) => string): Float32Array {
+    const palette = new Float32Array(256 * 3)
+    const color = new Color()
+    for (let index = 0; index < 256; index++) {
+      color.setStyle(colorAt(index / 255))
+      const offset = index * 3
+      palette[offset] = color.r
+      palette[offset + 1] = color.g
+      palette[offset + 2] = color.b
+    }
+    return palette
+  }
+
+  private climatePaletteColor(palette: Float32Array, value: number): Rgb {
+    const paletteIndex = Math.round(clamp(value, 0, 1) * 255)
+    const offset = paletteIndex * 3
+    return [palette[offset], palette[offset + 1], palette[offset + 2]]
   }
 
   private temperatureColor(value: number): Rgb {
@@ -255,12 +318,6 @@ export class WorldColorizer {
     if (t < 0.5)
       return this.mix([0.80, 0.65, 0.42], [0.34, 0.68, 0.49], t * 2)
     return this.mix([0.34, 0.68, 0.49], [0.08, 0.25, 0.57], (t - 0.5) * 2)
-  }
-
-  private landHeightmapShade(elevation: number): number {
-    if (elevation <= 0)
-      return 0
-    return clamp(elevation / 6, 0, 1)
   }
 
   private stressColor(stress: number): Rgb {

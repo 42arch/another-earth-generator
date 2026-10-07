@@ -20,6 +20,7 @@ export class MapSurfaceGeometry {
     regionMask?: Uint8Array,
     cornerColors?: Float32Array,
     includeCloudDirections = false,
+    cornerColorRegionMask?: Uint8Array,
   ): BufferGeometry {
     const positions: number[] = []
     const vertexColors: number[] = []
@@ -41,6 +42,9 @@ export class MapSurfaceGeometry {
       }
       const start = mesh.voronoi.cellCornerOffsets[region]
       const end = mesh.voronoi.cellCornerOffsets[region + 1]
+      const useCornerColors = cornerColors !== undefined
+        && (!cornerColorRegionMask || cornerColorRegionMask[region] !== 0)
+      const regionCornerColors = useCornerColors ? cornerColors : colors
 
       for (let index = start; index < end; index++) {
         const cornerA = mesh.voronoi.cellCorners[index]
@@ -52,16 +56,16 @@ export class MapSurfaceGeometry {
             cornerA,
             centralMeridian,
             centerLongitude,
-            cornerColors ?? colors,
-            cornerColors ? cornerA * 3 : region * 3,
+            regionCornerColors,
+            useCornerColors ? cornerA * 3 : region * 3,
           ),
           this.getCorner(
             mesh,
             cornerB,
             centralMeridian,
             centerLongitude,
-            cornerColors ?? colors,
-            cornerColors ? cornerB * 3 : region * 3,
+            regionCornerColors,
+            useCornerColors ? cornerB * 3 : region * 3,
           ),
         ]
         const minimumLongitude = Math.min(

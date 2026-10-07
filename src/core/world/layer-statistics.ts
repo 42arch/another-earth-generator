@@ -1,9 +1,10 @@
 import type { GlobeDisplayMode } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { KOPPEN_CODES, KOPPEN_COLORS, KOPPEN_LABELS } from '@/core/climate/koppen-climate-classifier'
-import { classifyOceanCurrentThermal, OCEAN_CURRENT_THERMAL_COLORS } from '@/core/climate/ocean-current-thermal'
+import { classifyOceanCurrentThermal } from '@/core/climate/ocean-current-thermal'
 import { BIOME_CODES, BIOME_COLORS, BIOME_LABELS } from '@/core/ecology/biome-data'
 import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/geology/geology-data'
+import { OCEAN_CURRENT_THERMAL_COLORS } from '@/core/rendering/shared/climate-color-scale'
 
 interface Category {
   label: string
@@ -40,9 +41,15 @@ export function formatLayerStatistics(statistics: LayerStatistics): string {
 
 const MONTH_NAMES = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月']
 
+const MODES_WITHOUT_STATISTICS = new Set<GlobeDisplayMode>(['satellite', 'dem', 'heightmap'])
+
+export function hasLayerStatistics(mode: GlobeDisplayMode): boolean {
+  return !MODES_WITHOUT_STATISTICS.has(mode)
+}
+
 const MODE_TITLES: Record<GlobeDisplayMode, string> = {
-  'terrain': '地形',
-  'heightmap': '陆地高度图',
+  'dem': 'DEM图',
+  'heightmap': '高度图',
   'plates': '板块构造',
   'continents': '大陆区划',
   // 'crust': '地壳类型',
@@ -257,7 +264,7 @@ export function buildLayerStatistics(
     }, month)
   }
 
-  if (mode === 'terrain' || mode === 'heightmap') {
+  if (mode === 'dem') {
     const categories = [
       { label: '海洋 (< 0 km)', color: '#123f7c' },
       { label: '海岸 (0–0.02 km)', color: '#c2b378' },
@@ -269,6 +276,20 @@ export function buildLayerStatistics(
     return countBuckets(mode, total, categories, (region) => {
       const value = geo.elevation[region]
       return value < 0 ? 0 : value < 0.02 ? 1 : value < 1 ? 2 : value < 2.5 ? 3 : value < 4.5 ? 4 : 5
+    })
+  }
+
+  if (mode === 'heightmap') {
+    const categories = [
+      { label: '海洋 (< 0 km)', color: '#123f7c' },
+      { label: '低地 (0–1 km)', color: '#388a34' },
+      { label: '丘陵 (1–2.5 km)', color: '#6e7238' },
+      { label: '山地 (2.5–4.5 km)', color: '#94705e' },
+      { label: '高山 (≥ 4.5 km)', color: '#d9dce6' },
+    ]
+    return countBuckets(mode, total, categories, (region) => {
+      const value = geo.elevation[region]
+      return value < 0 ? 0 : value < 1 ? 1 : value < 2.5 ? 2 : value < 4.5 ? 3 : 4
     })
   }
 

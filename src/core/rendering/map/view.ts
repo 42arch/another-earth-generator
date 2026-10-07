@@ -124,11 +124,13 @@ export class MapView {
     const modeChanged = previousMode !== params.appearance.displayMode
     const satelliteTransition = modeChanged && (previousMode === 'satellite' || params.appearance.displayMode === 'satellite')
     this.params = { ...params }
-    if (satelliteTransition)
+    const elevationColorModeChanged = modeChanged
+      && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(params.appearance.displayMode))
+    if (satelliteTransition || elevationColorModeChanged)
       this.surfaceDirty = true
     if (!this.active) {
       if (this.surface && this.data && !satelliteTransition
-        && params.appearance.displayMode !== 'heightmap'
+        && !this.isElevationColorMode(params.appearance.displayMode)
         && params.appearance.displayMode !== 'satellite') {
         this.geometryBuilder.updateColors(
           this.surface.geometry,
@@ -141,7 +143,7 @@ export class MapView {
     this.ensureSurface()
     if (!this.surface || !this.data)
       return
-    if (!satelliteTransition && params.appearance.displayMode !== 'heightmap'
+    if (!satelliteTransition && !this.isElevationColorMode(params.appearance.displayMode)
       && params.appearance.displayMode !== 'satellite') {
       this.geometryBuilder.updateColors(
         this.surface.geometry,
@@ -201,8 +203,8 @@ export class MapView {
     this.disposeSurface()
     const mode = this.params.appearance.displayMode
     const colors = this.colorizer.build(this.data, mode, this.mesh, mode === 'satellite')
-    const cornerColors = mode === 'heightmap'
-      ? this.colorizer.buildHeightmapCornerColors(this.mesh, this.data.geography.elevation)
+    const cornerColors = mode === 'dem'
+      ? this.colorizer.buildDEMCorners(this.mesh, this.data.geography.elevation, this.data.geography.landMask)
       : undefined
     const geometry = this.geometryBuilder.create(
       this.mesh,
@@ -211,6 +213,8 @@ export class MapView {
       this.centralMeridian,
       undefined,
       cornerColors,
+      false,
+      mode === 'dem' ? this.data.geography.landMask : undefined,
     )
     const material = new MeshBasicMaterial({
       vertexColors: true,
@@ -309,7 +313,7 @@ export class MapView {
     if (!this.mesh || !this.data || (mode !== 'wind' && mode !== 'ocean-current') || vectors?.kind !== mode)
       return
     const geometry = createClimateVectorGeometry(this.mesh, vectors, this.data.geography.landMask, 1)
-    this.addProjectedSourceGeometry(geometry, mode === 'wind' ? 0xFFE6A0 : 0xFFFFFF, 0.94, 0.4, 5, mode === 'ocean-current')
+    this.addProjectedSourceGeometry(geometry, mode === 'wind' ? 0xA9FFF1 : 0xFFFFFF, 0.94, 0.4, 5, mode === 'ocean-current')
   }
 
   private addCellBoundaries(): void {
@@ -566,6 +570,10 @@ export class MapView {
   private ensureSurface(): void {
     if (this.surfaceDirty || !this.surface)
       this.rebuildSurface()
+  }
+
+  private isElevationColorMode(mode: WorldConfig['appearance']['displayMode']): mode is 'dem' | 'heightmap' {
+    return mode === 'dem' || mode === 'heightmap'
   }
 
   private ensureOverlays(): void {

@@ -8,7 +8,7 @@ import { koppenLabel } from '@/core/climate/koppen-climate-classifier'
 import { projectMonthlyVectorField } from '@/core/climate/monthly-vector-projector'
 import { biomeLabel } from '@/core/ecology/biome-data'
 import { cloneWorldConfig, DEFAULT_WORLD_CONFIG } from '@/core/simulation/config'
-import { buildLayerStatistics } from '@/core/world/layer-statistics'
+import { buildLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
 import { RendererCore } from './renderer-core'
 import { GenerationAbortedError, SimulationCore } from './simulation-core'
 
@@ -109,6 +109,8 @@ export default class WorldEngine {
   }
 
   getLayerStatistics(): LayerStatistics | null {
+    if (!hasLayerStatistics(this.params.appearance.displayMode))
+      return null
     const state = this.simulation.state
     if (!state)
       return null

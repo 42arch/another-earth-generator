@@ -1,5 +1,5 @@
 export type GlobeDisplayMode
-  = | 'terrain'
+  = | 'dem'
     | 'heightmap'
     | 'plates'
     | 'continents'
