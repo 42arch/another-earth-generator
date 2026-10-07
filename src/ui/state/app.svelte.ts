@@ -13,6 +13,7 @@ export interface SelectedRegionInfo {
   longitude: number
   elevation: number
   plate: number
+  plateDetail: number
   continent?: number
   geometricFlowCount?: number
   koppenLabel?: string

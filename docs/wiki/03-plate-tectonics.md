@@ -8,9 +8,9 @@ Plates are moving crustal slabs. When adjacent plates move toward each other, mo
 
 ## How Plates Form
 
-The [PlateStage](../../src/core/simulation/pipeline/stages/plate-stage.ts) generates sub-plates on the reference mesh, then creates candidate continents and crust attributes based on the plate layout. Seeds are spread out as much as possible, plates grow by taking turns along adjacent regions, and then boundaries and fragmented pieces are processed. Each plate has an Euler rotation vector `ω`; the tangential velocity at a unit sphere position `p` is `v = ω × p`. This describes the local movement direction, not the true geological age or cm/yr speed.
+The [PlateStage](../../src/core/simulation/pipeline/stages/plate-stage.ts) generates a fixed set of 100 reference subdivisions, groups them into connected major plates of varied area, and splits a few independently moving microplates from their boundaries. Subdivision seeds are spread apart and grow through adjacent regions. The subdivision count is an internal constant, not a user control.
 
-The [PlatePhysicsProcessor](../../src/core/geology/plate-physics.ts) corrects initial motion based on area, crust, and boundary relationships. The [SuperPlateStage](../../src/core/simulation/pipeline/stages/super-plate-stage.ts) groups sub-plates into larger tectonic units, keeping major mountain belts and ridges continuous. The output retains `regionPlate` and `regionSuperPlate`: the former is useful for observing fine-grained plates, while the latter dominates large-scale boundaries.
+The [ContinentalCrustStage](../../src/core/simulation/pipeline/stages/continental-crust-stage.ts) then places candidate continents and crust using the established moving-plate layout. The [SuperPlateStage](../../src/core/simulation/pipeline/stages/super-plate-stage.ts) uses the [PlatePhysicsProcessor](../../src/core/geology/plate-physics.ts) to adjust motion based on area, crust, and boundary relationships. Each tectonic plate has an Euler rotation vector `ω`; the tangential velocity at a unit-sphere position `p` is `v = ω × p`. This describes local movement direction, not geological age or a measured cm/yr speed. `regionPlate` identifies reference subdivisions; `regionSuperPlate` identifies independently moving tectonic plates.
 
 ## How Boundaries Affect Topography
 
@@ -28,8 +28,8 @@ The code uses a normal threshold of `0.003` to distinguish obvious convergence a
 
 Boundary effects also decay inland instead of just being drawn on a single line. Tectonic elevation reads collision zones, ridges, faults, stress directions, and overriding/subducting sides to establish mountain belts, trenches, volcanic arcs, and rift valleys. A long-wave mantle field further modulates tectonic responses. See [Geology Data Types](../../src/core/geology/geology-data.ts) and [Tectonic Stage](../../src/core/simulation/pipeline/stages/tectonic-stage.ts) for related outputs.
 
-The [ProjectionStage](../../src/core/simulation/pipeline/stages/projection-stage.ts) analyzes the boundaries of both sub-plates and superplates simultaneously. The main tectonic types use superplate boundaries as a skeleton, while sub-plate stress and direction are used for local modulation; the code applies weights of `0.58` and `0.88` respectively to these two layers of stress. In this way, not all internal sub-plate seams become major mountain systems, but the details still affect the morphology of mountain belts.
+The [ProjectionStage](../../src/core/simulation/pipeline/stages/projection-stage.ts) derives tectonic stress from independently moving plate boundaries. Internal reference subdivisions inherit their plate's motion, so their seams do not create independent collision stress.
 
 ## How to Read the Map
 
-The "Plate Tectonics" layer in the interface is colored by sub-plate index. The index color only helps distinguish regions; it does not directly represent motion direction, stress, or crust type. Finer tectonic diagnosis fields are stored internally, but the layer bar does not expose all diagnostic modes currently.
+The "Plate Tectonics" layer colors independently moving plates. Reference subdivisions remain available to the internal generator and region inspector but no longer have a separate layer. Index colors distinguish regions; they do not encode motion direction, stress, or crust type.

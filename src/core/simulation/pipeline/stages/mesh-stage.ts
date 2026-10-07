@@ -1,6 +1,7 @@
 import type { ISimulationStage, SimulationContext } from '../types'
 import { IcosphereBuilder, nearestIcosphereLevel } from '@/core/mesh/icosphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
+import { REFERENCE_PLATE_SUBDIVISION_COUNT } from '@/core/simulation/config'
 import {
   REFERENCE_REGION_LEVEL,
   ReferenceGridProjector,
@@ -38,7 +39,7 @@ export class MeshStage implements ISimulationStage {
     const outputToReference = projector.projectPerturbed(
       mesh.regionPosition,
       config.core.seed,
-      config.geology.plateCount,
+      REFERENCE_PLATE_SUBDIVISION_COUNT,
     )
 
     context.referenceMesh = referenceMesh

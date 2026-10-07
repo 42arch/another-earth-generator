@@ -8,9 +8,9 @@
 
 ## 板块如何形成
 
-[PlateStage](../../src/core/simulation/pipeline/stages/plate-stage.ts) 在参考网格上生成细板块，再根据板块图创建候选大陆与地壳属性。种子尽量分散，板块沿邻接区域轮流生长，随后处理边界和零散片段。每块板有欧拉旋转向量 `ω`；单位球位置 `p` 的切向速度为 `v = ω × p`。这描述局部运动方向，不表示真实地质年代或 cm/年速度。
+[PlateStage](../../src/core/simulation/pipeline/stages/plate-stage.ts) 在参考网格上固定生成 100 个构造细分，并先将它们组合成面积不等、连通的主要板块，再沿边界拆出少量独立运动的小板块。细分种子尽量分散，单元沿邻接区域生长；细分数量是内部生成常量，不作为用户参数。
 
-[PlatePhysicsProcessor](../../src/core/geology/plate-physics.ts) 根据面积、地壳与边界关系修正初始运动。[SuperPlateStage](../../src/core/simulation/pipeline/stages/super-plate-stage.ts) 把细板块组合成较大的构造单元，让主山带和洋脊保持连续。输出保留 `regionPlate` 与 `regionSuperPlate`：前者便于看细分板块，后者主导大尺度边界。
+[ContinentalCrustStage](../../src/core/simulation/pipeline/stages/continental-crust-stage.ts) 随后参考已确定的主要板块布局，生成候选大陆和地壳属性。[SuperPlateStage](../../src/core/simulation/pipeline/stages/super-plate-stage.ts) 再由 [PlatePhysicsProcessor](../../src/core/geology/plate-physics.ts) 根据面积、地壳与边界关系修正运动。每块构造板块有欧拉旋转向量 `ω`；单位球位置 `p` 的切向速度为 `v = ω × p`。这描述局部运动方向，不表示真实地质年代或 cm/年速度。输出保留 `regionPlate` 与 `regionSuperPlate`：前者表示候选大陆布局所用细分，后者表示独立运动的构造板块。
 
 ## 边界如何影响地形
 
@@ -28,8 +28,8 @@ edgeStress     = max(|normalVelocity|, shearVelocity)
 
 边界作用还会向板内衰减，而不是只画在一条线上。构造高程读取碰撞带、洋脊、断层、应力方向与上覆/俯冲侧，建立山带、海沟、火山弧和裂谷。地幔长波场再调制构造响应。相关输出在 [地质数据类型](../../src/core/geology/geology-data.ts) 与 [构造阶段](../../src/core/simulation/pipeline/stages/tectonic-stage.ts)。
 
-[ProjectionStage](../../src/core/simulation/pipeline/stages/projection-stage.ts) 同时分析细板块与超级板块的边界。主构造类型以超级板块边界为骨架，细板块的应力与方向用于局部调制；代码分别给两层应力使用 `0.58` 和 `0.88` 的权重。这样内部细板块接缝不会都变成主山系，但细节仍会影响山带形态。
+[ProjectionStage](../../src/core/simulation/pipeline/stages/projection-stage.ts) 以独立运动的构造板块边界生成构造应力。内部细分继承所属板块的运动，不再因细分接缝产生独立的碰撞应力。
 
 ## 如何读图
 
-界面中的“板块构造”按细板块编号着色。编号颜色只帮助分辨区域，不能直接表示运动方向、应力或地壳类型。内部还保存更细的构造诊断字段，但目前图层栏未开放所有诊断模式。
+界面中的“板块构造”按独立运动的板块编号着色。构造细分仅用于内部生成和检查器信息，不再作为单独图层。编号颜色只帮助分辨区域，不能直接表示运动方向、应力或地壳类型。

@@ -35,20 +35,21 @@ export class WorldColorizer {
     const colors = new Float32Array(numRegions * 3)
 
     let plateColors: Float32Array | null = null
-    if (mode === 'plates' && data.geology.regionPlate) {
+    if (mode === 'plates') {
+      const regions = data.geology.regionSuperPlate
       let maxPlate = 0
       for (let i = 0; i < numRegions; i++) {
-        if (data.geology.regionPlate[i] > maxPlate)
-          maxPlate = data.geology.regionPlate[i]
+        if (regions[i] > maxPlate)
+          maxPlate = regions[i]
       }
       plateColors = this.buildPlateColors(maxPlate + 1)
     }
     let continentColors: Float32Array | null = null
-    if (mode === 'continents' && data.geography.continentId) {
+    if (mode === 'continents') {
       let maxContinent = 0
       for (let i = 0; i < numRegions; i++) {
-        if (data.geography.continentId[i] > maxContinent)
-          maxContinent = data.geography.continentId[i]
+        if (data.geography.visibleContinentId[i] > maxContinent)
+          maxContinent = data.geography.visibleContinentId[i]
       }
       continentColors = this.buildPlateColors(maxContinent + 1)
     }
@@ -72,20 +73,25 @@ export class WorldColorizer {
       const target = region * 3
       let color: Rgb
 
-      if (mode === 'plates' && plateColors && data.geology.regionPlate) {
-        const plate = data.geology.regionPlate[region]
+      if (mode === 'plates' && plateColors) {
+        const plate = data.geology.regionSuperPlate[region]
         const pIdx = Math.max(0, plate) * 3
         colors[target] = plateColors[pIdx]
         colors[target + 1] = plateColors[pIdx + 1]
         colors[target + 2] = plateColors[pIdx + 2]
         continue
       }
-      else if (mode === 'continents' && continentColors && data.geography.continentId) {
-        const continent = data.geography.continentId[region]
-        if (continent < 0) {
+      else if (mode === 'continents' && continentColors) {
+        const continent = data.geography.visibleContinentId[region]
+        if (data.geography.landMask[region] === 0) {
           colors[target] = 0.1
           colors[target + 1] = 0.15
           colors[target + 2] = 0.2
+        }
+        else if (continent < 0) {
+          colors[target] = 0.62
+          colors[target + 1] = 0.58
+          colors[target + 2] = 0.46
         }
         else {
           const cIdx = continent * 3
@@ -101,7 +107,10 @@ export class WorldColorizer {
           : this.demColor(data.geography.elevation[region])
       }
       else if (mode === 'heightmap') {
-        color = this.heightmapColor(data.geography.elevation[region])
+        color = this.heightmapColor(
+          data.geography.elevation[region],
+          data.geography.landMask[region] === 0,
+        )
       }
       /*
       else if (mode === 'crust') {
@@ -233,8 +242,7 @@ export class WorldColorizer {
     return [shade, shade, shade]
   }
 
-  private heightmapColor(elevation: number): Rgb {
-    const isOcean = elevation < 0
+  private heightmapColor(elevation: number, isOcean: boolean): Rgb {
     const palette = isOcean ? this.heightmapOceanPalette : this.heightmapLandPalette
     const scale = isOcean
       ? -elevation / HEIGHTMAP_MAX_OCEAN_DEPTH_KM

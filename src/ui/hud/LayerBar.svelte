@@ -315,6 +315,15 @@
             <div class='px-3 py-2 border-b border-white/[0.04]'>
               <div class='text-[11px] font-semibold text-obs-text-main'>{appState.layerStatistics.title}</div>
               <div class='mt-0.5 text-[10px] text-obs-text-dim'>占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元</div>
+              {#if appState.layerStatistics.plateCounts}
+                <div class='mt-2 flex gap-3 text-[10px] text-obs-text-main'>
+                  <span>主要板块 <strong class='font-mono text-obs-amber-light'>{appState.layerStatistics.plateCounts.primary}</strong></span>
+                  <span>小板块 <strong class='font-mono text-obs-amber-light'>{appState.layerStatistics.plateCounts.micro}</strong></span>
+                </div>
+              {/if}
+              {#if appState.layerStatistics.description}
+                <p class='mt-1.5 text-[10px] leading-relaxed text-obs-text-dim'>{appState.layerStatistics.description}</p>
+              {/if}
             </div>
             <div class='flex flex-col px-1.5 py-1.5'>
               {#each appState.layerStatistics.rows as item (item.key)}

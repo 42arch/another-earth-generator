@@ -1,45 +1,44 @@
 import type { ISimulationStage, SimulationContext } from '../types'
 import { PlatePhysicsProcessor } from '@/core/geology/plate-physics'
-import { SuperPlateGenerator } from '@/core/geology/super-plate-generator'
 
 export class SuperPlateStage implements ISimulationStage {
-  name = 'SuperPlates'
+  name = 'PlateDynamics'
 
-  private readonly superPlateGenerator = new SuperPlateGenerator()
-  // 独立的物理处理器实例，或者重用一个
   private readonly platePhysics = new PlatePhysicsProcessor()
 
   execute(context: SimulationContext): void {
-    if (!context.referenceMesh || !context.referencePlates || !context.plateAngularVelocity || !context.referenceCrust) {
+    if (!context.referenceMesh || !context.referencePlates || !context.referenceSuperPlates) {
       throw new Error('Missing dependencies in SuperPlateStage')
     }
 
     const config = context.config
     const referenceMesh = context.referenceMesh
 
-    const referenceSuperPlates = this.superPlateGenerator.generate(
+    const referenceSuperPlates = context.referenceSuperPlates
+
+    referenceSuperPlates.plateAngularVelocity = this.platePhysics.apply(
       referenceMesh,
-      context.referencePlates,
-      context.plateAngularVelocity,
-      context.referenceCrust,
+      referenceSuperPlates.regionPlate,
+      referenceSuperPlates.plateAngularVelocity,
+      referenceSuperPlates.crust,
+      config.core.seed,
+      1.6,
     )
-
-    if (referenceSuperPlates) {
-      referenceSuperPlates.plateAngularVelocity = this.platePhysics.apply(
-        referenceMesh,
-        referenceSuperPlates.regionPlate,
-        referenceSuperPlates.plateAngularVelocity,
-        referenceSuperPlates.crust,
-        config.core.seed,
-        1.6,
-      )
+    const fineVelocities = new Float32Array(context.referencePlates.plateSeeds.length * 3)
+    for (let plate = 0; plate < context.referencePlates.plateSeeds.length; plate++) {
+      const source = referenceSuperPlates.plateToSuper[plate] * 3
+      fineVelocities.set(referenceSuperPlates.plateAngularVelocity.subarray(source, source + 3), plate * 3)
     }
+    context.referencePlates = {
+      ...context.referencePlates,
+      plateAngularVelocity: fineVelocities,
+    }
+    context.plateAngularVelocity = fineVelocities
 
-    // PlatePhysicsProcessor 记录了最后一次 apply 计算出的 mantleFlow
+    // The mantle field follows the final moving plates, not the reference subdivisions.
     const referenceMantleFlow = this.platePhysics.mantleFlow
       ?? new Float32Array(referenceMesh.numRegions)
 
-    context.referenceSuperPlates = referenceSuperPlates || null
     context.referenceMantleFlow = referenceMantleFlow
   }
 }

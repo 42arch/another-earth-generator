@@ -161,13 +161,31 @@
           <div class='flex-1 h-px bg-white/5'></div>
         </div>
         <Slider
-          label='板块数量'
-          description='全球构造板块划分的初始数量。板块数量越多，地质活动越频繁，大陆也会越破碎。'
-          bind:value={appState.params.geology.plateCount}
-          min={4}
-          max={120}
+          label='主要板块'
+          description='控制全球连续运动的主要构造板块数量。'
+          bind:value={appState.params.geology.primaryPlateCount}
+          min={2}
+          max={24}
           step={1}
           decimals={0}
+        />
+        <Slider
+          label='小板块'
+          description='在主要板块边界附近生成的独立运动小板块上限。实际数量可能更少。'
+          bind:value={appState.params.geology.microPlateCount}
+          min={0}
+          max={20}
+          step={1}
+          decimals={0}
+        />
+        <Slider
+          label='板块面积差异'
+          description='主要板块目标面积的差异程度，数值越高越容易出现大面积板块。'
+          bind:value={appState.params.geology.plateSizeVariety}
+          min={0}
+          max={1}
+          step={0.05}
+          decimals={2}
         />
         <Slider
           label='大陆数量'

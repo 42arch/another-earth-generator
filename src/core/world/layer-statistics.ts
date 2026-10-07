@@ -23,6 +23,8 @@ export interface LayerStatistics {
   seed?: number
   month?: number
   totalCells: number
+  plateCounts?: { primary: number, micro: number }
+  description?: string
   rows: LayerStatisticRow[]
 }
 
@@ -34,6 +36,10 @@ export function formatLayerStatistics(statistics: LayerStatistics): string {
     `模式\t${statistics.mode}`,
     ...(statistics.month === undefined ? [] : [`月份\t${statistics.month + 1}`]),
     `总 cell\t${statistics.totalCells}`,
+    ...(statistics.plateCounts
+      ? [`主要板块\t${statistics.plateCounts.primary}`, `小板块\t${statistics.plateCounts.micro}`]
+      : []),
+    ...(statistics.description ? [`说明\t${statistics.description}`] : []),
     '分类\tcell 数\t占比',
     ...statistics.rows.map(item => `${item.label}\t${item.count}\t${item.percentage.toFixed(6)}%`),
   ].join('\n')
@@ -76,6 +82,14 @@ function row(key: string, category: Category, count: number, totalCells: number)
   return { key, ...category, count, percentage: totalCells > 0 ? count / totalCells * 100 : 0 }
 }
 
+function plateLabel(plate: number, primaryPlateLimit?: number): string {
+  if (plate < 0)
+    return '未分配板块'
+  if (primaryPlateLimit === undefined)
+    return `板块 #${plate}`
+  return `${plate < primaryPlateLimit ? '主要板块' : '小板块'} #${plate}`
+}
+
 function finish(
   mode: GlobeDisplayMode,
   totalCells: number,
@@ -113,6 +127,7 @@ export function buildLayerStatistics(
   data: WorldSimulationState,
   mode: GlobeDisplayMode,
   month: number,
+  primaryPlateCount?: number,
 ): LayerStatistics | null {
   const total = data.geography.elevation.length
   const geo = data.geography
@@ -144,19 +159,33 @@ export function buildLayerStatistics(
   }
 
   if (mode === 'plates') {
+    const regions = geology.regionSuperPlate
+    const primaryPlateLimit = primaryPlateCount === undefined
+      ? undefined
+      : Math.max(2, Math.floor(primaryPlateCount))
     const counts = new Map<number, number>()
     for (let region = 0; region < total; region++) {
-      const plate = geology.regionPlate[region]
+      const plate = regions[region]
       counts.set(plate, (counts.get(plate) ?? 0) + 1)
     }
+    const plateCounts = primaryPlateLimit !== undefined
+      ? {
+          primary: [...counts.keys()].filter(plate => plate >= 0 && plate < primaryPlateLimit).length,
+          micro: [...counts.keys()].filter(plate => plate >= primaryPlateLimit).length,
+        }
+      : undefined
     return {
       mode,
       title: MODE_TITLES[mode],
       totalCells: total,
+      plateCounts,
+      description: plateCounts
+        ? '主要板块通常覆盖多个构造细分；小板块从主要板块边界拆出，面积较小，也独立运动。大陆可跨越板块边界。'
+        : undefined,
       rows: [...counts].map(([plate, count]) => row(
         String(plate),
         {
-          label: plate >= 0 ? `板块 #${plate}` : '未分配板块',
+          label: plateLabel(plate, primaryPlateLimit),
           color: plate >= 0 ? `hsl(${(plate * 137.508) % 360} 65% 55%)` : '#777b85',
         },
         count,
@@ -168,18 +197,19 @@ export function buildLayerStatistics(
   if (mode === 'continents') {
     const counts = new Map<number, number>()
     for (let region = 0; region < total; region++) {
-      const continent = geo.continentId[region]
+      const continent = geo.landMask[region] === 0 ? -2 : geo.visibleContinentId[region]
       counts.set(continent, (counts.get(continent) ?? 0) + 1)
     }
     return {
       mode,
       title: MODE_TITLES[mode],
       totalCells: total,
+      description: '按最终海陆显示大陆归属；新露出的陆地继承最近候选大陆的编号。',
       rows: [...counts].map(([continent, count]) => row(
         String(continent),
         {
-          label: continent >= 0 ? `大陆 #${continent}` : '非大陆区域',
-          color: continent >= 0 ? `hsl(${(continent * 137.508) % 360} 65% 55%)` : '#1a2633',
+          label: continent >= 0 ? `大陆 #${continent}` : continent === -2 ? '海洋' : '未归属大陆的陆地',
+          color: continent >= 0 ? `hsl(${(continent * 137.508) % 360} 65% 55%)` : continent === -2 ? '#1a2633' : '#9e9475',
         },
         count,
         total,

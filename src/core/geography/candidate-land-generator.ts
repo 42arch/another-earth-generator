@@ -1,12 +1,14 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import alea from 'alea'
 import { createNoise3D } from 'simplex-noise'
-import { computeSphericalDistanceField, referenceCellsToAngle } from '@/core/math/distance-field'
+import { computeSphericalDistanceField, computeSphericalNearestLabels, referenceCellsToAngle } from '@/core/math/distance-field'
 import { clamp } from '@/core/math/math'
 
 export interface CandidateLandData {
   candidateLandMask: Uint8Array
   continentId: Int16Array
+  /** Nearest candidate continent at every reference region, including ocean. */
+  nearestContinentId: Int16Array
   /** Reference-mesh region at the seed of each generated continent. */
   continentSeeds: Uint32Array
   landArea: number
@@ -21,7 +23,7 @@ interface PlateTopology {
 
 const COAST_CONTOUR_AMPLITUDE = referenceCellsToAngle(6)
 
-/** Uses plate groups for continent placement, then contours coasts across plates. */
+/** Places continents on subdivisions guided by moving plates, then contours coasts. */
 export class CandidateLandGenerator {
   generate(
     mesh: SphericalMesh,
@@ -31,12 +33,15 @@ export class CandidateLandGenerator {
     requestedCoverage: number,
     sizeVariety: number,
     seed: number,
+    plateToSuper?: Int16Array,
   ): CandidateLandData {
     const plateCount = plateSeeds.length
     if (regionPlate.length !== mesh.numRegions)
       throw new Error('Plate assignment must match the reference mesh')
     if (plateCount === 0)
       throw new Error('At least one tectonic plate is required')
+    if (plateToSuper && plateToSuper.length !== plateCount)
+      throw new Error('Moving plate mapping must match reference subdivisions')
 
     const continentCount = Math.max(
       1,
@@ -54,6 +59,7 @@ export class CandidateLandGenerator {
       totalArea,
       variety,
       random,
+      plateToSuper,
     )
 
     this.trimOversizedSeeds(seedPlates, topology.area, targetLandArea)
@@ -87,6 +93,7 @@ export class CandidateLandGenerator {
           plateContinent,
           topology,
           random,
+          plateToSuper,
         )
         if (plate < 0)
           continue
@@ -127,6 +134,7 @@ export class CandidateLandGenerator {
     return {
       candidateLandMask: contoured.candidateLandMask,
       continentId: contoured.continentId,
+      nearestContinentId: contoured.nearestContinentId,
       continentSeeds: Uint32Array.from(
         seedPlates.map(plate => plateSeeds[plate]),
       ),
@@ -141,12 +149,12 @@ export class CandidateLandGenerator {
     continentSeeds: number[],
     targetLandArea: number,
     seed: number,
-  ): Pick<CandidateLandData, 'candidateLandMask' | 'continentId' | 'landArea'> {
+  ): Pick<CandidateLandData, 'candidateLandMask' | 'continentId' | 'nearestContinentId' | 'landArea'> {
     const count = mesh.numRegions
     const candidateLandMask = new Uint8Array(count)
     const continentId = new Int16Array(count).fill(-1)
     if (targetLandArea <= 0)
-      return { candidateLandMask, continentId, landArea: 0 }
+      return { candidateLandMask, continentId, nearestContinentId: new Int16Array(count).fill(-1), landArea: 0 }
 
     const distanceToLand = computeSphericalDistanceField(mesh, region => plateLandMask[region] === 1)
     const distanceToOcean = computeSphericalDistanceField(mesh, region => plateLandMask[region] === 0)
@@ -183,25 +191,26 @@ export class CandidateLandGenerator {
 
     // An expanded coast inherits the nearest original continent, not the plate
     // it happened to cross. Distances are processed outward from original land.
-    const nearestContinent = Int16Array.from(plateContinentId)
+    const originalNearestContinent = Int16Array.from(plateContinentId)
     const oceanRegions = rankedRegions.filter(region => plateLandMask[region] === 0)
     oceanRegions.sort((a, b) => distanceToLand[a] - distanceToLand[b] || a - b)
     for (const region of oceanRegions) {
       let nearest = -1
       let nearestDistance = distanceToLand[region]
       for (const neighbor of mesh.forEachNeighborOfRegion(region)) {
-        if (distanceToLand[neighbor] >= nearestDistance || nearestContinent[neighbor] < 0)
+        if (distanceToLand[neighbor] >= nearestDistance || originalNearestContinent[neighbor] < 0)
           continue
         nearestDistance = distanceToLand[neighbor]
-        nearest = nearestContinent[neighbor]
+        nearest = originalNearestContinent[neighbor]
       }
-      nearestContinent[region] = nearest
+      originalNearestContinent[region] = nearest
     }
     for (let region = 0; region < count; region++) {
       if (candidateLandMask[region])
-        continentId[region] = nearestContinent[region]
+        continentId[region] = originalNearestContinent[region]
     }
-    return { candidateLandMask, continentId, landArea }
+    const nearestContinentId = computeSphericalNearestLabels(mesh, continentId)
+    return { candidateLandMask, continentId, nearestContinentId, landArea }
   }
 
   private buildPlateTopology(
@@ -264,6 +273,7 @@ export class CandidateLandGenerator {
     totalArea: number,
     variety: number,
     random: () => number,
+    plateToSuper?: Int16Array,
   ): number[] {
     const plateCount = topology.area.length
     const seeds = [Math.floor(random() * plateCount)]
@@ -286,9 +296,11 @@ export class CandidateLandGenerator {
         const rawAreaFactor = Math.sqrt(expectedArea / Math.max(topology.area[plate], 1e-12))
         const areaFactor = 1 + (rawAreaFactor - 1) * (1 - variety * 0.5)
         const compactness = 0.3 + topology.compactness[plate] * 0.7
+        const newMovingPlate = plateToSuper
+          && seeds.every(existing => plateToSuper[existing] !== plateToSuper[plate])
         candidates.push({
           plate,
-          score: minimumDistance * areaFactor * compactness,
+          score: minimumDistance * areaFactor * compactness * (newMovingPlate ? 1.3 : 1),
         })
       }
       candidates.sort((a, b) => b.score - a.score || a.plate - b.plate)
@@ -357,6 +369,7 @@ export class CandidateLandGenerator {
     plateContinent: Int16Array,
     topology: PlateTopology,
     random: () => number,
+    plateToSuper?: Int16Array,
   ): number {
     const candidates: Array<{ plate: number, score: number }> = []
     for (let plate = 0; plate < plateContinent.length; plate++) {
@@ -365,11 +378,14 @@ export class CandidateLandGenerator {
       let touchesSelf = false
       let touchesOther = false
       let sameNeighbors = 0
+      let sameMovingPlateNeighbors = 0
       for (const neighbor of topology.neighbors[plate]) {
         const assignment = plateContinent[neighbor]
         if (assignment === continent) {
           touchesSelf = true
           sameNeighbors++
+          if (plateToSuper && plateToSuper[neighbor] === plateToSuper[plate])
+            sameMovingPlateNeighbors++
         }
         else if (assignment >= 0) {
           touchesOther = true
@@ -380,7 +396,8 @@ export class CandidateLandGenerator {
         continue
       candidates.push({
         plate,
-        score: sameNeighbors + topology.compactness[plate] * 3 + random() * 0.5,
+        score: sameNeighbors + sameMovingPlateNeighbors * 0.75
+          + topology.compactness[plate] * 3 + random() * 0.5,
       })
     }
     candidates.sort((a, b) => b.score - a.score || a.plate - b.plate)

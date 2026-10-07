@@ -27,7 +27,10 @@ export interface GeographyData {
   terrainErosion: TerrainErosionFields
   landMask: Uint8Array
   candidateLandMask: Uint8Array
+  /** Candidate-continent assignment, independent of the final shoreline. */
   continentId: Int16Array
+  /** Final visible land assignment; ocean is -1. */
+  visibleContinentId: Int16Array
   terrainFields: TectonicSpatialFields
   terrainClassification: TerrainClassificationFields
   landArea?: number

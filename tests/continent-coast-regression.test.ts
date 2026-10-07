@@ -30,6 +30,7 @@ it.each([2501, 42, 137])('contours continental crust across plate interiors for 
 
   expect(land.candidateLandMask).toEqual(repeated.candidateLandMask)
   expect(land.continentId).toEqual(repeated.continentId)
+  expect(land.nearestContinentId).toEqual(repeated.nearestContinentId)
   expect(superPlates).not.toBeNull()
   expect(superPlates!.crust.regionCrustType).toEqual(crust.regionCrustType)
   expect(superPlates!.crust.regionDensity).toEqual(crust.regionDensity)
@@ -41,6 +42,9 @@ it.each([2501, 42, 137])('contours continental crust across plate interiors for 
   for (let region = 0; region < mesh.numRegions; region++) {
     const landCell = land.candidateLandMask[region] === 1
     expect(land.continentId[region] >= 0).toBe(landCell)
+    expect(land.nearestContinentId[region]).toBeGreaterThanOrEqual(0)
+    if (landCell)
+      expect(land.continentId[region]).toBe(land.nearestContinentId[region])
     expect(crust.regionCrustType[region]).toBe(landCell ? CRUST_TYPE.Continental : CRUST_TYPE.Oceanic)
     const plate = plates.regionPlate[region]
     seenCrustByPlate[plate] |= landCell ? 2 : 1

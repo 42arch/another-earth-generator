@@ -58,6 +58,45 @@ export function computeSphericalDistanceField(
   return Float32Array.from(bestDistance)
 }
 
+/** Assigns every region the label of its nearest labeled source by graph-geodesic distance. */
+export function computeSphericalNearestLabels(
+  mesh: SphericalMesh,
+  sourceLabels: Int16Array,
+): Int16Array {
+  if (sourceLabels.length !== mesh.numRegions)
+    throw new Error('Source labels must match the spherical mesh')
+
+  const labels = Int16Array.from(sourceLabels)
+  const bestDistance = new Float64Array(mesh.numRegions).fill(Infinity)
+  const queue = new MinPriorityQueue<DistanceNode>()
+  for (let region = 0; region < mesh.numRegions; region++) {
+    if (labels[region] < 0)
+      continue
+    bestDistance[region] = 0
+    queue.push({ region, cost: 0 })
+  }
+
+  while (queue.size > 0) {
+    const current = queue.pop()
+    if (current.cost !== bestDistance[current.region])
+      continue
+    const nStart = mesh.neighborOffsets[current.region]
+    const nEnd = mesh.neighborOffsets[current.region + 1]
+    for (let n = nStart; n < nEnd; n++) {
+      const neighbor = mesh.neighbors[n]
+      const nextCost = current.cost
+        + mesh.distanceBetweenRegions(current.region, neighbor)
+      if (nextCost >= bestDistance[neighbor])
+        continue
+      bestDistance[neighbor] = nextCost
+      labels[neighbor] = labels[current.region]
+      queue.push({ region: neighbor, cost: nextCost })
+    }
+  }
+
+  return labels
+}
+
 /**
  * Propagates the strongest source value with exponential geodesic decay.
  * A source strength of 1 decays to e^-1 after `decayDistance` radians.

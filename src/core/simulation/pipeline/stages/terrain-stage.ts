@@ -23,9 +23,10 @@ export class TerrainStage implements ISimulationStage {
       regionPlate,
       regionSuperPlate,
       continentId,
+      nearestContinentId,
     } = context
 
-    if (!mesh || !candidateLandMask || !tectonics || !mantle || !regionPlate || !regionSuperPlate || !continentId) {
+    if (!mesh || !candidateLandMask || !tectonics || !mantle || !regionPlate || !regionSuperPlate || !continentId || !nearestContinentId) {
       throw new Error('Missing dependencies in TerrainStage')
     }
 
@@ -61,10 +62,15 @@ export class TerrainStage implements ISimulationStage {
     )
 
     const landMask = terrain.landMask
+    const visibleContinentId = new Int16Array(mesh.numRegions).fill(-1)
     let landArea = 0
     for (let region = 0; region < mesh.numRegions; region++) {
-      if (landMask[region] === 1)
+      if (landMask[region] === 1) {
         landArea += mesh.regionArea[region]
+        visibleContinentId[region] = continentId[region] >= 0
+          ? continentId[region]
+          : nearestContinentId[region]
+      }
     }
 
     const data: WorldSimulationState = {
@@ -98,6 +104,7 @@ export class TerrainStage implements ISimulationStage {
         landMask,
         candidateLandMask,
         continentId,
+        visibleContinentId,
         terrainFields: elevationFields.spatialFields,
         terrainClassification: elevationFields.classification,
         landArea,

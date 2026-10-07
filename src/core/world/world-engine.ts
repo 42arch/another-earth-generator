@@ -46,11 +46,12 @@ export default class WorldEngine {
       onStageStart: (stageName) => {
         const descriptions: Record<string, string> = {
           MeshGeneration: '正在构建球面拓扑网格…',
-          PlateTectonics: '正在计算板块动力学与碰撞…',
-          SuperPlates: '正在推演超大陆聚散与地幔流…',
+          PlateTectonics: '正在生成构造细分、主要板块与小板块…',
+          ContinentalCrust: '正在布置大陆地壳与候选海陆…',
+          PlateDynamics: '正在计算板块运动与地幔流…',
           DataProjection: '正在向高精度网格投影地壳特征…',
           MantleAndTectonics: '正在构建动态地形与应力强化…',
-          ElevationAndTerrain: '正在生成地形与冰川、水力、热力整形…',
+          ElevationAndTerrain: '正在生成地形与冰川、水力整形…',
           SeasonalCirculation: '正在计算四季风场与洋流…',
           MonthlyClimate: '正在计算 12 个月的气温与降水…',
           ClimateOutputProjection: '正在将气候细化到最终地形…',
@@ -123,7 +124,7 @@ export default class WorldEngine {
     if (cached)
       return cached
     this.prepareClimateDisplayFields()
-    const result = buildLayerStatistics(state.data, mode, month)
+    const result = buildLayerStatistics(state.data, mode, month, this.params.geology.primaryPlateCount)
     if (result) {
       result.seed = this.generatedSeed ?? undefined
       this.layerStatisticsCache.set(key, result)
@@ -193,10 +194,11 @@ export default class WorldEngine {
     if (!state)
       return
 
+    const plateCount = new Set(state.data.geology.regionSuperPlate).size
     this.callbacks?.onWorldSummary?.({
       regionCount: state.mesh.numRegions,
       triangleCount: state.mesh.numTriangles,
-      plateCount: this.params.geology.plateCount,
+      plateCount,
     })
 
     if (this.infoElement) {
@@ -204,7 +206,7 @@ export default class WorldEngine {
         '点击球面查看区域信息',
         `${state.mesh.numRegions} 个区域`,
         `${state.mesh.numTriangles} 个三角形`,
-        `${this.params.geology.plateCount} 个板块`,
+        `${plateCount} 个构造板块`,
       ].join(' · ')
     }
   }
@@ -219,8 +221,9 @@ export default class WorldEngine {
     const latitude = state.mesh.regionLatitude[region] * 180 / Math.PI
     const longitude = state.mesh.regionLongitude[region] * 180 / Math.PI
     const elevation = state.data.geography.elevation[region]
-    const plate = state.data.geology.regionPlate ? state.data.geology.regionPlate[region] : 0
-    const continent = state.data.geography.continentId ? state.data.geography.continentId[region] : -1
+    const plate = state.data.geology.regionSuperPlate[region]
+    const plateDetail = state.data.geology.regionPlate[region]
+    const continent = state.data.geography.visibleContinentId[region]
     const climate = state.data.climate
     const displayVector = climate?.displayVector
     const vectorInfo = displayVector?.month === this.params.appearance.climateMonth
@@ -270,6 +273,7 @@ export default class WorldEngine {
       longitude,
       elevation,
       plate,
+      plateDetail,
       continent,
       geometricFlowCount: state.data.geography.terrainErosion.flowAccumulation[region],
       ...climateInfo,
@@ -282,6 +286,7 @@ export default class WorldEngine {
         `纬度 ${latitude.toFixed(2)}°，经度 ${longitude.toFixed(2)}°`,
         `高程 ${elevation.toFixed(2)} km`,
         `板块 ${plate}`,
+        `构造细分 ${plateDetail}`,
       ].join(' · ')
     }
   }

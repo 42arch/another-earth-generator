@@ -13,8 +13,10 @@
 | 阶段 | 主要工作 | 输出位置 |
 | --- | --- | --- |
 | `MeshGeneration` | 构建参考和输出网格、区域映射 | `mesh`、`referenceMesh`、`outputToReference` |
-| `PlateTectonics`、`SuperPlates` | 细板块、候选大陆、地壳、超级板块 | 中间上下文 |
-| `Projection`、`Tectonics` | 投射宏观属性，计算边界、地幔与构造场 | 中间上下文 |
+| `PlateTectonics` | 100 个构造细分、主要板块与小板块拓扑 | 中间上下文 |
+| `ContinentalCrust` | 依据板块布局生成候选大陆与地壳属性 | 中间上下文 |
+| `PlateDynamics` | 根据地壳修正板块运动并计算地幔流 | 中间上下文 |
+| `DataProjection`、`MantleAndTectonics` | 投射宏观属性，计算边界、地幔与构造场 | 中间上下文 |
 | `ElevationAndTerrain` | 构造高程、纹理、后处理、最终海陆 | `data.geology`、`data.geography` |
 | `SeasonalCirculation` | 四个季节锚点的风、气压、表层洋流 | `data.climate.circulation` |
 | `MonthlyClimate` | 12 个月气温与降水 | `data.climate.monthly` |

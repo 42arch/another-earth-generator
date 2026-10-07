@@ -13,8 +13,10 @@ The [Worker Entry](../../src/core/simulation/worker/simulation.worker.ts) adds s
 | Stage | Main Work | Output Location |
 | --- | --- | --- |
 | `MeshGeneration` | Build reference and output meshes, region mapping | `mesh`, `referenceMesh`, `outputToReference` |
-| `PlateTectonics`, `SuperPlates` | Sub-plates, candidate continents, crust, superplates | Intermediate Context |
-| `Projection`, `Tectonics` | Project macroscopic attributes, calculate boundaries, mantle, and tectonic fields | Intermediate Context |
+| `PlateTectonics` | 100 reference subdivisions and major/micro plate topology | Intermediate Context |
+| `ContinentalCrust` | Candidate continents and crust guided by plate layout | Intermediate Context |
+| `PlateDynamics` | Crust-aware plate motion and mantle flow | Intermediate Context |
+| `DataProjection`, `MantleAndTectonics` | Project macroscopic attributes, calculate boundaries, mantle, and tectonic fields | Intermediate Context |
 | `ElevationAndTerrain` | Tectonic elevation, texture, post-processing, final land/sea | `data.geology`, `data.geography` |
 | `SeasonalCirculation` | Wind, pressure, surface ocean currents for four seasonal anchors | `data.climate.circulation` |
 | `MonthlyClimate` | 12-month temperature and precipitation | `data.climate.monthly` |

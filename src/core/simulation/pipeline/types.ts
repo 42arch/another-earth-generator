@@ -1,6 +1,7 @@
 import type { CandidateLandData } from '@/core/geography/candidate-land-generator'
 import type { SphericalBoundaryData, SphericalCrustData, SphericalTectonicData } from '@/core/geology/geology-data'
 import type { SphericalPlateData } from '@/core/geology/plate-generator'
+import type { SuperPlateData, SuperPlateTopologyData } from '@/core/geology/super-plate-generator'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { ReferenceGridProjector } from '@/core/mesh/reference-grid-projector'
 import type { WorldConfig } from '@/core/simulation/config'
@@ -30,23 +31,24 @@ export interface SimulationContext {
   /** Geographic nearest climate cells, without tectonic boundary perturbation. */
   climateOutputToReference?: Uint32Array
 
-  // 2. Reference Plate Stage
+  // 2. Reference plate topology and continental crust
   referencePlates?: SphericalPlateData
+  referencePlateTopology?: SuperPlateTopologyData
   referenceLand?: CandidateLandData
   referenceCrust?: SphericalCrustData
   plateAngularVelocity?: Float32Array
 
-  // 3. Super Plate Stage
-  referenceSuperPlates?: any // Uses SuperPlateData but let's just use any to avoid tight coupling if we don't have to import it
+  // 3. Plate dynamics
+  referenceSuperPlates?: SuperPlateData | null
   referenceMantleFlow?: Float32Array
 
   // 4. Projection Stage (将 reference 投影到高精度网格)
   candidateLandMask?: Uint8Array
   continentId?: Int16Array
+  nearestContinentId?: Int16Array
   regionPlate?: Int16Array
   regionSuperPlate?: Int16Array
   crust?: SphericalCrustData
-  fineBoundaries?: SphericalBoundaryData
   boundaries?: SphericalBoundaryData
 
   // 5. Mantle & Tectonics Stage

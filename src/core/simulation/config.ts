@@ -22,6 +22,9 @@ export type GlobeDisplayMode
     | 'wind'
     | 'ocean-current'
 
+/** Fixed reference subdivisions for candidate land and local plate construction. */
+export const REFERENCE_PLATE_SUBDIVISION_COUNT = 100
+
 export interface WorldConfig {
   core: {
     seed: number
@@ -32,7 +35,12 @@ export interface WorldConfig {
     planetRadius: number
   }
   geology: {
-    plateCount: number
+    /** Broad independently moving tectonic plates. */
+    primaryPlateCount: number
+    /** Small independently moving plates placed near broad boundaries. */
+    microPlateCount: number
+    /** Variation in target areas of broad plates. */
+    plateSizeVariety: number
     /** Number of separated plate groups assigned as candidate continents. */
     continentCount: number
     /** Allowed variation between continent target areas, from uniform to varied. */
@@ -94,8 +102,10 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
     planetRadius: 100,
   },
   geology: {
-    plateCount: 80,
-    continentCount: 6,
+    primaryPlateCount: 10,
+    microPlateCount: 14,
+    plateSizeVariety: 0.8,
+    continentCount: 7,
     continentSizeVariety: 0.35,
     landCoverage: 0.3,
     islandArcCount: 6,

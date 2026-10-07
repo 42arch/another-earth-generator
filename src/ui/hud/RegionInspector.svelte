@@ -86,6 +86,10 @@
               <span class='text-[11px] text-obs-text-dim uppercase tracking-wider'>高程 (Elevation)</span>
               <span class='text-obs-text-main font-mono'>{region.elevation.toFixed(2)} km</span>
             </div>
+            <div class='flex justify-between items-center'>
+              <span class='text-[11px] text-obs-text-dim uppercase tracking-wider'>构造细分 (Subdivision)</span>
+              <span class='text-obs-text-main font-mono'>#{region.plateDetail}</span>
+            </div>
             {#if appState.params.appearance.displayMode === 'geometric-flow'}
               <div class='flex justify-between items-center'>
                 <span class='text-[11px] text-obs-text-dim uppercase tracking-wider'>地形排水 (Drainage)</span>

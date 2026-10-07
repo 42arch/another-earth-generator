@@ -3,6 +3,7 @@ import type { GeneratedSphericalWorld, SimulationContext } from '@/core/simulati
 import { PipelineScheduler } from '@/core/simulation/pipeline/scheduler'
 import { BiomeStage } from '@/core/simulation/pipeline/stages/biome-stage'
 import { ClimateOutputStage } from '@/core/simulation/pipeline/stages/climate-output-stage'
+import { ContinentalCrustStage } from '@/core/simulation/pipeline/stages/continental-crust-stage'
 import { KoppenClimateStage } from '@/core/simulation/pipeline/stages/koppen-climate-stage'
 import { MeshStage } from '@/core/simulation/pipeline/stages/mesh-stage'
 import { MonthlyClimateStage } from '@/core/simulation/pipeline/stages/monthly-climate-stage'
@@ -29,6 +30,7 @@ export type WorkerResponse
 const scheduler = new PipelineScheduler()
   .addStage(new MeshStage())
   .addStage(new PlateStage())
+  .addStage(new ContinentalCrustStage())
   .addStage(new SuperPlateStage())
   .addStage(new ProjectionStage())
   .addStage(new TectonicStage())

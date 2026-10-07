@@ -19,7 +19,7 @@ interface PlatePairBoundary {
   plateA: number
   plateB: number
   total: number
-  convergent: Array<{ subducting: number, midpoint: readonly [number, number, number] }>
+  convergent: Array<{ subducting: number, oceanic: boolean, midpoint: readonly [number, number, number] }>
   divergent: Array<readonly [number, number, number]>
 }
 
@@ -177,8 +177,14 @@ export class PlatePhysicsProcessor {
       pair.total++
       if (boundaries.edgeBoundaryType[edge] === PLATE_BOUNDARY.Convergent) {
         const subducting = boundaries.edgeSubductingPlate[edge]
-        if (subducting >= 0)
-          pair.convergent.push({ subducting, midpoint })
+        if (subducting >= 0) {
+          const subductingRegion = subducting === plateA ? regionA : regionB
+          pair.convergent.push({
+            subducting,
+            oceanic: crust.regionCrustType[subductingRegion] === CRUST_TYPE.Oceanic,
+            midpoint,
+          })
+        }
       }
       else if (boundaries.edgeBoundaryType[edge] === PLATE_BOUNDARY.Divergent) {
         pair.divergent.push(midpoint)
@@ -187,8 +193,8 @@ export class PlatePhysicsProcessor {
     }
     for (const pair of pairBoundaries.values()) {
       if (pair.convergent.length > pair.total * 0.3) {
-        for (const { subducting, midpoint } of pair.convergent) {
-          if (crust.plateCrustType[subducting] !== CRUST_TYPE.Oceanic)
+        for (const { subducting, oceanic, midpoint } of pair.convergent) {
+          if (!oceanic)
             continue
           this.accumulate(slabCenters, subducting, midpoint)
           slabCounts[subducting]++
