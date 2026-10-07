@@ -49,10 +49,27 @@ jobs:
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Extract Release Notes
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: |
+          node -e "
+          const fs = require('fs');
+          const version = require('./package.json').version;
+          const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+          const startStr = '## ' + version;
+          const startIndex = changelog.indexOf(startStr);
+          if (startIndex !== -1) {
+            const contentStart = startIndex + startStr.length;
+            const endIndex = changelog.indexOf('\n## ', contentStart);
+            const notes = changelog.substring(contentStart, endIndex === -1 ? changelog.length : endIndex).trim();
+            fs.writeFileSync('RELEASE_NOTES.md', notes);
+          }
+          "
+
       - name: Create GitHub Release
         if: steps.changesets.outputs.hasChangesets == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
