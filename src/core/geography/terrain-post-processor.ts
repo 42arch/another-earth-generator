@@ -13,6 +13,7 @@ import {
 import { TerrainErosionProcessor } from '@/core/geography/terrain-erosion-processor'
 import { TerrainFinalizer } from '@/core/geography/terrain-finalizer'
 import { TerrainTextureGenerator } from '@/core/geography/terrain-texture-generator'
+import { REFERENCE_REGION_LEVEL } from '@/core/mesh/reference-grid-projector'
 
 export interface TerrainPostProcessData {
   elevation: Float32Array
@@ -30,6 +31,11 @@ const WARP_BIAS_BASE = 0.25
 const WARP_BIAS_SCALE = 0.5
 const WARP_HOTSPOT_DAMPEN = 0.8
 const SMOOTH_EDGE_SENSITIVITY = 12
+const SHORELINE_LAND_RELIEF_LIMIT = 0.12
+const SHORELINE_OCEAN_DEPTH_LIMIT = 0.025
+const SHORELINE_EDIFICE_PROTECTION = 0.025
+/** About half a reference-grid cell on the unit sphere. */
+const SHORELINE_MAX_FRAGMENT_AREA = 2 * Math.PI / (10 * 4 ** REFERENCE_REGION_LEVEL + 2)
 const DETAIL_NOISE_AMPLITUDE_KM = 0.1
 const DETAIL_NOISE_FREQUENCY = 5
 const DETAIL_NOISE_OCTAVES = 6
@@ -74,6 +80,7 @@ export class TerrainPostProcessor {
     dynamicTopography?: Float32Array,
     phasorRidge?: Float32Array,
     hotspot?: Float32Array,
+    edifices?: Float32Array,
     deferDrainage = false,
   ): TerrainPostProcessData {
     const textured = this.textureGenerator.generate(
@@ -94,10 +101,10 @@ export class TerrainPostProcessor {
     const finalized = this.finalizer.generate(mesh, textured.elevation, candidateLandMask)
     const elevation = Float32Array.from(finalized.elevation)
     this.warpTerrain(mesh, elevation, seed, terrainWarp, hotspot)
-    // The reference pipeline freezes the post-process shoreline after warp.
-    // This includes exposed volcanic islands and excludes submerged candidate land.
-    const oceanMask = this.buildOceanMask(elevation)
     const beforePostProcess = Float32Array.from(elevation)
+    this.regularizeShoreline(mesh, elevation, candidateLandMask, edifices)
+    // Freeze the stabilized shoreline for later erosion and land-only detail.
+    const oceanMask = this.buildOceanMask(elevation)
     if (smoothing > 0) {
       const iterations = Math.round(1 + smoothing * 4)
       const strength = 0.2 + smoothing * 0.5
@@ -199,6 +206,16 @@ export class TerrainPostProcessor {
     const noise = createNoise3D(alea(seed + 9999))
     const maximumAmplitude = WARP_MAX_AMPLITUDE * warpStrength
     const warpedElevation = Float32Array.from(elevation)
+    const shoreline = new Uint8Array(mesh.numRegions)
+    for (let region = 0; region < mesh.numRegions; region++) {
+      const land = elevation[region] > 0
+      for (const neighbor of mesh.forEachNeighborOfRegion(region)) {
+        if ((elevation[neighbor] > 0) !== land) {
+          shoreline[region] = 1
+          break
+        }
+      }
+    }
 
     for (let region = 0; region < mesh.numRegions; region++) {
       const index = region * 3
@@ -273,7 +290,9 @@ export class TerrainPostProcessor {
           break
         nearest = nextRegion
       }
-      warpedElevation[region] = elevation[nearest]
+      warpedElevation[region] = shoreline[nearest]
+        ? this.sampleShorelineElevation(mesh, elevation, nearest, targetX, targetY, targetZ)
+        : elevation[nearest]
     }
 
     const warpBias = WARP_BIAS_BASE + WARP_BIAS_SCALE * warpStrength
@@ -288,6 +307,77 @@ export class TerrainPostProcessor {
       elevation[region] = warped > original
         ? original + (warped - original) * bias
         : warped + (original - warped) * (1 - bias)
+    }
+  }
+
+  private sampleShorelineElevation(
+    mesh: SphericalMesh,
+    elevation: Float32Array,
+    nearest: number,
+    x: number,
+    y: number,
+    z: number,
+  ): number {
+    const weightFloor = mesh.regionArea[nearest] * 0.02
+    const weighted = (region: number): number => {
+      const index = region * 3
+      const dx = x - mesh.regionPosition[index]
+      const dy = y - mesh.regionPosition[index + 1]
+      const dz = z - mesh.regionPosition[index + 2]
+      return 1 / (dx * dx + dy * dy + dz * dz + weightFloor)
+    }
+    let weightSum = weighted(nearest)
+    let elevationSum = elevation[nearest] * weightSum
+    for (const neighbor of mesh.forEachNeighborOfRegion(nearest)) {
+      const weight = weighted(neighbor)
+      weightSum += weight
+      elevationSum += elevation[neighbor] * weight
+    }
+    return elevationSum / weightSum
+  }
+
+  /** Removes shallow one-cell coast speckles without flattening raised islands. */
+  private regularizeShoreline(
+    mesh: SphericalMesh,
+    elevation: Float32Array,
+    candidateLandMask: Uint8Array,
+    edifices?: Float32Array,
+  ): void {
+    const next = Float32Array.from(elevation)
+    for (let pass = 0; pass < 2; pass++) {
+      for (let region = 0; region < mesh.numRegions; region++) {
+        const current = elevation[region]
+        if (edifices && edifices[region] > SHORELINE_EDIFICE_PROTECTION)
+          continue
+        if (current > SHORELINE_LAND_RELIEF_LIMIT || current < -SHORELINE_OCEAN_DEPTH_LIMIT)
+          continue
+
+        let landNeighbors = 0
+        let oceanNeighbors = 0
+        let landElevation = 0
+        let oceanElevation = 0
+        for (const neighbor of mesh.forEachNeighborOfRegion(region)) {
+          const value = elevation[neighbor]
+          if (value > 0) {
+            landNeighbors++
+            landElevation += value
+          }
+          else {
+            oceanNeighbors++
+            oceanElevation += value
+          }
+        }
+        const smallFragment = mesh.regionArea[region] <= SHORELINE_MAX_FRAGMENT_AREA
+        if (current > 0 && landNeighbors <= 1 && oceanNeighbors >= 4
+          && (candidateLandMask[region] === 0 || smallFragment)) {
+          next[region] = Math.min(-0.002, oceanElevation / oceanNeighbors * 0.25)
+        }
+        else if (current <= 0 && smallFragment && candidateLandMask[region] === 1
+          && oceanNeighbors <= 1 && landNeighbors >= 4) {
+          next[region] = Math.max(0.002, landElevation / landNeighbors * 0.25)
+        }
+      }
+      elevation.set(next)
     }
   }
 

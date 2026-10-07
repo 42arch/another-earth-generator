@@ -21,7 +21,7 @@ interface PlateTopology {
   neighbors: Array<Set<number>>
 }
 
-const COAST_CONTOUR_AMPLITUDE = referenceCellsToAngle(6)
+const COAST_CONTOUR_AMPLITUDE = referenceCellsToAngle(4.5)
 
 /** Places continents on subdivisions guided by moving plates, then contours coasts. */
 export class CandidateLandGenerator {

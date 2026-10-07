@@ -59,6 +59,7 @@ export class TerrainStage implements ISimulationStage {
       mantle.elevationDelta,
       elevationFields.phasorRidge,
       elevationFields.edifices.hotspot,
+      elevationFields.edifices.total,
     )
 
     const landMask = terrain.landMask

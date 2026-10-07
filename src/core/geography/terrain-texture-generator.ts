@@ -253,7 +253,7 @@ export class TerrainTextureGenerator {
     const nearshoreIslandWidth = referenceCellsToAngle(1 + islandDensity * 1)
     const islandMaskStart = 0.94 - islandDensity * 0.2
     const islandMaskEnd = 0.995 - islandDensity * 0.04
-    const islandAmplitude = 0.045 + islandDensity * 0.05
+    const islandAmplitude = 0.04 + islandDensity * 0.035
     const result = new Float32Array(mesh.numRegions)
     for (let region = 0; region < mesh.numRegions; region++) {
       const coastDistance = fields.coastDistance[region]
@@ -267,7 +267,7 @@ export class TerrainTextureGenerator {
       const activeMargin = fields.convergentInfluence[region]
       const subductionSuppression = fields.subductingInfluence[region]
       const frequency = 24 + activeMargin * 12
-      const amplitude = (0.026 + activeMargin * 0.032) * falloff * falloff
+      const amplitude = (0.019 + activeMargin * 0.024) * falloff * falloff
 
       const warpX = warpNoise(x * 3 + 11.3, y * 3 + 4.7, z * 3 + 8.2) * 0.075 * falloff
       const warpY = warpNoise(x * 3 + 2.9, y * 3 + 9.4, z * 3 + 1.6) * 0.075 * falloff
