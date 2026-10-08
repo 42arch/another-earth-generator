@@ -156,7 +156,7 @@
       <div class='flex flex-col gap-2 relative mt-2'>
         <div class='flex items-center gap-2 mb-1'>
           <span class='font-sans text-[11px] uppercase tracking-wide text-obs-text-muted font-bold flex items-center gap-1.5'>
-            构造参数
+            板块与大陆
           </span>
           <div class='flex-1 h-px bg-white/5'></div>
         </div>
@@ -250,6 +250,34 @@
           max={10}
           step={1}
           decimals={0}
+        />
+      </div>
+
+      <!-- 气候与环境配置 -->
+      <div class='flex flex-col gap-2 relative mt-2'>
+        <div class='flex items-center gap-2 mb-1'>
+          <span class='font-sans text-[11px] uppercase tracking-wide text-obs-text-muted font-bold flex items-center gap-1.5'>
+            气候与环境
+          </span>
+          <div class='flex-1 h-px bg-white/5'></div>
+        </div>
+        <Slider
+          label='基础气温'
+          description='全球整体气温的偏差值（摄氏度）。较高的值会生成热带沙漠主导的炎热星球，较低的值会生成冰川覆盖的雪球地球。'
+          bind:value={appState.params.climate.temperatureOffsetC}
+          min={-30}
+          max={30}
+          step={1}
+          decimals={0}
+        />
+        <Slider
+          label='降水乘数'
+          description='全球降水量的整体倍率。较低的值会导致全球干旱形成大面积荒漠，较高的值会生成湿润的热带雨林和沼泽星球。'
+          bind:value={appState.params.climate.precipitationScale}
+          min={0.1}
+          max={4.0}
+          step={0.1}
+          decimals={1}
         />
       </div>
     </div>
