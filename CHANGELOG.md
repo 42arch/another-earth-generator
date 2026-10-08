@@ -1,5 +1,11 @@
 # another-earth-generator
 
+## 1.4.0
+
+### Minor Changes
+
+- 54de20d: feat: add spherical region topology and smoothing for boundaries and rendering. (新增球面区域拓扑结构，并实现边界平滑与渲染优化)
+
 ## 1.3.1
 
 ### Patch Changes
