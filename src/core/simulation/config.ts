@@ -89,6 +89,14 @@ export interface WorldConfig {
     showGraticule: boolean
     showAtmosphere: boolean
     wireframe: boolean
+    /** Draw boundaries between continent regions while the continents layer is active. */
+    showContinentBoundaries: boolean
+    /** Draw boundaries between tectonic plates while the plates layer is active. */
+    showPlateBoundaries: boolean
+    /** Draw boundaries between biome regions while the biome layer is active. */
+    showBiomeBoundaries: boolean
+    /** Draw boundaries between Köppen regions while the Köppen layer is active. */
+    showKoppenBoundaries: boolean
     autoRotate: boolean
     showDayNight: boolean
   }
@@ -134,6 +142,10 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
     showGraticule: false,
     showAtmosphere: true,
     wireframe: false,
+    showContinentBoundaries: false,
+    showPlateBoundaries: false,
+    showBiomeBoundaries: false,
+    showKoppenBoundaries: false,
     autoRotate: false,
     showDayNight: true,
   },
@@ -150,6 +162,10 @@ export function cloneWorldConfig(config: WorldConfig): WorldConfig {
       showRivers: config.appearance.showRivers ?? true,
       showClouds: config.appearance.showClouds ?? false,
       showDayNight: config.appearance.showDayNight ?? true,
+      showContinentBoundaries: config.appearance.showContinentBoundaries ?? false,
+      showPlateBoundaries: config.appearance.showPlateBoundaries ?? false,
+      showBiomeBoundaries: config.appearance.showBiomeBoundaries ?? false,
+      showKoppenBoundaries: config.appearance.showKoppenBoundaries ?? false,
     },
   }
 }

@@ -34,6 +34,8 @@ import { Stars } from '@/core/rendering/globe/stars'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
 import { MapView } from '@/core/rendering/map/view'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
+import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
+import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
 import { CLOUD_FRAGMENT_SHADER, CLOUD_GLOBE_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
@@ -55,6 +57,7 @@ export class GlobeRenderer {
   private readonly mapView: MapView
   private readonly colorizer = new WorldColorizer()
   private readonly cellBoundaryGeometryBuilder = new SphericalCellBoundaryGeometry()
+  private readonly regionTopologyBuilder = new SphericalRegionTopologyBuilder()
   private readonly graticuleGeometryBuilder = new SphericalGraticuleGeometry()
   private readonly riverGeometryBuilder = new RiverGeometry()
   private readonly geometryBuilder = new GlobeSurfaceGeometry()
@@ -82,6 +85,8 @@ export class GlobeRenderer {
 
   private readonly canvas: HTMLCanvasElement
   private readonly onRegionSelected: (region: number) => void
+  private regionTopology: SphericalRegionTopology | null = null
+  private smoothedRegionCorners: Float32Array | null = null
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -138,6 +143,7 @@ export class GlobeRenderer {
     this.data = data
     this.params = { ...params }
     this.controls.autoRotate = params.appearance.autoRotate
+    this.prepareRegionSmoothing()
     this.disposeSurface()
     const colors = this.colorizer.build(data, params.appearance.displayMode, mesh)
     const usesElevation = this.usesElevationGeometry(params)
@@ -155,6 +161,7 @@ export class GlobeRenderer {
         OCEAN_DEPTH_SCALE,
         cornerColors,
         params.appearance.displayMode === 'dem' ? data.geography.landMask : undefined,
+        this.smoothedRegionCorners ?? undefined,
       ),
     )
     this.scene.add(this.surface)
@@ -168,9 +175,11 @@ export class GlobeRenderer {
   updateAppearance(params: WorldConfig): void {
     const displayModeChanged = this.params.appearance.displayMode !== params.appearance.displayMode
     const elevationDisplacementChanged = this.params.appearance.elevationDisplacement !== params.appearance.elevationDisplacement
+    const regionSmoothingChanged = this.getRegionSmoothingMode(this.params)
+      !== this.getRegionSmoothingMode(params)
     this.params = { ...params }
     this.controls.autoRotate = params.appearance.autoRotate
-    if ((displayModeChanged || elevationDisplacementChanged) && this.mesh && this.data) {
+    if ((displayModeChanged || elevationDisplacementChanged || regionSmoothingChanged) && this.mesh && this.data) {
       this.setWorld(this.mesh, this.data, params)
       return
     }
@@ -344,6 +353,7 @@ export class GlobeRenderer {
       this.data,
       this.params.core.planetRadius + riverClearance,
       surfaceOffsets,
+      this.smoothedRegionCorners ?? undefined
     )
     if ((geometry.getAttribute('position')?.count ?? 0) === 0) {
       geometry.dispose()
@@ -455,8 +465,11 @@ export class GlobeRenderer {
 
   private rebuildCellBoundaries(): void {
     this.disposeCellBoundaries()
-    if (!this.params.appearance.wireframe || !this.mesh || !this.surface)
+    const showRegionBoundaries = this.isRegionSmoothingEnabled(this.params)
+    if ((!this.params.appearance.wireframe && !showRegionBoundaries) || !this.mesh || !this.surface)
       return
+    const regionIds = showRegionBoundaries ? this.buildDisplayRegionIds() : undefined
+    const topology = showRegionBoundaries ? this.regionTopology : undefined
     const geometry = this.cellBoundaryGeometryBuilder.create(
       this.mesh,
       this.params.core.planetRadius + CELL_BOUNDARY_LAYER_OFFSET,
@@ -466,7 +479,12 @@ export class GlobeRenderer {
         : undefined,
       this.getTerrainVerticalScale(this.params.core.planetRadius),
       OCEAN_DEPTH_SCALE,
+      regionIds,
+      topology?.boundaryEdges,
+      this.smoothedRegionCorners ?? undefined,
     )
+    if (topology)
+      geometry.userData.areaPolygons = topology.polygons
     this.cellBoundaryLayer = new LineSegments(geometry, new LineBasicMaterial({
       color: 0xB8D6E8,
       transparent: true,
@@ -476,6 +494,56 @@ export class GlobeRenderer {
     }))
     this.cellBoundaryLayer.renderOrder = 3
     this.scene.add(this.cellBoundaryLayer)
+  }
+
+
+  private buildDisplayRegionIds(): Int32Array {
+    const regionIds = new Int32Array(this.mesh!.numRegions)
+    for (let region = 0; region < regionIds.length; region++) {
+      if (this.params.appearance.displayMode === 'plates') {
+        regionIds[region] = this.data!.geology.regionSuperPlate[region]
+      }
+      else if (this.params.appearance.displayMode === 'biome') {
+        regionIds[region] = this.data!.biome?.biomeClass[region] ?? -1
+      }
+      else if (this.params.appearance.displayMode === 'koppen') {
+        regionIds[region] = this.data!.climate?.koppen?.climateClass[region] ?? -1
+      }
+      else {
+        regionIds[region] = this.data!.geography.landMask[region] === 0
+          ? -2
+          : this.data!.geography.visibleContinentId[region]
+      }
+    }
+    return regionIds
+  }
+
+  private isRegionSmoothingEnabled(params: WorldConfig): boolean {
+    return this.getRegionSmoothingMode(params) !== null
+  }
+
+  private getRegionSmoothingMode(params: WorldConfig): string | null {
+    const mode = params.appearance.displayMode
+    if ((mode === 'continents' && params.appearance.showContinentBoundaries)
+      || (mode === 'plates' && params.appearance.showPlateBoundaries)
+      || (mode === 'biome' && params.appearance.showBiomeBoundaries)
+      || (mode === 'koppen' && params.appearance.showKoppenBoundaries)) {
+      return mode
+    }
+    return null
+  }
+
+  private prepareRegionSmoothing(): void {
+    this.regionTopology = null
+    this.smoothedRegionCorners = null
+    if (!this.mesh || !this.data || !this.isRegionSmoothingEnabled(this.params))
+      return
+    const regionIds = this.buildDisplayRegionIds()
+    this.regionTopology = this.regionTopologyBuilder.build(this.mesh, regionIds)
+    this.smoothedRegionCorners = this.regionTopologyBuilder.buildSmoothedCornerPositions(
+      this.mesh,
+      this.regionTopology,
+    )
   }
 
   private rebuildGraticule(): void {

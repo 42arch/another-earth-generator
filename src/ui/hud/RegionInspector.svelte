@@ -33,7 +33,7 @@
   <!-- 头部 -->
   <header class='flex items-center justify-between px-4 py-2 border-b border-white/[0.06] select-none'>
     <div class='flex items-center gap-2'>
-      <Satellite class='w-4 h-4 text-obs-amber' />
+      <Satellite class='w-4 h-4 text-obs-primary' />
       <h2 class='font-heading text-[13px] font-bold tracking-wide uppercase text-obs-text-main m-0 leading-none pt-[2px]'>
         {#if region}
           SECTOR {region.region}
@@ -69,7 +69,7 @@
   <div class='flex-1 overflow-y-auto p-3.5 flex flex-col gap-3 custom-scrollbar text-xs max-h-[calc(100dvh-12rem)]'>
     {#if !region}
       <div class='py-4 text-center text-obs-text-dim text-xs flex flex-col items-center gap-2'>
-        <Satellite class='w-6 h-6 text-obs-amber/60 animate-[pulse_2s_ease-in-out_infinite]' />
+        <Satellite class='w-6 h-6 text-obs-primary/60 animate-[pulse_2s_ease-in-out_infinite]' />
         <span>点击行星地表区域，发射探针以获取环境数据</span>
       </div>
     {:else}
@@ -170,7 +170,7 @@
                   <button
                     type='button'
                     onclick={() => appState.updateParam('appearance', 'climateMonth', index)}
-                    class="rounded border px-1 py-1 text-center font-mono text-[10px] cursor-pointer transition-colors {month === index ? 'border-obs-amber/50 bg-obs-amber/10 text-obs-amber-light' : 'border-white/[0.04] text-obs-text-dim hover:bg-white/[0.04] hover:text-obs-text-main'}"
+                    class="rounded border px-1 py-1 text-center font-mono text-[10px] cursor-pointer transition-colors {month === index ? 'border-obs-primary/50 bg-obs-primary/10 text-obs-primary' : 'border-white/[0.04] text-obs-text-dim hover:bg-white/[0.04] hover:text-obs-text-main'}"
                   >
                     <span class='block'>{name}</span>
                     <span class='block mt-0.5 opacity-80'>{region.monthlyTemperatureC[index].toFixed(0)}°·{region.monthlyPrecipitationMm[index].toFixed(0)}</span>

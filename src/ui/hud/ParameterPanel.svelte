@@ -257,13 +257,13 @@
     <!-- 底部操作区 -->
     <footer class='flex items-center justify-between px-4 py-2 border-t border-white/[0.06] bg-black/10'>
       {#if appState.hasUnappliedChanges}
-        <span class='text-[10px] text-obs-amber font-medium'>参数已修改，等待执行</span>
+        <span class='text-[10px] text-obs-primary font-medium'>参数已修改，等待执行</span>
       {:else}
         <span class='text-[10px] text-obs-text-dim'>调整参数后手动执行</span>
       {/if}
       <button
         type='button'
-        class='flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-wider text-obs-amber-light border border-obs-amber/40 rounded-md bg-obs-amber/15 hover:bg-obs-amber/25 hover:border-obs-amber/70 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+        class='flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold tracking-wider text-obs-primary border border-obs-primary/40 rounded-md bg-obs-primary/15 hover:bg-obs-primary/25 hover:border-obs-primary/70 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
         onclick={() => appState.regenerateWorld(undefined, true)}
         disabled={appState.isGenerating}
       >

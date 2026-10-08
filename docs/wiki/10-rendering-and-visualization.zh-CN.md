@@ -20,6 +20,8 @@
 
 地球的 [surface-geometry.ts](../../src/core/rendering/globe/surface-geometry.ts) 与地图的 [surface-geometry.ts](../../src/core/rendering/map/surface-geometry.ts) 分开构建几何；区域颜色仍来自同一套着色逻辑。这样投影几何能改变，而板块、高程和分类数据不用改变。
 
+大陆、板块、生物群系与 Köppen 气候分类边界由 [SphericalRegionTopologyBuilder](../../src/core/rendering/shared/spherical-region-topology.ts) 从 Voronoi 共享边构建：同标签内部边被合并掉，跨标签边只生成一次，并按角点连接成闭合环。一个标签可以包含多个环，以表达分离岛屿与孔洞。开启任一图层的区域边界后，边界角点会做两轮轻度球面平滑；多区域交汇点保持固定，地球填色、地图填色和描边共用平滑后的坐标。大陆按最终可见大陆编号区分，板块按 `regionSuperPlate` 区分，生态和气候层按各自的分类编号区分。填色继续由各 cell 的三角网承载；相邻 cell 标签相同、颜色相同，因此这些三角形合起来就是该区划的球面面域，也为大区域提供稳定的内部细分。
+
 ## 界面当前开放的图层
 
 图层栏以 [LayerBar.svelte](../../src/ui/hud/LayerBar.svelte) 为准，当前可选：

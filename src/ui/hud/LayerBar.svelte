@@ -1,6 +1,7 @@
 <script lang='ts'>
   import {
     Check,
+    CircleQuestionMark,
     CloudRain,
     Copy,
     Layers,
@@ -13,6 +14,7 @@
     Workflow,
     X,
   } from '@lucide/svelte'
+  import Checkbox from '@/ui/components/Checkbox.svelte'
   import { fly } from 'svelte/transition'
   import {
     getHeightmapLandColor,
@@ -26,6 +28,7 @@
     getWindColor,
   } from '@/core/rendering/shared/climate-color-scale'
   import { formatLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
+  import Tooltip from '@/ui/components/Tooltip.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
   const numberFormat = new Intl.NumberFormat('zh-CN')
@@ -110,7 +113,7 @@
     <!-- 头部 -->
     <header class='flex items-center justify-between px-4 py-2 border-b border-white/[0.06] select-none'>
       <div class='flex items-center justify-center gap-2'>
-        <Layers class='w-4 h-4 text-obs-amber' />
+        <Layers class='w-4 h-4 text-obs-primary' />
         <h2 class='font-heading text-sm font-bold tracking-wider uppercase text-obs-text-main m-0 leading-tight'>
           图层
         </h2>
@@ -137,9 +140,9 @@
               type='button'
               onclick={() => appState.setDisplayMode(item.mode)}
               title={item.label}
-              class="flex flex-row items-center gap-1 p-1.5 rounded-lg transition-all text-center cursor-pointer border {appState.params.appearance.displayMode === item.mode ? 'bg-obs-amber/15 text-obs-amber-light border-obs-amber/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
+              class="flex flex-row items-center gap-1 p-1.5 rounded-lg transition-all text-center cursor-pointer border {appState.params.appearance.displayMode === item.mode ? 'bg-obs-primary/15 text-obs-primary border-obs-primary/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
             >
-              <Icon class="w-3 h-3 shrink-0 {appState.params.appearance.displayMode === item.mode ? 'text-obs-amber' : 'opacity-80'}" />
+              <Icon class="w-3 h-3 shrink-0 {appState.params.appearance.displayMode === item.mode ? 'text-obs-primary' : 'opacity-80'}" />
               <span class='leading-none text-[11px] whitespace-nowrap overflow-hidden text-ellipsis'>{item.label}</span>
             </button>
           {/each}
@@ -158,6 +161,28 @@
               {/each}
             </select>
           </label>
+        {/if}
+        {#if appState.params.appearance.displayMode === 'continents' || appState.params.appearance.displayMode === 'plates' || appState.params.appearance.displayMode === 'biome' || appState.params.appearance.displayMode === 'koppen'}
+          {@const boundaryMode = appState.params.appearance.displayMode}
+          {@const boundaryOptionMap = {
+            plates: 'showPlateBoundaries',
+            continents: 'showContinentBoundaries',
+            biome: 'showBiomeBoundaries',
+            koppen: 'showKoppenBoundaries',
+          } as const}
+          {@const boundaryOption = boundaryOptionMap[boundaryMode as keyof typeof boundaryOptionMap]}
+          <div class='flex items-center gap-2 px-1 pt-2 text-[11px] text-obs-text-muted'>
+            <Checkbox
+              label='显示区域边界'
+              checked={appState.params.appearance[boundaryOption]}
+              onchange={() => appState.toggleLayer(boundaryOption)}
+            />
+            <Tooltip content='隐藏同类区域内部网格线，只显示类别不同区域之间的边界。'>
+              <span class='inline-flex cursor-help text-obs-text-dim hover:text-obs-text-main transition-colors'>
+                <CircleQuestionMark class='h-3 w-3' />
+              </span>
+            </Tooltip>
+          </div>
         {/if}
         <!--
         {#if appState.params.appearance.displayMode === 'crust'}
@@ -303,7 +328,7 @@
             title='复制统计数据'
           >
             {#if copyStatus === 'copied'}
-              <Check class='w-3 h-3 text-obs-emerald' />
+              <Check class='w-3 h-3 text-obs-primary' />
             {:else}
               <Copy class='w-3 h-3' />
             {/if}
@@ -317,8 +342,8 @@
               <div class='mt-0.5 text-[10px] text-obs-text-dim'>占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元</div>
               {#if appState.layerStatistics.plateCounts}
                 <div class='mt-2 flex gap-3 text-[10px] text-obs-text-main'>
-                  <span>主要板块 <strong class='font-mono text-obs-amber-light'>{appState.layerStatistics.plateCounts.primary}</strong></span>
-                  <span>小板块 <strong class='font-mono text-obs-amber-light'>{appState.layerStatistics.plateCounts.micro}</strong></span>
+                  <span>主要板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.primary}</strong></span>
+                  <span>小板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.micro}</strong></span>
                 </div>
               {/if}
               {#if appState.layerStatistics.description}
@@ -332,7 +357,7 @@
                     <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={item.color}></span>
                     <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
                     <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(item.count)}</span>
-                    <span class='font-mono text-obs-amber-light tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
+                    <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
                   </div>
                   <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
                     <div class='h-full rounded-full' style:background-color={item.color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>

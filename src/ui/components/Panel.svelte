@@ -33,20 +33,20 @@
     {#if title}
       <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/[0.02] border-b border-white/[0.06] select-none'>
         <Collapsible.Trigger
-          class='flex items-center justify-between flex-1 gap-2 text-left bg-transparent border-0 p-0 m-0 cursor-pointer group text-inherit font-inherit outline-hidden focus-visible:ring-1 focus-visible:ring-obs-amber/40 rounded-sm'
+          class='flex items-center justify-between flex-1 gap-2 text-left bg-transparent border-0 p-0 m-0 cursor-pointer group text-inherit font-inherit outline-hidden focus-visible:ring-1 focus-visible:ring-obs-primary/40 rounded-sm'
         >
           <div class='flex items-center gap-2'>
             {#if icon}
-              <span class='text-obs-amber text-xs flex items-center'>
+              <span class='text-obs-primary text-xs flex items-center'>
                 {#if typeof icon === 'string'}
                   {icon}
                 {:else}
                   {@const IconComponent = icon}
-                  <IconComponent class='w-3.5 h-3.5 text-obs-amber' />
+                  <IconComponent class='w-3.5 h-3.5 text-obs-primary' />
                 {/if}
               </span>
             {/if}
-            <h3 class='m-0 font-heading text-xs font-semibold tracking-wider uppercase text-obs-text-main group-hover:text-obs-amber-light transition-colors'>
+            <h3 class='m-0 font-heading text-xs font-semibold tracking-wider uppercase text-obs-text-main group-hover:text-obs-primary transition-colors'>
               {title}
             </h3>
           </div>
@@ -81,12 +81,12 @@
       <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/[0.02] border-b border-white/[0.06] select-none'>
         <div class='flex items-center gap-2'>
           {#if icon}
-            <span class='text-obs-amber text-xs flex items-center'>
+            <span class='text-obs-primary text-xs flex items-center'>
               {#if typeof icon === 'string'}
                 {icon}
               {:else}
                 {@const IconComponent = icon}
-                <IconComponent class='w-3.5 h-3.5 text-obs-amber' />
+                <IconComponent class='w-3.5 h-3.5 text-obs-primary' />
               {/if}
             </span>
           {/if}

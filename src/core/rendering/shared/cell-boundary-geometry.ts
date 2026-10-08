@@ -12,9 +12,12 @@ export class SphericalCellBoundaryGeometry {
     terrainElevation?: Float32Array,
     terrainScale = 0,
     oceanDepthScale = 1,
+    regionIds?: Int32Array,
+    boundaryEdges?: Uint32Array,
+    cornerPositions?: Float32Array,
   ): BufferGeometry {
     const positions: number[] = []
-    const corners = mesh.voronoi.cornerPosition
+    const corners = cornerPositions ?? mesh.voronoi.cornerPosition
     const edges = mesh.voronoi.edgeCorners
     const displayElevations = terrainElevation?.length === mesh.numRegions
       ? this.buildDisplayElevations(terrainElevation)
@@ -23,9 +26,18 @@ export class SphericalCellBoundaryGeometry {
       ? this.buildCornerElevations(mesh, displayElevations)
       : null
 
-    for (let edge = 0; edge < edges.length; edge += 2) {
-      const start = edges[edge] * 3
-      const end = edges[edge + 1] * 3
+    const edgeCount = boundaryEdges?.length ?? edges.length / 2
+    for (let index = 0; index < edgeCount; index++) {
+      const edge = boundaryEdges?.[index] ?? index
+      const edgeOffset = edge * 2
+      if (regionIds) {
+        const regionA = mesh.voronoi.edgeRegions[edgeOffset]
+        const regionB = mesh.voronoi.edgeRegions[edgeOffset + 1]
+        if (regionIds[regionA] === regionIds[regionB])
+          continue
+      }
+      const start = edges[edgeOffset] * 3
+      const end = edges[edgeOffset + 1] * 3
       this.appendArc(
         positions,
         corners[start],
@@ -35,12 +47,12 @@ export class SphericalCellBoundaryGeometry {
         corners[end + 1],
         corners[end + 2],
         radius + this.elevationOffset(
-          cornerElevations?.[edges[edge]] ?? 0,
+          cornerElevations?.[edges[edgeOffset]] ?? 0,
           terrainScale,
           oceanDepthScale,
         ),
         radius + this.elevationOffset(
-          cornerElevations?.[edges[edge + 1]] ?? 0,
+          cornerElevations?.[edges[edgeOffset + 1]] ?? 0,
           terrainScale,
           oceanDepthScale,
         ),

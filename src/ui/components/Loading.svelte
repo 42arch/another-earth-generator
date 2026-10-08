@@ -16,26 +16,26 @@
       <!-- 3D 地球本体 -->
       <div class='globe relative w-full h-full rounded-full'>
         <!-- 经线 -->
-        <div class='absolute inset-0 rounded-full border border-obs-amber/20'></div>
-        <div class='absolute inset-0 rounded-full border border-obs-amber/20 [transform:rotateY(30deg)]'></div>
-        <div class='absolute inset-0 rounded-full border border-obs-amber/20 [transform:rotateY(60deg)]'></div>
-        <div class='absolute inset-0 rounded-full border border-obs-amber/20 [transform:rotateY(90deg)]'></div>
-        <div class='absolute inset-0 rounded-full border border-obs-amber/20 [transform:rotateY(120deg)]'></div>
-        <div class='absolute inset-0 rounded-full border border-obs-amber/20 [transform:rotateY(150deg)]'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/20'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/20 [transform:rotateY(30deg)]'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/20 [transform:rotateY(60deg)]'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/20 [transform:rotateY(90deg)]'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/20 [transform:rotateY(120deg)]'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/20 [transform:rotateY(150deg)]'></div>
 
         <!-- 纬线 -->
-        <div class='absolute inset-0 rounded-full border border-obs-amber/30 [transform:rotateX(90deg)]'></div>
-        <div class='absolute rounded-full border border-obs-amber/10' style='width: 124px; height: 124px; left: 2px; top: 2px; transform: translateY(-16px) rotateX(90deg)'></div>
-        <div class='absolute rounded-full border border-obs-amber/10' style='width: 124px; height: 124px; left: 2px; top: 2px; transform: translateY(16px) rotateX(90deg)'></div>
-        <div class='absolute rounded-full border border-obs-amber/10' style='width: 111px; height: 111px; left: 8.5px; top: 8.5px; transform: translateY(-32px) rotateX(90deg)'></div>
-        <div class='absolute rounded-full border border-obs-amber/10' style='width: 111px; height: 111px; left: 8.5px; top: 8.5px; transform: translateY(32px) rotateX(90deg)'></div>
-        <div class='absolute rounded-full border border-obs-amber/10' style='width: 85px; height: 85px; left: 21.5px; top: 21.5px; transform: translateY(-48px) rotateX(90deg)'></div>
-        <div class='absolute rounded-full border border-obs-amber/10' style='width: 85px; height: 85px; left: 21.5px; top: 21.5px; transform: translateY(48px) rotateX(90deg)'></div>
+        <div class='absolute inset-0 rounded-full border border-obs-primary/30 [transform:rotateX(90deg)]'></div>
+        <div class='absolute rounded-full border border-obs-primary/10' style='width: 124px; height: 124px; left: 2px; top: 2px; transform: translateY(-16px) rotateX(90deg)'></div>
+        <div class='absolute rounded-full border border-obs-primary/10' style='width: 124px; height: 124px; left: 2px; top: 2px; transform: translateY(16px) rotateX(90deg)'></div>
+        <div class='absolute rounded-full border border-obs-primary/10' style='width: 111px; height: 111px; left: 8.5px; top: 8.5px; transform: translateY(-32px) rotateX(90deg)'></div>
+        <div class='absolute rounded-full border border-obs-primary/10' style='width: 111px; height: 111px; left: 8.5px; top: 8.5px; transform: translateY(32px) rotateX(90deg)'></div>
+        <div class='absolute rounded-full border border-obs-primary/10' style='width: 85px; height: 85px; left: 21.5px; top: 21.5px; transform: translateY(-48px) rotateX(90deg)'></div>
+        <div class='absolute rounded-full border border-obs-primary/10' style='width: 85px; height: 85px; left: 21.5px; top: 21.5px; transform: translateY(48px) rotateX(90deg)'></div>
       </div>
 
       <!-- 雷达扫描线 -->
       <div class='absolute inset-0 rounded-full overflow-hidden'>
-        <div class='w-full h-full bg-gradient-to-b from-transparent via-obs-amber/5 to-obs-amber/10 border-b border-obs-amber/30 animate-[radar_2s_linear_infinite]'></div>
+        <div class='w-full h-full bg-gradient-to-b from-transparent via-obs-primary/5 to-obs-primary/10 border-b border-obs-primary/30 animate-[radar_2s_linear_infinite]'></div>
       </div>
     </div>
 
@@ -51,13 +51,13 @@
         class='relative w-48 h-0.5 bg-white/[0.08] rounded-full my-3 overflow-hidden'
       >
         <div
-          class='absolute top-0 left-0 h-full bg-obs-amber rounded-full progress-bar'
+          class='absolute top-0 left-0 h-full bg-obs-primary rounded-full progress-bar'
         ></div>
       </Progress.Root>
 
       <!-- 阶段文字 -->
       <p class='font-sans text-xs text-obs-text-dim m-0 flex items-center gap-1.5'>
-        <Orbit class='w-3 h-3 text-obs-amber shrink-0 animate-spin' style='animation-duration: 4s;' />
+        <Orbit class='w-3 h-3 text-obs-primary shrink-0 animate-spin' style='animation-duration: 4s;' />
         <span>{appState.loadingStageText}</span>
       </p>
     </div>

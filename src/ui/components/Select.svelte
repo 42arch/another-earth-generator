@@ -59,7 +59,7 @@
     items={options.map(opt => ({ value: String(opt.value), label: opt.label }))}
   >
     <Select.Trigger
-      class='flex items-center justify-between w-full bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.1] hover:border-white/[0.2] rounded-md px-2.5 py-1.5 font-sans text-xs text-obs-text-main focus:outline-hidden focus:border-obs-amber/60 focus:ring-1 focus:ring-obs-amber/30 cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none group'
+      class='flex items-center justify-between w-full bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.1] hover:border-white/[0.2] rounded-md px-2.5 py-1.5 font-sans text-xs text-obs-text-main focus:outline-hidden focus:border-obs-primary/60 focus:ring-1 focus:ring-obs-primary/30 cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none group'
     >
       <span class='truncate {selectedOption ? 'text-obs-text-main font-medium' : 'text-obs-text-dim'}'>
         {selectedOption ? selectedOption.label : placeholder}
@@ -79,7 +79,7 @@
             <Select.Item
               value={String(opt.value)}
               label={opt.label}
-              class='relative flex w-full cursor-pointer select-none items-center justify-between rounded-md px-2.5 py-1.5 text-xs text-obs-text-muted outline-hidden transition-colors data-[highlighted]:bg-obs-amber/15 data-[highlighted]:text-obs-amber-light data-[disabled]:pointer-events-none data-[disabled]:opacity-40 {String(opt.value) === stringValue ? 'text-obs-amber font-medium bg-obs-amber/10' : ''}'
+              class='relative flex w-full cursor-pointer select-none items-center justify-between rounded-md px-2.5 py-1.5 text-xs text-obs-text-muted outline-hidden transition-colors data-[highlighted]:bg-obs-primary/15 data-[highlighted]:text-obs-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-40 {String(opt.value) === stringValue ? 'text-obs-primary font-medium bg-obs-primary/10' : ''}'
             >
               <div class='flex flex-col'>
                 <span class='font-sans'>{opt.label}</span>
@@ -89,7 +89,7 @@
               </div>
 
               {#if String(opt.value) === stringValue}
-                <Check class='w-3.5 h-3.5 text-obs-amber shrink-0 ml-2' />
+                <Check class='w-3.5 h-3.5 text-obs-primary shrink-0 ml-2' />
               {/if}
             </Select.Item>
           {/each}

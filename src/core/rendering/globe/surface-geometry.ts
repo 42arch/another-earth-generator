@@ -13,7 +13,9 @@ export class GlobeSurfaceGeometry {
     oceanDepthScale = 1,
     cornerColors?: Float32Array,
     cornerColorRegionMask?: Uint8Array,
+    cornerPositions?: Float32Array,
   ): BufferGeometry {
+    const surfaceCornerPositions = cornerPositions ?? mesh.voronoi.cornerPosition
     const displayElevations = terrainElevation?.length === mesh.numRegions
       ? this.buildDisplayElevations(terrainElevation)
       : null
@@ -69,7 +71,7 @@ export class GlobeSurfaceGeometry {
           normals,
           vertexColors,
           face * 9 + 3,
-          mesh.voronoi.cornerPosition,
+          surfaceCornerPositions,
           cornerA,
           regionCornerColors,
           useCornerColors ? cornerA : center,
@@ -84,7 +86,7 @@ export class GlobeSurfaceGeometry {
           normals,
           vertexColors,
           face * 9 + 6,
-          mesh.voronoi.cornerPosition,
+          surfaceCornerPositions,
           cornerB,
           regionCornerColors,
           useCornerColors ? cornerB : center,

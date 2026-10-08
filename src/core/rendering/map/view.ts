@@ -25,6 +25,8 @@ import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
 import { MapRibbonMaterial } from '@/core/rendering/map/ribbon-material'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
+import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
+import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
 import { CLOUD_FRAGMENT_SHADER, CLOUD_MAP_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
@@ -44,6 +46,7 @@ export class MapView {
   private readonly controls: MapControls
   private readonly geometryBuilder = new MapSurfaceGeometry()
   private readonly cellBoundaryGeometryBuilder = new SphericalCellBoundaryGeometry()
+  private readonly regionTopologyBuilder = new SphericalRegionTopologyBuilder()
   private readonly graticuleGeometryBuilder = new SphericalGraticuleGeometry()
   private readonly riverGeometryBuilder = new RiverGeometry()
   private readonly riverRibbonGeometryBuilder = new MapRibbonGeometry()
@@ -70,6 +73,8 @@ export class MapView {
   private surfaceDirty = false
   private overlaysDirty = false
   private selectedRegion = -1
+  private regionTopology: SphericalRegionTopology | null = null
+  private smoothedRegionCorners: Float32Array | null = null
   private viewportWidth = 1
   private viewportHeight = 1
 
@@ -106,6 +111,7 @@ export class MapView {
     this.mesh = mesh
     this.data = data
     this.params = { ...params }
+    this.prepareRegionSmoothing()
     this.centralMeridian = this.chooseCentralMeridian(mesh, data)
     this.disposeSurface()
     this.disposeOverlays()
@@ -123,7 +129,13 @@ export class MapView {
     const previousMode = this.params.appearance.displayMode
     const modeChanged = previousMode !== params.appearance.displayMode
     const satelliteTransition = modeChanged && (previousMode === 'satellite' || params.appearance.displayMode === 'satellite')
+    const regionSmoothingChanged = this.getRegionSmoothingMode(this.params)
+      !== this.getRegionSmoothingMode(params)
     this.params = { ...params }
+    if (regionSmoothingChanged) {
+      this.prepareRegionSmoothing()
+      this.surfaceDirty = true
+    }
     const elevationColorModeChanged = modeChanged
       && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(params.appearance.displayMode))
     if (satelliteTransition || elevationColorModeChanged)
@@ -215,6 +227,7 @@ export class MapView {
       cornerColors,
       false,
       mode === 'dem' ? this.data.geography.landMask : undefined,
+      this.smoothedRegionCorners ?? undefined,
     )
     const material = new MeshBasicMaterial({
       vertexColors: true,
@@ -286,7 +299,12 @@ export class MapView {
       return
     }
     const geometry = this.riverRibbonGeometryBuilder.create(
-      this.riverGeometryBuilder.createStrokePaths(this.mesh, this.data),
+      this.riverGeometryBuilder.createStrokePaths(
+        this.mesh,
+        this.data,
+        undefined,
+        this.smoothedRegionCorners ?? undefined
+      ),
       this.projection,
       this.centralMeridian,
       0.3,
@@ -317,8 +335,11 @@ export class MapView {
   }
 
   private addCellBoundaries(): void {
-    if (!this.params.appearance.wireframe || !this.mesh)
+    const showRegionBoundaries = this.isRegionSmoothingEnabled(this.params)
+    if ((!this.params.appearance.wireframe && !showRegionBoundaries) || !this.mesh)
       return
+    const regionIds = showRegionBoundaries ? this.buildDisplayRegionIds() : undefined
+    const topology = showRegionBoundaries ? this.regionTopology : undefined
     // Surface polygons use straight projected edges. Keep the overlay on the
     // same endpoint segments so non-linear map projections cannot introduce
     // a visible offset between the fill boundary and the cell line.
@@ -326,8 +347,72 @@ export class MapView {
       this.mesh,
       1,
       Number.POSITIVE_INFINITY,
+      undefined,
+      0,
+      1,
+      regionIds,
+      topology?.boundaryEdges,
+      this.smoothedRegionCorners ?? undefined,
     )
-    this.addProjectedSourceGeometry(geometry, 0xB8D6E8, 0.5, 0.24, 2)
+    if (topology)
+      geometry.userData.areaPolygons = topology.polygons
+    this.addProjectedSourceGeometry(
+      geometry,
+      showRegionBoundaries ? 0x182536 : 0xB8D6E8,
+      showRegionBoundaries ? 0.82 : 0.5,
+      0.24,
+      2,
+    )
+  }
+
+
+  private buildDisplayRegionIds(): Int32Array {
+    const regionIds = new Int32Array(this.mesh!.numRegions)
+    for (let region = 0; region < regionIds.length; region++) {
+      if (this.params.appearance.displayMode === 'plates') {
+        regionIds[region] = this.data!.geology.regionSuperPlate[region]
+      }
+      else if (this.params.appearance.displayMode === 'biome') {
+        regionIds[region] = this.data!.biome?.biomeClass[region] ?? -1
+      }
+      else if (this.params.appearance.displayMode === 'koppen') {
+        regionIds[region] = this.data!.climate?.koppen?.climateClass[region] ?? -1
+      }
+      else {
+        regionIds[region] = this.data!.geography.landMask[region] === 0
+          ? -2
+          : this.data!.geography.visibleContinentId[region]
+      }
+    }
+    return regionIds
+  }
+
+  private isRegionSmoothingEnabled(params: WorldConfig): boolean {
+    return this.getRegionSmoothingMode(params) !== null
+  }
+
+  private getRegionSmoothingMode(params: WorldConfig): string | null {
+    const mode = params.appearance.displayMode
+    if ((mode === 'continents' && params.appearance.showContinentBoundaries)
+      || (mode === 'plates' && params.appearance.showPlateBoundaries)
+      || (mode === 'biome' && params.appearance.showBiomeBoundaries)
+      || (mode === 'koppen' && params.appearance.showKoppenBoundaries)) {
+      return mode
+    }
+    return null
+  }
+
+  private prepareRegionSmoothing(): void {
+    this.regionTopology = null
+    this.smoothedRegionCorners = null
+    if (!this.mesh || !this.data || !this.isRegionSmoothingEnabled(this.params))
+      return
+    const regionIds = this.buildDisplayRegionIds()
+    this.regionTopology = this.regionTopologyBuilder.build(this.mesh, regionIds)
+    this.smoothedRegionCorners = this.regionTopologyBuilder.buildSmoothedCornerPositions(
+      this.mesh,
+      this.regionTopology,
+    )
   }
 
   private addGraticule(): void {
@@ -351,6 +436,8 @@ export class MapView {
       this.centralMeridian,
       z,
     )
+    if (source.userData.areaPolygons)
+      geometry.userData.areaPolygons = source.userData.areaPolygons
     source.dispose()
     if ((geometry.getAttribute('position')?.count ?? 0) === 0) {
       geometry.dispose()

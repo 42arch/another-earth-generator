@@ -1,5 +1,5 @@
 <script lang='ts'>
-  import { HelpCircle } from '@lucide/svelte'
+  import { CircleQuestionMark } from '@lucide/svelte'
   import { Slider } from 'bits-ui'
   import Tooltip from './Tooltip.svelte'
 
@@ -77,7 +77,7 @@
       {#if description}
         <Tooltip content={description} delayDuration={100}>
           <div class='cursor-help text-obs-text-dim hover:text-white transition-colors'>
-            <HelpCircle class='w-3 h-3' />
+            <CircleQuestionMark class='w-3 h-3' />
           </div>
         </Tooltip>
       {/if}

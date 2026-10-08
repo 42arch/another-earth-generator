@@ -21,7 +21,9 @@ export class MapSurfaceGeometry {
     cornerColors?: Float32Array,
     includeCloudDirections = false,
     cornerColorRegionMask?: Uint8Array,
+    cornerPositions?: Float32Array,
   ): BufferGeometry {
+    const surfaceCornerPositions = cornerPositions ?? mesh.voronoi.cornerPosition
     const positions: number[] = []
     const vertexColors: number[] = []
     const faceRegions: number[] = []
@@ -52,20 +54,20 @@ export class MapSurfaceGeometry {
         const triangle = [
           center,
           this.getCorner(
-            mesh,
             cornerA,
             centralMeridian,
             centerLongitude,
             regionCornerColors,
             useCornerColors ? cornerA * 3 : region * 3,
+            surfaceCornerPositions,
           ),
           this.getCorner(
-            mesh,
             cornerB,
             centralMeridian,
             centerLongitude,
             regionCornerColors,
             useCornerColors ? cornerB * 3 : region * 3,
+            surfaceCornerPositions,
           ),
         ]
         const minimumLongitude = Math.min(
@@ -144,18 +146,18 @@ export class MapSurfaceGeometry {
   }
 
   private getCorner(
-    mesh: SphericalMesh,
     corner: number,
     centralMeridian: number,
     referenceLongitude: number,
     colors: Float32Array,
     colorIndex: number,
+    cornerPositions: Float32Array,
   ): UnwrappedPoint {
     const index = corner * 3
     const geographic = cartesianToGeographic(
-      mesh.voronoi.cornerPosition[index],
-      mesh.voronoi.cornerPosition[index + 1],
-      mesh.voronoi.cornerPosition[index + 2],
+      cornerPositions[index],
+      cornerPositions[index + 1],
+      cornerPositions[index + 2],
     )
     const relativeLongitude = wrapLongitude(geographic.longitude - centralMeridian)
     return {

@@ -13,11 +13,12 @@ export class RiverGeometry {
     data: WorldSimulationState,
     radius: number,
     surfaceOffsets?: Float32Array,
+    smoothedCorners?: Float32Array | null,
   ): BufferGeometry {
     const positions: number[] = []
     const colors: number[] = []
     const indices: number[] = []
-    const paths = this.createStrokePaths(mesh, data, surfaceOffsets)
+    const paths = this.createStrokePaths(mesh, data, surfaceOffsets, smoothedCorners)
 
     for (const path of paths)
       this.appendRibbon(path, radius, positions, colors, indices)
@@ -29,6 +30,7 @@ export class RiverGeometry {
     mesh: SphericalMesh,
     data: WorldSimulationState,
     surfaceOffsets?: Float32Array,
+    smoothedCorners?: Float32Array | null,
   ): SphericalStrokePath[] {
     const hydrology = data.hydrology
     if (!hydrology)
@@ -82,7 +84,7 @@ export class RiverGeometry {
         })
 
         if (hydrology.outletMask[region] !== 0) {
-          const coast = this.coastPoint(mesh, region, target)
+          const coast = this.coastPoint(mesh, region, target, smoothedCorners)
             ?? this.normalize(this.add(sourcePosition, this.regionPoint(mesh, target)))
           if (coast) {
             const coastOffset = surfaceOffsets
@@ -223,6 +225,7 @@ export class RiverGeometry {
     mesh: SphericalMesh,
     landRegion: number,
     oceanRegion: number,
+    smoothedCorners?: Float32Array | null,
   ): SphericalPoint | null {
     const targetCorners = new Set<number>()
     const targetStart = mesh.voronoi.cellCornerOffsets[oceanRegion]
@@ -239,10 +242,11 @@ export class RiverGeometry {
         continue
       const a = cornerA * 3
       const b = cornerB * 3
+      const srcPositions = smoothedCorners ?? mesh.voronoi.cornerPosition
       return this.normalize([
-        mesh.voronoi.cornerPosition[a] + mesh.voronoi.cornerPosition[b],
-        mesh.voronoi.cornerPosition[a + 1] + mesh.voronoi.cornerPosition[b + 1],
-        mesh.voronoi.cornerPosition[a + 2] + mesh.voronoi.cornerPosition[b + 2],
+        srcPositions[a] + srcPositions[b],
+        srcPositions[a + 1] + srcPositions[b + 1],
+        srcPositions[a + 2] + srcPositions[b + 2],
       ])
     }
     return null
