@@ -54,7 +54,7 @@
   }
 </script>
 
-<div class="inline-flex items-center gap-2 {className}">
+<div class='inline-flex items-center gap-2 {className}'>
   <Checkbox.Root
     id={checkboxId}
     bind:checked
@@ -64,7 +64,7 @@
       onchange?.(val)
       oncommit?.(val)
     }}
-    class="flex {sizeClasses[size]} shrink-0 items-center justify-center rounded-sm border border-white/[0.16] bg-white/[0.05] transition-colors hover:border-white/30 focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-40 cursor-pointer {activeClass} {checkboxClass}"
+    class='flex {sizeClasses[size]} shrink-0 items-center justify-center rounded-sm border border-white/[0.16] bg-white/[0.05] transition-colors hover:border-white/30 focus-visible:outline-hidden focus-visible:ring-1 disabled:pointer-events-none disabled:opacity-40 cursor-pointer {activeClass} {checkboxClass}'
   >
     {#snippet children({ checked: isChecked })}
       {#if isChecked}
@@ -76,7 +76,7 @@
   {#if label || children}
     <Label.Root
       for={checkboxId}
-      class="cursor-pointer select-none text-[11px] text-obs-text-muted hover:text-obs-text-main transition-colors disabled:pointer-events-none disabled:opacity-40 {labelClass}"
+      class='cursor-pointer select-none text-[11px] text-obs-text-muted hover:text-obs-text-main transition-colors disabled:pointer-events-none disabled:opacity-40 {labelClass}'
     >
       {#if children}
         {@render children()}
@@ -84,7 +84,7 @@
         {label}
       {/if}
       {#if description}
-        <span class="block text-[10px] text-obs-text-dim leading-tight">
+        <span class='block text-[10px] text-obs-text-dim leading-tight'>
           {description}
         </span>
       {/if}

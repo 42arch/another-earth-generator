@@ -3,6 +3,7 @@ import type {
 } from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjectionId } from '@/core/projections/map-projection'
+import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
@@ -34,12 +35,11 @@ import { Stars } from '@/core/rendering/globe/stars'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
 import { MapView } from '@/core/rendering/map/view'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
-import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
-import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
 import { CLOUD_FRAGMENT_SHADER, CLOUD_GLOBE_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
 import { RiverGeometry } from '@/core/rendering/shared/river-geometry'
+import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
 import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
 
 const GRATICULE_LAYER_OFFSET = 0.75
@@ -353,7 +353,7 @@ export class GlobeRenderer {
       this.data,
       this.params.core.planetRadius + riverClearance,
       surfaceOffsets,
-      this.smoothedRegionCorners ?? undefined
+      this.smoothedRegionCorners ?? undefined,
     )
     if ((geometry.getAttribute('position')?.count ?? 0) === 0) {
       geometry.dispose()
@@ -495,7 +495,6 @@ export class GlobeRenderer {
     this.cellBoundaryLayer.renderOrder = 3
     this.scene.add(this.cellBoundaryLayer)
   }
-
 
   private buildDisplayRegionIds(): Int32Array {
     const regionIds = new Int32Array(this.mesh!.numRegions)

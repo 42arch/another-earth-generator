@@ -135,7 +135,7 @@ export function createShareHash(config: WorldConfig): string {
 }
 
 export function applyShareHash(config: WorldConfig, hash: string): boolean {
-  const match = /^#w=(2|3|4|5|6)\.([\w-]+)$/.exec(hash)
+  const match = /^#w=([2-6])\.([\w-]+)$/.exec(hash)
   if (!match)
     return false
 

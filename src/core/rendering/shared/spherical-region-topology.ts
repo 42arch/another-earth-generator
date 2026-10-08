@@ -114,7 +114,7 @@ export class SphericalRegionTopologyBuilder {
         let x = cx * (1 - strength) + (positions[a] + positions[b]) * (strength * 0.5)
         let y = cy * (1 - strength) + (positions[a + 1] + positions[b + 1]) * (strength * 0.5)
         let z = cz * (1 - strength) + (positions[a + 2] + positions[b + 2]) * (strength * 0.5)
-        
+
         const length = Math.hypot(x, y, z) || 1
         x /= length
         y /= length
@@ -226,11 +226,12 @@ export class SphericalRegionTopologyBuilder {
         if (ring.length === 0)
           ring.push(edge.start)
         if (edge.end === start) {
-          if (ring.length >= 3)
+          if (ring.length >= 3) {
             rings.push({
               corners: new Uint32Array(ring),
               edgeIndices: new Uint32Array(ringEdges),
             })
+          }
           break
         }
         ring.push(edge.end)

@@ -23,7 +23,7 @@ export class SurfaceHydrologyStage implements ISimulationStage {
       oceanMask[region] = landMask[region] ? 0 : 1
 
     const snowpack = new Float32Array(mesh.numRegions)
-    
+
     // Run for 24 months to allow snowpack to reach an annual steady state
     for (let month = 0; month < CLIMATE_MONTH_COUNT * 2; month++) {
       const monthIndex = month % CLIMATE_MONTH_COUNT
@@ -41,12 +41,13 @@ export class SurfaceHydrologyStage implements ISimulationStage {
           continue
         const temperature = fields.temperatureC[region]
         const precipitation = fields.precipitationMm[region]
-        
+
         let availableLiquid = 0
         if (temperature < 0) {
           // Freezing temperatures: precipitation falls as snow
           snowpack[region] += precipitation
-        } else {
+        }
+        else {
           // Positive temperatures: precipitation falls as rain, and snow melts
           // Degree-day melt factor: roughly 2.5 mm per degree-day
           const meltRate = days * 2.5 * temperature

@@ -5,6 +5,7 @@
   import ParameterPanel from '@/ui/hud/ParameterPanel.svelte'
   import RegionInspector from '@/ui/hud/RegionInspector.svelte'
   import ReloadPrompt from '@/ui/hud/ReloadPrompt.svelte'
+  import RotatePrompt from '@/ui/hud/RotatePrompt.svelte'
   import TopBanner from '@/ui/hud/TopBanner.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
@@ -38,4 +39,7 @@
 
   <!-- PWA 更新提示 -->
   <ReloadPrompt />
+
+  <!-- 竖屏提示遮罩 -->
+  <RotatePrompt />
 </div>

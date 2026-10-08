@@ -24,7 +24,10 @@ describe('active-layer cell statistics', () => {
 
     expect(statistics.plateCounts).toEqual({ primary: 2, micro: 2 })
     expect(statistics.rows.map(item => item.label)).toEqual([
-      '主要板块 #0', '小板块 #2', '主要板块 #1', '小板块 #3',
+      '主要板块 #0',
+      '小板块 #2',
+      '主要板块 #1',
+      '小板块 #3',
     ])
     expect(statistics.description).toContain('独立运动')
     expect(formatLayerStatistics(statistics)).toContain('主要板块\t2\n小板块\t2')

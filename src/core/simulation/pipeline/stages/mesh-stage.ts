@@ -1,11 +1,11 @@
 import type { ISimulationStage, SimulationContext } from '../types'
 import { IcosphereBuilder, nearestIcosphereLevel } from '@/core/mesh/icosphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
-import { REFERENCE_PLATE_SUBDIVISION_COUNT } from '@/core/simulation/config'
 import {
   REFERENCE_REGION_LEVEL,
   ReferenceGridProjector,
 } from '@/core/mesh/reference-grid-projector'
+import { REFERENCE_PLATE_SUBDIVISION_COUNT } from '@/core/simulation/config'
 
 export class MeshStage implements ISimulationStage {
   name = 'MeshGeneration'

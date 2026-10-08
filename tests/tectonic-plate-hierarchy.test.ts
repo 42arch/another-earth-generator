@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
-import { PlatePropertiesGenerator } from '@/core/geology/plate-properties-generator'
 import { SphericalPlateBoundaryAnalyzer } from '@/core/geology/plate-boundary-analyzer'
 import { SphericalPlateGenerator } from '@/core/geology/plate-generator'
+import { PlatePropertiesGenerator } from '@/core/geology/plate-properties-generator'
 import { SuperPlateGenerator } from '@/core/geology/super-plate-generator'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'

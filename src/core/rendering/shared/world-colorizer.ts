@@ -1,19 +1,19 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { GlobeDisplayMode } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
+import { Color } from 'three'
 import { KOPPEN_COLORS } from '@/core/climate/koppen-climate-classifier'
 import { BIOME_COLORS } from '@/core/ecology/biome-data'
 import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/geology/geology-data'
 import { clamp } from '@/core/math/math'
 import { getOceanCurrentSpeedColor, getWindColor } from '@/core/rendering/shared/climate-color-scale'
-import { SatelliteColorizer } from '@/core/rendering/shared/satellite-colorizer'
-import { Color } from 'three'
 import {
   getHeightmapLandColor,
   getHeightmapOceanColor,
   HEIGHTMAP_MAX_LAND_ELEVATION_KM,
   HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
 } from '@/core/rendering/shared/heightmap-color-scale'
+import { SatelliteColorizer } from '@/core/rendering/shared/satellite-colorizer'
 
 type Rgb = readonly [number, number, number]
 

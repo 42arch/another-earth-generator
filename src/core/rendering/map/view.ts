@@ -1,6 +1,7 @@
 import type { BufferGeometry, Material, Object3D } from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection, MapProjectionId } from '@/core/projections/map-projection'
+import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
@@ -25,12 +26,11 @@ import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
 import { MapRibbonMaterial } from '@/core/rendering/map/ribbon-material'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
-import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
-import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
 import { CLOUD_FRAGMENT_SHADER, CLOUD_MAP_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
 import { RiverGeometry } from '@/core/rendering/shared/river-geometry'
+import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
 import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
 
 interface MapLayerResource {
@@ -119,10 +119,8 @@ export class MapView {
     this.overlaysDirty = true
     this.selectedRegion = -1
     this.selectionGroup.visible = false
-    if (this.active) {
-      this.rebuildSurface()
-      this.rebuildOverlays()
-    }
+    this.ensureSurface()
+    this.ensureOverlays()
   }
 
   updateAppearance(params: WorldConfig): void {
@@ -140,18 +138,7 @@ export class MapView {
       && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(params.appearance.displayMode))
     if (satelliteTransition || elevationColorModeChanged)
       this.surfaceDirty = true
-    if (!this.active) {
-      if (this.surface && this.data && !satelliteTransition
-        && !this.isElevationColorMode(params.appearance.displayMode)
-        && params.appearance.displayMode !== 'satellite') {
-        this.geometryBuilder.updateColors(
-          this.surface.geometry,
-          this.colorizer.build(this.data, params.appearance.displayMode, this.mesh ?? undefined),
-        )
-      }
-      this.overlaysDirty = true
-      return
-    }
+
     this.ensureSurface()
     if (!this.surface || !this.data)
       return
@@ -303,7 +290,7 @@ export class MapView {
         this.mesh,
         this.data,
         undefined,
-        this.smoothedRegionCorners ?? undefined
+        this.smoothedRegionCorners ?? undefined,
       ),
       this.projection,
       this.centralMeridian,
@@ -364,7 +351,6 @@ export class MapView {
       2,
     )
   }
-
 
   private buildDisplayRegionIds(): Int32Array {
     const regionIds = new Int32Array(this.mesh!.numRegions)

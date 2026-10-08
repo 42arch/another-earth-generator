@@ -87,5 +87,4 @@ export class ProjectionStage implements ISimulationStage {
       regionCrustThickness,
     }
   }
-
 }

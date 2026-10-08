@@ -14,20 +14,20 @@
     Workflow,
     X,
   } from '@lucide/svelte'
-  import Checkbox from '@/ui/components/Checkbox.svelte'
   import { fly } from 'svelte/transition'
+  import {
+    getOceanCurrentSpeedColor,
+    getOceanCurrentThermalColor,
+    getWindColor,
+  } from '@/core/rendering/shared/climate-color-scale'
   import {
     getHeightmapLandColor,
     getHeightmapOceanColor,
     HEIGHTMAP_MAX_LAND_ELEVATION_KM,
     HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
   } from '@/core/rendering/shared/heightmap-color-scale'
-  import {
-    getOceanCurrentSpeedColor,
-    getOceanCurrentThermalColor,
-    getWindColor,
-  } from '@/core/rendering/shared/climate-color-scale'
   import { formatLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
+  import Checkbox from '@/ui/components/Checkbox.svelte'
   import Tooltip from '@/ui/components/Tooltip.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
@@ -318,57 +318,57 @@
       {#if hasLayerStatistics(appState.params.appearance.displayMode)}
         <!-- 图层统计 -->
         <div class='flex flex-col gap-1.5 mt-2'>
-        <div class='flex items-center justify-between'>
-          <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>当前图层统计</span>
-          <button
-            type='button'
-            onclick={copyStatistics}
-            disabled={!appState.layerStatistics}
-            class='flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
-            title='复制统计数据'
-          >
-            {#if copyStatus === 'copied'}
-              <Check class='w-3 h-3 text-obs-primary' />
-            {:else}
-              <Copy class='w-3 h-3' />
-            {/if}
-          </button>
-        </div>
+          <div class='flex items-center justify-between'>
+            <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>当前图层统计</span>
+            <button
+              type='button'
+              onclick={copyStatistics}
+              disabled={!appState.layerStatistics}
+              class='flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
+              title='复制统计数据'
+            >
+              {#if copyStatus === 'copied'}
+                <Check class='w-3 h-3 text-obs-primary' />
+              {:else}
+                <Copy class='w-3 h-3' />
+              {/if}
+            </button>
+          </div>
 
-        <div class='flex flex-col bg-black/20 rounded-lg border border-white/[0.04] overflow-hidden'>
-          {#if appState.layerStatistics}
-            <div class='px-3 py-2 border-b border-white/[0.04]'>
-              <div class='text-[11px] font-semibold text-obs-text-main'>{appState.layerStatistics.title}</div>
-              <div class='mt-0.5 text-[10px] text-obs-text-dim'>占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元</div>
-              {#if appState.layerStatistics.plateCounts}
-                <div class='mt-2 flex gap-3 text-[10px] text-obs-text-main'>
-                  <span>主要板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.primary}</strong></span>
-                  <span>小板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.micro}</strong></span>
-                </div>
-              {/if}
-              {#if appState.layerStatistics.description}
-                <p class='mt-1.5 text-[10px] leading-relaxed text-obs-text-dim'>{appState.layerStatistics.description}</p>
-              {/if}
-            </div>
-            <div class='flex flex-col px-1.5 py-1.5'>
-              {#each appState.layerStatistics.rows as item (item.key)}
-                <div class='rounded-md px-1.5 py-1.5 hover:bg-white/[0.04]'>
-                  <div class='flex items-center gap-2 text-[10px]'>
-                    <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={item.color}></span>
-                    <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
-                    <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(item.count)}</span>
-                    <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
+          <div class='flex flex-col bg-black/20 rounded-lg border border-white/[0.04] overflow-hidden'>
+            {#if appState.layerStatistics}
+              <div class='px-3 py-2 border-b border-white/[0.04]'>
+                <div class='text-[11px] font-semibold text-obs-text-main'>{appState.layerStatistics.title}</div>
+                <div class='mt-0.5 text-[10px] text-obs-text-dim'>占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元</div>
+                {#if appState.layerStatistics.plateCounts}
+                  <div class='mt-2 flex gap-3 text-[10px] text-obs-text-main'>
+                    <span>主要板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.primary}</strong></span>
+                    <span>小板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.micro}</strong></span>
                   </div>
-                  <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
-                    <div class='h-full rounded-full' style:background-color={item.color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
+                {/if}
+                {#if appState.layerStatistics.description}
+                  <p class='mt-1.5 text-[10px] leading-relaxed text-obs-text-dim'>{appState.layerStatistics.description}</p>
+                {/if}
+              </div>
+              <div class='flex flex-col px-1.5 py-1.5'>
+                {#each appState.layerStatistics.rows as item (item.key)}
+                  <div class='rounded-md px-1.5 py-1.5 hover:bg-white/[0.04]'>
+                    <div class='flex items-center gap-2 text-[10px]'>
+                      <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={item.color}></span>
+                      <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
+                      <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(item.count)}</span>
+                      <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
+                    </div>
+                    <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
+                      <div class='h-full rounded-full' style:background-color={item.color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
+                    </div>
                   </div>
-                </div>
-              {/each}
-            </div>
-          {:else}
-            <div class='py-4 text-center text-[10px] text-obs-text-dim'>世界生成完成后显示统计</div>
-          {/if}
-        </div>
+                {/each}
+              </div>
+            {:else}
+              <div class='py-4 text-center text-[10px] text-obs-text-dim'>世界生成完成后显示统计</div>
+            {/if}
+          </div>
         </div>
       {/if}
     </div>

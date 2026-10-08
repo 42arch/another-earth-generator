@@ -28,7 +28,13 @@ export class SuperPlateGenerator {
     seed = 0,
   ): SuperPlateData | null {
     const topology = this.generateTopology(
-      mesh, plates, angularVelocity, primaryCount, microCount, sizeVariety, seed,
+      mesh,
+      plates,
+      angularVelocity,
+      primaryCount,
+      microCount,
+      sizeVariety,
+      seed,
     )
     return topology ? this.attachCrust(mesh, plates, topology, crust) : null
   }
