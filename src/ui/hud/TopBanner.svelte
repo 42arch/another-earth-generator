@@ -111,28 +111,28 @@
         >
           <Toggle
             label='经纬网格'
-            checked={appState.params.appearance.showGraticule}
-            oncommit={checked => appState.updateParam('appearance', 'showGraticule', checked)}
-          />
-          <Toggle
-            label='河网显示'
-            checked={appState.params.appearance.showRivers}
-            oncommit={checked => appState.updateParam('appearance', 'showRivers', checked)}
+            checked={!!appState.params.appearance.overlays.graticule}
+            oncommit={() => appState.toggleOverlay('graticule')}
           />
           <Toggle
             label='云层显示'
-            checked={appState.params.appearance.showClouds}
-            oncommit={checked => appState.updateParam('appearance', 'showClouds', checked)}
+            checked={!!appState.params.appearance.overlays.clouds}
+            oncommit={() => appState.toggleOverlay('clouds')}
+          />
+          <Toggle
+            label='河流水系'
+            checked={!!appState.params.appearance.overlays.rivers}
+            oncommit={() => appState.toggleOverlay('rivers')}
           />
           <Toggle
             label='Cell 网格'
-            checked={appState.params.appearance.wireframe}
-            oncommit={checked => appState.updateParam('appearance', 'wireframe', checked)}
+            checked={!!appState.params.appearance.overlays.wireframe}
+            oncommit={() => appState.toggleOverlay('wireframe')}
           />
           <Toggle
             label='大气光晕'
-            checked={appState.params.appearance.showAtmosphere}
-            oncommit={checked => appState.updateParam('appearance', 'showAtmosphere', checked)}
+            checked={!!appState.params.appearance.overlays.atmosphere}
+            oncommit={() => appState.toggleOverlay('atmosphere')}
           />
           <Toggle
             label='高度位移'
@@ -142,8 +142,8 @@
           <div class={appState.viewMode === 'map' ? 'opacity-30 pointer-events-none' : ''}>
             <Toggle
               label='昼夜效果'
-              checked={appState.params.appearance.showDayNight}
-              oncommit={checked => appState.updateParam('appearance', 'showDayNight', checked)}
+              checked={!!appState.params.appearance.overlays['day-night']}
+              oncommit={() => appState.toggleOverlay('day-night')}
             />
           </div>
           <div class={appState.viewMode === 'map' ? 'opacity-30 pointer-events-none' : ''}>

@@ -1,6 +1,6 @@
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
-import type { GlobeDisplayMode, WorldConfig } from '@/core/simulation/config'
+import type { WorldConfig } from '@/core/simulation/config'
 import type { LayerStatistics } from '@/core/world/layer-statistics'
 import type WorldEngine from '@/core/world/world-engine'
 import { tick } from 'svelte'
@@ -133,8 +133,8 @@ return false
     }
   }
 
-  setDisplayMode(mode: GlobeDisplayMode) {
-    this.updateParam('appearance', 'displayMode', mode)
+  setBaseMap(mode: string) {
+    this.updateParam('appearance', 'baseMap', mode)
   }
 
   toggleLayerDrawer() {
@@ -166,6 +166,12 @@ return false
     this.setMapProjection(
       this.mapProjection === 'mercator' ? 'equal-earth' : 'mercator',
     )
+  }
+
+  toggleOverlay(overlayId: string) {
+    const isEnabled = this.params.appearance.overlays[overlayId] ?? false
+    this.params.appearance.overlays[overlayId] = !isEnabled
+    this.updateParam('appearance', 'overlays', this.params.appearance.overlays)
   }
 
   toggleLayer(layerKey: keyof WorldConfig['appearance']) {

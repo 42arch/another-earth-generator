@@ -30,6 +30,8 @@ export class TerrainStage implements ISimulationStage {
       throw new Error('Missing dependencies in TerrainStage')
     }
 
+    console.time('elevationGenerator.generate')
+
     const elevationFields = this.elevationGenerator.generate(
       mesh,
       candidateLandMask,
@@ -41,6 +43,9 @@ export class TerrainStage implements ISimulationStage {
         hotspotCount: config.geology.hotspotCount,
       },
     )
+    console.timeEnd('elevationGenerator.generate')
+
+    console.time('terrainPostProcessor.generate')
 
     const terrain = this.terrainPostProcessor.generate(
       mesh,
@@ -61,6 +66,9 @@ export class TerrainStage implements ISimulationStage {
       elevationFields.edifices.hotspot,
       elevationFields.edifices.total,
     )
+    console.timeEnd('terrainPostProcessor.generate')
+
+    console.time('postProcess array copies')
 
     const landMask = terrain.landMask
     const visibleContinentId = new Int16Array(mesh.numRegions).fill(-1)

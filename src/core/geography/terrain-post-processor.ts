@@ -83,6 +83,7 @@ export class TerrainPostProcessor {
     edifices?: Float32Array,
     deferDrainage = false,
   ): TerrainPostProcessData {
+    console.time('textureGenerator.generate')
     const textured = this.textureGenerator.generate(
       mesh,
       baseElevation,
@@ -98,19 +99,35 @@ export class TerrainPostProcessor {
       for (let region = 0; region < mesh.numRegions; region++)
         textured.elevation[region] += dynamicTopography[region]
     }
+    console.timeEnd('textureGenerator.generate')
+    
+    console.time('finalizer.generate')
     const finalized = this.finalizer.generate(mesh, textured.elevation, candidateLandMask)
     const elevation = Float32Array.from(finalized.elevation)
+    console.timeEnd('finalizer.generate')
+    
+    console.time('warpTerrain')
     this.warpTerrain(mesh, elevation, seed, terrainWarp, hotspot)
+    console.timeEnd('warpTerrain')
+    
     const beforePostProcess = Float32Array.from(elevation)
+    console.time('regularizeShoreline')
     this.regularizeShoreline(mesh, elevation, candidateLandMask, edifices)
+    console.timeEnd('regularizeShoreline')
+    
     // Freeze the stabilized shoreline for later erosion and land-only detail.
     const oceanMask = this.buildOceanMask(elevation)
+    
+    console.time('smooth')
     if (smoothing > 0) {
       const iterations = Math.round(1 + smoothing * 4)
       const strength = 0.2 + smoothing * 0.5
       this.smooth(mesh, elevation, oceanMask, iterations, strength)
     }
+    console.timeEnd('smooth')
+    
     const beforeDetail = Float32Array.from(elevation)
+    console.time('applyDetailNoise')
     this.applyDetailNoise(mesh, elevation, oceanMask, classification, seed)
     this.applyDetailNoise(mesh, elevation, oceanMask, classification, seed, {
       amplitudeKm: 0.05,
@@ -120,17 +137,24 @@ export class TerrainPostProcessor {
       biasExponent: 0.4,
       seedOffset: 13579,
     })
+    console.timeEnd('applyDetailNoise')
+    
     for (let region = 0; region < mesh.numRegions; region++) {
       const detailDelta = elevation[region] - beforeDetail[region]
       textured.texture.postDetail[region] = detailDelta
       textured.texture.total[region] += detailDelta
     }
+    
+    console.time('erosionProcessor.generate')
     const erosion = this.erosionProcessor.generate(mesh, elevation, oceanMask, {
       glacial: glacialErosion,
       hydraulic: hydraulicErosion,
-      drainageDiagnostics: !deferDrainage,
+      drainageDiagnostics: false,
     })
+    console.timeEnd('erosionProcessor.generate')
+    
     const sharpening = Math.max(0, Math.min(1, ridgeSharpening))
+    console.time('sharpenRidges')
     if (sharpening > 0) {
       this.sharpenRidges(
         mesh,
@@ -140,9 +164,16 @@ export class TerrainPostProcessor {
         sharpening * 0.08,
       )
     }
+    console.timeEnd('sharpenRidges')
+    
+    console.time('applySoilCreep')
     this.applySoilCreep(mesh, elevation, oceanMask, 3, 0.1125)
+    console.timeEnd('applySoilCreep')
+    
+    console.time('rebuildDrainage')
     if (!deferDrainage)
       this.erosionProcessor.rebuildDrainage(mesh, elevation, oceanMask, erosion)
+    console.timeEnd('rebuildDrainage')
     const landMask = new Uint8Array(mesh.numRegions)
     for (let region = 0; region < mesh.numRegions; region++) {
       landMask[region] = elevation[region] > 0 ? 1 : 0
@@ -207,9 +238,14 @@ export class TerrainPostProcessor {
     const maximumAmplitude = WARP_MAX_AMPLITUDE * warpStrength
     const warpedElevation = Float32Array.from(elevation)
     const shoreline = new Uint8Array(mesh.numRegions)
+    const neighborOffsets = mesh.neighborOffsets
+    const neighbors = mesh.neighbors
     for (let region = 0; region < mesh.numRegions; region++) {
       const land = elevation[region] > 0
-      for (const neighbor of mesh.forEachNeighborOfRegion(region)) {
+      const start = neighborOffsets[region]
+      const end = neighborOffsets[region + 1]
+      for (let n = start; n < end; n++) {
+        const neighbor = neighbors[n]
         if ((elevation[neighbor] > 0) !== land) {
           shoreline[region] = 1
           break
@@ -328,7 +364,10 @@ export class TerrainPostProcessor {
     }
     let weightSum = weighted(nearest)
     let elevationSum = elevation[nearest] * weightSum
-    for (const neighbor of mesh.forEachNeighborOfRegion(nearest)) {
+    const nStart = mesh.neighborOffsets[nearest]
+    const nEnd = mesh.neighborOffsets[nearest + 1]
+    for (let n = nStart; n < nEnd; n++) {
+      const neighbor = mesh.neighbors[n]
       const weight = weighted(neighbor)
       weightSum += weight
       elevationSum += elevation[neighbor] * weight
@@ -356,7 +395,10 @@ export class TerrainPostProcessor {
         let oceanNeighbors = 0
         let landElevation = 0
         let oceanElevation = 0
-        for (const neighbor of mesh.forEachNeighborOfRegion(region)) {
+        const nStart = mesh.neighborOffsets[region]
+        const nEnd = mesh.neighborOffsets[region + 1]
+        for (let n = nStart; n < nEnd; n++) {
+          const neighbor = mesh.neighbors[n]
           const value = elevation[neighbor]
           if (value > 0) {
             landNeighbors++

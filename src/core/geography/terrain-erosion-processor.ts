@@ -1,6 +1,6 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import { clamp } from '@/core/math/math'
-import { MinPriorityQueue } from '@/core/math/priority-queue'
+import { IndexPriorityQueue } from '@/core/math/priority-queue'
 
 export interface TerrainErosionFields {
   flowReceiver: Int32Array
@@ -15,11 +15,6 @@ export interface TerrainErosionOptions {
   hydraulic: number
   /** Skip flow diagnostics when another pass will rebuild drainage later. */
   drainageDiagnostics?: boolean
-}
-
-interface FloodNode {
-  region: number
-  cost: number
 }
 
 const FLOOD_NOISE_AMPLITUDE = 0.01
@@ -66,7 +61,7 @@ export class TerrainErosionProcessor {
       hydraulicIterations,
     )
     const before = Float32Array.from(elevation)
-    const neighborDistance = this.buildNeighborDistances(mesh)
+    const neighborDistance = mesh.neighborDistances
     const landRegions = this.collectLandRegions(mesh, oceanMask)
     const flowReceiver = new Int32Array(mesh.numRegions).fill(-1)
     const flowAccumulation = new Float32Array(mesh.numRegions)
@@ -96,7 +91,7 @@ export class TerrainErosionProcessor {
 
         const applyGlacial = iteration < glacialIterations && glacialStrength > 0
         const applyHydraulic = iteration < hydraulicIterations
-        if (applyGlacial || applyHydraulic)
+        if ((applyGlacial || applyHydraulic) && (iteration === 0 || iteration === middleFloodIteration || (iteration & 3) === 0))
           landRegions.sort((a, b) => elevation[b] - elevation[a])
 
         if (applyGlacial) {
@@ -116,8 +111,7 @@ export class TerrainErosionProcessor {
         }
 
         if (applyHydraulic) {
-          if (applyGlacial)
-            landRegions.sort((a, b) => elevation[b] - elevation[a])
+
           this.buildDrainage(
             mesh,
             elevation,
@@ -212,7 +206,7 @@ export class TerrainErosionProcessor {
     const surface = Float32Array.from(elevation)
     const drainTo = new Int32Array(mesh.numRegions).fill(-1)
     const visited = Uint8Array.from(oceanMask)
-    const queue = new MinPriorityQueue<FloodNode>()
+    const queue = new IndexPriorityQueue(mesh.numRegions / 2)
 
     for (let region = 0; region < mesh.numRegions; region++) {
       if (oceanMask[region] !== 0)
@@ -225,13 +219,13 @@ export class TerrainErosionProcessor {
           continue
         visited[region] = 1
         drainTo[region] = neighbor
-        queue.push({ region, cost: surface[region] + this.cellNoise(region) })
+        queue.push(region, surface[region] + this.cellNoise(region))
         break
       }
     }
 
     while (queue.size > 0) {
-      const current = queue.pop().region
+      const current = queue.pop()
       const currentSurface = surface[current]
       const nStart = mesh.neighborOffsets[current]
       const nEnd = mesh.neighborOffsets[current + 1]
@@ -243,10 +237,7 @@ export class TerrainErosionProcessor {
         drainTo[neighbor] = current
         if (elevation[neighbor] < currentSurface + FLOOD_EPSILON)
           surface[neighbor] = currentSurface + FLOOD_EPSILON
-        queue.push({
-          region: neighbor,
-          cost: surface[neighbor] + this.cellNoise(neighbor),
-        })
+        queue.push(neighbor, surface[neighbor] + this.cellNoise(neighbor))
       }
     }
 

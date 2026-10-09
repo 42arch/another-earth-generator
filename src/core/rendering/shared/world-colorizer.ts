@@ -1,5 +1,4 @@
 import type SphericalMesh from '@/core/mesh/mesh'
-import type { GlobeDisplayMode } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { Color } from 'three'
 import { KOPPEN_COLORS } from '@/core/climate/koppen-climate-classifier'
@@ -24,7 +23,7 @@ export class WorldColorizer {
   private readonly windPalette = this.buildClimatePalette(getWindColor)
   private readonly oceanCurrentSpeedPalette = this.buildClimatePalette(getOceanCurrentSpeedColor)
 
-  build(data: WorldSimulationState, mode: GlobeDisplayMode, mesh?: SphericalMesh, mapHillshade = false): Float32Array {
+  build(data: WorldSimulationState, mode: string, mesh?: SphericalMesh, mapHillshade = false): Float32Array {
     if (mode === 'satellite') {
       if (!mesh)
         throw new Error('Satellite rendering requires the world mesh')
@@ -35,7 +34,7 @@ export class WorldColorizer {
     const colors = new Float32Array(numRegions * 3)
 
     let plateColors: Float32Array | null = null
-    if (mode === 'plates') {
+    if (mode === 'plates' || mode === 'plates-smoothed') {
       const regions = data.geology.regionSuperPlate
       let maxPlate = 0
       for (let i = 0; i < numRegions; i++) {
@@ -45,7 +44,7 @@ export class WorldColorizer {
       plateColors = this.buildPlateColors(maxPlate + 1)
     }
     let continentColors: Float32Array | null = null
-    if (mode === 'continents') {
+    if (mode === 'continents' || mode === 'continents-smoothed') {
       let maxContinent = 0
       for (let i = 0; i < numRegions; i++) {
         if (data.geography.visibleContinentId[i] > maxContinent)
@@ -73,7 +72,7 @@ export class WorldColorizer {
       const target = region * 3
       let color: Rgb
 
-      if (mode === 'plates' && plateColors) {
+      if ((mode === 'plates' || mode === 'plates-smoothed') && plateColors) {
         const plate = data.geology.regionSuperPlate[region]
         const pIdx = Math.max(0, plate) * 3
         colors[target] = plateColors[pIdx]
@@ -81,7 +80,7 @@ export class WorldColorizer {
         colors[target + 2] = plateColors[pIdx + 2]
         continue
       }
-      else if (mode === 'continents' && continentColors) {
+      else if ((mode === 'continents' || mode === 'continents-smoothed') && continentColors) {
         const continent = data.geography.visibleContinentId[region]
         if (data.geography.landMask[region] === 0) {
           colors[target] = 0.1
@@ -164,10 +163,10 @@ export class WorldColorizer {
       else if (mode === 'glacial') {
         color = this.glacialColor(data.geography.terrainErosion.glacialIndex[region])
       }
-      else if (mode === 'koppen') {
+      else if (mode === 'koppen' || mode === 'koppen-smoothed') {
         color = KOPPEN_COLORS[data.climate?.koppen?.climateClass[region] ?? 0]
       }
-      else if (mode === 'biome') {
+      else if (mode === 'biome' || mode === 'biome-smoothed') {
         color = BIOME_COLORS[data.biome?.biomeClass[region] ?? 0] ?? BIOME_COLORS[0]
       }
       else if (mode === 'temperature') {

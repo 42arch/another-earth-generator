@@ -110,12 +110,12 @@ export default class WorldEngine {
   }
 
   getLayerStatistics(): LayerStatistics | null {
-    if (!hasLayerStatistics(this.params.appearance.displayMode))
+    if (!hasLayerStatistics(this.params.appearance.baseMap))
       return null
     const state = this.simulation.state
     if (!state)
       return null
-    const mode = this.params.appearance.displayMode
+    const mode = this.params.appearance.baseMap
     const month = this.params.appearance.climateMonth
     const key = mode === 'temperature' || mode === 'precipitation' || mode === 'wind' || mode === 'ocean-current'
       ? `${mode}:${month}`
@@ -154,7 +154,7 @@ export default class WorldEngine {
     const climate = state?.data.climate
     if (!state || !climate)
       return
-    const mode = this.params.appearance.displayMode
+    const mode = this.params.appearance.baseMap
     const month = this.params.appearance.climateMonth
     const climateMesh = state.mesh.numRegions <= state.referenceMesh.numRegions
       ? state.mesh
@@ -227,7 +227,7 @@ export default class WorldEngine {
     const climate = state.data.climate
     const displayVector = climate?.displayVector
     const vectorInfo = displayVector?.month === this.params.appearance.climateMonth
-      && displayVector.kind === this.params.appearance.displayMode
+      && displayVector.kind === this.params.appearance.baseMap
       ? {
           vectorEast: displayVector.east[region],
           vectorNorth: displayVector.north[region],

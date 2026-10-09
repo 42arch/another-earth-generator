@@ -196,6 +196,7 @@ export class TectonicEdificeGenerator {
       mesh,
       region => isOrigin[region] !== 0,
       sameOceanicPlate,
+      ARC_MAX_DISTANCE,
     )
     const arcStress = computeSphericalInfluenceField(
       mesh,
@@ -406,58 +407,122 @@ export class TectonicEdificeGenerator {
     seed: number,
   ): Float32Array {
     const values = new Float32Array(mesh.numRegions)
+    if (edifices.length === 0)
+      return values
+
     const minimumSigma = Math.sqrt(4 * Math.PI / mesh.numRegions) * 0.65
     const shapeNoise = createNoise3D(alea(seed))
-    for (let region = 0; region < mesh.numRegions; region++) {
+
+    // Precalculate all invariant parameters per edifice to eliminate overhead in the mega-loop
+    const preparedEdifices = edifices.map((edifice) => {
+      const peakSigma = Math.max(edifice.sigma, minimumSigma)
+      const swellSigma = edifice.swellSigma ? Math.max(edifice.swellSigma, minimumSigma) : 0
+      const peakLimit = peakSigma * 5
+      const swellLimit = swellSigma * 4
+      const maxAngle = Math.max(peakLimit, swellLimit)
+      const stretch = edifice.stretch ?? 1
+      const invStretchSq = 1 / (stretch * stretch)
+      const warp = edifice.warp ?? 0
+      // With warp, angle can be reduced by at most 0.55.
+      // So unwarped angle must be <= maxAngle / 0.55 to have any chance to contribute.
+      const unwarpedAngleLimit = warp > 0 ? maxAngle / 0.55 : maxAngle
+      const safeAngle = Math.min(Math.PI, unwarpedAngleLimit)
+      const boundingDot = Math.cos(safeAngle)
+
+      const invTwoPeakSigmaSq = -0.5 / (peakSigma * peakSigma)
+      const invTwoSwellSigmaSq = swellSigma > 0 ? -0.5 / (swellSigma * swellSigma) : 0
+      const calderaSigma = edifice.calderaDepth && edifice.calderaSigma
+        ? Math.max(edifice.calderaSigma, minimumSigma * 0.35)
+        : 0
+      const invTwoCalderaSigmaSq = calderaSigma > 0 ? -0.5 / (calderaSigma * calderaSigma) : 0
+
+      return {
+        x: edifice.x,
+        y: edifice.y,
+        z: edifice.z,
+        height: edifice.height,
+        peakLimit,
+        swellLimit,
+        unwarpedAngleLimit,
+        boundingDot,
+        hasDrift: Boolean(edifice.drift),
+        driftX: edifice.drift ? edifice.drift[0] : 0,
+        driftY: edifice.drift ? edifice.drift[1] : 0,
+        driftZ: edifice.drift ? edifice.drift[2] : 0,
+        invStretchSq,
+        warp,
+        invTwoPeakSigmaSq,
+        swellHeight: edifice.swellHeight ?? 0,
+        invTwoSwellSigmaSq,
+        calderaDepth: edifice.calderaDepth ?? 0,
+        invTwoCalderaSigmaSq,
+      }
+    })
+
+    const positions = mesh.regionPosition
+    const numRegions = mesh.numRegions
+    const numEdifices = preparedEdifices.length
+
+    for (let region = 0; region < numRegions; region++) {
       const position = region * 3
-      const x = mesh.regionPosition[position]
-      const y = mesh.regionPosition[position + 1]
-      const z = mesh.regionPosition[position + 2]
+      const x = positions[position]
+      const y = positions[position + 1]
+      const z = positions[position + 2]
       let uplift = 0
-      for (const edifice of edifices) {
-        const peakSigma = Math.max(edifice.sigma, minimumSigma)
-        const swellSigma = edifice.swellSigma
-          ? Math.max(edifice.swellSigma, minimumSigma)
-          : undefined
-        const rawAngle = Math.acos(clamp(
-          x * edifice.x + y * edifice.y + z * edifice.z,
-          -1,
-          1,
-        ))
-        const dx = x - edifice.x
-        const dy = y - edifice.y
-        const dz = z - edifice.z
-        const along = edifice.drift
-          ? dx * edifice.drift[0] + dy * edifice.drift[1] + dz * edifice.drift[2]
-          : 0
-        const stretch = edifice.stretch ?? 1
-        const acrossSquared = Math.max(0, rawAngle * rawAngle - along * along)
-        let angle = Math.sqrt(acrossSquared + (along / stretch) ** 2)
-        if (edifice.warp) {
+
+      for (let i = 0; i < numEdifices; i++) {
+        const ed = preparedEdifices[i]
+        const dot = x * ed.x + y * ed.y + z * ed.z
+        if (dot < ed.boundingDot)
+          continue
+
+        const rawAngle = Math.acos(clamp(dot, -1, 1))
+        let angle: number
+
+        if (ed.hasDrift) {
+          const dx = x - ed.x
+          const dy = y - ed.y
+          const dz = z - ed.z
+          const along = dx * ed.driftX + dy * ed.driftY + dz * ed.driftZ
+          const acrossSquared = Math.max(0, rawAngle * rawAngle - along * along)
+          angle = Math.sqrt(acrossSquared + along * along * ed.invStretchSq)
+        }
+        else {
+          angle = rawAngle
+        }
+
+        // CRITICAL SHORT-CIRCUIT:
+        // Skip expensive 3D simplex noise evaluations if unwarped angle is already outside the limit!
+        if (angle > ed.unwarpedAngleLimit)
+          continue
+
+        if (ed.warp > 0) {
           const broadWarp = shapeNoise(
-            x * 8 + edifice.x * 17,
-            y * 8 + edifice.y * 17,
-            z * 8 + edifice.z * 17,
+            x * 8 + ed.x * 17,
+            y * 8 + ed.y * 17,
+            z * 8 + ed.z * 17,
           )
           const detailWarp = shapeNoise(
-            x * 20 + edifice.z * 29,
-            y * 20 + edifice.x * 29,
-            z * 20 + edifice.y * 29,
+            x * 20 + ed.z * 29,
+            y * 20 + ed.x * 29,
+            z * 20 + ed.y * 29,
           )
-          angle *= Math.max(0.55, 1 + edifice.warp * (broadWarp * 0.6 + detailWarp * 0.4))
+          angle *= Math.max(0.55, 1 + ed.warp * (broadWarp * 0.6 + detailWarp * 0.4))
         }
-        if (angle > peakSigma * 5 && (!swellSigma || angle > swellSigma * 4))
+
+        if (angle > ed.peakLimit && (ed.swellLimit === 0 || angle > ed.swellLimit))
           continue
-        uplift += edifice.height * this.gaussian(angle, peakSigma)
-        if (edifice.calderaDepth && edifice.calderaSigma) {
-          uplift -= edifice.calderaDepth * this.gaussian(
-            angle,
-            Math.max(edifice.calderaSigma, minimumSigma * 0.35),
-          )
-        }
-        if (swellSigma && edifice.swellHeight)
-          uplift += edifice.swellHeight * this.gaussian(angle, swellSigma)
+
+        const angleSq = angle * angle
+        let contribution = ed.height * Math.exp(angleSq * ed.invTwoPeakSigmaSq)
+        if (ed.calderaDepth > 0)
+          contribution -= ed.calderaDepth * Math.exp(angleSq * ed.invTwoCalderaSigmaSq)
+        if (ed.swellHeight > 0)
+          contribution += ed.swellHeight * Math.exp(angleSq * ed.invTwoSwellSigmaSq)
+
+        uplift += contribution
       }
+
       values[region] = uplift
     }
     return values
@@ -496,18 +561,43 @@ export class TectonicEdificeGenerator {
   }
 
   private nearestRegion(mesh: SphericalMesh, x: number, y: number, z: number): number {
+    const numRegions = mesh.numRegions
+    const positions = mesh.regionPosition
+    const neighborOffsets = mesh.neighborOffsets
+    const neighbors = mesh.neighbors
+
+    // Subsample candidate regions evenly to find a good starting point
     let nearest = 0
-    let bestDot = -Infinity
-    for (let region = 0; region < mesh.numRegions; region++) {
-      const position = region * 3
-      const dot = x * mesh.regionPosition[position]
-        + y * mesh.regionPosition[position + 1]
-        + z * mesh.regionPosition[position + 2]
+    let bestDot = x * positions[0] + y * positions[1] + z * positions[2]
+    const step = Math.max(1, (numRegions >> 8)) // ~256-512 samples
+    for (let r = step; r < numRegions; r += step) {
+      const idx = r * 3
+      const dot = x * positions[idx] + y * positions[idx + 1] + z * positions[idx + 2]
       if (dot > bestDot) {
         bestDot = dot
-        nearest = region
+        nearest = r
       }
     }
+
+    // Greedy hill-climb to exact nearest region
+    while (true) {
+      let improved = false
+      const start = neighborOffsets[nearest]
+      const end = neighborOffsets[nearest + 1]
+      for (let n = start; n < end; n++) {
+        const neighbor = neighbors[n]
+        const idx = neighbor * 3
+        const dot = x * positions[idx] + y * positions[idx + 1] + z * positions[idx + 2]
+        if (dot > bestDot) {
+          bestDot = dot
+          nearest = neighbor
+          improved = true
+        }
+      }
+      if (!improved)
+        break
+    }
+
     return nearest
   }
 

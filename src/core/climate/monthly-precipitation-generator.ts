@@ -67,16 +67,18 @@ function windConvergence(mesh: SphericalMesh, wind: MonthlyWind, edgeKm: number)
   const count = mesh.numRegions
   const convergence = new Float32Array(count)
   const edgeRadians = edgeKm / EARTH_RADIUS_KM
+  const neighborDx = mesh.neighborDx
+  const neighborDy = mesh.neighborDy
+  const neighborDz = mesh.neighborDz
   for (let region = 0; region < count; region++) {
     const index = 3 * region
     let inward = 0
     let neighbors = 0
     for (let edge = mesh.neighborOffsets[region]; edge < mesh.neighborOffsets[region + 1]; edge++) {
       const neighbor = mesh.neighbors[edge]
-      const other = 3 * neighbor
-      const dx = mesh.regionPosition[other] - mesh.regionPosition[index]
-      const dy = mesh.regionPosition[other + 1] - mesh.regionPosition[index + 1]
-      const dz = mesh.regionPosition[other + 2] - mesh.regionPosition[index + 2]
+      const dx = -neighborDx[edge]
+      const dy = -neighborDy[edge]
+      const dz = -neighborDz[edge]
       inward -= (wind.x[neighbor] + wind.x[region]) * dx
         + (wind.y[neighbor] + wind.y[region]) * dy
         + (wind.z[neighbor] + wind.z[region]) * dz
@@ -145,6 +147,9 @@ function advectMoisture(
   }
   const localSupply = new Float32Array(source)
   const hops = clamp(Math.round(3400 / spatial.edgeKm), 8, 24)
+  const neighborDx = mesh.neighborDx
+  const neighborDy = mesh.neighborDy
+  const neighborDz = mesh.neighborDz
   for (let pass = 0; pass < hops; pass++) {
     for (let region = 0; region < count; region++) {
       if (!surface.landMask[region]) {
@@ -157,10 +162,9 @@ function advectMoisture(
       let sourceHeight = 0
       for (let edge = mesh.neighborOffsets[region]; edge < mesh.neighborOffsets[region + 1]; edge++) {
         const neighbor = mesh.neighbors[edge]
-        const other = 3 * neighbor
-        const dx = mesh.regionPosition[index] - mesh.regionPosition[other]
-        const dy = mesh.regionPosition[index + 1] - mesh.regionPosition[other + 1]
-        const dz = mesh.regionPosition[index + 2] - mesh.regionPosition[other + 2]
+        const dx = neighborDx[edge]
+        const dy = neighborDy[edge]
+        const dz = neighborDz[edge]
         const alignment = wind.x[neighbor] * dx + wind.y[neighbor] * dy + wind.z[neighbor] * dz
         if (alignment <= 0)
           continue

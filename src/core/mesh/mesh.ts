@@ -15,6 +15,10 @@ export default class SphericalMesh implements SphericalMeshData {
   readonly neighbors: Uint32Array
   readonly triangles: Uint32Array
   readonly voronoi: SphericalVoronoi
+  private _neighborDistances?: Float64Array
+  private _neighborDx?: Float32Array
+  private _neighborDy?: Float32Array
+  private _neighborDz?: Float32Array
 
   constructor(data: SphericalMeshData & { voronoi?: SphericalVoronoiData }) {
     this.numRegions = data.numRegions
@@ -54,5 +58,53 @@ export default class SphericalMesh implements SphericalMeshData {
 
   distanceBetweenRegions(a: number, b: number): number {
     return Math.acos(clamp(this.dotBetweenRegions(a, b), -1, 1))
+  }
+
+  get neighborDistances(): Float64Array {
+    if (!this._neighborDistances) {
+      this._neighborDistances = new Float64Array(this.neighbors.length)
+      for (let region = 0; region < this.numRegions; region++) {
+        const start = this.neighborOffsets[region]
+        const end = this.neighborOffsets[region + 1]
+        for (let j = start; j < end; j++) {
+           this._neighborDistances[j] = this.distanceBetweenRegions(region, this.neighbors[j])
+        }
+      }
+    }
+    return this._neighborDistances
+  }
+
+  get neighborDx(): Float32Array {
+    this.ensureNeighborVectors()
+    return this._neighborDx!
+  }
+
+  get neighborDy(): Float32Array {
+    this.ensureNeighborVectors()
+    return this._neighborDy!
+  }
+
+  get neighborDz(): Float32Array {
+    this.ensureNeighborVectors()
+    return this._neighborDz!
+  }
+
+  private ensureNeighborVectors(): void {
+    if (this._neighborDx) return
+    const length = this.neighbors.length
+    this._neighborDx = new Float32Array(length)
+    this._neighborDy = new Float32Array(length)
+    this._neighborDz = new Float32Array(length)
+    for (let region = 0; region < this.numRegions; region++) {
+      const idx = region * 3
+      const start = this.neighborOffsets[region]
+      const end = this.neighborOffsets[region + 1]
+      for (let j = start; j < end; j++) {
+        const other = this.neighbors[j] * 3
+        this._neighborDx[j] = this.regionPosition[idx] - this.regionPosition[other]
+        this._neighborDy[j] = this.regionPosition[idx + 1] - this.regionPosition[other + 1]
+        this._neighborDz[j] = this.regionPosition[idx + 2] - this.regionPosition[other + 2]
+      }
+    }
   }
 }

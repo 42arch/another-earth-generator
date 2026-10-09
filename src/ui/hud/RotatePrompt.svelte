@@ -1,18 +1,31 @@
 <script lang='ts'>
-  import { Smartphone } from '@lucide/svelte'
+  import { Smartphone, X } from '@lucide/svelte'
+
+  let dismissed = $state(false)
 </script>
 
-<div class='rotate-prompt fixed inset-0 z-[100] flex-col items-center justify-center bg-obs-surface/80 backdrop-blur-md border border-obs-border text-white pointer-events-auto'>
-  <div class='flex flex-col items-center gap-6'>
-    <div class='animate-phone-rotate'>
-      <Smartphone class='w-16 h-16 text-obs-amber' strokeWidth={1.5} />
-    </div>
-    <div class='text-center space-y-2'>
-      <h2 class='text-lg font-medium text-obs-amber-light'>建议横屏浏览</h2>
-      <p class='text-sm text-obs-text-muted'>为了获得最佳体验，请关闭方向锁定<br>并将设备旋转至横向模式</p>
+{#if !dismissed}
+  <div class='rotate-prompt fixed inset-0 z-[100] flex-col items-center justify-center bg-obs-surface/80 backdrop-blur-md border border-obs-border text-white pointer-events-auto'>
+    <button
+      type='button'
+      onclick={() => dismissed = true}
+      class='absolute top-6 right-6 p-2 text-obs-text-muted hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-colors cursor-pointer'
+      title='关闭提示'
+    >
+      <X class='w-5 h-5' />
+    </button>
+
+    <div class='flex flex-col items-center gap-6'>
+      <div class='animate-phone-rotate'>
+        <Smartphone class='w-16 h-16 text-obs-amber' strokeWidth={1.5} />
+      </div>
+      <div class='text-center space-y-2'>
+        <h2 class='text-lg font-medium text-obs-amber-light'>建议横屏浏览</h2>
+        <p class='text-sm text-obs-text-muted'>为了获得最佳体验，请关闭方向锁定<br>并将设备旋转至横向模式</p>
+      </div>
     </div>
   </div>
-</div>
+{/if}
 
 <style>
   .rotate-prompt {

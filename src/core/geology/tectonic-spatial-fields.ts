@@ -75,6 +75,8 @@ export class TectonicSpatialFieldGenerator {
     const divergentDistance = computeSphericalDistanceField(
       mesh,
       region => tectonics.regionBoundaryType[region] === PLATE_BOUNDARY.Divergent,
+      () => true,
+      referenceCellsToAngle(12),
     )
     const samePlate = (from: number, to: number) => (
       tectonics.regionPrimaryPlate[from] === tectonics.regionPrimaryPlate[to]
@@ -133,36 +135,43 @@ export class TectonicSpatialFieldGenerator {
       mesh,
       region => tectonics.regionSubductionRole[region] === SUBDUCTION_ROLE.Overriding,
       samePlate,
+      referenceCellsToAngle(10),
     )
     const riftDistance = computeSphericalDistanceField(
       mesh,
       isContinentalRift,
       samePrimaryLand,
+      referenceCellsToAngle(6.5),
     )
     const ridgeDistance = computeSphericalDistanceField(
       mesh,
       isOceanicRidge,
       samePrimaryOcean,
+      referenceCellsToAngle(3.5),
     )
     const fractureDistance = computeSphericalDistanceField(
       mesh,
       isOceanicTransform,
       samePrimaryOcean,
+      referenceCellsToAngle(3),
     )
     const backArcDistance = computeSphericalDistanceField(
       mesh,
       isBackArcSource,
       samePrimaryLand,
+      referenceCellsToAngle(13),
     )
     const activeMarginDistance = computeSphericalDistanceField(
       mesh,
       isActiveMarginSource,
       (_, to) => isOcean(to),
+      referenceCellsToAngle(6),
     )
     const subductingDistance = computeSphericalDistanceField(
       mesh,
       region => tectonics.regionSubductionRole[region] === SUBDUCTION_ROLE.Subducting,
       samePlate,
+      referenceCellsToAngle(10),
     )
     const isTerrainMountainSource = (region: number) => (
       tectonics.regionBoundaryType[region] === PLATE_BOUNDARY.Convergent

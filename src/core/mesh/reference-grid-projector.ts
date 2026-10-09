@@ -9,7 +9,7 @@ const LOW_PLATE_RANGE = 20
 const PERTURB_BASE = 1.5
 const PERTURB_LOW_PLATE_BONUS = 1
 const FBM_BASE_FREQUENCY = 8
-const FBM_OCTAVES = 4
+const FBM_OCTAVES = 2
 const FBM_DECAY = 0.5
 const FBM_FREQUENCY_MULTIPLIER = 2
 
@@ -28,8 +28,10 @@ export class ReferenceGridProjector {
     this.position = referencePosition
     this.left = new Int32Array(count).fill(-1)
     this.right = new Int32Array(count).fill(-1)
-    const indices = Array.from({ length: count }, (_, index) => index)
-    this.root = this.buildTree(indices, 0)
+    const indices = new Int32Array(count)
+    for (let index = 0; index < count; index++)
+      indices[index] = index
+    this.root = this.buildTree(indices, 0, count, 0)
   }
 
   project(outputPosition: Float32Array): Uint32Array {
@@ -37,9 +39,11 @@ export class ReferenceGridProjector {
       throw new Error('Output positions must be xyz triples')
 
     const result = new Uint32Array(outputPosition.length / 3)
+    const best = { region: -1, distance: Infinity }
     for (let region = 0; region < result.length; region++) {
       const index = region * 3
-      const best = { region: -1, distance: Infinity }
+      best.region = -1
+      best.distance = Infinity
       this.nearest(
         this.root,
         outputPosition[index],
@@ -71,6 +75,7 @@ export class ReferenceGridProjector {
     const maximumAmplitude = cellAngle
       * (PERTURB_BASE + PERTURB_LOW_PLATE_BONUS * lowPlateFactor)
     const result = new Uint32Array(outputPosition.length / 3)
+    const best = { region: -1, distance: Infinity }
 
     for (let region = 0; region < result.length; region++) {
       const index = region * 3
@@ -105,25 +110,27 @@ export class ReferenceGridProjector {
       x /= length
       y /= length
       z /= length
-      const best = { region: -1, distance: Infinity }
+      best.region = -1
+      best.distance = Infinity
       this.nearest(this.root, x, y, z, best)
       result[region] = best.region
     }
     return result
   }
 
-  private buildTree(indices: number[], depth: number): number {
-    if (indices.length === 0)
+  private buildTree(indices: Int32Array, start: number, end: number, depth: number): number {
+    if (start >= end)
       return -1
 
     const axis = depth % 3
-    indices.sort((a, b) => (
-      this.position[a * 3 + axis] - this.position[b * 3 + axis] || a - b
+    const pos = this.position
+    indices.subarray(start, end).sort((a, b) => (
+      pos[a * 3 + axis] - pos[b * 3 + axis] || a - b
     ))
-    const middle = indices.length >> 1
+    const middle = (start + end) >> 1
     const region = indices[middle]
-    this.left[region] = this.buildTree(indices.slice(0, middle), depth + 1)
-    this.right[region] = this.buildTree(indices.slice(middle + 1), depth + 1)
+    this.left[region] = this.buildTree(indices, start, middle, depth + 1)
+    this.right[region] = this.buildTree(indices, middle + 1, end, depth + 1)
     return region
   }
 

@@ -1,4 +1,3 @@
-import type { GlobeDisplayMode } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { KOPPEN_CODES, KOPPEN_COLORS, KOPPEN_LABELS } from '@/core/climate/koppen-climate-classifier'
 import { classifyOceanCurrentThermal } from '@/core/climate/ocean-current-thermal'
@@ -18,7 +17,7 @@ export interface LayerStatisticRow extends Category {
 }
 
 export interface LayerStatistics {
-  mode: GlobeDisplayMode
+  mode: string
   title: string
   seed?: number
   month?: number
@@ -47,17 +46,19 @@ export function formatLayerStatistics(statistics: LayerStatistics): string {
 
 const MONTH_NAMES = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月']
 
-const MODES_WITHOUT_STATISTICS = new Set<GlobeDisplayMode>(['satellite', 'dem', 'heightmap'])
+const MODES_WITHOUT_STATISTICS = new Set<string>(['satellite', 'dem', 'heightmap'])
 
-export function hasLayerStatistics(mode: GlobeDisplayMode): boolean {
+export function hasLayerStatistics(mode: string): boolean {
   return !MODES_WITHOUT_STATISTICS.has(mode)
 }
 
-const MODE_TITLES: Record<GlobeDisplayMode, string> = {
+const MODE_TITLES: Record<string, string> = {
   'dem': 'DEM图',
   'heightmap': '高度图',
   'plates': '板块构造',
+  'plates-smoothed': '平滑板块',
   'continents': '大陆区划',
+  'continents-smoothed': '平滑大陆',
   // 'crust': '地壳类型',
   // 'density': '地壳密度',
   'subduction': '俯冲极性',
@@ -70,8 +71,10 @@ const MODE_TITLES: Record<GlobeDisplayMode, string> = {
   'geometric-flow': '几何汇流',
   'satellite': '卫星影像风格',
   'biome': 'Biome 生物群系',
+  'biome-smoothed': 'Biome 平滑群系',
   'glacial': '冰川指数',
   'koppen': 'Köppen 气候分类',
+  'koppen-smoothed': 'Köppen 平滑气候分类',
   'temperature': '月均气温',
   'precipitation': '月降水量',
   'wind': '盛行风',
@@ -91,7 +94,7 @@ function plateLabel(plate: number, primaryPlateLimit?: number): string {
 }
 
 function finish(
-  mode: GlobeDisplayMode,
+  mode: string,
   totalCells: number,
   categories: Category[],
   counts: Uint32Array,
@@ -110,7 +113,7 @@ function finish(
 }
 
 function countBuckets(
-  mode: GlobeDisplayMode,
+  mode: string,
   totalCells: number,
   categories: Category[],
   categoryOf: (region: number) => number,
@@ -125,7 +128,7 @@ function countBuckets(
 /** Count final output cells according to the active surface layer. */
 export function buildLayerStatistics(
   data: WorldSimulationState,
-  mode: GlobeDisplayMode,
+  mode: string,
   month: number,
   primaryPlateCount?: number,
 ): LayerStatistics | null {
@@ -136,7 +139,7 @@ export function buildLayerStatistics(
   if (mode === 'satellite')
     return null
 
-  if (mode === 'koppen') {
+  if (mode === 'koppen' || mode === 'koppen-smoothed') {
     const classes = data.climate?.koppen?.climateClass
     if (!classes || classes.length !== total)
       return null
@@ -147,7 +150,7 @@ export function buildLayerStatistics(
     return countBuckets(mode, total, categories, region => classes[region])
   }
 
-  if (mode === 'biome') {
+  if (mode === 'biome' || mode === 'biome-smoothed') {
     const classes = data.biome?.biomeClass
     if (!classes || classes.length !== total)
       return null
@@ -158,7 +161,7 @@ export function buildLayerStatistics(
     return countBuckets(mode, total, categories, region => classes[region])
   }
 
-  if (mode === 'plates') {
+  if (mode === 'plates' || mode === 'plates-smoothed') {
     const regions = geology.regionSuperPlate
     const primaryPlateLimit = primaryPlateCount === undefined
       ? undefined
@@ -194,7 +197,7 @@ export function buildLayerStatistics(
     }
   }
 
-  if (mode === 'continents') {
+  if (mode === 'continents' || mode === 'continents-smoothed') {
     const counts = new Map<number, number>()
     for (let region = 0; region < total; region++) {
       const continent = geo.landMask[region] === 0 ? -2 : geo.visibleContinentId[region]

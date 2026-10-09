@@ -1,7 +1,7 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import { drainageGeometry } from '@/core/hydrology/drainage-geometry'
 import { RUNOFF_ACCUMULATION_TO_DISCHARGE } from '@/core/hydrology/hydrology-units'
-import { MinPriorityQueue } from '@/core/math/priority-queue'
+import { IndexPriorityQueue } from '@/core/math/priority-queue'
 
 const FLOOD_EPSILON = 1e-5
 const FLOOD_TIE_BREAK = 1e-9
@@ -13,10 +13,6 @@ const MIN_RIVER_THRESHOLD = 0.02
 
 export const SURFACE_HYDROLOGY_VERSION = 4
 
-interface FloodNode {
-  region: number
-  cost: number
-}
 
 export interface SurfaceDrainageData {
   /** Depression-resolved surface used to build a monotonic drainage tree. */
@@ -100,16 +96,13 @@ export class SurfaceHydrologyGenerator {
     const surface = Float32Array.from(elevation)
     const parent = new Int32Array(mesh.numRegions).fill(-1)
     const visited = Uint8Array.from(oceanMask)
-    const queue = new MinPriorityQueue<FloodNode>()
+    const queue = new IndexPriorityQueue(mesh.numRegions)
 
     for (let region = 0; region < mesh.numRegions; region++) {
       if (oceanMask[region] !== 0 || !this.hasOceanNeighbor(mesh, region, oceanMask))
         continue
       visited[region] = 1
-      queue.push({
-        region,
-        cost: surface[region] + region * FLOOD_TIE_BREAK,
-      })
+      queue.push(region, surface[region] + region * FLOOD_TIE_BREAK)
     }
 
     this.floodLand(mesh, oceanMask, visited, surface, parent, queue)
@@ -127,10 +120,7 @@ export class SurfaceHydrologyGenerator {
       if (lowest < 0)
         break
       visited[lowest] = 1
-      queue.push({
-        region: lowest,
-        cost: surface[lowest] + lowest * FLOOD_TIE_BREAK,
-      })
+      queue.push(lowest, surface[lowest] + lowest * FLOOD_TIE_BREAK)
       this.floodLand(mesh, oceanMask, visited, surface, parent, queue)
     }
 
@@ -143,25 +133,22 @@ export class SurfaceHydrologyGenerator {
     visited: Uint8Array,
     surface: Float32Array,
     parent: Int32Array,
-    queue: MinPriorityQueue<FloodNode>,
+    queue: IndexPriorityQueue,
   ): void {
     const { offsets, neighbors } = drainageGeometry(mesh)
     while (queue.size > 0) {
       const current = queue.pop()
-      for (let entry = offsets[current.region]; entry < offsets[current.region + 1]; entry++) {
+      for (let entry = offsets[current]; entry < offsets[current + 1]; entry++) {
         const neighbor = neighbors[entry]
         if (oceanMask[neighbor] !== 0 || visited[neighbor] !== 0)
           continue
         visited[neighbor] = 1
-        parent[neighbor] = current.region
+        parent[neighbor] = current
         surface[neighbor] = Math.max(
           surface[neighbor],
-          surface[current.region] + FLOOD_EPSILON,
+          surface[current] + FLOOD_EPSILON,
         )
-        queue.push({
-          region: neighbor,
-          cost: surface[neighbor] + neighbor * FLOOD_TIE_BREAK,
-        })
+        queue.push(neighbor, surface[neighbor] + neighbor * FLOOD_TIE_BREAK)
       }
     }
   }

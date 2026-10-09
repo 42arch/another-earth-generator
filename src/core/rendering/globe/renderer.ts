@@ -145,9 +145,9 @@ export class GlobeRenderer {
     this.controls.autoRotate = params.appearance.autoRotate
     this.prepareRegionSmoothing()
     this.disposeSurface()
-    const colors = this.colorizer.build(data, params.appearance.displayMode, mesh)
+    const colors = this.colorizer.build(data, params.appearance.baseMap, mesh)
     const usesElevation = this.usesElevationGeometry(params)
-    const cornerColors = params.appearance.displayMode === 'dem'
+    const cornerColors = params.appearance.baseMap === 'dem'
       ? this.colorizer.buildDEMCorners(mesh, data.geography.elevation, data.geography.landMask)
       : undefined
     this.surface = this.createSurface(
@@ -160,7 +160,7 @@ export class GlobeRenderer {
         this.getTerrainVerticalScale(params.core.planetRadius),
         OCEAN_DEPTH_SCALE,
         cornerColors,
-        params.appearance.displayMode === 'dem' ? data.geography.landMask : undefined,
+        params.appearance.baseMap === 'dem' ? data.geography.landMask : undefined,
         this.smoothedRegionCorners ?? undefined,
       ),
     )
@@ -173,26 +173,58 @@ export class GlobeRenderer {
   }
 
   updateAppearance(params: WorldConfig): void {
-    const displayModeChanged = this.params.appearance.displayMode !== params.appearance.displayMode
-    const elevationDisplacementChanged = this.params.appearance.elevationDisplacement !== params.appearance.elevationDisplacement
-    const regionSmoothingChanged = this.getRegionSmoothingMode(this.params)
-      !== this.getRegionSmoothingMode(params)
+    const previousParams = this.params
+    const previousMode = previousParams.appearance.baseMap
+    const modeChanged = previousMode !== params.appearance.baseMap
+    const satelliteTransition = modeChanged && (previousMode === 'satellite' || params.appearance.baseMap === 'satellite')
+    const elevationColorModeChanged = modeChanged
+      && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(params.appearance.baseMap))
+
+    const elevationDisplacementChanged = previousParams.appearance.elevationDisplacement !== params.appearance.elevationDisplacement
+    const regionSmoothingChanged = this.getRegionSmoothingMode(previousParams) !== this.getRegionSmoothingMode(params)
+    const monthChanged = previousParams.appearance.climateMonth !== params.appearance.climateMonth
+
     this.params = { ...params }
     this.controls.autoRotate = params.appearance.autoRotate
-    if ((displayModeChanged || elevationDisplacementChanged || regionSmoothingChanged) && this.mesh && this.data) {
+
+    if ((satelliteTransition || elevationColorModeChanged || elevationDisplacementChanged || regionSmoothingChanged) && this.mesh && this.data) {
       this.setWorld(this.mesh, this.data, params)
       return
     }
-    if (this.surface && this.data && !this.isElevationColorMode(params.appearance.displayMode)) {
+
+    if ((modeChanged || monthChanged) && this.surface && this.data && !this.isElevationColorMode(params.appearance.baseMap) && params.appearance.baseMap !== 'satellite') {
       this.geometryBuilder.updateColors(
         this.surface.geometry,
-        this.colorizer.build(this.data, params.appearance.displayMode, this.mesh ?? undefined),
+        this.colorizer.build(this.data, params.appearance.baseMap, this.mesh ?? undefined),
       )
     }
+
     this.mapView.updateAppearance(params)
     this.updateLighting(params)
-    this.rebuildAtmosphere()
-    this.rebuildOverlays()
+
+    const oldOverlays = previousParams.appearance.overlays
+    const newOverlays = params.appearance.overlays
+
+    if (oldOverlays.atmosphere !== newOverlays.atmosphere) {
+      this.rebuildAtmosphere()
+      this.rebuildWaterLayer()
+    }
+    else if (modeChanged) {
+      this.rebuildWaterLayer()
+    }
+
+    if (oldOverlays.clouds !== newOverlays.clouds)
+      this.rebuildCloudLayer()
+    if (oldOverlays.graticule !== newOverlays.graticule)
+      this.rebuildGraticule()
+    if (oldOverlays.rivers !== newOverlays.rivers)
+      this.rebuildRiverLayer()
+    if (oldOverlays.wireframe !== newOverlays.wireframe)
+      this.rebuildCellBoundaries()
+
+    if (modeChanged || monthChanged) {
+      this.rebuildVectorLayer()
+    }
   }
 
   selectRegion(region: number): void {
@@ -257,7 +289,7 @@ export class GlobeRenderer {
   }
 
   private updateLighting(params: WorldConfig): void {
-    if (params.appearance.showDayNight) {
+    if (params.appearance.overlays['day-night']) {
       // Night mode ambient (make it slightly dark, but not pitch black)
       this.ambientLight.color.setHex(0x667799)
       this.ambientLight.intensity = 1.6
@@ -309,7 +341,7 @@ export class GlobeRenderer {
 
   private rebuildCloudLayer(): void {
     this.disposeCloudLayer()
-    if (!this.params.appearance.showClouds || !this.mesh || !this.data)
+    if (!this.params.appearance.overlays.clouds || !this.mesh || !this.data)
       return
     const geometry = this.geometryBuilder.create(
       this.mesh,
@@ -340,7 +372,7 @@ export class GlobeRenderer {
   private rebuildRiverLayer(): void {
     this.disposeRiverLayer()
     if (
-      !this.params.appearance.showRivers
+      !this.params.appearance.overlays.rivers
       || !this.mesh
       || !this.data?.hydrology
     ) {
@@ -393,7 +425,7 @@ export class GlobeRenderer {
 
   private rebuildVectorLayer(): void {
     this.disposeVectorLayer()
-    const mode = this.params.appearance.displayMode
+    const mode = this.params.appearance.baseMap
     const vectors = this.data?.climate?.displayVector
     if (!this.mesh || !this.data || (mode !== 'wind' && mode !== 'ocean-current') || vectors?.kind !== mode)
       return
@@ -429,8 +461,8 @@ export class GlobeRenderer {
     }
 
     if (
-      this.params.appearance.displayMode === 'satellite'
-      && this.params.appearance.showAtmosphere
+      this.params.appearance.baseMap === 'satellite'
+      && this.params.appearance.overlays.atmosphere
     ) {
       const planetRadius = this.params.core.planetRadius
       let geometry: BufferGeometry
@@ -466,7 +498,7 @@ export class GlobeRenderer {
   private rebuildCellBoundaries(): void {
     this.disposeCellBoundaries()
     const showRegionBoundaries = this.isRegionSmoothingEnabled(this.params)
-    if ((!this.params.appearance.wireframe && !showRegionBoundaries) || !this.mesh || !this.surface)
+    if ((!this.params.appearance.overlays.wireframe && !showRegionBoundaries) || !this.mesh || !this.surface)
       return
     const regionIds = showRegionBoundaries ? this.buildDisplayRegionIds() : undefined
     const topology = showRegionBoundaries ? this.regionTopology : undefined
@@ -498,14 +530,15 @@ export class GlobeRenderer {
 
   private buildDisplayRegionIds(): Int32Array {
     const regionIds = new Int32Array(this.mesh!.numRegions)
+    const mode = this.getRegionSmoothingMode(this.params)
     for (let region = 0; region < regionIds.length; region++) {
-      if (this.params.appearance.displayMode === 'plates') {
+      if (mode === 'plates') {
         regionIds[region] = this.data!.geology.regionSuperPlate[region]
       }
-      else if (this.params.appearance.displayMode === 'biome') {
+      else if (mode === 'biome') {
         regionIds[region] = this.data!.biome?.biomeClass[region] ?? -1
       }
-      else if (this.params.appearance.displayMode === 'koppen') {
+      else if (mode === 'koppen') {
         regionIds[region] = this.data!.climate?.koppen?.climateClass[region] ?? -1
       }
       else {
@@ -522,13 +555,15 @@ export class GlobeRenderer {
   }
 
   private getRegionSmoothingMode(params: WorldConfig): string | null {
-    const mode = params.appearance.displayMode
-    if ((mode === 'continents' && params.appearance.showContinentBoundaries)
-      || (mode === 'plates' && params.appearance.showPlateBoundaries)
-      || (mode === 'biome' && params.appearance.showBiomeBoundaries)
-      || (mode === 'koppen' && params.appearance.showKoppenBoundaries)) {
-      return mode
-    }
+    const mode = params.appearance.baseMap
+    if (mode === 'plates-smoothed')
+      return 'plates'
+    if (mode === 'continents-smoothed')
+      return 'continents'
+    if (mode === 'biome-smoothed')
+      return 'biome'
+    if (mode === 'koppen-smoothed')
+      return 'koppen'
     return null
   }
 
@@ -547,7 +582,7 @@ export class GlobeRenderer {
 
   private rebuildGraticule(): void {
     this.disposeGraticule()
-    if (!this.params.appearance.showGraticule || !this.surface)
+    if (!this.params.appearance.overlays.graticule || !this.surface)
       return
     const terrainClearance = this.usesElevationGeometry(this.params)
       ? this.getTerrainVerticalScale(this.params.core.planetRadius)
@@ -591,7 +626,7 @@ export class GlobeRenderer {
 
   private rebuildAtmosphere(): void {
     this.disposeAtmosphere()
-    if (this.isElevationColorMode(this.params.appearance.displayMode) || !this.params.appearance.showAtmosphere)
+    if (this.isElevationColorMode(this.params.appearance.baseMap) || !this.params.appearance.overlays.atmosphere)
       return
 
     this.atmosphereLayer = new Atmosphere(this.params.core.planetRadius)
@@ -612,12 +647,12 @@ export class GlobeRenderer {
 
   private usesElevationGeometry(params: WorldConfig): boolean {
     return params.appearance.elevationDisplacement
-      && (params.appearance.displayMode === 'dem'
-        || params.appearance.displayMode === 'heightmap'
-        || params.appearance.displayMode === 'satellite')
+      && (params.appearance.baseMap === 'dem'
+        || params.appearance.baseMap === 'heightmap'
+        || params.appearance.baseMap === 'satellite')
   }
 
-  private isElevationColorMode(mode: WorldConfig['appearance']['displayMode']): mode is 'dem' | 'heightmap' {
+  private isElevationColorMode(mode: string): mode is 'dem' | 'heightmap' {
     return mode === 'dem' || mode === 'heightmap'
   }
 

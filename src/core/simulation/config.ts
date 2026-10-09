@@ -1,27 +1,3 @@
-export type GlobeDisplayMode
-  = | 'dem'
-    | 'heightmap'
-    | 'plates'
-    | 'continents'
-    // | 'crust'
-    // | 'density'
-    | 'subduction'
-    | 'stress'
-    | 'mantle'
-    | 'volcanism'
-    | 'classification'
-    | 'texture'
-    | 'finalization'
-    | 'geometric-flow'
-    | 'satellite'
-    | 'biome'
-    | 'glacial'
-    | 'koppen'
-    | 'temperature'
-    | 'precipitation'
-    | 'wind'
-    | 'ocean-current'
-
 /** Fixed reference subdivisions for candidate land and local plate construction. */
 export const REFERENCE_PLATE_SUBDIVISION_COUNT = 100
 
@@ -77,28 +53,13 @@ export interface WorldConfig {
     precipitationScale: number
   }
   appearance: {
-    displayMode: GlobeDisplayMode
-    /** Show the annual river network over the selected surface mode. */
-    showRivers: boolean
-    /** Show the procedural cloud field over the selected surface mode. */
-    showClouds: boolean
+    baseMap: string
+    overlays: Record<string, boolean>
     /** Zero-based calendar month used by the climate layers. */
     climateMonth: number
     /** Whether terrain elevation displaces the 3D globe surface. */
     elevationDisplacement: boolean
-    showGraticule: boolean
-    showAtmosphere: boolean
-    wireframe: boolean
-    /** Draw boundaries between continent regions while the continents layer is active. */
-    showContinentBoundaries: boolean
-    /** Draw boundaries between tectonic plates while the plates layer is active. */
-    showPlateBoundaries: boolean
-    /** Draw boundaries between biome regions while the biome layer is active. */
-    showBiomeBoundaries: boolean
-    /** Draw boundaries between Köppen regions while the Köppen layer is active. */
-    showKoppenBoundaries: boolean
     autoRotate: boolean
-    showDayNight: boolean
   }
 }
 
@@ -134,20 +95,15 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
     precipitationScale: 1.8,
   },
   appearance: {
-    displayMode: 'satellite',
-    showRivers: true,
-    showClouds: false,
+    baseMap: 'satellite',
+    overlays: {
+      'rivers': true,
+      'atmosphere': true,
+      'day-night': true,
+    },
     climateMonth: 0,
     elevationDisplacement: false,
-    showGraticule: false,
-    showAtmosphere: true,
-    wireframe: false,
-    showContinentBoundaries: false,
-    showPlateBoundaries: false,
-    showBiomeBoundaries: false,
-    showKoppenBoundaries: false,
     autoRotate: false,
-    showDayNight: true,
   },
 }
 
@@ -159,13 +115,9 @@ export function cloneWorldConfig(config: WorldConfig): WorldConfig {
     climate: { ...config.climate },
     appearance: {
       ...config.appearance,
-      showRivers: config.appearance.showRivers ?? true,
-      showClouds: config.appearance.showClouds ?? false,
-      showDayNight: config.appearance.showDayNight ?? true,
-      showContinentBoundaries: config.appearance.showContinentBoundaries ?? false,
-      showPlateBoundaries: config.appearance.showPlateBoundaries ?? false,
-      showBiomeBoundaries: config.appearance.showBiomeBoundaries ?? false,
-      showKoppenBoundaries: config.appearance.showKoppenBoundaries ?? false,
+      overlays: { ...config.appearance.overlays },
+      elevationDisplacement: config.appearance.elevationDisplacement ?? false,
+      autoRotate: config.appearance.autoRotate ?? false,
     },
   }
 }

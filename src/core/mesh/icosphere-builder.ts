@@ -250,10 +250,20 @@ export class IcosphereBuilder {
   }
 
   private buildAdjacency(numRegions: number, triangles: Uint32Array) {
-    const adjacency = Array.from({ length: numRegions }, () => new Set<number>())
-    const addEdge = (a: number, b: number) => {
-      adjacency[a].add(b)
-      adjacency[b].add(a)
+    const MAX_DEGREE = 12
+    const adj = new Uint32Array(numRegions * MAX_DEGREE)
+    const degree = new Uint32Array(numRegions)
+
+    const addEdge = (u: number, v: number) => {
+      const start = u * MAX_DEGREE
+      const deg = degree[u]
+      for (let i = 0; i < deg; i++) {
+        if (adj[start + i] === v) return
+      }
+      if (deg < MAX_DEGREE) {
+        adj[start + deg] = v
+        degree[u]++
+      }
     }
 
     for (let index = 0; index < triangles.length; index += 3) {
@@ -261,18 +271,25 @@ export class IcosphereBuilder {
       const b = triangles[index + 1]
       const c = triangles[index + 2]
       addEdge(a, b)
+      addEdge(b, a)
       addEdge(b, c)
+      addEdge(c, b)
       addEdge(c, a)
+      addEdge(a, c)
     }
 
     const neighborOffsets = new Uint32Array(numRegions + 1)
-    for (let region = 0; region < numRegions; region++)
-      neighborOffsets[region + 1] = neighborOffsets[region] + adjacency[region].size
+    for (let region = 0; region < numRegions; region++) {
+      neighborOffsets[region + 1] = neighborOffsets[region] + degree[region]
+    }
 
     const neighbors = new Uint32Array(neighborOffsets[numRegions])
     for (let region = 0; region < numRegions; region++) {
-      const sorted = [...adjacency[region]].sort((a, b) => a - b)
-      neighbors.set(sorted, neighborOffsets[region])
+      const start = region * MAX_DEGREE
+      const deg = degree[region]
+      const local = adj.subarray(start, start + deg)
+      local.sort()
+      neighbors.set(local, neighborOffsets[region])
     }
     return { neighborOffsets, neighbors }
   }
@@ -329,7 +346,7 @@ export class IcosphereBuilder {
 
     // Convert 3D points to 2D via Stereographic Projection
     // We project from Vertex 0, so we exclude Vertex 0 from the 2D triangulation.
-    const points2d: number[] = []
+    const points2d = new Float64Array((numRegions - 1) * 2)
 
     for (let i = 1; i < numRegions; i++) {
       const idx = i * 3
@@ -366,20 +383,23 @@ export class IcosphereBuilder {
       // X = x / (1 - z), Y = y / (1 - z)
       // Since vertex 0 is at (0,0,1), no other vertex should have rz = 1.
       const denom = 1.0 - rz
-      points2d.push(rx / denom, ry / denom)
+      const outIdx = (i - 1) * 2
+      points2d[outIdx] = rx / denom
+      points2d[outIdx + 1] = ry / denom
     }
 
     // Triangulate the 2D points using Delaunator (highly optimized O(N log N))
     const delaunay = new Delaunator(points2d)
-    const triangles: number[] = []
+    const totalTriangles = 2 * numRegions - 4
+    const triangles = new Uint32Array(totalTriangles * 3)
+    let triIdx = 0
 
     // The 2D triangulation provides the base mesh (excluding the pole)
-    for (let i = 0; i < delaunay.triangles.length; i += 3) {
-      // Shift indices by +1 because Vertex 0 was excluded
-      const a = delaunay.triangles[i] + 1
-      const b = delaunay.triangles[i + 1] + 1
-      const c = delaunay.triangles[i + 2] + 1
-      triangles.push(a, b, c)
+    const dTriangles = delaunay.triangles
+    for (let i = 0; i < dTriangles.length; i += 3) {
+      triangles[triIdx++] = dTriangles[i] + 1
+      triangles[triIdx++] = dTriangles[i + 1] + 1
+      triangles[triIdx++] = dTriangles[i + 2] + 1
     }
 
     // The convex hull of the 2D triangulation corresponds to the polygon
@@ -389,7 +409,9 @@ export class IcosphereBuilder {
       const a = hull[i] + 1
       const b = hull[(i + 1) % hull.length] + 1
       // Connect each hull edge to Vertex 0
-      triangles.push(0, b, a)
+      triangles[triIdx++] = 0
+      triangles[triIdx++] = b
+      triangles[triIdx++] = a
     }
 
     // Enforce correct winding order globally (CCW from outside the sphere)
@@ -420,6 +442,6 @@ export class IcosphereBuilder {
       }
     }
 
-    return new Uint32Array(triangles)
+    return triangles
   }
 }

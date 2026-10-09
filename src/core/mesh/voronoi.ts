@@ -116,20 +116,38 @@ export class SphericalVoronoiBuilder {
   }
 
   private buildCells(mesh: SphericalMeshData, cornerPosition: Float32Array) {
-    const incident = Array.from({ length: mesh.numRegions }, () => [] as number[])
-    for (let triangle = 0; triangle < mesh.numTriangles; triangle++) {
-      const side = triangle * 3
-      incident[mesh.triangles[side]].push(triangle)
-      incident[mesh.triangles[side + 1]].push(triangle)
-      incident[mesh.triangles[side + 2]].push(triangle)
+    const numRegions = mesh.numRegions
+    const numTriangles = mesh.numTriangles
+    const triangles = mesh.triangles
+
+    const counts = new Uint32Array(numRegions)
+    for (let i = 0; i < triangles.length; i++) {
+      counts[triangles[i]]++
     }
 
-    const cellCornerOffsets = new Uint32Array(mesh.numRegions + 1)
-    for (let region = 0; region < mesh.numRegions; region++)
-      cellCornerOffsets[region + 1] = cellCornerOffsets[region] + incident[region].length
+    const cellCornerOffsets = new Uint32Array(numRegions + 1)
+    for (let region = 0; region < numRegions; region++) {
+      cellCornerOffsets[region + 1] = cellCornerOffsets[region] + counts[region]
+    }
 
-    const cellCorners = new Uint32Array(cellCornerOffsets[mesh.numRegions])
-    for (let region = 0; region < mesh.numRegions; region++) {
+    const cellCorners = new Uint32Array(cellCornerOffsets[numRegions])
+    const cursor = new Uint32Array(cellCornerOffsets)
+    for (let triangle = 0; triangle < numTriangles; triangle++) {
+      const side = triangle * 3
+      cellCorners[cursor[triangles[side]]++] = triangle
+      cellCorners[cursor[triangles[side + 1]]++] = triangle
+      cellCorners[cursor[triangles[side + 2]]++] = triangle
+    }
+
+    const scratchCorners = new Uint32Array(32)
+    const scratchAngles = new Float64Array(32)
+
+    for (let region = 0; region < numRegions; region++) {
+      const start = cellCornerOffsets[region]
+      const end = cellCornerOffsets[region + 1]
+      const deg = end - start
+      if (deg <= 1) continue
+
       const position = region * 3
       const nx = mesh.regionPosition[position]
       const ny = mesh.regionPosition[position + 1]
@@ -147,21 +165,38 @@ export class SphericalVoronoiBuilder {
       const northY = nz * eastX - nx * eastZ
       const northZ = nx * eastY - ny * eastX
 
-      incident[region].sort((a, b) => {
-        const ai = a * 3
-        const bi = b * 3
-        const angleA = Math.atan2(
-          cornerPosition[ai] * northX + cornerPosition[ai + 1] * northY + cornerPosition[ai + 2] * northZ,
-          cornerPosition[ai] * eastX + cornerPosition[ai + 1] * eastY + cornerPosition[ai + 2] * eastZ,
+      for (let i = 0; i < deg; i++) {
+        const tri = cellCorners[start + i]
+        const ti = tri * 3
+        const cx = cornerPosition[ti]
+        const cy = cornerPosition[ti + 1]
+        const cz = cornerPosition[ti + 2]
+        scratchCorners[i] = tri
+        scratchAngles[i] = Math.atan2(
+          cx * northX + cy * northY + cz * northZ,
+          cx * eastX + cy * eastY + cz * eastZ,
         )
-        const angleB = Math.atan2(
-          cornerPosition[bi] * northX + cornerPosition[bi + 1] * northY + cornerPosition[bi + 2] * northZ,
-          cornerPosition[bi] * eastX + cornerPosition[bi + 1] * eastY + cornerPosition[bi + 2] * eastZ,
-        )
-        return angleA - angleB
-      })
-      cellCorners.set(incident[region], cellCornerOffsets[region])
+      }
+
+      // Small insertion sort on degree elements (deg is ~5-7)
+      for (let i = 1; i < deg; i++) {
+        const c = scratchCorners[i]
+        const a = scratchAngles[i]
+        let j = i - 1
+        while (j >= 0 && scratchAngles[j] > a) {
+          scratchCorners[j + 1] = scratchCorners[j]
+          scratchAngles[j + 1] = scratchAngles[j]
+          j--
+        }
+        scratchCorners[j + 1] = c
+        scratchAngles[j + 1] = a
+      }
+
+      for (let i = 0; i < deg; i++) {
+        cellCorners[start + i] = scratchCorners[i]
+      }
     }
+
     return { cellCornerOffsets, cellCorners }
   }
 
@@ -196,41 +231,66 @@ export class SphericalVoronoiBuilder {
   }
 
   private buildEdges(mesh: SphericalMeshData) {
-    const edges = new Map<string, EdgeRecord>()
-    const addEdge = (regionA: number, regionB: number, corner: number) => {
-      const low = Math.min(regionA, regionB)
-      const high = Math.max(regionA, regionB)
-      const key = `${low}:${high}`
-      const existing = edges.get(key)
-      if (existing) {
-        existing.cornerB = corner
-        return
-      }
-      edges.set(key, { regionA: low, regionB: high, cornerA: corner, cornerB: corner })
-    }
+    const numTriangles = mesh.numTriangles
+    const triangles = mesh.triangles
+    const numHalfEdges = numTriangles * 3
+    const halfEdges = new BigUint64Array(numHalfEdges)
 
-    for (let triangle = 0; triangle < mesh.numTriangles; triangle++) {
+    let edgeIdx = 0
+    for (let triangle = 0; triangle < numTriangles; triangle++) {
       const side = triangle * 3
-      const a = mesh.triangles[side]
-      const b = mesh.triangles[side + 1]
-      const c = mesh.triangles[side + 2]
-      addEdge(a, b, triangle)
-      addEdge(b, c, triangle)
-      addEdge(c, a, triangle)
+      const a = triangles[side]
+      const b = triangles[side + 1]
+      const c = triangles[side + 2]
+      const tBig = BigInt(triangle)
+
+      const abLow = a < b ? a : b
+      const abHigh = a < b ? b : a
+      halfEdges[edgeIdx++] = (BigInt(abLow) << 44n) | (BigInt(abHigh) << 24n) | tBig
+
+      const bcLow = b < c ? b : c
+      const bcHigh = b < c ? c : b
+      halfEdges[edgeIdx++] = (BigInt(bcLow) << 44n) | (BigInt(bcHigh) << 24n) | tBig
+
+      const caLow = c < a ? c : a
+      const caHigh = c < a ? a : c
+      halfEdges[edgeIdx++] = (BigInt(caLow) << 44n) | (BigInt(caHigh) << 24n) | tBig
     }
 
-    const sorted = [...edges.values()].sort((a, b) => (
-      a.regionA - b.regionA || a.regionB - b.regionB
-    ))
-    const edgeRegions = new Uint32Array(sorted.length * 2)
-    const edgeCorners = new Uint32Array(sorted.length * 2)
-    for (let edge = 0; edge < sorted.length; edge++) {
-      const target = edge * 2
-      edgeRegions[target] = sorted[edge].regionA
-      edgeRegions[target + 1] = sorted[edge].regionB
-      edgeCorners[target] = sorted[edge].cornerA
-      edgeCorners[target + 1] = sorted[edge].cornerB
+    halfEdges.sort()
+
+    // Count unique edges
+    let uniqueCount = 0
+    for (let i = 0; i < numHalfEdges; i++) {
+      if (i === 0 || (halfEdges[i] >> 24n) !== (halfEdges[i - 1] >> 24n)) {
+        uniqueCount++
+      }
     }
+
+    const edgeRegions = new Uint32Array(uniqueCount * 2)
+    const edgeCorners = new Uint32Array(uniqueCount * 2)
+    let outIdx = 0
+
+    for (let i = 0; i < numHalfEdges;) {
+      const entry1 = halfEdges[i]
+      const low = Number(entry1 >> 44n)
+      const high = Number((entry1 >> 24n) & 0xFFFFFn)
+      const cornerA = Number(entry1 & 0xFFFFFFn)
+      let cornerB = cornerA
+
+      i++
+      if (i < numHalfEdges && (halfEdges[i] >> 24n) === (entry1 >> 24n)) {
+        cornerB = Number(halfEdges[i] & 0xFFFFFFn)
+        i++
+      }
+
+      edgeRegions[outIdx] = low
+      edgeRegions[outIdx + 1] = high
+      edgeCorners[outIdx] = cornerA
+      edgeCorners[outIdx + 1] = cornerB
+      outIdx += 2
+    }
+
     return { edgeRegions, edgeCorners }
   }
 }

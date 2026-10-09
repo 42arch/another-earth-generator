@@ -1,17 +1,8 @@
 <script lang='ts'>
   import {
     Check,
-    CircleQuestionMark,
-    CloudRain,
     Copy,
     Layers,
-    Map,
-    Mountain,
-    Satellite,
-    Thermometer,
-    Waves,
-    Wind,
-    Workflow,
     X,
   } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
@@ -26,9 +17,9 @@
     HEIGHTMAP_MAX_LAND_ELEVATION_KM,
     HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
   } from '@/core/rendering/shared/heightmap-color-scale'
+  import { getBaseMaps, getOverlays } from '@/core/world/layer-registry'
   import { formatLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
   import Checkbox from '@/ui/components/Checkbox.svelte'
-  import Tooltip from '@/ui/components/Tooltip.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
   const numberFormat = new Intl.NumberFormat('zh-CN')
@@ -54,31 +45,6 @@
       clearTimeout(resetTimer)
     resetTimer = setTimeout(() => copyStatus = 'idle', 2400)
   }
-
-  const displayModes = [
-    { mode: 'satellite' as const, label: '卫星影像', icon: Satellite },
-    { mode: 'heightmap' as const, label: '高度图', icon: Mountain },
-    { mode: 'dem' as const, label: 'DEM图', icon: Mountain },
-    { mode: 'plates' as const, label: '板块构造', icon: Workflow },
-    { mode: 'continents' as const, label: '大陆区划', icon: Map },
-    // { mode: 'crust' as const, label: '地壳类型', icon: Layers },
-    // { mode: 'density' as const, label: '地壳密度', icon: CircleGauge },
-    // { mode: 'subduction' as const, label: '俯冲极性', icon: ArrowDownUp },
-    // { mode: 'stress' as const, label: '构造应力', icon: Activity },
-    // { mode: 'mantle' as const, label: '地幔动态', icon: Orbit },
-    // { mode: 'volcanism' as const, label: '火山构造', icon: Flame },
-    // { mode: 'classification' as const, label: '地形分类', icon: Layers },
-    // { mode: 'texture' as const, label: '地形纹理', icon: Activity },
-    // { mode: 'finalization' as const, label: '最终整形', icon: CircleGauge },
-    // { mode: 'glacial' as const, label: '冰川指数', icon: Mountain },
-    { mode: 'geometric-flow' as const, label: '几何汇流', icon: Workflow },
-    { mode: 'temperature' as const, label: '月均气温', icon: Thermometer },
-    { mode: 'precipitation' as const, label: '月降水量', icon: CloudRain },
-    { mode: 'wind' as const, label: '盛行风', icon: Wind },
-    { mode: 'ocean-current' as const, label: '洋流', icon: Waves },
-    { mode: 'koppen' as const, label: '气候分类', icon: Layers },
-    { mode: 'biome' as const, label: '生物群系', icon: Layers },
-  ]
 
   const heightmapOceanLegend = [8, 6, 4, 2, 0]
     .map((depth) => {
@@ -134,21 +100,39 @@
       <!-- 着色模式 -->
       <div class='flex flex-col gap-1.5'>
         <div class='grid grid-cols-4 gap-1'>
-          {#each displayModes as item}
+          {#each getBaseMaps().filter(m => !m.id.endsWith('-smoothed')) as item}
             {@const Icon = item.icon}
+            {@const isActive = appState.params.appearance.baseMap.replace('-smoothed', '') === item.id}
             <button
               type='button'
-              onclick={() => appState.setDisplayMode(item.mode)}
-              title={item.label}
-              class="flex flex-row items-center gap-1 p-1.5 rounded-lg transition-all text-center cursor-pointer border {appState.params.appearance.displayMode === item.mode ? 'bg-obs-primary/15 text-obs-primary border-obs-primary/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
+              onclick={() => {
+                const isSmoothed = appState.params.appearance.baseMap.endsWith('-smoothed')
+                appState.setBaseMap(isSmoothed && ['plates', 'continents', 'biome', 'koppen'].includes(item.id) ? `${item.id}-smoothed` : item.id)
+              }}
+              title={item.name}
+              class="flex flex-row items-center gap-1 p-1.5 rounded-lg transition-all text-center cursor-pointer border {isActive ? 'bg-obs-primary/15 text-obs-primary border-obs-primary/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
             >
-              <Icon class="w-3 h-3 shrink-0 {appState.params.appearance.displayMode === item.mode ? 'text-obs-primary' : 'opacity-80'}" />
-              <span class='leading-none text-[11px] whitespace-nowrap overflow-hidden text-ellipsis'>{item.label}</span>
+              <Icon class="w-3 h-3 shrink-0 {isActive ? 'text-obs-primary' : 'opacity-80'}" />
+              <span class='leading-none text-[11px] whitespace-nowrap overflow-hidden text-ellipsis'>{item.name}</span>
             </button>
           {/each}
         </div>
 
-        {#if appState.params.appearance.displayMode === 'temperature' || appState.params.appearance.displayMode === 'precipitation' || appState.params.appearance.displayMode === 'wind' || appState.params.appearance.displayMode === 'ocean-current'}
+        {#if ['plates', 'continents', 'biome', 'koppen'].includes(appState.params.appearance.baseMap.replace('-smoothed', ''))}
+          <div class='pt-2 pl-1'>
+            <Checkbox
+              label='平滑边界'
+              checked={appState.params.appearance.baseMap.endsWith('-smoothed')}
+              onchange={() => {
+                const isSmoothed = appState.params.appearance.baseMap.endsWith('-smoothed')
+                const baseId = appState.params.appearance.baseMap.replace('-smoothed', '')
+                appState.setBaseMap(isSmoothed ? baseId : `${baseId}-smoothed`)
+              }}
+            />
+          </div>
+        {/if}
+
+        {#if appState.params.appearance.baseMap === 'temperature' || appState.params.appearance.baseMap === 'precipitation' || appState.params.appearance.baseMap === 'wind' || appState.params.appearance.baseMap === 'ocean-current'}
           <label class='flex items-center justify-between gap-2 px-1 pt-2 text-[11px] text-obs-text-muted'>
             <span>显示月份</span>
             <select
@@ -162,26 +146,30 @@
             </select>
           </label>
         {/if}
-        {#if appState.params.appearance.displayMode === 'continents' || appState.params.appearance.displayMode === 'plates' || appState.params.appearance.displayMode === 'biome' || appState.params.appearance.displayMode === 'koppen'}
-          {@const boundaryMode = appState.params.appearance.displayMode}
-          {@const boundaryOptionMap = {
-            plates: 'showPlateBoundaries',
-            continents: 'showContinentBoundaries',
-            biome: 'showBiomeBoundaries',
-            koppen: 'showKoppenBoundaries',
-          } as const}
-          {@const boundaryOption = boundaryOptionMap[boundaryMode as keyof typeof boundaryOptionMap]}
-          <div class='flex items-center gap-2 px-1 pt-2 text-[11px] text-obs-text-muted'>
-            <Checkbox
-              label='显示区域边界'
-              checked={appState.params.appearance[boundaryOption]}
-              onchange={() => appState.toggleLayer(boundaryOption)}
-            />
-            <Tooltip content='隐藏同类区域内部网格线，只显示类别不同区域之间的边界。'>
-              <span class='inline-flex cursor-help text-obs-text-dim hover:text-obs-text-main transition-colors'>
-                <CircleQuestionMark class='h-3 w-3' />
-              </span>
-            </Tooltip>
+
+        {#if getOverlays().length > 0}
+          {@const overlays = getOverlays()}
+          {@const groups = [
+            { label: '自然边界', items: overlays.filter(o => o.category === 'physics' || o.category === 'ecology' || o.category === 'climate') },
+            { label: '人文其他', items: overlays.filter(o => o.category === 'human') },
+          ].filter(g => g.items.length > 0)}
+          <div class='mt-1.5 flex flex-col gap-1.5 pt-2 border-t border-white/[0.06]'>
+            <span class='text-[10px] text-obs-text-dim px-1 font-medium'>叠加层</span>
+
+            {#each groups as group}
+              <div class='px-1 pt-1'>
+                <div class='text-[9px] text-obs-text-dim/50 mb-1.5 pl-0.5'>{group.label}</div>
+                <div class='grid grid-cols-2 gap-1.5'>
+                  {#each group.items as overlay}
+                    <Checkbox
+                      label={overlay.name}
+                      checked={appState.params.appearance.overlays[overlay.id]}
+                      onchange={() => appState.toggleOverlay(overlay.id)}
+                    />
+                  {/each}
+                </div>
+              </div>
+            {/each}
           </div>
         {/if}
         <!--
@@ -234,38 +222,26 @@
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#4db8ff]'></i>物理尺度细节</span>
           </div>
         -->
-        {#if appState.params.appearance.displayMode === 'satellite'}
+        {#if appState.params.appearance.baseMap === 'satellite'}
           <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <div class='flex items-center gap-2'><span>干旱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#b9a27a] via-[#8e8851] to-[#315b2b]'></i><span>湿润</span></div>
             <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#3b6230] via-[#777565] to-[#d5e0e5]'></i><span>高山雪线</span></div>
           </div>
-        {:else if appState.params.appearance.displayMode === 'dem'}
+        {:else if appState.params.appearance.baseMap === 'dem'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>低谷/深海</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-black to-white border border-white/20'></i><span>高山</span>
           </div>
-        {:else if appState.params.appearance.displayMode === 'heightmap'}
+        {:else if appState.params.appearance.baseMap === 'heightmap'}
           <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <div class='flex items-center gap-2'><span>深海</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${heightmapOceanLegend})`}></i><span>浅海</span></div>
             <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${heightmapLandLegend})`}></i><span>高山</span></div>
           </div>
-          <!--
-        {:else if appState.params.appearance.displayMode === 'finalization'}
-          <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ff9e1f]'></i>高程抬升</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#1f94ff]'></i>高程压低</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ff33b8]'></i>洼地填平</span>
-          </div>
-        -->
-        {:else if appState.params.appearance.displayMode === 'geometric-flow'}
+        {:else if appState.params.appearance.baseMap === 'geometric-flow'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>低汇流</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#030509] via-[#0a6bb8] to-[#b8fff5]'></i><span>高汇流</span>
           </div>
           <div class='px-1 text-[9px] text-obs-text-dim/80'>沿地形排水图累加上游单元数量，用于观察流域几何</div>
-        {:else if appState.params.appearance.displayMode === 'glacial'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>无冰川</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#030509] via-[#1f7ae6] to-[#f0faff]'></i><span>强冰川</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'koppen'}
+        {:else if appState.params.appearance.baseMap === 'koppen'}
           <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#127a47]'></i>A 热带</span>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ec632b]'></i>B 干旱</span>
@@ -273,7 +249,7 @@
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#5b61b0]'></i>D 大陆性</span>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#c3d6df]'></i>E 极地</span>
           </div>
-        {:else if appState.params.appearance.displayMode === 'biome'}
+        {:else if appState.params.appearance.baseMap === 'biome'}
           <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#091f47]'></i>海洋</span>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#0d6b2e]'></i>热带雨林</span>
@@ -291,20 +267,20 @@
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#e6eff5]'></i>冰原</span>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#bad4ca]'></i>高山苔原</span>
           </div>
-        {:else if appState.params.appearance.displayMode === 'temperature'}
+        {:else if appState.params.appearance.baseMap === 'temperature'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>−30°C</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#2e52b8] via-[#e0eddb] to-[#db451f]'></i><span>40°C</span>
           </div>
-        {:else if appState.params.appearance.displayMode === 'precipitation'}
+        {:else if appState.params.appearance.baseMap === 'precipitation'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>0 mm</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#cca66b] via-[#57ad7d] to-[#144092]'></i><span>600+ mm</span>
           </div>
-        {:else if appState.params.appearance.displayMode === 'wind'}
+        {:else if appState.params.appearance.baseMap === 'wind'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>弱</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${windStrengthLegend})`}></i><span>强</span>
           </div>
           <div class='px-1 text-[9px] leading-relaxed text-obs-text-dim'>底色表示相对风力并与地形融合；箭头表示气流方向。仅为相对值，非 m/s。</div>
-        {:else if appState.params.appearance.displayMode === 'ocean-current'}
+        {:else if appState.params.appearance.baseMap === 'ocean-current'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>冷</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${oceanCurrentThermalLegend})`}></i><span>暖</span>
           </div>
@@ -315,7 +291,7 @@
         {/if}
       </div>
 
-      {#if hasLayerStatistics(appState.params.appearance.displayMode)}
+      {#if hasLayerStatistics(appState.params.appearance.baseMap)}
         <!-- 图层统计 -->
         <div class='flex flex-col gap-1.5 mt-2'>
           <div class='flex items-center justify-between'>
