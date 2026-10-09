@@ -23,6 +23,7 @@
   import { appState } from '@/ui/state/app.svelte'
 
   const numberFormat = new Intl.NumberFormat('zh-CN')
+  const smoothableBaseMaps = new Set(['plates', 'continents', 'biome', 'koppen'])
   let copyStatus = $state<'idle' | 'copied' | 'error'>('idle')
   let resetTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -107,7 +108,7 @@
               type='button'
               onclick={() => {
                 const isSmoothed = appState.params.appearance.baseMap.endsWith('-smoothed')
-                appState.setBaseMap(isSmoothed && ['plates', 'continents', 'biome', 'koppen'].includes(item.id) ? `${item.id}-smoothed` : item.id)
+                appState.setBaseMap(isSmoothed && smoothableBaseMaps.has(item.id) ? `${item.id}-smoothed` : item.id)
               }}
               title={item.name}
               class="flex flex-row items-center gap-1 p-1.5 rounded-lg transition-all text-center cursor-pointer border {isActive ? 'bg-obs-primary/15 text-obs-primary border-obs-primary/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
@@ -118,7 +119,7 @@
           {/each}
         </div>
 
-        {#if ['plates', 'continents', 'biome', 'koppen'].includes(appState.params.appearance.baseMap.replace('-smoothed', ''))}
+        {#if smoothableBaseMaps.has(appState.params.appearance.baseMap.replace('-smoothed', ''))}
           <div class='pt-2 pl-1'>
             <Checkbox
               label='平滑边界'
@@ -151,7 +152,7 @@
           {@const overlays = getOverlays()}
           {@const groups = [
             { label: '自然边界', items: overlays.filter(o => o.category === 'physics' || o.category === 'ecology' || o.category === 'climate') },
-            { label: '人文其他', items: overlays.filter(o => o.category === 'human') },
+            { label: '人文', items: overlays.filter(o => o.category === 'human') },
           ].filter(g => g.items.length > 0)}
           <div class='mt-1.5 flex flex-col gap-1.5 pt-2 border-t border-white/[0.06]'>
             <span class='text-[10px] text-obs-text-dim px-1 font-medium'>叠加层</span>
@@ -267,6 +268,29 @@
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#e6eff5]'></i>冰原</span>
             <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#bad4ca]'></i>高山苔原</span>
           </div>
+        {:else if appState.params.appearance.baseMap === 'population'}
+          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
+            <span>稀疏</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#303b30] via-[#dbb040] to-[#f54a2b]'></i><span>密集</span>
+          </div>
+          <div class='px-1 text-[9px] text-obs-text-dim/80'>陆地人口密度（人/km²）；海洋以深蓝色显示。</div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>模型总人口 {numberFormat.format(Math.round(appState.worldSummary.totalPopulation))} · 聚落 {numberFormat.format(appState.worldSummary.settlementCount)} 处</div>
+        {:else if appState.params.appearance.baseMap === 'market-access'}
+          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
+            <span>弱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#292e38] via-[#479494] to-[#f7c24f]'></i><span>强</span>
+          </div>
+          <div class='px-1 text-[9px] text-obs-text-dim/80'>按地形通行成本与可达腹地估算的相对市场潜力，并非贸易额。</div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>陆路 {numberFormat.format(appState.worldSummary.roadCount)} 条 · 航线 {numberFormat.format(appState.worldSummary.seaRouteCount)} 条</div>
+        {:else if ['ethnicity', 'languages'].includes(appState.params.appearance.baseMap.replace('-smoothed', ''))}
+          <div class='px-1 text-[10px] text-obs-text-dim'>颜色区分当地人数最多的{appState.params.appearance.baseMap.replace('-smoothed', '') === 'ethnicity' ? '民族' : '语言'}；灰色为无人居住的陆地。</div>
+          <div class='px-1 text-[9px] text-obs-text-dim/80'>颜色越鲜明，主要群体在当地居民中的占比越高；具体人数见下方统计。</div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>民族 {numberFormat.format(appState.worldSummary.ethnicGroupCount)} 个 · 语言 {numberFormat.format(appState.worldSummary.languageCount)} 种</div>
+        {:else if appState.params.appearance.baseMap.replace('-smoothed', '') === 'polities'}
+          <div class='px-1 text-[10px] text-obs-text-dim'>颜色区分国家；颜色越鲜明，首都到当地的治理通达性越强。灰色为未接入国家的独立陆地。</div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>国家 {numberFormat.format(appState.worldSummary.polityCount)} 个 · 行政区 {numberFormat.format(appState.worldSummary.districtCount)} 个</div>
+        {:else if appState.params.appearance.baseMap.replace('-smoothed', '') === 'religions'}
+          <div class='px-1 text-[10px] text-obs-text-dim'>颜色区分当地人数最多的主要信仰归属；棕灰色为无归属，浅灰色为无人居住的陆地。</div>
+          <div class='px-1 text-[9px] text-obs-text-dim/80'>颜色越鲜明，主要归属份额越高；各信仰和无归属人口见下方统计。</div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>宗教 {numberFormat.format(appState.worldSummary.religionCount)} 个 · 圣地 {numberFormat.format(appState.worldSummary.sacredSiteCount)} 处</div>
         {:else if appState.params.appearance.baseMap === 'temperature'}
           <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
             <span>−30°C</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#2e52b8] via-[#e0eddb] to-[#db451f]'></i><span>40°C</span>
@@ -315,7 +339,13 @@
             {#if appState.layerStatistics}
               <div class='px-3 py-2 border-b border-white/[0.04]'>
                 <div class='text-[11px] font-semibold text-obs-text-main'>{appState.layerStatistics.title}</div>
-                <div class='mt-0.5 text-[10px] text-obs-text-dim'>占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元</div>
+                <div class='mt-0.5 text-[10px] text-obs-text-dim'>
+                  {#if appState.layerStatistics.measure === 'people'}
+                    占模型总人口 {numberFormat.format(Math.round(appState.layerStatistics.totalPopulation ?? 0))} 人
+                  {:else}
+                    占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元
+                  {/if}
+                </div>
                 {#if appState.layerStatistics.plateCounts}
                   <div class='mt-2 flex gap-3 text-[10px] text-obs-text-main'>
                     <span>主要板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.primary}</strong></span>
@@ -332,9 +362,10 @@
                     <div class='flex items-center gap-2 text-[10px]'>
                       <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={item.color}></span>
                       <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
-                      <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(item.count)}</span>
+                      <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(appState.layerStatistics.measure === 'people' ? Math.round(item.count) : item.count)}</span>
                       <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
                     </div>
+                    {#if item.areaKm2 !== undefined}<div class='ml-4 text-[9px] text-obs-text-dim'>面积 {numberFormat.format(Math.round(item.areaKm2))} km²</div>{/if}
                     <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
                       <div class='h-full rounded-full' style:background-color={item.color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
                     </div>

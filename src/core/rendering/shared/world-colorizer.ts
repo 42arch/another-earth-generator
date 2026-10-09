@@ -13,6 +13,7 @@ import {
   HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
 } from '@/core/rendering/shared/heightmap-color-scale'
 import { SatelliteColorizer } from '@/core/rendering/shared/satellite-colorizer'
+import { humanGroupColor } from '@/core/society/group-color'
 
 type Rgb = readonly [number, number, number]
 
@@ -32,6 +33,7 @@ export class WorldColorizer {
 
     const numRegions = data.geography.elevation.length
     const colors = new Float32Array(numRegions * 3)
+    const categoricalMode = mode.endsWith('-smoothed') ? mode.slice(0, -'-smoothed'.length) : mode
 
     let plateColors: Float32Array | null = null
     if (mode === 'plates' || mode === 'plates-smoothed') {
@@ -52,6 +54,17 @@ export class WorldColorizer {
       }
       continentColors = this.buildPlateColors(maxContinent + 1)
     }
+    const ethnicity = data.society?.ethnicity
+    const religions = data.society?.religions
+    const humanPalette = categoricalMode === 'ethnicity' && ethnicity
+      ? ethnicity.groups.map(group => humanGroupColor(group.id))
+      : categoricalMode === 'languages' && ethnicity
+        ? ethnicity.languages.map(language => humanGroupColor(language.id))
+        : categoricalMode === 'polities' && data.society?.polities
+          ? data.society.polities.polities.map(polity => humanGroupColor(polity.id))
+          : categoricalMode === 'religions' && religions
+            ? religions.religions.map(religion => humanGroupColor(religion.id))
+            : null
     let maximumStress = 0
     if (mode === 'stress') {
       for (let region = 0; region < numRegions; region++)
@@ -168,6 +181,71 @@ export class WorldColorizer {
       }
       else if (mode === 'biome' || mode === 'biome-smoothed') {
         color = BIOME_COLORS[data.biome?.biomeClass[region] ?? 0] ?? BIOME_COLORS[0]
+      }
+      else if (mode === 'population') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const density = data.society?.populationDensity[region] ?? 0
+          const intensity = clamp(Math.log1p(density) / Math.log1p(1000), 0, 1)
+          color = intensity < 0.5
+            ? this.mix([0.18, 0.23, 0.19], [0.86, 0.69, 0.25], intensity * 2)
+            : this.mix([0.86, 0.69, 0.25], [0.96, 0.29, 0.17], (intensity - 0.5) * 2)
+        }
+      }
+      else if (categoricalMode === 'ethnicity' || categoricalMode === 'languages') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const id = categoricalMode === 'ethnicity'
+            ? ethnicity?.dominantGroup[region] ?? -1
+            : ethnicity?.dominantLanguage[region] ?? -1
+          const share = categoricalMode === 'ethnicity'
+            ? ethnicity?.dominantGroupShare[region] ?? 0
+            : ethnicity?.dominantLanguageShare[region] ?? 0
+          color = id >= 0 && humanPalette?.[id]
+            ? this.mix([0.30, 0.33, 0.34], humanPalette[id], 0.35 + 0.65 * share)
+            : [0.30, 0.33, 0.34]
+        }
+      }
+      else if (categoricalMode === 'polities') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const id = data.society?.polities?.polityByRegion[region] ?? -1
+          const strength = data.society?.polities?.controlStrength[region] ?? 0
+          color = id >= 0 && humanPalette?.[id]
+            ? this.mix([0.34, 0.35, 0.33], humanPalette[id], 0.5 + 0.5 * strength)
+            : [0.30, 0.33, 0.34]
+        }
+      }
+      else if (categoricalMode === 'religions') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const id = religions?.dominantAffiliation[region] ?? -2
+          const share = religions?.dominantShare[region] ?? 0
+          color = id >= 0 && humanPalette?.[id]
+            ? this.mix([0.32, 0.33, 0.34], humanPalette[id], 0.3 + 0.7 * share)
+            : id === -1
+              ? this.mix([0.32, 0.33, 0.34], [0.55, 0.47, 0.40], 0.3 + 0.7 * share)
+              : [0.30, 0.33, 0.34]
+        }
+      }
+      else if (mode === 'market-access') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const access = data.society?.transport?.marketAccess[region] ?? 0
+          color = access < 0.5
+            ? this.mix([0.16, 0.18, 0.22], [0.28, 0.58, 0.58], access * 2)
+            : this.mix([0.28, 0.58, 0.58], [0.97, 0.76, 0.31], (access - 0.5) * 2)
+        }
       }
       else if (mode === 'temperature') {
         color = this.temperatureColor(data.climate?.displayMonth?.temperatureC[region] ?? 0)

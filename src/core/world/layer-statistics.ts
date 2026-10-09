@@ -4,6 +4,7 @@ import { classifyOceanCurrentThermal } from '@/core/climate/ocean-current-therma
 import { BIOME_CODES, BIOME_COLORS, BIOME_LABELS } from '@/core/ecology/biome-data'
 import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/geology/geology-data'
 import { OCEAN_CURRENT_THERMAL_COLORS } from '@/core/rendering/shared/climate-color-scale'
+import { humanGroupCssColor } from '@/core/society/group-color'
 
 interface Category {
   label: string
@@ -14,6 +15,7 @@ export interface LayerStatisticRow extends Category {
   key: string
   count: number
   percentage: number
+  areaKm2?: number
 }
 
 export interface LayerStatistics {
@@ -22,6 +24,8 @@ export interface LayerStatistics {
   seed?: number
   month?: number
   totalCells: number
+  measure?: 'people'
+  totalPopulation?: number
   plateCounts?: { primary: number, micro: number }
   description?: string
   rows: LayerStatisticRow[]
@@ -34,19 +38,21 @@ export function formatLayerStatistics(statistics: LayerStatistics): string {
     `图层\t${statistics.title}`,
     `模式\t${statistics.mode}`,
     ...(statistics.month === undefined ? [] : [`月份\t${statistics.month + 1}`]),
-    `总 cell\t${statistics.totalCells}`,
+    ...(statistics.measure === 'people'
+      ? [`模型总人口（人）\t${statistics.totalPopulation ?? 0}`]
+      : [`总 cell\t${statistics.totalCells}`]),
     ...(statistics.plateCounts
       ? [`主要板块\t${statistics.plateCounts.primary}`, `小板块\t${statistics.plateCounts.micro}`]
       : []),
     ...(statistics.description ? [`说明\t${statistics.description}`] : []),
-    '分类\tcell 数\t占比',
-    ...statistics.rows.map(item => `${item.label}\t${item.count}\t${item.percentage.toFixed(6)}%`),
+    statistics.mode.startsWith('polities') ? '分类\t居民人数（人）\t占比\t面积（km²）' : statistics.measure === 'people' ? '分类\t居民人数（人）\t占比' : '分类\tcell 数\t占比',
+    ...statistics.rows.map(item => `${item.label}\t${item.count}\t${item.percentage.toFixed(6)}%${item.areaKm2 === undefined ? '' : `\t${item.areaKm2}`}`),
   ].join('\n')
 }
 
 const MONTH_NAMES = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月']
 
-const MODES_WITHOUT_STATISTICS = new Set<string>(['satellite', 'dem', 'heightmap'])
+const MODES_WITHOUT_STATISTICS = new Set<string>(['satellite', 'dem', 'heightmap', 'population', 'market-access'])
 
 export function hasLayerStatistics(mode: string): boolean {
   return !MODES_WITHOUT_STATISTICS.has(mode)
@@ -59,6 +65,14 @@ const MODE_TITLES: Record<string, string> = {
   'plates-smoothed': '平滑板块',
   'continents': '大陆区划',
   'continents-smoothed': '平滑大陆',
+  'ethnicity': '民族分布',
+  'ethnicity-smoothed': '平滑民族分布',
+  'languages': '语言分布',
+  'languages-smoothed': '平滑语言分布',
+  'polities': '国家归属',
+  'polities-smoothed': '平滑国家归属',
+  'religions': '宗教与信仰',
+  'religions-smoothed': '平滑宗教分布',
   // 'crust': '地壳类型',
   // 'density': '地壳密度',
   'subduction': '俯冲极性',
@@ -135,9 +149,110 @@ export function buildLayerStatistics(
   const total = data.geography.elevation.length
   const geo = data.geography
   const geology = data.geology
+  const categoricalMode = mode.endsWith('-smoothed') ? mode.slice(0, -'-smoothed'.length) : mode
 
   if (mode === 'satellite')
     return null
+
+  if (categoricalMode === 'polities') {
+    const polities = data.society?.polities
+    if (!polities)
+      return null
+    const totalPopulation = data.society?.totalPopulation ?? 0
+    return {
+      mode,
+      title: '国家人口与面积',
+      totalCells: total,
+      measure: 'people',
+      totalPopulation,
+      description: '按居民所在地汇总人口，按球面物理面积汇总国土；灰色为没有政治中心或航线接入的独立陆地。',
+      rows: [
+        ...polities.polities.map(polity => ({
+          key: String(polity.id),
+          label: polity.name,
+          color: humanGroupCssColor(polity.id),
+          count: polity.population,
+          percentage: totalPopulation > 0 ? polity.population / totalPopulation * 100 : 0,
+          areaKm2: polity.areaKm2,
+        })),
+        {
+          key: 'unassigned', label: '未归属', color: 'rgb(77, 84, 87)',
+          count: polities.unassignedPopulation,
+          percentage: totalPopulation > 0 ? polities.unassignedPopulation / totalPopulation * 100 : 0,
+          areaKm2: polities.unassignedAreaKm2,
+        },
+      ].sort((a, b) => b.count - a.count),
+    }
+  }
+
+  if (categoricalMode === 'religions') {
+    const religions = data.society?.religions
+    if (!religions)
+      return null
+    const counts = new Float64Array(religions.religions.length)
+    let unaffiliated = 0
+    for (let index = 0; index < religions.affiliationIds.length; index++) {
+      const id = religions.affiliationIds[index]
+      if (id >= 0)
+        counts[id] += religions.residents[index]
+      else
+        unaffiliated += religions.residents[index]
+    }
+    const totalPopulation = counts.reduce((sum, value) => sum + value, unaffiliated)
+    return {
+      mode,
+      title: '主要信仰归属人口',
+      totalCells: total,
+      measure: 'people',
+      totalPopulation,
+      description: '每位居民只计入一个主要信仰归属；无归属单列。尚未模拟多重参与。',
+      rows: [
+        ...religions.religions.map(religion => ({
+          key: String(religion.id),
+          label: religion.name,
+          color: humanGroupCssColor(religion.id),
+          count: counts[religion.id],
+          percentage: totalPopulation > 0 ? counts[religion.id] / totalPopulation * 100 : 0,
+        })),
+        {
+          key: 'unaffiliated', label: '无归属', color: 'rgb(115, 102, 92)',
+          count: unaffiliated,
+          percentage: totalPopulation > 0 ? unaffiliated / totalPopulation * 100 : 0,
+        },
+      ].sort((a, b) => b.count - a.count),
+    }
+  }
+
+  if (categoricalMode === 'ethnicity' || categoricalMode === 'languages') {
+    const ethnicity = data.society?.ethnicity
+    if (!ethnicity)
+      return null
+    const entities = categoricalMode === 'ethnicity' ? ethnicity.groups : ethnicity.languages
+    const counts = new Float64Array(entities.length)
+    for (let index = 0; index < ethnicity.groupIds.length; index++) {
+      const group = ethnicity.groups[ethnicity.groupIds[index]]
+      const entityId = categoricalMode === 'ethnicity' ? group.id : group.languageId
+      counts[entityId] += ethnicity.residents[index]
+    }
+    const totalPopulation = counts.reduce((sum, value) => sum + value, 0)
+    return {
+      mode,
+      title: categoricalMode === 'ethnicity' ? '民族居民构成' : '语言使用人口',
+      totalCells: total,
+      measure: 'people',
+      totalPopulation,
+      description: categoricalMode === 'ethnicity'
+        ? '按各区域居民构成人数汇总；底图仅显示当地人数最多的民族。'
+        : '按民族关联的主要语言汇总使用人口；当前尚未模拟双语使用。',
+      rows: entities.map(entity => ({
+        key: String(entity.id),
+        label: entity.name,
+        color: humanGroupCssColor(entity.id),
+        count: counts[entity.id],
+        percentage: totalPopulation > 0 ? counts[entity.id] / totalPopulation * 100 : 0,
+      })).sort((a, b) => b.count - a.count),
+    }
+  }
 
   if (mode === 'koppen' || mode === 'koppen-smoothed') {
     const classes = data.climate?.koppen?.climateClass

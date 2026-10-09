@@ -24,6 +24,8 @@ export default class WorldEngine {
   private params: WorldConfig
   private callbacks?: WorldEngineCallbacks
   private selectedRegion = -1
+  private selectedSettlementId: number | undefined
+  private selectedRouteId: number | undefined
   private climateRegionSampler: ReturnType<typeof createOutputClimateRegionSampler> | null = null
   private generatedSeed: number | null = null
   private readonly layerStatisticsCache = new Map<string, LayerStatistics>()
@@ -58,6 +60,11 @@ export default class WorldEngine {
           KoppenClimate: '正在依据 12 个月气候划分 Köppen 类型…',
           Biome: '正在依据气候与地形划分生物群系…',
           SurfaceHydrology: '正在汇集年径流并生成河流网…',
+          PopulationAndSettlements: '正在计算宜居性、人口与聚落…',
+          TransportAndMarkets: '正在连接聚落并计算市场可达性…',
+          EthnicityAndLanguages: '正在生成人口构成、民族与语言…',
+          PolitiesAndAdministration: '正在划分国家与行政区…',
+          ReligionsAndBeliefs: '正在生成宗教起源、传播与居民信仰构成…',
         }
         const text = descriptions[stageName] || `正在执行: ${stageName}`
         this.callbacks?.onPipelineProgress?.(text)
@@ -82,6 +89,8 @@ export default class WorldEngine {
       throw error
     }
     this.selectedRegion = -1
+    this.selectedSettlementId = undefined
+    this.selectedRouteId = undefined
     this.generatedSeed = generationSeed
     this.climateRegionSampler = null
     this.layerStatisticsCache.clear()
@@ -106,7 +115,7 @@ export default class WorldEngine {
     this.prepareClimateDisplayFields()
     this.renderer.updateAppearance(this.params)
     if (this.selectedRegion >= 0)
-      this.handleRegionSelected(this.selectedRegion)
+      this.handleRegionSelected(this.selectedRegion, this.selectedSettlementId, this.selectedRouteId)
   }
 
   getLayerStatistics(): LayerStatistics | null {
@@ -199,6 +208,16 @@ export default class WorldEngine {
       regionCount: state.mesh.numRegions,
       triangleCount: state.mesh.numTriangles,
       plateCount,
+      totalPopulation: state.data.society?.totalPopulation ?? 0,
+      settlementCount: state.data.society?.settlements.length ?? 0,
+      roadCount: state.data.society?.transport?.routes.filter(route => route.kind === 'road').length ?? 0,
+      seaRouteCount: state.data.society?.transport?.routes.filter(route => route.kind === 'sea').length ?? 0,
+      ethnicGroupCount: state.data.society?.ethnicity?.groups.length ?? 0,
+      languageCount: state.data.society?.ethnicity?.languages.length ?? 0,
+      polityCount: state.data.society?.polities?.polities.length ?? 0,
+      districtCount: state.data.society?.polities?.districts.length ?? 0,
+      religionCount: state.data.society?.religions?.religions.length ?? 0,
+      sacredSiteCount: state.data.society?.religions?.sacredSites.length ?? 0,
     })
 
     if (this.infoElement) {
@@ -211,12 +230,14 @@ export default class WorldEngine {
     }
   }
 
-  private handleRegionSelected = (region: number) => {
+  private handleRegionSelected = (region: number, settlementId?: number, routeId?: number) => {
     const state = this.simulation.state
     if (!state)
       return
 
     this.selectedRegion = region
+    this.selectedSettlementId = settlementId
+    this.selectedRouteId = routeId
     this.renderer.selectRegion(region)
     const latitude = state.mesh.regionLatitude[region] * 180 / Math.PI
     const longitude = state.mesh.regionLongitude[region] * 180 / Math.PI
@@ -224,6 +245,62 @@ export default class WorldEngine {
     const plate = state.data.geology.regionSuperPlate[region]
     const plateDetail = state.data.geology.regionPlate[region]
     const continent = state.data.geography.visibleContinentId[region]
+    const society = state.data.society
+    const selectedSettlement = settlementId !== undefined
+      ? society?.settlements[settlementId]
+      : society?.settlements[society.settlementByRegion[region]]
+    const transport = society?.transport
+    const selectedRoute = routeId !== undefined ? transport?.routes[routeId] : undefined
+    const marketId = transport?.nearestMarket[region] ?? -1
+    const ethnicity = society?.ethnicity
+    const religionData = society?.religions
+    const polityData = society?.polities
+    const polityId = polityData?.polityByRegion[region] ?? -1
+    const polity = polityId >= 0 ? polityData?.polities[polityId] : undefined
+    const districtId = polityData?.districtByRegion[region] ?? -1
+    const district = districtId >= 0 ? polityData?.districts[districtId] : undefined
+    const ethnicComposition: Array<{ name: string, population: number, share: number, originRegion: number, languageName: string }> = []
+    const languageResidents = new Map<number, number>()
+    if (ethnicity && society.population[region] > 0) {
+      for (let index = ethnicity.regionOffsets[region]; index < ethnicity.regionOffsets[region + 1]; index++) {
+        const group = ethnicity.groups[ethnicity.groupIds[index]]
+        const residents = ethnicity.residents[index]
+        ethnicComposition.push({
+          name: group.name,
+          population: residents,
+          share: residents / society.population[region],
+          originRegion: group.originRegion,
+          languageName: ethnicity.languages[group.languageId].name,
+        })
+        languageResidents.set(group.languageId, (languageResidents.get(group.languageId) ?? 0) + residents)
+      }
+    }
+    const languageComposition = [...languageResidents].map(([id, population]) => {
+      const language = ethnicity!.languages[id]
+      return {
+        name: language.name,
+        population,
+        share: population / society!.population[region],
+        familyName: ethnicity!.languageFamilies[language.familyId].name,
+      }
+    }).sort((a, b) => b.population - a.population)
+    const religiousComposition: Array<{ name: string, population: number, share: number, originName?: string, parentName?: string }> = []
+    if (religionData && society.population[region] > 0) {
+      for (let index = religionData.regionOffsets[region]; index < religionData.regionOffsets[region + 1]; index++) {
+        const religionId = religionData.affiliationIds[index]
+        const religion = religionId >= 0 ? religionData.religions[religionId] : undefined
+        const residents = religionData.residents[index]
+        religiousComposition.push({
+          name: religion?.name ?? '无归属',
+          population: residents,
+          share: residents / society.population[region],
+          originName: religion ? society.settlements[religion.originSettlementId]?.name : undefined,
+          parentName: religion && religion.parentReligionId >= 0
+            ? religionData.religions[religion.parentReligionId]?.name
+            : undefined,
+        })
+      }
+    }
     const climate = state.data.climate
     const displayVector = climate?.displayVector
     const vectorInfo = displayVector?.month === this.params.appearance.climateMonth
@@ -272,10 +349,35 @@ export default class WorldEngine {
       latitude,
       longitude,
       elevation,
+      isLand: Boolean(state.data.geography.landMask[region]),
       plate,
       plateDetail,
       continent,
       geometricFlowCount: state.data.geography.terrainErosion.flowAccumulation[region],
+      habitability: society?.habitability[region],
+      population: society?.population[region],
+      populationDensity: society?.populationDensity[region],
+      ethnicComposition: ethnicity ? ethnicComposition : undefined,
+      languageComposition: ethnicity ? languageComposition : undefined,
+      religiousComposition: religionData ? religiousComposition : undefined,
+      sacredSiteNames: religionData?.sacredSites.filter(site => site.region === region).map(site => site.name),
+      polityName: polity?.name,
+      polityForm: polity?.governingForm,
+      capitalName: polity ? society?.settlements[polity.capitalSettlementId]?.name : undefined,
+      officialLanguageName: polity && polity.officialLanguageId >= 0 ? ethnicity?.languages[polity.officialLanguageId]?.name : undefined,
+      controlStrength: polity ? polityData?.controlStrength[region] : undefined,
+      districtName: district?.name,
+      patronReligionName: polity?.patronReligionId !== undefined
+        ? religionData?.religions[polity.patronReligionId]?.name
+        : undefined,
+      settlement: selectedSettlement,
+      route: selectedRoute,
+      routeFromName: selectedRoute ? society?.settlements[selectedRoute.fromSettlement]?.name : undefined,
+      routeToName: selectedRoute ? society?.settlements[selectedRoute.toSettlement]?.name : undefined,
+      nearestMarketName: marketId >= 0 ? society?.settlements[marketId]?.name : undefined,
+      marketCostKm: Number.isFinite(transport?.marketCostKm[region]) ? transport?.marketCostKm[region] : undefined,
+      marketAccess: transport?.marketAccess[region],
+      isPort: selectedSettlement ? Boolean(transport?.portSettlementIds[selectedSettlement.id]) : false,
       ...climateInfo,
       ...vectorInfo,
     })
@@ -295,6 +397,8 @@ export default class WorldEngine {
     this.renderer.enableRegionPicking = enabled
     if (!enabled) {
       this.selectedRegion = -1
+      this.selectedSettlementId = undefined
+      this.selectedRouteId = undefined
       this.renderer.selectRegion(-1)
       this.callbacks?.onRegionSelected?.(null)
     }

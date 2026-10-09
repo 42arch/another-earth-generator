@@ -11,7 +11,7 @@ export class RendererCore {
   constructor(
     canvas: HTMLCanvasElement,
     config: WorldConfig,
-    onRegionSelected: (region: number) => void,
+    onRegionSelected: (region: number, settlementId?: number, routeId?: number) => void,
   ) {
     this.globeRenderer = new GlobeRenderer(canvas, config, onRegionSelected)
   }

@@ -21,6 +21,8 @@ function main() {
   const worldEngine = new WorldEngine(canvas, info, appState.params, {
     onRegionSelected: (regionInfo) => {
       appState.selectedRegion = regionInfo
+      if (regionInfo?.settlement || regionInfo?.route)
+        appState.inspectorOpen = true
     },
     onWorldSummary: (summary) => {
       appState.worldSummary = summary

@@ -280,6 +280,23 @@
           decimals={1}
         />
       </div>
+      <div class='flex flex-col gap-2 relative mt-2'>
+        <div class='flex items-center gap-2 mb-1'>
+          <span class='font-sans text-[11px] uppercase tracking-wide text-obs-text-muted font-bold'>人文 · 人口与聚落</span>
+          <div class='flex-1 h-px bg-white/5'></div>
+        </div>
+        <Slider label='人口规模' description='按各地宜居性放大全球人口，不指定国家或城市数量。' bind:value={appState.params.society.populationScale} min={0} max={3} step={0.1} decimals={1} />
+        <Slider label='聚落密度' description='控制聚落中心的相对数量，实际数量受可居住陆地限制。' bind:value={appState.params.society.settlementDensity} min={0} max={2} step={0.1} decimals={1} />
+        <Slider label='人口集中度' description='将腹地人口的一部分集中到聚落，不改变全球人口总量。' bind:value={appState.params.society.urbanization} min={0} max={1} step={0.05} decimals={2} />
+      </div>
+      <div class='flex flex-col gap-2 relative mt-2'>
+        <div class='flex items-center gap-2 mb-1'>
+          <span class='font-sans text-[11px] uppercase tracking-wide text-obs-text-muted font-bold'>人文 · 交通与市场</span>
+          <div class='flex-1 h-px bg-white/5'></div>
+        </div>
+        <Slider label='道路连通度' description='增加主要聚落之间的冗余环路；基础连通网络始终按地形成本生成。' bind:value={appState.params.society.roadConnectivity} min={0} max={1} step={0.05} decimals={2} />
+        <Slider label='地形阻力' description='控制坡度、沙漠、冻土等对陆路通行成本的影响。' bind:value={appState.params.society.terrainResistance} min={0} max={2} step={0.1} decimals={1} />
+      </div>
     </div>
 
     <!-- 底部操作区 -->

@@ -27,8 +27,10 @@ pnpm dev
 
 ## 从何读起
 
-非开发者可以从 [Wiki 简介](docs/wiki/README.zh-CN.md) 开始，依次了解“球面网格 → 板块与陆地 → 地形 → 季节环流与气候 → 河流 → 生态 → 可视化”。每章首先解释现象，然后提供算法、数据字段和源码入口。
+非开发者可以从 [自然领域 Wiki](docs/wiki/nature/README.zh-CN.md) 开始，依次了解“球面网格 → 板块与陆地 → 地形 → 季节环流与气候 → 河流 → 生态 → 可视化”。每章首先解释现象，然后提供算法、数据字段和源码入口。
 
-开发者可以首先查看 [系统架构](docs/wiki/01-system-architecture.zh-CN.md) 和 [Worker 流水线](src/core/simulation/worker/simulation.worker.ts)。核心代码位于 `src/core/`，用户界面位于 `src/ui/`。
+开发者可以首先查看 [系统架构](docs/wiki/nature/01-system-architecture.zh-CN.md) 和 [Worker 流水线](src/core/simulation/worker/simulation.worker.ts)。核心代码位于 `src/core/`，用户界面位于 `src/ui/`。
+
+人文地理的前两阶段已实现人口、聚落、交通与市场可达性；实现说明与后续规划见[人文领域 Wiki](docs/wiki/society/README.zh-CN.md)。
 
 技术栈：TypeScript、Vite、Svelte 5、Three.js、Tailwind CSS、Vitest。项目使用 pnpm 进行依赖管理。

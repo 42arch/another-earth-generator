@@ -4,16 +4,21 @@ import { PipelineScheduler } from '@/core/simulation/pipeline/scheduler'
 import { BiomeStage } from '@/core/simulation/pipeline/stages/biome-stage'
 import { ClimateOutputStage } from '@/core/simulation/pipeline/stages/climate-output-stage'
 import { ContinentalCrustStage } from '@/core/simulation/pipeline/stages/continental-crust-stage'
+import { EthnicityStage } from '@/core/simulation/pipeline/stages/ethnicity-stage'
 import { KoppenClimateStage } from '@/core/simulation/pipeline/stages/koppen-climate-stage'
 import { MeshStage } from '@/core/simulation/pipeline/stages/mesh-stage'
 import { MonthlyClimateStage } from '@/core/simulation/pipeline/stages/monthly-climate-stage'
 import { PlateStage } from '@/core/simulation/pipeline/stages/plate-stage'
+import { PolityStage } from '@/core/simulation/pipeline/stages/polity-stage'
+import { PopulationStage } from '@/core/simulation/pipeline/stages/population-stage'
 import { ProjectionStage } from '@/core/simulation/pipeline/stages/projection-stage'
+import { ReligionStage } from '@/core/simulation/pipeline/stages/religion-stage'
 import { SeasonalCirculationStage } from '@/core/simulation/pipeline/stages/seasonal-circulation-stage'
 import { SuperPlateStage } from '@/core/simulation/pipeline/stages/super-plate-stage'
 import { SurfaceHydrologyStage } from '@/core/simulation/pipeline/stages/surface-hydrology-stage'
 import { TectonicStage } from '@/core/simulation/pipeline/stages/tectonic-stage'
 import { TerrainStage } from '@/core/simulation/pipeline/stages/terrain-stage'
+import { TransportStage } from '@/core/simulation/pipeline/stages/transport-stage'
 import { extractTransferables } from './transfer'
 
 // 定义通讯协议
@@ -41,6 +46,11 @@ const scheduler = new PipelineScheduler()
   .addStage(new KoppenClimateStage())
   .addStage(new BiomeStage())
   .addStage(new SurfaceHydrologyStage())
+  .addStage(new PopulationStage())
+  .addStage(new TransportStage())
+  .addStage(new EthnicityStage())
+  .addStage(new PolityStage())
+  .addStage(new ReligionStage())
 
 scheduler.addMiddleware({
   onStageStart: (stageName) => {

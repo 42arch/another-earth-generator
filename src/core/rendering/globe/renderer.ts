@@ -1,6 +1,3 @@
-import type {
-  BufferGeometry,
-} from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
@@ -9,9 +6,12 @@ import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
   AmbientLight,
+  BufferAttribute,
+  BufferGeometry,
   Color,
   DirectionalLight,
   DoubleSide,
+  Group,
   LineBasicMaterial,
   LineSegments,
   Mesh,
@@ -20,14 +20,20 @@ import {
   MeshPhongMaterial,
   NotEqualStencilFunc,
   PerspectiveCamera,
+  Points,
   ReplaceStencilOp,
   Scene,
   ShaderMaterial,
   SphereGeometry,
   SRGBColorSpace,
+  Vector2,
+  Vector3,
   WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { Line2 } from 'three/addons/lines/Line2.js'
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { elevationKmToDisplayCoordinate } from '@/core/geography/elevation-units'
 import { Atmosphere } from '@/core/rendering/globe/atmosphere'
 import { GlobePicker } from '@/core/rendering/globe/picker'
@@ -37,9 +43,17 @@ import { MapView } from '@/core/rendering/map/view'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
 import { CLOUD_FRAGMENT_SHADER, CLOUD_GLOBE_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
+import { getSurfaceDaylight } from '@/core/rendering/shared/day-night-lighting'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
+import {
+  createPolityBorderPaths,
+  createPolityRegionIds,
+  createPolitySmoothedCornerPositions,
+} from '@/core/rendering/shared/polity-border-geometry'
 import { RiverGeometry } from '@/core/rendering/shared/river-geometry'
 import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
+import { createMapMarkerMaterial } from '@/core/rendering/shared/settlement-marker-material'
+import { createTransportLineGeometry } from '@/core/rendering/shared/transport-line-geometry'
 import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
 
 const GRATICULE_LAYER_OFFSET = 0.75
@@ -69,9 +83,14 @@ export class GlobeRenderer {
 
   private surface: Mesh<BufferGeometry, MeshLambertMaterial> | null = null
   private cellBoundaryLayer: LineSegments<BufferGeometry, LineBasicMaterial> | null = null
+  private polityBorderLayer: Group | null = null
+  private polityBorderMaterial: LineMaterial | null = null
   private graticuleLayer: LineSegments<BufferGeometry, LineBasicMaterial> | null = null
   private vectorLayer: LineSegments<BufferGeometry, LineBasicMaterial> | null = null
   private riverLayer: Mesh<BufferGeometry, MeshLambertMaterial> | null = null
+  private transportLayer: LineSegments<BufferGeometry, LineBasicMaterial> | null = null
+  private settlementLayer: Points<BufferGeometry, ShaderMaterial> | null = null
+  private sacredSiteLayer: Points<BufferGeometry, ShaderMaterial> | null = null
   private cloudLayer: Mesh<BufferGeometry, ShaderMaterial> | null = null
   private atmosphereLayer: Atmosphere | null = null
   private waterLayer: Mesh<BufferGeometry, MeshPhongMaterial> | null = null
@@ -84,14 +103,14 @@ export class GlobeRenderer {
   private viewMode: WorldViewMode = 'globe'
 
   private readonly canvas: HTMLCanvasElement
-  private readonly onRegionSelected: (region: number) => void
+  private readonly onRegionSelected: (region: number, settlementId?: number, routeId?: number) => void
   private regionTopology: SphericalRegionTopology | null = null
   private smoothedRegionCorners: Float32Array | null = null
 
   constructor(
     canvas: HTMLCanvasElement,
     params: WorldConfig,
-    onRegionSelected: (region: number) => void,
+    onRegionSelected: (region: number, settlementId?: number, routeId?: number) => void,
   ) {
     this.canvas = canvas
     this.onRegionSelected = onRegionSelected
@@ -183,6 +202,8 @@ export class GlobeRenderer {
     const elevationDisplacementChanged = previousParams.appearance.elevationDisplacement !== params.appearance.elevationDisplacement
     const regionSmoothingChanged = this.getRegionSmoothingMode(previousParams) !== this.getRegionSmoothingMode(params)
     const monthChanged = previousParams.appearance.climateMonth !== params.appearance.climateMonth
+    const overlayLightingChanged = monthChanged
+      || previousParams.appearance.overlays['day-night'] !== params.appearance.overlays['day-night']
 
     this.params = { ...params }
     this.controls.autoRotate = params.appearance.autoRotate
@@ -219,6 +240,14 @@ export class GlobeRenderer {
       this.rebuildGraticule()
     if (oldOverlays.rivers !== newOverlays.rivers)
       this.rebuildRiverLayer()
+    if (oldOverlays.cities !== newOverlays.cities || overlayLightingChanged)
+      this.rebuildSettlementLayer()
+    if (oldOverlays['sacred-sites'] !== newOverlays['sacred-sites'] || overlayLightingChanged)
+      this.rebuildSacredSites()
+    if (oldOverlays.routes !== newOverlays.routes || overlayLightingChanged)
+      this.rebuildTransportLayer()
+    if (oldOverlays['nation-borders'] !== newOverlays['nation-borders'] || overlayLightingChanged)
+      this.rebuildPolityBorders()
     if (oldOverlays.wireframe !== newOverlays.wireframe)
       this.rebuildCellBoundaries()
 
@@ -283,6 +312,9 @@ export class GlobeRenderer {
     this.mapView.destroy()
     this.disposeSurface()
     this.disposeAtmosphere()
+    this.disposeSettlementLayer()
+    this.disposeSacredSites()
+    this.disposeTransportLayer()
     this.selectionMarker.geometry.dispose()
     this.selectionMarker.material.dispose()
     this.renderer.dispose()
@@ -332,11 +364,180 @@ export class GlobeRenderer {
 
   private rebuildOverlays(): void {
     this.rebuildCellBoundaries()
+    this.rebuildPolityBorders()
     this.rebuildGraticule()
     this.rebuildWaterLayer()
     this.rebuildVectorLayer()
     this.rebuildCloudLayer()
     this.rebuildRiverLayer()
+    this.rebuildSettlementLayer()
+    this.rebuildSacredSites()
+    this.rebuildTransportLayer()
+  }
+
+  private rebuildTransportLayer(): void {
+    this.disposeTransportLayer()
+    if (!this.params.appearance.overlays.routes || !this.mesh || !this.data?.society?.transport)
+      return
+    const scale = this.usesElevationGeometry(this.params)
+      ? this.getTerrainVerticalScale(this.params.core.planetRadius)
+      : 0
+    const sunDirection = this.params.appearance.overlays['day-night']
+      ? [this.sunlight.position.x, this.sunlight.position.y, this.sunlight.position.z] as const
+      : undefined
+    const geometry = createTransportLineGeometry(this.mesh, this.data, this.params.core.planetRadius, scale, sunDirection)
+    if ((geometry.getAttribute('position')?.count ?? 0) === 0) {
+      geometry.dispose()
+      return
+    }
+    this.transportLayer = new LineSegments(geometry, new LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.85,
+      depthTest: true,
+      depthWrite: false,
+    }))
+    this.transportLayer.renderOrder = 7.5
+    this.scene.add(this.transportLayer)
+  }
+
+  private disposeTransportLayer(): void {
+    if (!this.transportLayer)
+      return
+    this.scene.remove(this.transportLayer)
+    this.transportLayer.geometry.dispose()
+    this.transportLayer.material.dispose()
+    this.transportLayer = null
+  }
+
+  private rebuildSettlementLayer(): void {
+    this.disposeSettlementLayer()
+    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.society)
+      return
+    const data = this.data
+    const settlements = data.society!.settlements
+    if (settlements.length === 0)
+      return
+    const positions = new Float32Array(settlements.length * 3)
+    const colors = new Float32Array(settlements.length * 3)
+    const markerLevels = new Float32Array(settlements.length)
+    const palette = { village: 0xB7E4B3, town: 0xF4D777, city: 0xFFAE59, metropolis: 0xFF665C }
+    const level = { village: 0, town: 1, city: 2, metropolis: 3 }
+    for (const settlement of settlements) {
+      const region = settlement.region
+      const elevation = elevationKmToDisplayCoordinate(data.geography.elevation[region])
+      const offset = this.usesElevationGeometry(this.params)
+        ? elevation * this.getTerrainVerticalScale(this.params.core.planetRadius)
+        : 0
+      const radius = this.params.core.planetRadius + offset + 0.22
+      const source = region * 3
+      const target = settlement.id * 3
+      positions[target] = this.mesh.regionPosition[source] * radius
+      positions[target + 1] = this.mesh.regionPosition[source + 1] * radius
+      positions[target + 2] = this.mesh.regionPosition[source + 2] * radius
+      const color = new Color(palette[settlement.rank])
+      colors[target] = color.r
+      colors[target + 1] = color.g
+      colors[target + 2] = color.b
+      markerLevels[settlement.id] = level[settlement.rank]
+    }
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(positions, 3))
+    geometry.setAttribute('color', new BufferAttribute(colors, 3))
+    geometry.setAttribute('markerLevel', new BufferAttribute(markerLevels, 1))
+    this.settlementLayer = new Points(geometry, createMapMarkerMaterial(
+      true,
+      this.params.appearance.overlays['day-night'],
+      this.sunlight.position,
+    ))
+    this.settlementLayer.renderOrder = 8
+    this.scene.add(this.settlementLayer)
+  }
+
+  private disposeSettlementLayer(): void {
+    if (!this.settlementLayer)
+      return
+    this.scene.remove(this.settlementLayer)
+    this.settlementLayer.geometry.dispose()
+    this.settlementLayer.material.dispose()
+    this.settlementLayer = null
+  }
+
+  private rebuildSacredSites(): void {
+    this.disposeSacredSites()
+    if (!this.params.appearance.overlays['sacred-sites'] || !this.mesh || !this.data?.society?.religions)
+      return
+    const sites = this.data.society.religions.sacredSites
+    if (sites.length === 0)
+      return
+    const positions = new Float32Array(sites.length * 3)
+    const colors = new Float32Array(sites.length * 3)
+    const markerLevels = new Float32Array(sites.length).fill(2)
+    const color = new Color(0xEAC2FF)
+    for (const site of sites) {
+      const region = site.region
+      const source = region * 3
+      const elevation = elevationKmToDisplayCoordinate(this.data.geography.elevation[region])
+      const offset = this.usesElevationGeometry(this.params)
+        ? elevation * this.getTerrainVerticalScale(this.params.core.planetRadius)
+        : 0
+      const radius = this.params.core.planetRadius + offset + 0.22
+      const target = site.id * 3
+      positions[target] = this.mesh.regionPosition[source] * radius
+      positions[target + 1] = this.mesh.regionPosition[source + 1] * radius
+      positions[target + 2] = this.mesh.regionPosition[source + 2] * radius
+      colors[target] = color.r
+      colors[target + 1] = color.g
+      colors[target + 2] = color.b
+    }
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(positions, 3))
+    geometry.setAttribute('color', new BufferAttribute(colors, 3))
+    geometry.setAttribute('markerLevel', new BufferAttribute(markerLevels, 1))
+    this.sacredSiteLayer = new Points(geometry, createMapMarkerMaterial(
+      true,
+      this.params.appearance.overlays['day-night'],
+      this.sunlight.position,
+    ))
+    this.sacredSiteLayer.renderOrder = 9
+    this.scene.add(this.sacredSiteLayer)
+  }
+
+  private disposeSacredSites(): void {
+    if (!this.sacredSiteLayer)
+      return
+    this.scene.remove(this.sacredSiteLayer)
+    this.sacredSiteLayer.geometry.dispose()
+    this.sacredSiteLayer.material.dispose()
+    this.sacredSiteLayer = null
+  }
+
+  private pickSettlement(event: PointerEvent): number | null {
+    if (!this.settlementLayer || !this.mesh || !this.data?.society)
+      return null
+    const rect = this.canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const positions = this.settlementLayer.geometry.getAttribute('position')
+    const point = new Vector3()
+    let nearest = 10 * 10
+    let chosen: number | null = null
+    for (let id = 0; id < positions.count; id++) {
+      point.fromBufferAttribute(positions, id)
+      if (point.dot(this.camera.position) <= point.lengthSq())
+        continue
+      const projected = point.clone().project(this.camera)
+      if (projected.z < -1 || projected.z > 1)
+        continue
+      const dx = (projected.x + 1) * rect.width / 2 - x
+      const dy = (1 - projected.y) * rect.height / 2 - y
+      const distance = dx * dx + dy * dy
+      if (distance < nearest) {
+        nearest = distance
+        chosen = id
+      }
+    }
+    return chosen
   }
 
   private rebuildCloudLayer(): void {
@@ -497,11 +698,8 @@ export class GlobeRenderer {
 
   private rebuildCellBoundaries(): void {
     this.disposeCellBoundaries()
-    const showRegionBoundaries = this.isRegionSmoothingEnabled(this.params)
-    if ((!this.params.appearance.overlays.wireframe && !showRegionBoundaries) || !this.mesh || !this.surface)
+    if (!this.params.appearance.overlays.wireframe || !this.mesh || !this.surface)
       return
-    const regionIds = showRegionBoundaries ? this.buildDisplayRegionIds() : undefined
-    const topology = showRegionBoundaries ? this.regionTopology : undefined
     const geometry = this.cellBoundaryGeometryBuilder.create(
       this.mesh,
       this.params.core.planetRadius + CELL_BOUNDARY_LAYER_OFFSET,
@@ -511,12 +709,10 @@ export class GlobeRenderer {
         : undefined,
       this.getTerrainVerticalScale(this.params.core.planetRadius),
       OCEAN_DEPTH_SCALE,
-      regionIds,
-      topology?.boundaryEdges,
+      undefined,
+      undefined,
       this.smoothedRegionCorners ?? undefined,
     )
-    if (topology)
-      geometry.userData.areaPolygons = topology.polygons
     this.cellBoundaryLayer = new LineSegments(geometry, new LineBasicMaterial({
       color: 0xB8D6E8,
       transparent: true,
@@ -528,11 +724,92 @@ export class GlobeRenderer {
     this.scene.add(this.cellBoundaryLayer)
   }
 
+  private rebuildPolityBorders(): void {
+    this.disposePolityBorders()
+    if (!this.params.appearance.overlays['nation-borders'] || !this.mesh || !this.data?.society?.polities)
+      return
+    const scale = this.usesElevationGeometry(this.params)
+      ? this.getTerrainVerticalScale(this.params.core.planetRadius)
+      : 0
+    const smoothedCorners = this.getRegionSmoothingMode(this.params) === 'polities' && this.smoothedRegionCorners
+      ? this.smoothedRegionCorners
+      : createPolitySmoothedCornerPositions(this.mesh, this.data, this.regionTopologyBuilder)
+    const paths = createPolityBorderPaths(
+      this.mesh,
+      this.data,
+      this.params.core.planetRadius + 0.32,
+      scale,
+      OCEAN_DEPTH_SCALE,
+      smoothedCorners,
+    )
+    if (paths.length === 0)
+      return
+    this.polityBorderLayer = new Group()
+    this.polityBorderMaterial = new LineMaterial({
+      color: 0x747A80,
+      vertexColors: true,
+      linewidth: 3.4,
+      dashed: true,
+      dashSize: 1.5,
+      gapSize: 1,
+      resolution: new Vector2(Math.max(1, this.canvas.clientWidth), Math.max(1, this.canvas.clientHeight)),
+      transparent: true,
+      opacity: 0.95,
+      depthTest: true,
+      depthWrite: false,
+    })
+    for (const path of paths) {
+      const points = path.closed ? [...path.points, path.points[0]] : path.points
+      const geometry = new LineGeometry().setPositions(points.flatMap(point => point))
+      const sun = this.sunlight.position
+      const colors = points.flatMap((point) => {
+        const brightness = this.params.appearance.overlays['day-night']
+          ? getSurfaceDaylight(point[0], point[1], point[2], sun.x, sun.y, sun.z)
+          : 1
+        return [brightness, brightness, brightness]
+      })
+      geometry.setColors(colors)
+      const line = new Line2(geometry, this.polityBorderMaterial)
+      line.computeLineDistances()
+      this.polityBorderLayer.add(line)
+    }
+    this.polityBorderLayer.renderOrder = 7
+    this.scene.add(this.polityBorderLayer)
+  }
+
+  private disposePolityBorders(): void {
+    if (!this.polityBorderLayer)
+      return
+    this.scene.remove(this.polityBorderLayer)
+    for (const line of this.polityBorderLayer.children) {
+      if (line instanceof Line2)
+        line.geometry.dispose()
+    }
+    this.polityBorderMaterial?.dispose()
+    this.polityBorderMaterial = null
+    this.polityBorderLayer = null
+  }
+
   private buildDisplayRegionIds(): Int32Array {
     const regionIds = new Int32Array(this.mesh!.numRegions)
     const mode = this.getRegionSmoothingMode(this.params)
+    if (mode === 'polities')
+      return createPolityRegionIds(this.mesh!, this.data!)
     for (let region = 0; region < regionIds.length; region++) {
-      if (mode === 'plates') {
+      if (this.data!.geography.landMask[region] === 0
+        && (mode === 'ethnicity' || mode === 'languages' || mode === 'religions')) {
+        regionIds[region] = -2147483648
+      }
+      else if (mode === 'ethnicity') {
+        regionIds[region] = this.data!.society?.ethnicity?.dominantGroup[region] ?? -1
+      }
+      else if (mode === 'languages') {
+        regionIds[region] = this.data!.society?.ethnicity?.dominantLanguage[region] ?? -1
+      }
+      else if (mode === 'religions') {
+        regionIds[region] = this.data!.society?.religions?.dominantAffiliation[region] ?? -1
+      }
+      else if (mode === 'plates') {
         regionIds[region] = this.data!.geology.regionSuperPlate[region]
       }
       else if (mode === 'biome') {
@@ -564,6 +841,14 @@ export class GlobeRenderer {
       return 'biome'
     if (mode === 'koppen-smoothed')
       return 'koppen'
+    if (mode === 'ethnicity' || mode === 'ethnicity-smoothed')
+      return 'ethnicity'
+    if (mode === 'languages' || mode === 'languages-smoothed')
+      return 'languages'
+    if (mode === 'polities' || mode === 'polities-smoothed')
+      return 'polities'
+    if (mode === 'religions' || mode === 'religions-smoothed')
+      return 'religions'
     return null
   }
 
@@ -609,6 +894,7 @@ export class GlobeRenderer {
       this.surface = null
     }
     this.disposeCellBoundaries()
+    this.disposePolityBorders()
     this.disposeGraticule()
     this.disposeVectorLayer()
     this.disposeRiverLayer()
@@ -705,6 +991,7 @@ export class GlobeRenderer {
     const width = Math.max(1, this.canvas.clientWidth)
     const height = Math.max(1, this.canvas.clientHeight)
     this.renderer.setSize(width, height, false)
+    this.polityBorderMaterial?.resolution.set(width, height)
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
     this.mapView.resize(width, height)
@@ -718,20 +1005,36 @@ export class GlobeRenderer {
   }
 
   private handlePointerUp = (event: PointerEvent) => {
-    if (!this.enableRegionPicking)
-      return
     if (
       Math.hypot(event.clientX - this.pointerStartX, event.clientY - this.pointerStartY) > 4
       || !this.mesh
     ) {
       return
     }
+    const settlementId = this.viewMode === 'map'
+      ? this.mapView.pickSettlement(event)
+      : this.pickSettlement(event)
+    if (settlementId !== null && this.data?.society) {
+      this.onRegionSelected(this.data.society.settlements[settlementId].region, settlementId)
+      return
+    }
+    if (!this.enableRegionPicking && !this.params.appearance.overlays.routes)
+      return
     const region = this.viewMode === 'map'
       ? this.mapView.pick(event)
       : this.surface
         ? this.picker.pick(event, this.canvas, this.camera, this.surface, this.mesh)
         : null
     if (region === null)
+      return
+    const routeId = this.params.appearance.overlays.routes
+      ? this.data?.society?.transport?.routeByRegion[region] ?? -1
+      : -1
+    if (routeId >= 0) {
+      this.onRegionSelected(region, undefined, routeId)
+      return
+    }
+    if (!this.enableRegionPicking)
       return
     this.onRegionSelected(region)
   }
@@ -743,6 +1046,11 @@ export class GlobeRenderer {
       return
     }
     this.controls.update()
+    if (this.polityBorderMaterial) {
+      const distance = this.camera.position.distanceTo(this.controls.target)
+      const distanceScale = Math.min(distance / 320, 320 / distance)
+      this.polityBorderMaterial.linewidth = Math.max(1.2, 3.4 * distanceScale)
+    }
     this.renderer.render(this.scene, this.camera)
   }
 }

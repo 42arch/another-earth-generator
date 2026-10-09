@@ -5,6 +5,7 @@
   } from '@lucide/svelte'
   import { fly, slide } from 'svelte/transition'
   import { classifyOceanCurrentThermal } from '@/core/climate/ocean-current-thermal'
+  import { SETTLEMENT_RANK_LABELS } from '@/core/society/society-data'
   import Badge from '@/ui/components/Badge.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
@@ -97,6 +98,97 @@
               </div>
             {/if}
           </div>
+
+          {#if region.habitability !== undefined}
+            <div class='border-t border-white/[0.06]'></div>
+            <div class='flex flex-col gap-1.5'>
+              <div class='text-[11px] text-obs-text-dim uppercase tracking-wider'>人口与聚落</div>
+              <div class='flex justify-between items-center'><span class='text-obs-text-dim'>宜居性</span><span class='font-mono'>{(region.habitability * 100).toFixed(0)}%</span></div>
+              <div class='flex justify-between items-center'><span class='text-obs-text-dim'>区域人口</span><span class='font-mono'>{Math.round(region.population ?? 0).toLocaleString('zh-CN')} 人</span></div>
+              <div class='flex justify-between items-center'><span class='text-obs-text-dim'>人口密度</span><span class='font-mono'>{(region.populationDensity ?? 0).toFixed(1)} 人/km²</span></div>
+              {#if region.settlement}
+                <div class='mt-1 rounded-md bg-obs-primary/10 border border-obs-primary/20 p-2 flex flex-col gap-1'>
+                  <div class='font-medium text-obs-text-main'>{region.settlement.name} · {SETTLEMENT_RANK_LABELS[region.settlement.rank]}</div>
+                  {#if region.isPort}<div class='text-obs-primary'>航线接驳节点</div>{/if}
+                  <div class='text-obs-text-dim'>聚落人口 {Math.round(region.settlement.population).toLocaleString('zh-CN')} 人</div>
+                  <div class='text-obs-text-dim'>服务腹地 {Math.round(region.settlement.hinterlandPopulation).toLocaleString('zh-CN')} 人</div>
+                  <div class='text-obs-text-dim'>{region.settlement.reasons.join(' · ')}</div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+
+          {#if region.ethnicComposition && region.ethnicComposition.length > 0}
+            <div class='border-t border-white/[0.06]'></div>
+            <div class='flex flex-col gap-1.5'>
+              <div class='text-[11px] text-obs-text-dim uppercase tracking-wider'>民族与语言</div>
+              {#each region.ethnicComposition as group}
+                <div class='flex justify-between gap-2'>
+                  <span class='text-obs-text-main'>{group.name} <span class='text-obs-text-dim'>· {group.languageName}</span></span>
+                  <span class='font-mono shrink-0'>{Math.round(group.population).toLocaleString('zh-CN')} 人 · {(group.share * 100).toFixed(0)}%</span>
+                </div>
+              {/each}
+              <div class='text-[10px] text-obs-text-dim'>主要群体的起源区域 #{region.ethnicComposition[0].originRegion}；主要群体不一定超过半数。</div>
+              {#if region.languageComposition}
+                <div class='pt-1 text-[10px] text-obs-text-dim'>语言：{region.languageComposition.map(language => `${language.name}（${language.familyName}）${(language.share * 100).toFixed(0)}%`).join(' · ')}</div>
+              {/if}
+            </div>
+          {/if}
+
+          {#if region.religiousComposition && region.religiousComposition.length > 0}
+            <div class='border-t border-white/[0.06]'></div>
+            <div class='flex flex-col gap-1.5'>
+              <div class='text-[11px] text-obs-text-dim uppercase tracking-wider'>宗教与信仰 · 主要归属</div>
+              {#each region.religiousComposition as belief}
+                <div class='flex justify-between gap-2'>
+                  <span class='text-obs-text-main'>{belief.name}</span>
+                  <span class='font-mono shrink-0'>{Math.round(belief.population).toLocaleString('zh-CN')} 人 · {(belief.share * 100).toFixed(0)}%</span>
+                </div>
+              {/each}
+              {#if region.religiousComposition[0].originName}
+                <div class='text-[10px] text-obs-text-dim'>主要信仰起源：{region.religiousComposition[0].originName}{region.religiousComposition[0].parentName ? ` · ${region.religiousComposition[0].parentName}分支` : ''}</div>
+              {/if}
+              {#if region.sacredSiteNames && region.sacredSiteNames.length > 0}
+                <div class='text-[10px] text-obs-primary'>圣地：{region.sacredSiteNames.join(' · ')}</div>
+              {/if}
+            </div>
+          {/if}
+
+          {#if region.marketAccess !== undefined}
+            <div class='border-t border-white/[0.06]'></div>
+            <div class='flex flex-col gap-1.5'>
+              <div class='text-[11px] text-obs-text-dim uppercase tracking-wider'>交通与市场</div>
+              <div class='flex justify-between items-center'><span class='text-obs-text-dim'>最近市场</span><span>{region.nearestMarketName ?? '无陆路市场'}</span></div>
+              {#if region.marketCostKm !== undefined}
+                <div class='flex justify-between items-center'><span class='text-obs-text-dim'>通行成本</span><span class='font-mono'>{region.marketCostKm.toFixed(0)} km 等效</span></div>
+              {/if}
+              <div class='flex justify-between items-center'><span class='text-obs-text-dim'>市场可达性</span><span class='font-mono'>{(region.marketAccess * 100).toFixed(0)}%</span></div>
+              {#if region.route}
+                <div class='mt-1 rounded-md bg-obs-primary/10 border border-obs-primary/20 p-2 flex flex-col gap-1'>
+                  <div class='font-medium'>{region.route.kind === 'sea' ? '航线' : '陆路'} · {region.routeFromName} — {region.routeToName}</div>
+                  <div class='text-obs-text-dim'>路径 {region.route.distanceKm.toFixed(0)} km · 成本 {region.route.costKm.toFixed(0)} km 等效</div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+
+          {#if region.habitability !== undefined && region.isLand}
+            <div class='border-t border-white/[0.06]'></div>
+            <div class='flex flex-col gap-1.5'>
+              <div class='text-[11px] text-obs-text-dim uppercase tracking-wider'>国家与行政</div>
+              {#if region.polityName}
+                <div class='flex justify-between items-center'><span class='text-obs-text-dim'>所属国家</span><span>{region.polityName}</span></div>
+                <div class='flex justify-between items-center'><span class='text-obs-text-dim'>政体</span><span>{region.polityForm === 'kingdom' ? '王国' : region.polityForm === 'republic' ? '共和国' : region.polityForm === 'league' ? '联盟' : '城邦'}</span></div>
+                <div class='flex justify-between items-center'><span class='text-obs-text-dim'>首都</span><span>{region.capitalName}</span></div>
+                <div class='flex justify-between items-center'><span class='text-obs-text-dim'>行政区</span><span>{region.districtName ?? '—'}</span></div>
+                <div class='flex justify-between items-center'><span class='text-obs-text-dim'>控制强度</span><span class='font-mono'>{((region.controlStrength ?? 0) * 100).toFixed(0)}%</span></div>
+                {#if region.officialLanguageName}<div class='flex justify-between items-center'><span class='text-obs-text-dim'>官方语言</span><span>{region.officialLanguageName}</span></div>{/if}
+                {#if region.patronReligionName}<div class='flex justify-between items-center'><span class='text-obs-text-dim'>扶持信仰</span><span>{region.patronReligionName}</span></div>{/if}
+              {:else}
+                <div class='text-obs-text-dim'>未归属任何国家</div>
+              {/if}
+            </div>
+          {/if}
 
           <!-- 矢量流场 -->
           {#if region.vectorKind && region.vectorEast !== undefined && region.vectorNorth !== undefined}

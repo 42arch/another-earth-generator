@@ -36,7 +36,7 @@ export interface LayerDefinition {
  * Replaces the hardcoded GlobeDisplayMode and showXXXBoundaries booleans.
  */
 export const LAYER_REGISTRY: Record<string, LayerDefinition> = {
-  // === Base Maps (Raster/Grid) ===
+  // === Base Maps ===
   'satellite': { id: 'satellite', name: '卫星影像', icon: Satellite, dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
   'heightmap': { id: 'heightmap', name: '高度图', icon: Mountain, dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
   'dem': { id: 'dem', name: 'DEM图', icon: Mountain, dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
@@ -59,10 +59,18 @@ export const LAYER_REGISTRY: Record<string, LayerDefinition> = {
   'koppen-smoothed': { id: 'koppen-smoothed', name: '平滑气候区', icon: Layers, dataType: 'vector-area', category: 'ecology', isBaseMap: true, canOverlay: false },
   'biome': { id: 'biome', name: '生物群系', icon: Layers, dataType: 'raster', category: 'ecology', isBaseMap: true, canOverlay: false },
   'biome-smoothed': { id: 'biome-smoothed', name: '平滑群系', icon: Layers, dataType: 'vector-area', category: 'ecology', isBaseMap: true, canOverlay: false },
+  'population': { id: 'population', name: '人口密度', icon: Layers, dataType: 'raster', category: 'human', isBaseMap: true, canOverlay: false },
+  'market-access': { id: 'market-access', name: '市场可达性', icon: Map, dataType: 'raster', category: 'human', isBaseMap: true, canOverlay: false },
+  'ethnicity': { id: 'ethnicity', name: '民族分布', icon: Layers, dataType: 'vector-area', category: 'human', isBaseMap: true, canOverlay: false },
+  'languages': { id: 'languages', name: '语言分布', icon: Map, dataType: 'vector-area', category: 'human', isBaseMap: true, canOverlay: false },
+  'polities': { id: 'polities', name: '国家归属', icon: Map, dataType: 'vector-area', category: 'human', isBaseMap: true, canOverlay: false },
+  'religions': { id: 'religions', name: '宗教与信仰', icon: Layers, dataType: 'vector-area', category: 'human', isBaseMap: true, canOverlay: false },
 
-  // === Future Human Layers (Examples) ===
-  // 'nation-borders': { id: 'nation-borders', name: '国界线', icon: Map, dataType: 'vector-line', category: 'human', isBaseMap: false, canOverlay: true },
-  // 'cities': { id: 'cities', name: '主要城市', icon: Component, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
+  // Human overlays
+  'nation-borders': { id: 'nation-borders', name: '国界线', icon: Map, dataType: 'vector-line', category: 'human', isBaseMap: false, canOverlay: true },
+  'cities': { id: 'cities', name: '聚落', icon: Component, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
+  'routes': { id: 'routes', name: '道路与航线', icon: Workflow, dataType: 'vector-line', category: 'human', isBaseMap: false, canOverlay: true },
+  'sacred-sites': { id: 'sacred-sites', name: '圣地', icon: Component, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
 
   // === Environment & System ===
   'clouds': { id: 'clouds', name: '云层', icon: CloudRain, dataType: 'raster', category: 'environment', isBaseMap: false, canOverlay: true },

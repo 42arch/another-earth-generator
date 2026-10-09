@@ -52,6 +52,18 @@ export interface WorldConfig {
     /** Converts the generated daily precipitation rate to calibrated rainfall. */
     precipitationScale: number
   }
+  society: {
+    /** Global multiplier for resident population. */
+    populationScale: number
+    /** Relative number of settlement centres. */
+    settlementDensity: number
+    /** Share of hinterland residents concentrated in settlements. */
+    urbanization: number
+    /** Relative number of redundant road connections. */
+    roadConnectivity: number
+    /** Extra land travel resistance from relief and difficult biomes. */
+    terrainResistance: number
+  }
   appearance: {
     baseMap: string
     overlays: Record<string, boolean>
@@ -94,10 +106,21 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
     temperatureOffsetC: 0,
     precipitationScale: 1.8,
   },
+  society: {
+    populationScale: 1,
+    settlementDensity: 1,
+    urbanization: 0.35,
+    roadConnectivity: 0.35,
+    terrainResistance: 1,
+  },
   appearance: {
     baseMap: 'satellite',
     overlays: {
       'rivers': true,
+      'cities': true,
+      'routes': true,
+      'nation-borders': true,
+      'sacred-sites': true,
       'atmosphere': true,
       'day-night': true,
     },
@@ -113,6 +136,7 @@ export function cloneWorldConfig(config: WorldConfig): WorldConfig {
     geology: { ...config.geology },
     terrain: { ...config.terrain },
     climate: { ...config.climate },
+    society: { ...config.society },
     appearance: {
       ...config.appearance,
       overlays: { ...config.appearance.overlays },

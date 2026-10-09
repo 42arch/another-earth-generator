@@ -1,10 +1,12 @@
-import type { BufferGeometry, Material, Object3D } from 'three'
+import type { Material, Object3D } from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection, MapProjectionId } from '@/core/projections/map-projection'
 import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
+  BufferAttribute,
+  BufferGeometry,
   Color,
   DoubleSide,
   Group,
@@ -13,13 +15,19 @@ import {
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
+  Points,
   RingGeometry,
   Scene,
   ShaderMaterial,
+  Vector2,
+  Vector3,
 } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
+import { Line2 } from 'three/addons/lines/Line2.js'
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { getMapProjection } from '@/core/projections/d3-map-projection'
-import { FULL_LONGITUDE, wrapLongitude } from '@/core/projections/projection-math'
+import { cartesianToGeographic, FULL_LONGITUDE, unwrapLongitudeNear, wrapLongitude } from '@/core/projections/projection-math'
 import { MapLineGeometry } from '@/core/rendering/map/line-geometry'
 import { MapPicker } from '@/core/rendering/map/picker'
 import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
@@ -29,13 +37,20 @@ import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boun
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
 import { CLOUD_FRAGMENT_SHADER, CLOUD_MAP_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
 import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
+import {
+  createPolityBorderPaths,
+  createPolityRegionIds,
+  createPolitySmoothedCornerPositions,
+} from '@/core/rendering/shared/polity-border-geometry'
 import { RiverGeometry } from '@/core/rendering/shared/river-geometry'
 import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
+import { createMapMarkerMaterial } from '@/core/rendering/shared/settlement-marker-material'
+import { createTransportLineGeometry } from '@/core/rendering/shared/transport-line-geometry'
 import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
 
 interface MapLayerResource {
   objects: Object3D[]
-  geometry: BufferGeometry
+  geometry: BufferGeometry | BufferGeometry[]
   material: Material
 }
 
@@ -254,11 +269,92 @@ export class MapView {
       return
 
     this.addCellBoundaries()
+    this.addPolityBorders()
     this.addGraticule()
     this.addClimateVectors()
     this.addClouds()
     this.addRivers()
+    this.addSettlements()
+    this.addSacredSites()
+    this.addRoutes()
     this.overlaysDirty = false
+  }
+
+  private addRoutes(): void {
+    if (!this.params.appearance.overlays.routes || !this.mesh || !this.data?.society?.transport)
+      return
+    this.addProjectedSourceGeometry(
+      createTransportLineGeometry(this.mesh, this.data),
+      0xFFFFFF,
+      0.85,
+      0.4,
+      7.5,
+      true,
+    )
+  }
+
+  private addSettlements(): void {
+    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.society)
+      return
+    const positions: number[] = []
+    const colors: number[] = []
+    const markerLevels: number[] = []
+    const palette = { village: 0xB7E4B3, town: 0xF4D777, city: 0xFFAE59, metropolis: 0xFF665C }
+    const level = { village: 0, town: 1, city: 2, metropolis: 3 }
+    for (const settlement of this.data.society.settlements) {
+      const projected = this.projection.project(
+        this.mesh.regionLongitude[settlement.region],
+        this.mesh.regionLatitude[settlement.region],
+        this.centralMeridian,
+      )
+      if (!projected)
+        continue
+      positions.push(projected.x, projected.y, 0.5)
+      const color = new Color(palette[settlement.rank])
+      colors.push(color.r, color.g, color.b)
+      markerLevels.push(level[settlement.rank])
+    }
+    if (positions.length === 0)
+      return
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+    geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
+    geometry.setAttribute('markerLevel', new BufferAttribute(new Float32Array(markerLevels), 1))
+    const material = createMapMarkerMaterial(false)
+    const layer = new Points(geometry, material)
+    layer.renderOrder = 8
+    this.addWrappedLayer(layer, geometry, material)
+  }
+
+  private addSacredSites(): void {
+    if (!this.params.appearance.overlays['sacred-sites'] || !this.mesh || !this.data?.society?.religions)
+      return
+    const positions: number[] = []
+    const colors: number[] = []
+    const markerLevels: number[] = []
+    const color = new Color(0xEAC2FF)
+    for (const site of this.data.society.religions.sacredSites) {
+      const projected = this.projection.project(
+        this.mesh.regionLongitude[site.region],
+        this.mesh.regionLatitude[site.region],
+        this.centralMeridian,
+      )
+      if (projected) {
+        positions.push(projected.x, projected.y, 0.56)
+        colors.push(color.r, color.g, color.b)
+        markerLevels.push(2)
+      }
+    }
+    if (positions.length === 0)
+      return
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+    geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
+    geometry.setAttribute('markerLevel', new BufferAttribute(new Float32Array(markerLevels), 1))
+    const material = createMapMarkerMaterial(false)
+    const layer = new Points(geometry, material)
+    layer.renderOrder = 9
+    this.addWrappedLayer(layer, geometry, material)
   }
 
   private addClouds(): void {
@@ -337,11 +433,8 @@ export class MapView {
   }
 
   private addCellBoundaries(): void {
-    const showRegionBoundaries = this.isRegionSmoothingEnabled(this.params)
-    if ((!this.params.appearance.overlays.wireframe && !showRegionBoundaries) || !this.mesh)
+    if (!this.params.appearance.overlays.wireframe || !this.mesh)
       return
-    const regionIds = showRegionBoundaries ? this.buildDisplayRegionIds() : undefined
-    const topology = showRegionBoundaries ? this.regionTopology : undefined
     // Surface polygons use straight projected edges. Keep the overlay on the
     // same endpoint segments so non-linear map projections cannot introduce
     // a visible offset between the fill boundary and the cell line.
@@ -352,26 +445,144 @@ export class MapView {
       undefined,
       0,
       1,
-      regionIds,
-      topology?.boundaryEdges,
+      undefined,
+      undefined,
       this.smoothedRegionCorners ?? undefined,
     )
-    if (topology)
-      geometry.userData.areaPolygons = topology.polygons
     this.addProjectedSourceGeometry(
       geometry,
-      showRegionBoundaries ? 0x182536 : 0xB8D6E8,
-      showRegionBoundaries ? 0.82 : 0.5,
+      0xB8D6E8,
+      0.5,
       0.24,
       2,
     )
   }
 
+  private addPolityBorders(): void {
+    if (!this.params.appearance.overlays['nation-borders'] || !this.mesh || !this.data?.society?.polities)
+      return
+    const smoothedCorners = this.getRegionSmoothingMode(this.params) === 'polities' && this.smoothedRegionCorners
+      ? this.smoothedRegionCorners
+      : createPolitySmoothedCornerPositions(this.mesh, this.data, this.regionTopologyBuilder)
+    const paths = createPolityBorderPaths(this.mesh, this.data, 1, 0, 1, smoothedCorners)
+    const group = new Group()
+    const geometries: BufferGeometry[] = []
+    const material = new LineMaterial({
+      color: 0x747A80,
+      linewidth: 3.4,
+      dashed: true,
+      dashSize: 0.05,
+      gapSize: 0.035,
+      resolution: new Vector2(this.viewportWidth, this.viewportHeight),
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,
+      depthWrite: false,
+    })
+
+    for (const path of paths) {
+      const geographic = path.points.map((point) => {
+        const location = cartesianToGeographic(point[0], point[1], point[2])
+        return {
+          longitude: wrapLongitude(location.longitude - this.centralMeridian),
+          latitude: location.latitude,
+        }
+      })
+      for (let index = 1; index < geographic.length; index++) {
+        geographic[index].longitude = unwrapLongitudeNear(
+          geographic[index].longitude,
+          geographic[index - 1].longitude,
+        )
+      }
+      if (path.closed) {
+        const first = geographic[0]
+        geographic.push({
+          ...first,
+          longitude: unwrapLongitudeNear(first.longitude, geographic[geographic.length - 1].longitude),
+        })
+      }
+
+      const fragments: [number, number, number][][] = []
+      for (const worldOffset of [-FULL_LONGITUDE, 0, FULL_LONGITUDE]) {
+        let current: [number, number, number][] = []
+        for (let index = 1; index < geographic.length; index++) {
+          const start = { ...geographic[index - 1], longitude: geographic[index - 1].longitude + worldOffset }
+          const end = { ...geographic[index], longitude: geographic[index].longitude + worldOffset }
+          const clipped = clipBorderSegment(
+            start,
+            end,
+            -Math.PI,
+            Math.PI,
+            this.projection.minimumLatitude,
+            this.projection.maximumLatitude,
+          )
+          if (!clipped) {
+            if (current.length >= 2)
+              fragments.push(current)
+            current = []
+            continue
+          }
+          const projectedStart = this.projection.projectRelative(clipped[0].longitude, clipped[0].latitude)
+          const projectedEnd = this.projection.projectRelative(clipped[1].longitude, clipped[1].latitude)
+          if (!projectedStart || !projectedEnd) {
+            if (current.length >= 2)
+              fragments.push(current)
+            current = []
+            continue
+          }
+          const start3: [number, number, number] = [projectedStart.x, projectedStart.y, 0.35]
+          const end3: [number, number, number] = [projectedEnd.x, projectedEnd.y, 0.35]
+          const last = current[current.length - 1]
+          if (last && Math.hypot(last[0] - start3[0], last[1] - start3[1]) > 1e-6) {
+            if (current.length >= 2)
+              fragments.push(current)
+            current = []
+          }
+          if (current.length === 0)
+            current.push(start3)
+          current.push(end3)
+        }
+        if (current.length >= 2)
+          fragments.push(current)
+      }
+
+      for (const fragment of fragments) {
+        const geometry = new LineGeometry().setPositions(fragment.flatMap(point => point))
+        const line = new Line2(geometry, material)
+        line.computeLineDistances()
+        line.renderOrder = 6
+        group.add(line)
+        geometries.push(geometry)
+      }
+    }
+
+    if (geometries.length === 0) {
+      material.dispose()
+      return
+    }
+    this.addWrappedLayer(group, geometries, material)
+  }
+
   private buildDisplayRegionIds(): Int32Array {
     const regionIds = new Int32Array(this.mesh!.numRegions)
     const mode = this.getRegionSmoothingMode(this.params)
+    if (mode === 'polities')
+      return createPolityRegionIds(this.mesh!, this.data!)
     for (let region = 0; region < regionIds.length; region++) {
-      if (mode === 'plates') {
+      if (this.data!.geography.landMask[region] === 0
+        && (mode === 'ethnicity' || mode === 'languages' || mode === 'religions')) {
+        regionIds[region] = -2147483648
+      }
+      else if (mode === 'ethnicity') {
+        regionIds[region] = this.data!.society?.ethnicity?.dominantGroup[region] ?? -1
+      }
+      else if (mode === 'languages') {
+        regionIds[region] = this.data!.society?.ethnicity?.dominantLanguage[region] ?? -1
+      }
+      else if (mode === 'religions') {
+        regionIds[region] = this.data!.society?.religions?.dominantAffiliation[region] ?? -1
+      }
+      else if (mode === 'plates') {
         regionIds[region] = this.data!.geology.regionSuperPlate[region]
       }
       else if (mode === 'biome') {
@@ -403,6 +614,14 @@ export class MapView {
       return 'biome'
     if (mode === 'koppen-smoothed')
       return 'koppen'
+    if (mode === 'ethnicity' || mode === 'ethnicity-smoothed')
+      return 'ethnicity'
+    if (mode === 'languages' || mode === 'languages-smoothed')
+      return 'languages'
+    if (mode === 'polities' || mode === 'polities-smoothed')
+      return 'polities'
+    if (mode === 'religions' || mode === 'religions-smoothed')
+      return 'religions'
     return null
   }
 
@@ -462,7 +681,7 @@ export class MapView {
 
   private addWrappedLayer(
     layer: Object3D,
-    geometry: BufferGeometry,
+    geometry: BufferGeometry | BufferGeometry[],
     material: Material,
   ): void {
     const objects: Object3D[] = []
@@ -546,6 +765,37 @@ export class MapView {
     )
   }
 
+  pickSettlement(event: PointerEvent): number | null {
+    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.society)
+      return null
+    const rect = this.canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    const position = new Vector3()
+    let nearest = 10 * 10
+    let chosen: number | null = null
+    for (const settlement of this.data.society.settlements) {
+      const projected = this.projection.project(
+        this.mesh.regionLongitude[settlement.region],
+        this.mesh.regionLatitude[settlement.region],
+        this.centralMeridian,
+      )
+      if (!projected)
+        continue
+      for (const offset of this.projection.wrapX ? [-this.projection.worldWidth, 0, this.projection.worldWidth] : [0]) {
+        position.set(projected.x + offset, projected.y, 0.5).project(this.camera)
+        const dx = (position.x + 1) * rect.width / 2 - x
+        const dy = (1 - position.y) * rect.height / 2 - y
+        const distance = dx * dx + dy * dy
+        if (distance < nearest) {
+          nearest = distance
+          chosen = settlement.id
+        }
+      }
+    }
+    return chosen
+  }
+
   resize(width: number, height: number): void {
     this.viewportWidth = Math.max(1, width)
     this.viewportHeight = Math.max(1, height)
@@ -579,6 +829,8 @@ export class MapView {
     for (const resource of this.overlayResources) {
       if (resource.material instanceof MapRibbonMaterial)
         resource.material.setResolution(this.viewportWidth, this.viewportHeight)
+      else if (resource.material instanceof LineMaterial)
+        resource.material.resolution.set(this.viewportWidth, this.viewportHeight)
     }
   }
 
@@ -589,6 +841,9 @@ export class MapView {
         // Base scale 100 multiplied by zoom ensures rivers shrink when zooming out
         // and grow proportionally when zooming in.
         resource.material.setWidthScale(100 * this.camera.zoom)
+      }
+      else if (resource.material instanceof LineMaterial) {
+        resource.material.linewidth = Math.max(1.2, 3.4 / Math.sqrt(this.camera.zoom))
       }
     }
     const visibleHalfWidth = (this.camera.right - this.camera.left)
@@ -676,7 +931,8 @@ export class MapView {
     for (const resource of this.overlayResources) {
       for (const object of resource.objects)
         this.scene.remove(object)
-      resource.geometry.dispose()
+      for (const geometry of Array.isArray(resource.geometry) ? resource.geometry : [resource.geometry])
+        geometry.dispose()
       resource.material.dispose()
     }
     this.overlayResources = []
@@ -699,4 +955,40 @@ export class MapView {
     this.surface = null
     this.surfaceCopies = []
   }
+}
+
+function clipBorderSegment(
+  start: { longitude: number, latitude: number },
+  end: { longitude: number, latitude: number },
+  minimumLongitude: number,
+  maximumLongitude: number,
+  minimumLatitude: number,
+  maximumLatitude: number,
+): readonly [{ longitude: number, latitude: number }, { longitude: number, latitude: number }] | null {
+  let minimumAmount = 0
+  let maximumAmount = 1
+  const axes = [
+    [start.longitude, end.longitude - start.longitude, minimumLongitude, maximumLongitude],
+    [start.latitude, end.latitude - start.latitude, minimumLatitude, maximumLatitude],
+  ] as const
+  for (const [origin, difference, minimum, maximum] of axes) {
+    if (Math.abs(difference) <= Number.EPSILON) {
+      if (origin < minimum || origin > maximum)
+        return null
+      continue
+    }
+    const amountA = (minimum - origin) / difference
+    const amountB = (maximum - origin) / difference
+    minimumAmount = Math.max(minimumAmount, Math.min(amountA, amountB))
+    maximumAmount = Math.min(maximumAmount, Math.max(amountA, amountB))
+    if (minimumAmount > maximumAmount)
+      return null
+  }
+  if (maximumAmount - minimumAmount <= 1e-12)
+    return null
+  const interpolate = (amount: number) => ({
+    longitude: start.longitude + (end.longitude - start.longitude) * amount,
+    latitude: start.latitude + (end.latitude - start.latitude) * amount,
+  })
+  return [interpolate(minimumAmount), interpolate(maximumAmount)]
 }

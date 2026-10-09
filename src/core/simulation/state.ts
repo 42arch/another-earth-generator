@@ -8,6 +8,7 @@ import type { TectonicEdificeFields } from '@/core/geology/tectonic-edifice-gene
 import type { TectonicSpatialFields } from '@/core/geology/tectonic-spatial-fields'
 import type { TerrainClassificationFields } from '@/core/geology/terrain-classifier'
 import type { SurfaceHydrologyData } from '@/core/hydrology/surface-hydrology-generator'
+import type { SocietyData } from '@/core/society/society-data'
 
 export interface GeologyData {
   regionPlate: Int16Array
@@ -45,6 +46,8 @@ export interface WorldSimulationState {
   hydrology?: SurfaceHydrologyData
   /** Climate and elevation-derived terrestrial biome classification. */
   biome?: BiomeData
+  /** Residents, settlements, transport, ethnic/language composition, governance, and belief affiliation on the output mesh. */
+  society?: SocietyData
 }
 
 export interface SelectedWorldRegion {

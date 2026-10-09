@@ -29,7 +29,7 @@ const SHARE_FIELDS_V3 = [
   ['geology', 'plateSizeVariety'],
 ] as const
 
-const SHARE_FIELDS = [
+const SHARE_FIELDS_V6 = [
   ['core', 'seed'],
   ['core', 'detail'],
   ['core', 'irregularity'],
@@ -50,10 +50,23 @@ const SHARE_FIELDS = [
   ['geology', 'plateSizeVariety'],
 ] as const
 
+const SHARE_FIELDS_V7 = [
+  ...SHARE_FIELDS_V6,
+  ['society', 'populationScale'],
+  ['society', 'settlementDensity'],
+  ['society', 'urbanization'],
+] as const
+
+const SHARE_FIELDS = [
+  ...SHARE_FIELDS_V7,
+  ['society', 'roadConnectivity'],
+  ['society', 'terrainResistance'],
+] as const
+
 const LEGACY_DEFAULT_MICRO_PLATE_COUNT = 6
 const LEGACY_DEFAULT_CONTINENT_COUNT = 6
 
-type ShareField = typeof SHARE_FIELDS_V3[number]
+type ShareField = typeof SHARE_FIELDS_V3[number] | typeof SHARE_FIELDS[number]
 
 const NUMBER_RANGES: Record<string, readonly [number, number, boolean?]> = {
   'core.seed': [1, 99999, true],
@@ -75,6 +88,11 @@ const NUMBER_RANGES: Record<string, readonly [number, number, boolean?]> = {
   'terrain.glacialErosion': [0, 1],
   'terrain.hydraulicErosion': [0, 1],
   'terrain.ridgeSharpening': [0, 1],
+  'society.populationScale': [0, 3],
+  'society.settlementDensity': [0, 2],
+  'society.urbanization': [0, 1],
+  'society.roadConnectivity': [0, 1],
+  'society.terrainResistance': [0, 2],
 }
 
 function readField(config: WorldConfig, [category, key]: ShareField): unknown {
@@ -131,18 +149,20 @@ export function createShareHash(config: WorldConfig): string {
 
   const payload = JSON.stringify([changedFields])
   const compressed = deflateSync(new TextEncoder().encode(payload))
-  return `#w=6.${toBase64Url(compressed)}`
+  return `#w=8.${toBase64Url(compressed)}`
 }
 
 export function applyShareHash(config: WorldConfig, hash: string): boolean {
-  const match = /^#w=([2-6])\.([\w-]+)$/.exec(hash)
+  const match = /^#w=([2-8])\.([\w-]+)$/.exec(hash)
   if (!match)
     return false
 
   try {
     const fields: readonly ShareField[] = match[1] === '2'
       ? LEGACY_SHARE_FIELDS
-      : match[1] === '3' ? SHARE_FIELDS_V3 : SHARE_FIELDS
+      : match[1] === '3' ? SHARE_FIELDS_V3
+        : match[1] === '7' ? SHARE_FIELDS_V7
+          : match[1] === '8' ? SHARE_FIELDS : SHARE_FIELDS_V6
     const compressed = fromBase64Url(match[2])
     const payload = JSON.parse(new TextDecoder().decode(inflateSync(compressed))) as unknown
     if (!Array.isArray(payload) || payload.length !== 1)
