@@ -6,7 +6,7 @@ export interface SceneLayer {
 }
 
 export class SceneLayerManager {
-  private readonly layers = new Set<SceneLayer>()
+  private readonly layers = new Map<string, SceneLayer>()
   private readonly scene: Scene
   private readonly canCreateLayer: () => boolean
 
@@ -18,28 +18,37 @@ export class SceneLayerManager {
     this.canCreateLayer = canCreateLayer
   }
 
-  replace<T extends SceneLayer>(current: T | null, create: () => T): T | null {
-    this.dispose(current)
+  replace<T extends SceneLayer>(id: string, create: () => T): T | null {
+    this.dispose(id)
     if (!this.canCreateLayer())
       return null
 
     const next = create()
     this.scene.add(next.group)
-    this.layers.add(next)
+    this.layers.set(id, next)
     return next
   }
 
-  dispose(layer: SceneLayer | null): void {
+  get<T extends SceneLayer>(id: string): T | null {
+    return (this.layers.get(id) as T | undefined) ?? null
+  }
+
+  dispose(id: string): void {
+    const layer = this.layers.get(id)
     if (!layer)
       return
 
     this.scene.remove(layer.group)
     layer.dispose()
-    this.layers.delete(layer)
+    this.layers.delete(id)
+  }
+
+  disposeMany(...ids: string[]): void {
+    for (const id of ids)
+      this.dispose(id)
   }
 
   disposeAll(): void {
-    for (const layer of [...this.layers])
-      this.dispose(layer)
+    this.disposeMany(...this.layers.keys())
   }
 }

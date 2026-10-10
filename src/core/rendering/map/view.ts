@@ -16,16 +16,8 @@ import {
 import { MapControls } from 'three/addons/controls/MapControls.js'
 import { getMapProjection } from '@/core/projections/d3-map-projection'
 import { FULL_LONGITUDE, wrapLongitude } from '@/core/projections/projection-math'
-import { SceneLayerManager } from '@/core/rendering/scene-layer-manager'
-import { MapCellBoundaryLayer } from '@/core/rendering/map/layers/map-cell-boundary-layer'
-import { MapCloudLayer } from '@/core/rendering/map/layers/map-cloud-layer'
-import { MapGraticuleLayer } from '@/core/rendering/map/layers/map-graticule-layer'
-import { MapLabelLayer } from '@/core/rendering/map/layers/map-label-layer'
-import { MapPolityBorderLayer } from '@/core/rendering/map/layers/map-polity-border-layer'
-import { MapRiverLayer } from '@/core/rendering/map/layers/map-river-layer'
-import { MapRouteLayer } from '@/core/rendering/map/layers/map-route-layer'
-import { MapSettlementLayer } from '@/core/rendering/map/layers/map-settlement-layer'
-import { MapClimateVectorLayer } from '@/core/rendering/map/layers/map-vector-layer'
+import type { MapLayerContext } from '@/core/rendering/map/layers/map-layer-set'
+import { MapLayerSet } from '@/core/rendering/map/layers/map-layer-set'
 import { MapPicker } from '@/core/rendering/map/picker'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
 import { buildSmoothedRegionCorners, getRegionSmoothingMode } from '@/core/rendering/shared/region-display'
@@ -54,21 +46,12 @@ export class MapView {
   private surfaceCopies: Mesh[] = []
   private mesh: SphericalMesh | null = null
   private data: WorldSimulationState | null = null
-  private readonly layerManager: SceneLayerManager
+  private readonly layers: MapLayerSet
   private params: WorldConfig
   private centralMeridian = 0
   private active = false
   private surfaceDirty = false
   private overlaysDirty = false
-  private settlementLayer: MapSettlementLayer | null = null
-  private labelLayerInstance: MapLabelLayer | null = null
-  private cloudLayer: MapCloudLayer | null = null
-  private riverLayer: MapRiverLayer | null = null
-  private vectorLayer: MapClimateVectorLayer | null = null
-  private routeLayer: MapRouteLayer | null = null
-  private cellBoundaryLayer: MapCellBoundaryLayer | null = null
-  private polityBorderLayer: MapPolityBorderLayer | null = null
-  private graticuleLayer: MapGraticuleLayer | null = null
   private selectedRegion = -1
   private smoothedRegionCorners: Float32Array | null = null
 
@@ -83,7 +66,7 @@ export class MapView {
   ) {
     this.canvas = canvas
     this.params = { ...params }
-    this.layerManager = new SceneLayerManager(this.scene, () => Boolean(this.mesh && this.data))
+    this.layers = new MapLayerSet(this.scene, () => this.getLayerContext())
     this.viewportWidth = Math.max(1, canvas.clientWidth)
     this.viewportHeight = Math.max(1, canvas.clientHeight)
     this.scene.background = new Color(0x07101F)
@@ -112,7 +95,7 @@ export class MapView {
     this.prepareRegionSmoothing()
     this.centralMeridian = this.chooseCentralMeridian(mesh, data)
     this.disposeSurface()
-    this.disposeOverlays()
+    this.layers.disposeAll()
     this.surfaceDirty = true
     this.overlaysDirty = true
     this.selectedRegion = -1
@@ -162,7 +145,7 @@ export class MapView {
     const settlementOverlaysChanged = oldOverlays.cities !== newOverlays.cities
       || oldOverlays['sacred-sites'] !== newOverlays['sacred-sites']
     if (settlementOverlaysChanged)
-      this.rebuildSettlementLayer()
+      this.layers.rebuild('settlements')
 
     const labelsChanged = modeChanged
       || settlementOverlaysChanged
@@ -171,25 +154,25 @@ export class MapView {
       || oldOverlays['ethnicity-labels'] !== newOverlays['ethnicity-labels']
       || oldOverlays['language-labels'] !== newOverlays['language-labels']
     if (labelsChanged)
-      this.rebuildLabelLayer()
+      this.layers.rebuild('labels')
 
     if (oldOverlays.clouds !== newOverlays.clouds)
-      this.rebuildCloudLayer()
+      this.layers.rebuild('clouds')
     if (oldOverlays.rivers !== newOverlays.rivers || regionSmoothingChanged)
-      this.rebuildRiverLayer()
+      this.layers.rebuild('rivers')
     if (oldOverlays.routes !== newOverlays.routes)
-      this.rebuildRouteLayer()
+      this.layers.rebuild('routes')
     if (oldOverlays.wireframe !== newOverlays.wireframe || regionSmoothingChanged)
-      this.rebuildCellBoundaryLayer()
+      this.layers.rebuild('cell-boundaries')
     if (oldOverlays['nation-borders'] !== newOverlays['nation-borders'] || politySmoothingChanged)
-      this.rebuildPolityBorderLayer()
+      this.layers.rebuild('polity-borders')
     if (oldOverlays.graticule !== newOverlays.graticule)
-      this.rebuildGraticuleLayer()
+      this.layers.rebuild('graticule')
 
     const vectorMode = (mode: string) => mode === 'wind' || mode === 'ocean-current'
     if ((modeChanged && (vectorMode(previousMode) || vectorMode(params.appearance.baseMap)))
       || (monthChanged && vectorMode(params.appearance.baseMap))) {
-      this.rebuildVectorLayer()
+      this.layers.rebuild('vectors')
     }
   }
 
@@ -210,7 +193,7 @@ export class MapView {
       return
 
     this.disposeSurface()
-    this.disposeOverlays()
+    this.layers.disposeAll()
     this.projection = projection
     this.surfaceDirty = true
     this.overlaysDirty = true
@@ -272,95 +255,6 @@ export class MapView {
     for (const surface of this.surfaceCopies)
       this.scene.add(surface)
     this.surfaceDirty = false
-  }
-
-  private rebuildOverlays(): void {
-    if (!this.mesh || !this.data)
-      return
-
-    this.rebuildSettlementLayer()
-    this.rebuildLabelLayer()
-    this.rebuildCloudLayer()
-    this.rebuildRiverLayer()
-    this.rebuildVectorLayer()
-    this.rebuildRouteLayer()
-    this.rebuildCellBoundaryLayer()
-    this.rebuildPolityBorderLayer()
-    this.rebuildGraticuleLayer()
-    this.overlaysDirty = false
-  }
-
-  private rebuildSettlementLayer(): void {
-    this.settlementLayer = this.layerManager.replace(
-      this.settlementLayer,
-      () => new MapSettlementLayer(this.mesh!, this.data!, this.params, this.projection, this.centralMeridian),
-    )
-  }
-
-  private rebuildLabelLayer(): void {
-    this.labelLayerInstance = this.layerManager.replace(
-      this.labelLayerInstance,
-      () => new MapLabelLayer(this.mesh!, this.data!, this.params, this.projection, this.centralMeridian),
-    )
-  }
-
-  private rebuildCloudLayer(): void {
-    this.cloudLayer = this.layerManager.replace(
-      this.cloudLayer,
-      () => new MapCloudLayer(this.mesh!, this.data!, this.params, this.projection, this.centralMeridian),
-    )
-  }
-
-  private rebuildRiverLayer(): void {
-    this.riverLayer = this.layerManager.replace(
-      this.riverLayer,
-      () => new MapRiverLayer(
-        this.mesh!, this.data!, this.params, this.projection, this.centralMeridian,
-        this.smoothedRegionCorners, this.viewportWidth, this.viewportHeight,
-      ),
-    )
-  }
-
-  private rebuildVectorLayer(): void {
-    this.vectorLayer = this.layerManager.replace(
-      this.vectorLayer,
-      () => new MapClimateVectorLayer(this.mesh!, this.data!, this.params, this.projection, this.centralMeridian),
-    )
-  }
-
-  private rebuildRouteLayer(): void {
-    this.routeLayer = this.layerManager.replace(
-      this.routeLayer,
-      () => new MapRouteLayer(this.mesh!, this.data!, this.params, this.projection, this.centralMeridian),
-    )
-  }
-
-  private rebuildCellBoundaryLayer(): void {
-    this.cellBoundaryLayer = this.layerManager.replace(
-      this.cellBoundaryLayer,
-      () => new MapCellBoundaryLayer(
-        this.mesh!, this.data!, this.params, this.projection, this.centralMeridian,
-        this.smoothedRegionCorners ?? null,
-      ),
-    )
-  }
-
-  private rebuildPolityBorderLayer(): void {
-    this.polityBorderLayer = this.layerManager.replace(
-      this.polityBorderLayer,
-      () => new MapPolityBorderLayer(
-        this.mesh!, this.data!, this.params, this.projection, this.centralMeridian,
-        this.smoothedRegionCorners ?? null, this.regionTopologyBuilder,
-        this.viewportWidth, this.viewportHeight,
-      ),
-    )
-  }
-
-  private rebuildGraticuleLayer(): void {
-    this.graticuleLayer = this.layerManager.replace(
-      this.graticuleLayer,
-      () => new MapGraticuleLayer(this.params, this.projection, this.centralMeridian),
-    )
   }
 
   private prepareRegionSmoothing(): void {
@@ -504,17 +398,12 @@ export class MapView {
       this.camera.bottom = -halfHeight
     }
     this.camera.updateProjectionMatrix()
-    this.riverLayer?.updateViewport(this.viewportWidth, this.viewportHeight)
-    this.vectorLayer?.updateViewport(this.viewportWidth, this.viewportHeight)
-    this.polityBorderLayer?.updateViewport(this.viewportWidth, this.viewportHeight)
+    this.layers.updateViewport(this.viewportWidth, this.viewportHeight)
   }
 
   update(): void {
     this.controls.update()
-    this.labelLayerInstance?.updateLOD(this.camera.zoom)
-    this.riverLayer?.updateWidthScale(this.camera.zoom)
-    this.vectorLayer?.updateLineWidth(this.camera.zoom)
-    this.polityBorderLayer?.updateLineWidth(this.camera.zoom)
+    this.layers.update(this.camera.zoom)
     const visibleHalfWidth = (this.camera.right - this.camera.left)
       / Math.max(this.camera.zoom * 2, Number.EPSILON)
     const maximumX = Math.max(0, this.projection.worldWidth * 0.5 - visibleHalfWidth)
@@ -548,7 +437,7 @@ export class MapView {
 
   destroy(): void {
     this.controls.dispose()
-    this.disposeOverlays()
+    this.layers.disposeAll()
     this.disposeSurface()
     this.selectionGroup.removeFromParent()
     this.selectionGroup.clear()
@@ -597,17 +486,26 @@ export class MapView {
       this.rebuildOverlays()
   }
 
-  private disposeOverlays(): void {
-    this.layerManager.disposeAll()
-    this.settlementLayer = null
-    this.labelLayerInstance = null
-    this.cloudLayer = null
-    this.riverLayer = null
-    this.vectorLayer = null
-    this.routeLayer = null
-    this.cellBoundaryLayer = null
-    this.polityBorderLayer = null
-    this.graticuleLayer = null
+  private rebuildOverlays(): void {
+    this.layers.rebuildAll()
+    this.overlaysDirty = false
+  }
+
+  private getLayerContext(): MapLayerContext | null {
+    if (!this.mesh || !this.data)
+      return null
+
+    return {
+      mesh: this.mesh,
+      data: this.data,
+      params: this.params,
+      projection: this.projection,
+      centralMeridian: this.centralMeridian,
+      smoothedRegionCorners: this.smoothedRegionCorners,
+      viewportWidth: this.viewportWidth,
+      viewportHeight: this.viewportHeight,
+      regionTopologyBuilder: this.regionTopologyBuilder,
+    }
   }
 
   private disposeSurface(): void {

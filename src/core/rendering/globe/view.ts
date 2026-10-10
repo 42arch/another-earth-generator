@@ -1,6 +1,3 @@
-import type {
-  ShaderMaterial,
-} from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
@@ -8,7 +5,6 @@ import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
   AmbientLight,
-  BufferAttribute,
   BufferGeometry,
   Color,
   DirectionalLight,
@@ -16,35 +12,22 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   PerspectiveCamera,
-  Points,
   Scene,
   SphereGeometry,
   SRGBColorSpace,
-  Vector3,
   WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { elevationKmToDisplayCoordinate } from '@/core/geography/elevation-units'
-import { SceneLayerManager } from '@/core/rendering/scene-layer-manager'
-import { Atmosphere } from '@/core/rendering/globe/atmosphere'
-import { GlobeCellBoundaryLayer } from '@/core/rendering/globe/layers/globe-cell-boundary-layer'
-import { GlobeCloudLayer } from '@/core/rendering/globe/layers/globe-cloud-layer'
-import { GlobeGraticuleLayer } from '@/core/rendering/globe/layers/globe-graticule-layer'
-import { GlobePolityBorderLayer } from '@/core/rendering/globe/layers/globe-polity-border-layer'
-import { GlobeRiverLayer } from '@/core/rendering/globe/layers/globe-river-layer'
-import { GlobeRouteLayer } from '@/core/rendering/globe/layers/globe-route-layer'
-import { GlobeClimateVectorLayer } from '@/core/rendering/globe/layers/globe-vector-layer'
-import { GlobeWaterLayer } from '@/core/rendering/globe/layers/globe-water-layer'
+import type { GlobeLayerContext } from '@/core/rendering/globe/layers/globe-layer-set'
+import { GlobeLayerSet } from '@/core/rendering/globe/layers/globe-layer-set'
 import { GlobePicker } from '@/core/rendering/globe/picker'
 import { Stars } from '@/core/rendering/globe/stars'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
 import { MapView } from '@/core/rendering/map/view'
 import { buildSmoothedRegionCorners, getRegionSmoothingMode } from '@/core/rendering/shared/region-display'
-import { createMapMarkerMaterial } from '@/core/rendering/shared/settlement-marker-material'
 import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
 import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
-import { GlobeLabelLayer } from './globe-label-layer'
-import { GlobeSettlementLayer } from './globe-settlement-layer'
 
 const TERRAIN_VERTICAL_SCALE = 0.04
 const OCEAN_DEPTH_SCALE = 0.3
@@ -65,24 +48,11 @@ export class GlobeView {
   private readonly sunlight: DirectionalLight
 
   private surface: Mesh<BufferGeometry, MeshLambertMaterial> | null = null
-  private settlementLayer: Points<BufferGeometry, ShaderMaterial> | null = null
-  private sacredSiteLayer: Points<BufferGeometry, ShaderMaterial> | null = null
-  private globeSettlementLayer: GlobeSettlementLayer | null = null
-  private atmosphereLayer: Atmosphere | null = null
   private starsLayer: Stars | null = null
 
-  private labelLayerInstance: GlobeLabelLayer | null = null
-  private routeLayerInstance: GlobeRouteLayer | null = null
-  private cellBoundaryLayerInstance: GlobeCellBoundaryLayer | null = null
-  private polityBorderLayerInstance: GlobePolityBorderLayer | null = null
-  private graticuleLayerInstance: GlobeGraticuleLayer | null = null
-  private riverLayerInstance: GlobeRiverLayer | null = null
-  private cloudLayerInstance: GlobeCloudLayer | null = null
-  private vectorLayerInstance: GlobeClimateVectorLayer | null = null
-  private waterLayerInstance: GlobeWaterLayer | null = null
   private mesh: SphericalMesh | null = null
   private data: WorldSimulationState | null = null
-  private readonly layerManager: SceneLayerManager
+  private readonly layers: GlobeLayerSet
   private params: WorldConfig
   private pointerStartX = 0
   private pointerStartY = 0
@@ -100,7 +70,7 @@ export class GlobeView {
     this.canvas = canvas
     this.onRegionSelected = onRegionSelected
     this.params = { ...params }
-    this.layerManager = new SceneLayerManager(this.scene, () => Boolean(this.mesh && this.data))
+    this.layers = new GlobeLayerSet(this.scene, () => this.getLayerContext())
     this.renderer = new WebGLRenderer({ canvas, antialias: true })
     this.mapView = new MapView(canvas, params)
     this.renderer.outputColorSpace = SRGBColorSpace
@@ -170,11 +140,10 @@ export class GlobeView {
       ),
     )
     this.scene.add(this.surface)
-    this.rebuildAtmosphere()
     this.mapView.setWorld(mesh, data, params)
     this.selectionMarker.visible = false
     this.updateLighting(params)
-    this.rebuildOverlays()
+    this.layers.rebuildAll()
   }
 
   updateAppearance(params: WorldConfig): void {
@@ -213,38 +182,40 @@ export class GlobeView {
     this.updateLighting(params)
 
     if (oldOverlays.atmosphere !== newOverlays.atmosphere) {
-      this.rebuildAtmosphere()
-      this.rebuildWaterLayer()
+      this.layers.rebuild('atmosphere')
+      this.layers.rebuild('water')
     }
 
     if (oldOverlays.clouds !== newOverlays.clouds)
-      this.rebuildCloudLayer()
+      this.layers.rebuild('clouds')
     if (oldOverlays.graticule !== newOverlays.graticule)
-      this.rebuildGraticuleLayer()
+      this.layers.rebuild('graticule')
     if (oldOverlays.rivers !== newOverlays.rivers)
-      this.rebuildRiverLayer()
+      this.layers.rebuild('rivers')
     if (oldOverlays.routes !== newOverlays.routes || overlayLightingChanged)
-      this.rebuildRouteLayer()
+      this.layers.rebuild('routes')
     if (oldOverlays['nation-borders'] !== newOverlays['nation-borders'] || overlayLightingChanged)
-      this.rebuildPolityBorderLayer()
+      this.layers.rebuild('polity-borders')
     if (oldOverlays.wireframe !== newOverlays.wireframe)
-      this.rebuildCellBoundaryLayer()
+      this.layers.rebuild('cell-boundaries')
     const vectorMode = (mode: string) => mode === 'wind' || mode === 'ocean-current'
     if ((modeChanged && (vectorMode(previousMode) || vectorMode(params.appearance.baseMap)))
       || (monthChanged && vectorMode(params.appearance.baseMap))) {
-      this.rebuildVectorLayer()
+      this.layers.rebuild('vectors')
     }
 
     if (oldOverlays['sacred-sites'] !== newOverlays['sacred-sites'] || overlayLightingChanged)
-      this.rebuildSacredSites()
-    if (oldOverlays.cities !== newOverlays.cities || overlayLightingChanged)
-      this.rebuildSettlementLayer()
+      this.layers.rebuild('sacred-sites')
+    if (oldOverlays.cities !== newOverlays.cities || overlayLightingChanged) {
+      this.layers.rebuild('settlement-markers')
+      this.layers.rebuild('settlement-labels')
+    }
     const labelOverlaysChanged = oldOverlays['nation-labels'] !== newOverlays['nation-labels']
       || oldOverlays['religion-labels'] !== newOverlays['religion-labels']
       || oldOverlays['ethnicity-labels'] !== newOverlays['ethnicity-labels']
       || oldOverlays['language-labels'] !== newOverlays['language-labels']
     if (labelOverlaysChanged || modeChanged)
-      this.rebuildLabels()
+      this.layers.rebuild('labels')
   }
 
   selectRegion(region: number): void {
@@ -302,12 +273,9 @@ export class GlobeView {
     this.controls.dispose()
     this.mapView.destroy()
     this.disposeSurface()
-    this.disposeAtmosphere()
-    this.disposeEnvironmentLayers()
-    this.disposeSettlementLayer()
-    this.disposeSacredSites()
-    this.disposeLabels()
-    this.layerManager.dispose(this.starsLayer)
+    this.layers.disposeAll()
+    if (this.starsLayer)
+      this.starsLayer.dispose()
     this.starsLayer = null
     this.selectionMarker.geometry.dispose()
     this.selectionMarker.material.dispose()
@@ -356,285 +324,10 @@ export class GlobeView {
     }
   }
 
-  private rebuildOverlays(): void {
-    this.rebuildEnvironmentLayers()
-    this.rebuildLabels()
-    this.rebuildSettlementLayer()
-    this.rebuildSacredSites()
-  }
-
-  private rebuildEnvironmentLayers(): void {
-    this.rebuildWaterLayer()
-    this.rebuildVectorLayer()
-    this.rebuildCloudLayer()
-    this.rebuildRiverLayer()
-    this.rebuildRouteLayer()
-    this.rebuildCellBoundaryLayer()
-    this.rebuildPolityBorderLayer()
-    this.rebuildGraticuleLayer()
-  }
-
-  private rebuildWaterLayer(): void {
-    this.waterLayerInstance = this.layerManager.replace(
-      this.waterLayerInstance,
-      () => new GlobeWaterLayer(this.mesh!, this.data!, this.params, this.usesElevationGeometry(this.params)),
-    )
-  }
-
-  private rebuildVectorLayer(): void {
-    this.vectorLayerInstance = this.layerManager.replace(
-      this.vectorLayerInstance,
-      () => new GlobeClimateVectorLayer(this.mesh!, this.data!, this.params),
-    )
-  }
-
-  private rebuildCloudLayer(): void {
-    this.cloudLayerInstance = this.layerManager.replace(
-      this.cloudLayerInstance,
-      () => new GlobeCloudLayer(
-        this.mesh!, this.data!, this.params,
-        this.getTerrainVerticalScale(this.params.core.planetRadius),
-        this.usesElevationGeometry(this.params),
-      ),
-    )
-  }
-
-  private rebuildRiverLayer(): void {
-    this.riverLayerInstance = this.layerManager.replace(
-      this.riverLayerInstance,
-      () => new GlobeRiverLayer(
-        this.mesh!, this.data!, this.params, this.smoothedRegionCorners ?? null,
-        this.getTerrainVerticalScale(this.params.core.planetRadius),
-        this.usesElevationGeometry(this.params),
-      ),
-    )
-  }
-
-  private rebuildRouteLayer(): void {
-    this.routeLayerInstance = this.layerManager.replace(
-      this.routeLayerInstance,
-      () => new GlobeRouteLayer(
-        this.mesh!, this.data!, this.params,
-        this.getTerrainVerticalScale(this.params.core.planetRadius),
-        this.usesElevationGeometry(this.params),
-        this.params.appearance.overlays['day-night']
-          ? [this.sunlight.position.x, this.sunlight.position.y, this.sunlight.position.z]
-          : undefined,
-      ),
-    )
-  }
-
-  private rebuildCellBoundaryLayer(): void {
-    this.cellBoundaryLayerInstance = this.layerManager.replace(
-      this.cellBoundaryLayerInstance,
-      () => new GlobeCellBoundaryLayer(
-        this.mesh!, this.data!, this.params,
-        this.getTerrainVerticalScale(this.params.core.planetRadius),
-        this.usesElevationGeometry(this.params), this.smoothedRegionCorners ?? null,
-      ),
-    )
-  }
-
-  private rebuildPolityBorderLayer(): void {
-    this.polityBorderLayerInstance = this.layerManager.replace(
-      this.polityBorderLayerInstance,
-      () => new GlobePolityBorderLayer(
-        this.mesh!, this.data!, this.params,
-        this.getTerrainVerticalScale(this.params.core.planetRadius),
-        this.usesElevationGeometry(this.params), this.smoothedRegionCorners ?? null,
-        this.regionTopologyBuilder, this.canvas.clientWidth, this.canvas.clientHeight,
-        this.sunlight.position,
-      ),
-    )
-  }
-
-  private rebuildGraticuleLayer(): void {
-    this.graticuleLayerInstance = this.layerManager.replace(
-      this.graticuleLayerInstance,
-      () => new GlobeGraticuleLayer(
-        this.params,
-        this.getTerrainVerticalScale(this.params.core.planetRadius),
-        this.usesElevationGeometry(this.params),
-      ),
-    )
-  }
-
-  private disposeEnvironmentLayers(): void {
-    this.layerManager.disposeAll()
-    this.riverLayerInstance = null
-    this.cloudLayerInstance = null
-    this.vectorLayerInstance = null
-    this.waterLayerInstance = null
-    this.routeLayerInstance = null
-    this.cellBoundaryLayerInstance = null
-    this.polityBorderLayerInstance = null
-    this.graticuleLayerInstance = null
-  }
-
-  private rebuildSettlementLayer(): void {
-    this.disposeSettlementLayer()
-    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.society)
-      return
-    const data = this.data
-    const settlements = data.society!.settlements
-    if (settlements.length === 0)
-      return
-    const positions = new Float32Array(settlements.length * 3)
-    const colors = new Float32Array(settlements.length * 3)
-    const markerLevels = new Float32Array(settlements.length)
-    const palette = { village: 0xB7E4B3, town: 0xF4D777, city: 0xFFAE59, metropolis: 0xFF665C }
-    const level = { village: 0, town: 1, city: 2, metropolis: 3 }
-    for (const settlement of settlements) {
-      const region = settlement.region
-      const elevation = elevationKmToDisplayCoordinate(data.geography.elevation[region])
-      const offset = this.usesElevationGeometry(this.params)
-        ? elevation * this.getTerrainVerticalScale(this.params.core.planetRadius)
-        : 0
-      const radius = this.params.core.planetRadius + offset + 0.22
-      const source = region * 3
-      const target = settlement.id * 3
-      positions[target] = this.mesh.regionPosition[source] * radius
-      positions[target + 1] = this.mesh.regionPosition[source + 1] * radius
-      positions[target + 2] = this.mesh.regionPosition[source + 2] * radius
-      const color = new Color(palette[settlement.rank])
-      colors[target] = color.r
-      colors[target + 1] = color.g
-      colors[target + 2] = color.b
-      markerLevels[settlement.id] = level[settlement.rank]
-    }
-    const geometry = new BufferGeometry()
-    geometry.setAttribute('position', new BufferAttribute(positions, 3))
-    geometry.setAttribute('color', new BufferAttribute(colors, 3))
-    geometry.setAttribute('markerLevel', new BufferAttribute(markerLevels, 1))
-    this.settlementLayer = new Points(geometry, createMapMarkerMaterial(
-      true,
-      this.params.appearance.overlays['day-night'],
-      this.sunlight.position,
-    ))
-    this.settlementLayer.renderOrder = 8
-    this.settlementLayer.visible = false
-    this.scene.add(this.settlementLayer)
-
-    // 创建全新 3D 聚落名牌图层（内置官方 Maki 矢量图标 + 聚落名称 + 3级动态 LOD）
-    this.globeSettlementLayer = new GlobeSettlementLayer(
-      this.mesh,
-      this.data,
-      this.params,
-      this.getTerrainVerticalScale(this.params.core.planetRadius),
-    )
-    this.scene.add(this.globeSettlementLayer.group)
-  }
-
-  private disposeSettlementLayer(): void {
-    if (this.globeSettlementLayer) {
-      this.scene.remove(this.globeSettlementLayer.group)
-      this.globeSettlementLayer.dispose()
-      this.globeSettlementLayer = null
-    }
-    if (!this.settlementLayer)
-      return
-    this.scene.remove(this.settlementLayer)
-    this.settlementLayer.geometry.dispose()
-    this.settlementLayer.material.dispose()
-    this.settlementLayer = null
-  }
-
-  private rebuildSacredSites(): void {
-    this.disposeSacredSites()
-    if (!this.params.appearance.overlays['sacred-sites'] || !this.mesh || !this.data?.society?.religions)
-      return
-    const sites = this.data.society.religions.sacredSites
-    if (sites.length === 0)
-      return
-    const positions = new Float32Array(sites.length * 3)
-    const colors = new Float32Array(sites.length * 3)
-    const markerLevels = new Float32Array(sites.length).fill(2)
-    const color = new Color(0xEAC2FF)
-    for (const site of sites) {
-      const region = site.region
-      const source = region * 3
-      const elevation = elevationKmToDisplayCoordinate(this.data.geography.elevation[region])
-      const offset = this.usesElevationGeometry(this.params)
-        ? elevation * this.getTerrainVerticalScale(this.params.core.planetRadius)
-        : 0
-      const radius = this.params.core.planetRadius + offset + 0.22
-      const target = site.id * 3
-      positions[target] = this.mesh.regionPosition[source] * radius
-      positions[target + 1] = this.mesh.regionPosition[source + 1] * radius
-      positions[target + 2] = this.mesh.regionPosition[source + 2] * radius
-      colors[target] = color.r
-      colors[target + 1] = color.g
-      colors[target + 2] = color.b
-    }
-    const geometry = new BufferGeometry()
-    geometry.setAttribute('position', new BufferAttribute(positions, 3))
-    geometry.setAttribute('color', new BufferAttribute(colors, 3))
-    geometry.setAttribute('markerLevel', new BufferAttribute(markerLevels, 1))
-    this.sacredSiteLayer = new Points(geometry, createMapMarkerMaterial(
-      true,
-      this.params.appearance.overlays['day-night'],
-      this.sunlight.position,
-    ))
-    this.sacredSiteLayer.renderOrder = 9
-    this.sacredSiteLayer.visible = false
-    this.scene.add(this.sacredSiteLayer)
-  }
-
-  private disposeSacredSites(): void {
-    if (!this.sacredSiteLayer)
-      return
-    this.scene.remove(this.sacredSiteLayer)
-    this.sacredSiteLayer.geometry.dispose()
-    this.sacredSiteLayer.material.dispose()
-    this.sacredSiteLayer = null
-  }
-
   private pickSettlement(event: PointerEvent): number | null {
-    if (!this.settlementLayer || !this.mesh || !this.data?.society)
+    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.society)
       return null
-    const rect = this.canvas.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
-    const positions = this.settlementLayer.geometry.getAttribute('position')
-    const point = new Vector3()
-    let nearest = 10 * 10
-    let chosen: number | null = null
-    for (let id = 0; id < positions.count; id++) {
-      point.fromBufferAttribute(positions, id)
-      if (point.dot(this.camera.position) <= point.lengthSq())
-        continue
-      const projected = point.clone().project(this.camera)
-      if (projected.z < -1 || projected.z > 1)
-        continue
-      const dx = (projected.x + 1) * rect.width / 2 - x
-      const dy = (1 - projected.y) * rect.height / 2 - y
-      const distance = dx * dx + dy * dy
-      if (distance < nearest) {
-        nearest = distance
-        chosen = id
-      }
-    }
-    return chosen
-  }
-
-  private rebuildLabels(): void {
-    this.disposeLabels()
-    if (!this.mesh || !this.data?.society)
-      return
-
-    this.labelLayerInstance = new GlobeLabelLayer(
-      this.mesh,
-      this.data,
-      this.params,
-      this.getTerrainVerticalScale(this.params.core.planetRadius),
-    )
-    if (this.labelLayerInstance)
-      this.scene.add(this.labelLayerInstance.group)
-  }
-
-  private disposeLabels(): void {
-    this.layerManager.dispose(this.labelLayerInstance)
-    this.labelLayerInstance = null
+    return this.layers.pickSettlement(event, this.canvas, this.camera)
   }
 
   private prepareRegionSmoothing(): void {
@@ -649,6 +342,21 @@ export class GlobeView {
     )
   }
 
+  private getLayerContext(): GlobeLayerContext | null {
+    if (!this.mesh || !this.data)
+      return null
+
+    return {
+      mesh: this.mesh,
+      data: this.data,
+      params: this.params,
+      smoothedRegionCorners: this.smoothedRegionCorners,
+      regionTopologyBuilder: this.regionTopologyBuilder,
+      canvas: this.canvas,
+      sunlight: this.sunlight.position,
+    }
+  }
+
   private disposeSurface(): void {
     if (this.surface) {
       this.scene.remove(this.surface)
@@ -656,23 +364,6 @@ export class GlobeView {
       this.surface.material.dispose()
       this.surface = null
     }
-  }
-
-  private disposeAtmosphere(): void {
-    if (this.atmosphereLayer) {
-      this.scene.remove(this.atmosphereLayer.group)
-      this.atmosphereLayer.dispose()
-      this.atmosphereLayer = null
-    }
-  }
-
-  private rebuildAtmosphere(): void {
-    this.disposeAtmosphere()
-    if (this.isElevationColorMode(this.params.appearance.baseMap) || !this.params.appearance.overlays.atmosphere)
-      return
-
-    this.atmosphereLayer = new Atmosphere(this.params.core.planetRadius)
-    this.scene.add(this.atmosphereLayer.group)
   }
 
   private createSurface(
@@ -702,7 +393,7 @@ export class GlobeView {
     const width = Math.max(1, this.canvas.clientWidth)
     const height = Math.max(1, this.canvas.clientHeight)
     this.renderer.setSize(width, height, false)
-    this.polityBorderLayerInstance?.updateViewport(width, height)
+    this.layers.updateViewport(width, height)
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
     this.mapView.resize(width, height)
@@ -758,9 +449,7 @@ export class GlobeView {
     }
     this.controls.update()
     const distance = this.camera.position.distanceTo(this.controls.target)
-    if (this.globeSettlementLayer) {
-      this.globeSettlementLayer.updateLOD(distance)
-    }
+    this.layers.updateSettlementLOD(distance)
     this.renderer.render(this.scene, this.camera)
   }
 }

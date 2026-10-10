@@ -27,22 +27,6 @@
   - **前端交互**: **Svelte 5** (Runes), **TailwindCSS v4**, **Bits UI**
   - **质量保证**: **Vitest**, **ESLint** (`@antfu/eslint-config`)
 
-## 代码结构导航
-
-- **`src/core/spherical/` (球面物理与生成核心)**:
-  - `mesh/`: 基于正二十面体细分 (Icosphere) 与 `d3-geo-voronoi` 构建的球面拓扑网格。
-  - `algorithms/`: 跨领域的图算法，如寻路、距离场、优先队列与影响力扩散。
-  - `geology/`、`climate/`、`hydrology/`、`geography/`、`society/`: 按领域存放生成器、数据契约与领域常量。
-  - `spherical-world-generator.ts`: 全球要素生成总调度流水线。
-- **`src/core/world/` (世界协调层)**:
-  - `world-engine.ts`: 协调世界生成、视图切换、渲染更新与 UI 回调。
-- **`src/core/rendering/` (渲染管线)**:
-  - `globe/`: Three.js 3D 地球视图的渲染器、拾取、标签及图层几何。
-  - `map/`: 2D 投影视图及其拾取、标签和带状线几何。
-  - `shared/`: 两种视图共享的颜色映射、等高线、经纬网、风场与球面线几何。
-- **`src/ui/` (Svelte 5 HUD 交互)**:
-  - `hud/`: 游戏风格悬浮控制面板（图层栏、信息检查器、操作栏、百科抽屉等）。
-  - `state/ui-state.svelte.ts`: 全局响应式状态管理。
 
 ## 文档索引 (Single Source of Truth)
 项目算法原理与技术方案以 `docs/` 为准。在进行具体要素开发或排查时，请主动阅读相关文档：
