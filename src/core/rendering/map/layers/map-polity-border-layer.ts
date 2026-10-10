@@ -8,7 +8,9 @@ import { Line2 } from 'three/addons/lines/Line2.js'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { cartesianToGeographic, unwrapLongitudeNear, wrapLongitude } from '@/core/projections/projection-math'
+import { clipSegmentParameterRange } from '@/core/math/segment-clipping'
 import { createPolityBorderPaths, createPolitySmoothedCornerPositions } from '@/core/rendering/shared/polity-border-geometry'
+import { getRegionSmoothingMode } from '@/core/rendering/shared/region-display'
 
 const FULL_LONGITUDE = Math.PI * 2
 
@@ -48,7 +50,7 @@ export class MapPolityBorderLayer {
       return
     }
 
-    const smoothedCorners = this.getRegionSmoothingMode(params) === 'polities' && smoothedRegionCorners
+    const smoothedCorners = getRegionSmoothingMode(params.appearance.baseMap) === 'polities' && smoothedRegionCorners
       ? smoothedRegionCorners
       : createPolitySmoothedCornerPositions(mesh, data, regionTopologyBuilder)
 
@@ -95,20 +97,25 @@ export class MapPolityBorderLayer {
         for (let index = 1; index < geographic.length; index++) {
           const start = { ...geographic[index - 1], longitude: geographic[index - 1].longitude + worldOffset }
           const end = { ...geographic[index], longitude: geographic[index].longitude + worldOffset }
-          const clipped = clipBorderSegment(
-            start,
-            end,
+          const clippedRange = clipSegmentParameterRange(
+            { x: start.longitude, y: start.latitude },
+            { x: end.longitude, y: end.latitude },
             -Math.PI,
             Math.PI,
             projection.minimumLatitude,
             projection.maximumLatitude,
           )
-          if (!clipped) {
+          if (!clippedRange) {
             if (current.length >= 2)
               fragments.push(current)
             current = []
             continue
           }
+          const interpolate = (amount: number) => ({
+            longitude: start.longitude + (end.longitude - start.longitude) * amount,
+            latitude: start.latitude + (end.latitude - start.latitude) * amount,
+          })
+          const clipped = [interpolate(clippedRange[0]), interpolate(clippedRange[1])] as const
           const projectedStart = projection.projectRelative(clipped[0].longitude, clipped[0].latitude)
           const projectedEnd = projection.projectRelative(clipped[1].longitude, clipped[1].latitude)
           if (!projectedStart || !projectedEnd) {
@@ -159,13 +166,6 @@ export class MapPolityBorderLayer {
     }
   }
 
-  private getRegionSmoothingMode(params: WorldConfig): string | null {
-    const mode = params.appearance.baseMap
-    if (mode === 'polities' || mode === 'polities-smoothed')
-      return 'polities'
-    return null
-  }
-
   updateLineWidth(zoom: number): void {
     if (this.material) {
       this.material.linewidth = Math.max(1.0, 3.4 / Math.sqrt(zoom))
@@ -184,40 +184,4 @@ export class MapPolityBorderLayer {
     this.geometries = []
     this.material?.dispose()
   }
-}
-
-function clipBorderSegment(
-  start: { longitude: number, latitude: number },
-  end: { longitude: number, latitude: number },
-  minimumLongitude: number,
-  maximumLongitude: number,
-  minimumLatitude: number,
-  maximumLatitude: number,
-): readonly [{ longitude: number, latitude: number }, { longitude: number, latitude: number }] | null {
-  let minimumAmount = 0
-  let maximumAmount = 1
-  const axes = [
-    [start.longitude, end.longitude - start.longitude, minimumLongitude, maximumLongitude],
-    [start.latitude, end.latitude - start.latitude, minimumLatitude, maximumLatitude],
-  ] as const
-  for (const [origin, difference, minimum, maximum] of axes) {
-    if (Math.abs(difference) <= Number.EPSILON) {
-      if (origin < minimum || origin > maximum)
-        return null
-      continue
-    }
-    const amountA = (minimum - origin) / difference
-    const amountB = (maximum - origin) / difference
-    minimumAmount = Math.max(minimumAmount, Math.min(amountA, amountB))
-    maximumAmount = Math.min(maximumAmount, Math.max(amountA, amountB))
-    if (minimumAmount > maximumAmount)
-      return null
-  }
-  if (maximumAmount - minimumAmount <= 1e-12)
-    return null
-  const interpolate = (amount: number) => ({
-    longitude: start.longitude + (end.longitude - start.longitude) * amount,
-    latitude: start.latitude + (end.latitude - start.latitude) * amount,
-  })
-  return [interpolate(minimumAmount), interpolate(maximumAmount)]
 }

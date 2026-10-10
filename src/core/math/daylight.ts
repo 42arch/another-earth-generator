@@ -1,3 +1,5 @@
+import { smoothstep } from '@/core/math/math'
+
 /** Returns a subdued but visible night brightness with a soft twilight transition. */
 export function getSurfaceDaylight(
   x: number,
@@ -13,7 +15,6 @@ export function getSurfaceDaylight(
     return 0.045
 
   const cosine = (x * sunX + y * sunY + z * sunZ) / (positionLength * sunLength)
-  const amount = Math.max(0, Math.min(1, (cosine + 0.12) / 0.24))
-  const twilight = amount * amount * (3 - 2 * amount)
+  const twilight = smoothstep(-0.12, 0.12, cosine)
   return 0.045 + twilight * 0.955
 }

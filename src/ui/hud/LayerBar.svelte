@@ -18,8 +18,9 @@
     HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
   } from '@/core/rendering/shared/heightmap-color-scale'
   import { getBaseMaps, getOverlays } from '@/core/world/layer-registry'
-  import { formatLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
+  import { hasLayerStatistics } from '@/core/world/layer-statistics'
   import Checkbox from '@/ui/components/Checkbox.svelte'
+  import { formatLayerStatistics, getLayerIcon, getLayerStatisticColor } from '@/ui/hud/layer-presentation'
   import { appState } from '@/ui/state/app.svelte'
 
   const numberFormat = new Intl.NumberFormat('zh-CN')
@@ -102,7 +103,7 @@
       <div class='flex flex-col gap-1.5'>
         <div class='grid grid-cols-4 gap-1'>
           {#each getBaseMaps().filter(m => !m.id.endsWith('-smoothed')) as item}
-            {@const Icon = item.icon}
+            {@const Icon = getLayerIcon(item.id)}
             {@const isActive = appState.params.appearance.baseMap.replace('-smoothed', '') === item.id}
             <button
               type='button'
@@ -358,16 +359,17 @@
               </div>
               <div class='flex flex-col px-1.5 py-1.5'>
                 {#each appState.layerStatistics.rows as item (item.key)}
+                  {@const color = getLayerStatisticColor(appState.layerStatistics.mode, item)}
                   <div class='rounded-md px-1.5 py-1.5 hover:bg-white/[0.04]'>
                     <div class='flex items-center gap-2 text-[10px]'>
-                      <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={item.color}></span>
+                      <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={color}></span>
                       <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
                       <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(appState.layerStatistics.measure === 'people' ? Math.round(item.count) : item.count)}</span>
                       <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
                     </div>
                     {#if item.areaKm2 !== undefined}<div class='ml-4 text-[9px] text-obs-text-dim'>面积 {numberFormat.format(Math.round(item.areaKm2))} km²</div>{/if}
                     <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
-                      <div class='h-full rounded-full' style:background-color={item.color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
+                      <div class='h-full rounded-full' style:background-color={color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
                     </div>
                   </div>
                 {/each}

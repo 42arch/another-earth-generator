@@ -1,74 +1,12 @@
 import type { MapProjectionId } from '@/core/projections/map-projection'
 import type { WorldViewMode } from '@/core/rendering/view-mode'
 import type { WorldConfig } from '@/core/simulation/config'
-import type { Settlement, TransportRoute } from '@/core/society/society-data'
 import type { LayerStatistics } from '@/core/world/layer-statistics'
+import type { SelectedRegionInfo, WorldSummaryInfo } from '@/core/world/world-info'
 import type WorldEngine from '@/core/world/world-engine'
 import { tick } from 'svelte'
 import { applyShareHash, createShareHash } from '@/core/sharing/share-link'
 import { cloneWorldConfig, DEFAULT_WORLD_CONFIG } from '@/core/simulation/config'
-
-export interface SelectedRegionInfo {
-  region: number
-  latitude: number
-  longitude: number
-  elevation: number
-  plate: number
-  plateDetail: number
-  continent?: number
-  geometricFlowCount?: number
-  koppenLabel?: string
-  biomeLabel?: string
-  aridityIndex?: number
-  growingSeasonMonths?: number
-  isLand?: boolean
-  annualTemperatureC?: number
-  annualPrecipitationMm?: number
-  monthlyTemperatureC?: number[]
-  monthlyPrecipitationMm?: number[]
-  vectorKind?: 'wind' | 'ocean-current'
-  vectorEast?: number
-  vectorNorth?: number
-  vectorWarmth?: number
-  habitability?: number
-  population?: number
-  populationDensity?: number
-  ethnicComposition?: Array<{ name: string, population: number, share: number, originRegion: number, languageName: string }>
-  languageComposition?: Array<{ name: string, population: number, share: number, familyName: string }>
-  religiousComposition?: Array<{ name: string, population: number, share: number, originName?: string, parentName?: string }>
-  sacredSiteNames?: string[]
-  polityName?: string
-  polityForm?: string
-  capitalName?: string
-  officialLanguageName?: string
-  controlStrength?: number
-  districtName?: string
-  patronReligionName?: string
-  settlement?: Settlement
-  route?: TransportRoute
-  routeFromName?: string
-  routeToName?: string
-  nearestMarketName?: string
-  marketCostKm?: number
-  marketAccess?: number
-  isPort?: boolean
-}
-
-export interface WorldSummaryInfo {
-  regionCount: number
-  triangleCount: number
-  plateCount: number
-  totalPopulation: number
-  settlementCount: number
-  roadCount: number
-  seaRouteCount: number
-  ethnicGroupCount: number
-  languageCount: number
-  polityCount: number
-  districtCount: number
-  religionCount: number
-  sacredSiteCount: number
-}
 
 export class AppState {
   engine: WorldEngine | null = null

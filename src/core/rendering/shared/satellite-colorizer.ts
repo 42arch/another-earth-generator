@@ -1,17 +1,12 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldSimulationState } from '@/core/simulation/state'
-import { clamp } from '@/core/math/math'
+import { clamp, smoothstep } from '@/core/math/math'
 
 type Rgb = readonly [number, number, number]
 
 const EARTH_RADIUS_KM = 6371
 const ROCK_COLOR: Rgb = [0.39, 0.37, 0.33]
 const SNOW_COLOR: Rgb = [0.83, 0.87, 0.9]
-
-function smoothstep(edge0: number, edge1: number, value: number): number {
-  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1)
-  return t * t * (3 - 2 * t)
-}
 
 /** Creates natural-looking surface colors from continuous climate and terrain fields. */
 export class SatelliteColorizer {

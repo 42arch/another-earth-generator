@@ -36,7 +36,6 @@
     "simplex-noise": "^4.0.3",
     "three": "^0.185.1",
     "troika-three-text": "^0.52.5",
-    "tweakpane": "^4.0.5",
     "workbox-window": "^7.4.1"
   },
   "devDependencies": {
@@ -44,7 +43,6 @@
     "@changesets/cli": "^3.0.3",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@tweakpane/core": "^2.0.5",
     "@types/d3-geo": "^3.1.1",
     "@types/d3-scale-chromatic": "^3.1.0",
     "@types/delaunator": "^5.0.3",

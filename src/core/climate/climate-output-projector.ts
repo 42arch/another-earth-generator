@@ -2,7 +2,7 @@ import type { ClimateData, ClimateOutputProjectionData } from '@/core/climate/cl
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { GeographyData } from '@/core/simulation/state'
 import { CLIMATE_MONTH_COUNT } from '@/core/climate/climate-data'
-import { clamp } from '@/core/climate/climate-geometry'
+import { clamp } from '@/core/math/math'
 import { interpolateMonthlyForcing } from '@/core/climate/monthly-forcing'
 import { makeMonthlyWind } from '@/core/climate/monthly-precipitation-generator'
 import { makeElevationGradients } from '@/core/climate/monthly-spatial-fields'

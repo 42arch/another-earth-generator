@@ -3,20 +3,6 @@ import type SphericalMesh from '@/core/mesh/mesh'
 export const DEG = Math.PI / 180
 export const EARTH_RADIUS_KM = 6371
 
-export function clamp(value: number, low: number, high: number): number {
-  return Math.max(low, Math.min(high, value))
-}
-
-export function smoothstep(low: number, high: number, value: number): number {
-  const t = clamp((value - low) / (high - low), 0, 1)
-  return t * t * (3 - 2 * t)
-}
-
-export function gaussian(distance: number, width: number): number {
-  const x = distance / width
-  return Math.exp(-0.5 * x * x)
-}
-
 /** Graph distance from the seed regions, constrained to the specified mask. */
 export function graphDistance(mesh: SphericalMesh, allowed: Uint8Array, seeds: Uint8Array): Int32Array {
   const distance = new Int32Array(mesh.numRegions).fill(-1)

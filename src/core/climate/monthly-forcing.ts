@@ -1,6 +1,7 @@
 import type { SeasonalCirculationData } from '@/core/climate/climate-data'
 import { ITCZ_LONGITUDE_SAMPLES } from '@/core/climate/climate-data'
-import { clamp, DEG } from '@/core/climate/climate-geometry'
+import { DEG } from '@/core/climate/climate-geometry'
+import { clamp } from '@/core/math/math'
 
 /** Non-leap calendar; month 0 is January. */
 export const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const

@@ -6,8 +6,9 @@ import { Group, Vector2 } from 'three'
 import { Line2 } from 'three/addons/lines/Line2.js'
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
-import { getSurfaceDaylight } from '@/core/rendering/shared/day-night-lighting'
+import { getSurfaceDaylight } from '@/core/math/daylight'
 import { createPolityBorderPaths, createPolitySmoothedCornerPositions } from '@/core/rendering/shared/polity-border-geometry'
+import { getRegionSmoothingMode } from '@/core/rendering/shared/region-display'
 
 const OCEAN_DEPTH_SCALE = 0.3
 
@@ -50,7 +51,7 @@ export class GlobePolityBorderLayer {
     }
 
     const scale = usesElevationGeometry ? terrainVerticalScale : 0
-    const smoothedCorners = this.getRegionSmoothingMode(params) === 'polities' && smoothedRegionCorners
+    const smoothedCorners = getRegionSmoothingMode(params.appearance.baseMap) === 'polities' && smoothedRegionCorners
       ? smoothedRegionCorners
       : createPolitySmoothedCornerPositions(mesh, data, regionTopologyBuilder)
 
@@ -97,13 +98,6 @@ export class GlobePolityBorderLayer {
       this.group.add(line)
       this.geometries.push(geometry)
     }
-  }
-
-  private getRegionSmoothingMode(params: WorldConfig): string | null {
-    const mode = params.appearance.baseMap
-    if (mode === 'polities' || mode === 'polities-smoothed')
-      return 'polities'
-    return null
   }
 
   updateLineWidth(_zoom: number): void {

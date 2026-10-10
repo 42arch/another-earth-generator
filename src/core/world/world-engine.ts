@@ -3,19 +3,19 @@ import type { WorldViewMode } from '@/core/rendering/view-mode'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { GeneratedSphericalWorld } from '@/core/simulation/pipeline/types'
 import type { LayerStatistics } from '@/core/world/layer-statistics'
-import { createOutputClimateRegionSampler, getOutputClimateMonth } from '@/core/climate/climate-output-projector'
-import { koppenLabel } from '@/core/climate/koppen-climate-classifier'
-import { projectMonthlyVectorField } from '@/core/climate/monthly-vector-projector'
-import { biomeLabel } from '@/core/ecology/biome-data'
+import type { SelectedRegionInfo, WorldSummaryInfo } from '@/core/world/world-info'
 import { cloneWorldConfig, DEFAULT_WORLD_CONFIG } from '@/core/simulation/config'
+import { prepareClimateDisplayFields } from '@/core/world/climate-display-fields'
 import { buildLayerStatistics, hasLayerStatistics } from '@/core/world/layer-statistics'
+import { RegionSelectionInfoBuilder } from '@/core/world/region-selection-info'
+import { buildWorldSummary } from '@/core/world/world-summary'
 import { RendererCore } from './renderer-core'
 import { GenerationAbortedError, SimulationCore } from './simulation-core'
 
 export interface WorldEngineCallbacks {
-  onRegionSelected?: (info: any) => void
-  onWorldSummary?: (summary: any) => void
-  onPipelineProgress?: (text: string) => void
+  onRegionSelected?: (info: SelectedRegionInfo | null) => void
+  onWorldSummary?: (summary: WorldSummaryInfo) => void
+  onPipelineStageStart?: (stageName: string) => void
 }
 
 export default class WorldEngine {
@@ -26,49 +26,22 @@ export default class WorldEngine {
   private selectedRegion = -1
   private selectedSettlementId: number | undefined
   private selectedRouteId: number | undefined
-  private climateRegionSampler: ReturnType<typeof createOutputClimateRegionSampler> | null = null
+  private readonly regionSelectionInfoBuilder = new RegionSelectionInfoBuilder()
   private generatedSeed: number | null = null
   private readonly layerStatisticsCache = new Map<string, LayerStatistics>()
 
-  private readonly infoElement?: HTMLElement | null
-
   constructor(
     canvas: HTMLCanvasElement,
-    infoElement?: HTMLElement | null,
     params: WorldConfig = DEFAULT_WORLD_CONFIG,
     callbacks?: WorldEngineCallbacks,
   ) {
-    this.infoElement = infoElement
     this.params = cloneWorldConfig(params)
     this.callbacks = callbacks
     this.simulation = new SimulationCore(this.params)
     this.renderer = new RendererCore(canvas, this.params, this.handleRegionSelected)
 
     this.simulation.addMiddleware({
-      onStageStart: (stageName) => {
-        const descriptions: Record<string, string> = {
-          MeshGeneration: '正在构建球面拓扑网格…',
-          PlateTectonics: '正在生成构造细分、主要板块与小板块…',
-          ContinentalCrust: '正在布置大陆地壳与候选海陆…',
-          PlateDynamics: '正在计算板块运动与地幔流…',
-          DataProjection: '正在向高精度网格投影地壳特征…',
-          MantleAndTectonics: '正在构建动态地形与应力强化…',
-          ElevationAndTerrain: '正在生成地形与冰川、水力整形…',
-          SeasonalCirculation: '正在计算四季风场与洋流…',
-          MonthlyClimate: '正在计算 12 个月的气温与降水…',
-          ClimateOutputProjection: '正在将气候细化到最终地形…',
-          KoppenClimate: '正在依据 12 个月气候划分 Köppen 类型…',
-          Biome: '正在依据气候与地形划分生物群系…',
-          SurfaceHydrology: '正在汇集年径流并生成河流网…',
-          PopulationAndSettlements: '正在计算宜居性、人口与聚落…',
-          TransportAndMarkets: '正在连接聚落并计算市场可达性…',
-          EthnicityAndLanguages: '正在生成人口构成、民族与语言…',
-          PolitiesAndAdministration: '正在划分国家与行政区…',
-          ReligionsAndBeliefs: '正在生成宗教起源、传播与居民信仰构成…',
-        }
-        const text = descriptions[stageName] || `正在执行: ${stageName}`
-        this.callbacks?.onPipelineProgress?.(text)
-      },
+      onStageStart: stageName => this.callbacks?.onPipelineStageStart?.(stageName),
     })
   }
 
@@ -92,10 +65,10 @@ export default class WorldEngine {
     this.selectedSettlementId = undefined
     this.selectedRouteId = undefined
     this.generatedSeed = generationSeed
-    this.climateRegionSampler = null
+    this.regionSelectionInfoBuilder.reset()
     this.layerStatisticsCache.clear()
     this.callbacks?.onRegionSelected?.(null)
-    this.prepareClimateDisplayFields()
+    prepareClimateDisplayFields(this.simulation.state, this.params)
     const renderStart = performance.now()
     this.renderer.setWorld(generated.mesh, generated.data, this.params)
     // eslint-disable-next-line no-console
@@ -103,7 +76,7 @@ export default class WorldEngine {
       renderSetup: Math.round(performance.now() - renderStart),
       total: Math.round(performance.now() - generationStart),
     })
-    this.showWorldSummary()
+    this.callbacks?.onWorldSummary?.(buildWorldSummary(generated))
     return true
   }
 
@@ -112,7 +85,7 @@ export default class WorldEngine {
   }
 
   updateAppearance(): void {
-    this.prepareClimateDisplayFields()
+    prepareClimateDisplayFields(this.simulation.state, this.params)
     this.renderer.updateAppearance(this.params)
     if (this.selectedRegion >= 0)
       this.handleRegionSelected(this.selectedRegion, this.selectedSettlementId, this.selectedRouteId)
@@ -132,7 +105,7 @@ export default class WorldEngine {
     const cached = this.layerStatisticsCache.get(key)
     if (cached)
       return cached
-    this.prepareClimateDisplayFields()
+    prepareClimateDisplayFields(state, this.params)
     const result = buildLayerStatistics(state.data, mode, month, this.params.geology.primaryPlateCount)
     if (result) {
       result.seed = this.generatedSeed ?? undefined
@@ -154,243 +127,22 @@ export default class WorldEngine {
   }
 
   destroy(): void {
-    this.climateRegionSampler = null
+    this.regionSelectionInfoBuilder.reset()
     this.renderer.destroy()
   }
 
-  private prepareClimateDisplayFields(): void {
-    const state = this.simulation.state
-    const climate = state?.data.climate
-    if (!state || !climate)
-      return
-    const mode = this.params.appearance.baseMap
-    const month = this.params.appearance.climateMonth
-    const climateMesh = state.mesh.numRegions <= state.referenceMesh.numRegions
-      ? state.mesh
-      : state.referenceMesh
-    if (mode === 'wind' || mode === 'ocean-current') {
-      if (climate.displayVector?.month !== month || climate.displayVector.kind !== mode) {
-        climate.displayVector = projectMonthlyVectorField(
-          state.mesh,
-          climateMesh,
-          state.data.geography,
-          climate,
-          month,
-          this.params.climate.axialTiltDeg,
-          mode,
-        )
-      }
-    }
-    else if (mode === 'temperature' || mode === 'precipitation') {
-      if (climate.displayMonth?.month === month)
-        return
-      climate.displayMonth = {
-        month,
-        ...getOutputClimateMonth(
-          state.mesh,
-          climateMesh,
-          state.data.geography,
-          climate,
-          month,
-          this.params.climate.axialTiltDeg,
-        ),
-      }
-    }
-  }
-
-  private showWorldSummary(): void {
-    const state = this.simulation.state
-    if (!state)
-      return
-
-    const plateCount = new Set(state.data.geology.regionSuperPlate).size
-    this.callbacks?.onWorldSummary?.({
-      regionCount: state.mesh.numRegions,
-      triangleCount: state.mesh.numTriangles,
-      plateCount,
-      totalPopulation: state.data.society?.totalPopulation ?? 0,
-      settlementCount: state.data.society?.settlements.length ?? 0,
-      roadCount: state.data.society?.transport?.routes.filter(route => route.kind === 'road').length ?? 0,
-      seaRouteCount: state.data.society?.transport?.routes.filter(route => route.kind === 'sea').length ?? 0,
-      ethnicGroupCount: state.data.society?.ethnicity?.groups.length ?? 0,
-      languageCount: state.data.society?.ethnicity?.languages.length ?? 0,
-      polityCount: state.data.society?.polities?.polities.length ?? 0,
-      districtCount: state.data.society?.polities?.districts.length ?? 0,
-      religionCount: state.data.society?.religions?.religions.length ?? 0,
-      sacredSiteCount: state.data.society?.religions?.sacredSites.length ?? 0,
-    })
-
-    if (this.infoElement) {
-      this.infoElement.textContent = [
-        '点击球面查看区域信息',
-        `${state.mesh.numRegions} 个区域`,
-        `${state.mesh.numTriangles} 个三角形`,
-        `${plateCount} 个构造板块`,
-      ].join(' · ')
-    }
-  }
-
   private handleRegionSelected = (region: number, settlementId?: number, routeId?: number) => {
-    const state = this.simulation.state
-    if (!state)
+    const world = this.simulation.state
+    if (!world)
       return
 
     this.selectedRegion = region
     this.selectedSettlementId = settlementId
     this.selectedRouteId = routeId
     this.renderer.selectRegion(region)
-    const latitude = state.mesh.regionLatitude[region] * 180 / Math.PI
-    const longitude = state.mesh.regionLongitude[region] * 180 / Math.PI
-    const elevation = state.data.geography.elevation[region]
-    const plate = state.data.geology.regionSuperPlate[region]
-    const plateDetail = state.data.geology.regionPlate[region]
-    const continent = state.data.geography.visibleContinentId[region]
-    const society = state.data.society
-    const selectedSettlement = settlementId !== undefined
-      ? society?.settlements[settlementId]
-      : society?.settlements[society.settlementByRegion[region]]
-    const transport = society?.transport
-    const selectedRoute = routeId !== undefined ? transport?.routes[routeId] : undefined
-    const marketId = transport?.nearestMarket[region] ?? -1
-    const ethnicity = society?.ethnicity
-    const religionData = society?.religions
-    const polityData = society?.polities
-    const polityId = polityData?.polityByRegion[region] ?? -1
-    const polity = polityId >= 0 ? polityData?.polities[polityId] : undefined
-    const districtId = polityData?.districtByRegion[region] ?? -1
-    const district = districtId >= 0 ? polityData?.districts[districtId] : undefined
-    const ethnicComposition: Array<{ name: string, population: number, share: number, originRegion: number, languageName: string }> = []
-    const languageResidents = new Map<number, number>()
-    if (ethnicity && society.population[region] > 0) {
-      for (let index = ethnicity.regionOffsets[region]; index < ethnicity.regionOffsets[region + 1]; index++) {
-        const group = ethnicity.groups[ethnicity.groupIds[index]]
-        const residents = ethnicity.residents[index]
-        ethnicComposition.push({
-          name: group.name,
-          population: residents,
-          share: residents / society.population[region],
-          originRegion: group.originRegion,
-          languageName: ethnicity.languages[group.languageId].name,
-        })
-        languageResidents.set(group.languageId, (languageResidents.get(group.languageId) ?? 0) + residents)
-      }
-    }
-    const languageComposition = [...languageResidents].map(([id, population]) => {
-      const language = ethnicity!.languages[id]
-      return {
-        name: language.name,
-        population,
-        share: population / society!.population[region],
-        familyName: ethnicity!.languageFamilies[language.familyId].name,
-      }
-    }).sort((a, b) => b.population - a.population)
-    const religiousComposition: Array<{ name: string, population: number, share: number, originName?: string, parentName?: string }> = []
-    if (religionData && society.population[region] > 0) {
-      for (let index = religionData.regionOffsets[region]; index < religionData.regionOffsets[region + 1]; index++) {
-        const religionId = religionData.affiliationIds[index]
-        const religion = religionId >= 0 ? religionData.religions[religionId] : undefined
-        const residents = religionData.residents[index]
-        religiousComposition.push({
-          name: religion?.name ?? '无归属',
-          population: residents,
-          share: residents / society.population[region],
-          originName: religion ? society.settlements[religion.originSettlementId]?.name : undefined,
-          parentName: religion && religion.parentReligionId >= 0
-            ? religionData.religions[religion.parentReligionId]?.name
-            : undefined,
-        })
-      }
-    }
-    const climate = state.data.climate
-    const displayVector = climate?.displayVector
-    const vectorInfo = displayVector?.month === this.params.appearance.climateMonth
-      && displayVector.kind === this.params.appearance.baseMap
-      ? {
-          vectorEast: displayVector.east[region],
-          vectorNorth: displayVector.north[region],
-          vectorKind: displayVector.kind,
-          vectorWarmth: displayVector.warmth?.[region],
-        }
-      : {}
-    let climateInfo = {}
-    if (climate?.monthly && climate.koppen) {
-      if (!this.climateRegionSampler) {
-        const climateMesh = state.mesh.numRegions <= state.referenceMesh.numRegions
-          ? state.mesh
-          : state.referenceMesh
-        this.climateRegionSampler = createOutputClimateRegionSampler(
-          climate,
-          state.data.geography,
-          this.params.climate.axialTiltDeg,
-          climateMesh,
-        )
-      }
-      const monthlyTemperatureC: number[] = []
-      const monthlyPrecipitationMm: number[] = []
-      for (let month = 0; month < 12; month++) {
-        const fields = this.climateRegionSampler(region, month)
-        monthlyTemperatureC.push(fields.temperatureC)
-        monthlyPrecipitationMm.push(fields.precipitationMm)
-      }
-      climateInfo = {
-        isLand: Boolean(state.data.geography.landMask[region]),
-        koppenLabel: koppenLabel(climate.koppen.climateClass[region]),
-        biomeLabel: state.data.biome ? biomeLabel(state.data.biome.biomeClass[region]) : undefined,
-        aridityIndex: state.data.biome?.aridityIndex[region],
-        growingSeasonMonths: state.data.biome?.growingSeasonMonths[region],
-        annualTemperatureC: climate.koppen.annualTemperatureC[region],
-        annualPrecipitationMm: climate.koppen.annualPrecipitationMm[region],
-        monthlyTemperatureC,
-        monthlyPrecipitationMm,
-      }
-    }
-    this.callbacks?.onRegionSelected?.({
-      region,
-      latitude,
-      longitude,
-      elevation,
-      isLand: Boolean(state.data.geography.landMask[region]),
-      plate,
-      plateDetail,
-      continent,
-      geometricFlowCount: state.data.geography.terrainErosion.flowAccumulation[region],
-      habitability: society?.habitability[region],
-      population: society?.population[region],
-      populationDensity: society?.populationDensity[region],
-      ethnicComposition: ethnicity ? ethnicComposition : undefined,
-      languageComposition: ethnicity ? languageComposition : undefined,
-      religiousComposition: religionData ? religiousComposition : undefined,
-      sacredSiteNames: religionData?.sacredSites.filter(site => site.region === region).map(site => site.name),
-      polityName: polity?.name,
-      polityForm: polity?.governingForm,
-      capitalName: polity ? society?.settlements[polity.capitalSettlementId]?.name : undefined,
-      officialLanguageName: polity && polity.officialLanguageId >= 0 ? ethnicity?.languages[polity.officialLanguageId]?.name : undefined,
-      controlStrength: polity ? polityData?.controlStrength[region] : undefined,
-      districtName: district?.name,
-      patronReligionName: polity?.patronReligionId !== undefined
-        ? religionData?.religions[polity.patronReligionId]?.name
-        : undefined,
-      settlement: selectedSettlement,
-      route: selectedRoute,
-      routeFromName: selectedRoute ? society?.settlements[selectedRoute.fromSettlement]?.name : undefined,
-      routeToName: selectedRoute ? society?.settlements[selectedRoute.toSettlement]?.name : undefined,
-      nearestMarketName: marketId >= 0 ? society?.settlements[marketId]?.name : undefined,
-      marketCostKm: Number.isFinite(transport?.marketCostKm[region]) ? transport?.marketCostKm[region] : undefined,
-      marketAccess: transport?.marketAccess[region],
-      isPort: selectedSettlement ? Boolean(transport?.portSettlementIds[selectedSettlement.id]) : false,
-      ...climateInfo,
-      ...vectorInfo,
-    })
-
-    if (this.infoElement) {
-      this.infoElement.textContent = [
-        `区域 ${region}`,
-        `纬度 ${latitude.toFixed(2)}°，经度 ${longitude.toFixed(2)}°`,
-        `高程 ${elevation.toFixed(2)} km`,
-        `板块 ${plate}`,
-        `构造细分 ${plateDetail}`,
-      ].join(' · ')
-    }
+    this.callbacks?.onRegionSelected?.(
+      this.regionSelectionInfoBuilder.build(world, this.params, region, settlementId, routeId),
+    )
   }
 
   setRegionPickingEnabled(enabled: boolean): void {

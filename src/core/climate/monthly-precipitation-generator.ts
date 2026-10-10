@@ -2,7 +2,8 @@ import type { ClimateSurfaceData } from '@/core/climate/climate-data'
 import type { MonthlyForcing } from '@/core/climate/monthly-forcing'
 import type { MonthlySpatialFields } from '@/core/climate/monthly-spatial-fields'
 import type SphericalMesh from '@/core/mesh/mesh'
-import { clamp, DEG, EARTH_RADIUS_KM, gaussian, smoothMasked, smoothstep } from '@/core/climate/climate-geometry'
+import { DEG, EARTH_RADIUS_KM, smoothMasked } from '@/core/climate/climate-geometry'
+import { clamp, gaussian, smoothstep } from '@/core/math/math'
 import { itczAtLongitude } from '@/core/climate/monthly-forcing'
 
 export interface MonthlyWind {

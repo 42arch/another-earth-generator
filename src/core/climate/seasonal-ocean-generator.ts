@@ -1,7 +1,8 @@
 import type { SeasonalCirculationData } from '@/core/climate/climate-data'
 import type SphericalMesh from '@/core/mesh/mesh'
 import { CLIMATE_SEASON_COUNT, ITCZ_LONGITUDE_SAMPLES } from '@/core/climate/climate-data'
-import { clamp, DEG, graphDistance, smoothMasked, smoothstep } from '@/core/climate/climate-geometry'
+import { DEG, graphDistance, smoothMasked } from '@/core/climate/climate-geometry'
+import { clamp, smoothstep } from '@/core/math/math'
 
 interface CoastFields {
   westDistance: Int32Array

@@ -4,7 +4,7 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import alea from 'alea'
 import { createNoise3D } from 'simplex-noise'
 import { referenceCellsToAngle } from '@/core/math/distance-field'
-import { clamp } from '@/core/math/math'
+import { clamp, smoothstep } from '@/core/math/math'
 
 export interface TerrainTextureFields {
   phasorRidge: Float32Array
@@ -263,7 +263,7 @@ export class TerrainTextureGenerator {
       const x = mesh.regionPosition[position]
       const y = mesh.regionPosition[position + 1]
       const z = mesh.regionPosition[position + 2]
-      const falloff = 1 - this.smoothstep(0, COAST_DETAIL_WIDTH, coastDistance)
+      const falloff = 1 - smoothstep(0, COAST_DETAIL_WIDTH, coastDistance)
       const activeMargin = fields.convergentInfluence[region]
       const subductionSuppression = fields.subductingInfluence[region]
       const frequency = 24 + activeMargin * 12
@@ -295,7 +295,7 @@ export class TerrainTextureGenerator {
           y * 41 + 5.9,
           z * 41 + 21.3,
         ))
-        const islandMask = this.smoothstep(
+        const islandMask = smoothstep(
           islandMaskStart,
           islandMaskEnd,
           islandMacro * islandFine,
@@ -338,7 +338,7 @@ export class TerrainTextureGenerator {
       const gradientDampening = 1 / (1 + 4 * slope)
       const positiveElevation = Math.max(0, current)
       const elevationT = Math.min(1, positiveElevation / 0.3)
-      const elevationBoost = elevationT * elevationT * (3 - 2 * elevationT)
+      const elevationBoost = smoothstep(0, 1, elevationT)
       const basinDampening = 1 - 0.6 * classification.basinFactor[region]
       const mountainDistance = fields.convergentDistance[region]
       const mountainT = Number.isFinite(mountainDistance)
@@ -423,8 +423,4 @@ export class TerrainTextureGenerator {
     return maximum > 0 ? sum / maximum : 0
   }
 
-  private smoothstep(edge0: number, edge1: number, value: number): number {
-    const t = clamp((value - edge0) / (edge1 - edge0), 0, 1)
-    return t * t * (3 - 2 * t)
-  }
 }

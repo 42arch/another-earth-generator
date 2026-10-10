@@ -3,12 +3,12 @@ import { KOPPEN_CODES, KOPPEN_COLORS, KOPPEN_LABELS } from '@/core/climate/koppe
 import { classifyOceanCurrentThermal } from '@/core/climate/ocean-current-thermal'
 import { BIOME_CODES, BIOME_COLORS, BIOME_LABELS } from '@/core/ecology/biome-data'
 import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/geology/geology-data'
-import { OCEAN_CURRENT_THERMAL_COLORS } from '@/core/rendering/shared/climate-color-scale'
 import { humanGroupCssColor } from '@/core/society/group-color'
 
 interface Category {
   label: string
-  color: string
+  color?: string
+  key?: string
 }
 
 export interface LayerStatisticRow extends Category {
@@ -29,25 +29,6 @@ export interface LayerStatistics {
   plateCounts?: { primary: number, micro: number }
   description?: string
   rows: LayerStatisticRow[]
-}
-
-/** Tab-separated text keeps copied counts readable and easy to paste into a sheet. */
-export function formatLayerStatistics(statistics: LayerStatistics): string {
-  return [
-    ...(statistics.seed === undefined ? [] : [`种子\t${statistics.seed}`]),
-    `图层\t${statistics.title}`,
-    `模式\t${statistics.mode}`,
-    ...(statistics.month === undefined ? [] : [`月份\t${statistics.month + 1}`]),
-    ...(statistics.measure === 'people'
-      ? [`模型总人口（人）\t${statistics.totalPopulation ?? 0}`]
-      : [`总 cell\t${statistics.totalCells}`]),
-    ...(statistics.plateCounts
-      ? [`主要板块\t${statistics.plateCounts.primary}`, `小板块\t${statistics.plateCounts.micro}`]
-      : []),
-    ...(statistics.description ? [`说明\t${statistics.description}`] : []),
-    statistics.mode.startsWith('polities') ? '分类\t居民人数（人）\t占比\t面积（km²）' : statistics.measure === 'people' ? '分类\t居民人数（人）\t占比' : '分类\tcell 数\t占比',
-    ...statistics.rows.map(item => `${item.label}\t${item.count}\t${item.percentage.toFixed(6)}%${item.areaKm2 === undefined ? '' : `\t${item.areaKm2}`}`),
-  ].join('\n')
 }
 
 const MONTH_NAMES = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月']
@@ -73,8 +54,6 @@ const MODE_TITLES: Record<string, string> = {
   'polities-smoothed': '平滑国家归属',
   'religions': '宗教与信仰',
   'religions-smoothed': '平滑宗教分布',
-  // 'crust': '地壳类型',
-  // 'density': '地壳密度',
   'subduction': '俯冲极性',
   'stress': '构造应力',
   'mantle': '地幔动态地形',
@@ -115,7 +94,7 @@ function finish(
   month?: number,
 ): LayerStatistics {
   const rows = categories
-    .map((category, index) => row(String(index), category, counts[index], totalCells))
+    .map((category, index) => row(category.key ?? String(index), category, counts[index], totalCells))
     .sort((a, b) => b.count - a.count)
   return {
     mode,
@@ -386,9 +365,9 @@ export function buildLayerStatistics(
       const categories = [
         { label: '陆地', color: '#253735' },
         { label: '近静止', color: '#344b57' },
-        { label: '冷流', color: OCEAN_CURRENT_THERMAL_COLORS.cold },
-        { label: '中性', color: OCEAN_CURRENT_THERMAL_COLORS.neutral },
-        { label: '暖流', color: OCEAN_CURRENT_THERMAL_COLORS.warm },
+        { key: 'cold', label: '冷流' },
+        { key: 'neutral', label: '中性' },
+        { key: 'warm', label: '暖流' },
       ]
       return countBuckets(mode, total, categories, (region) => {
         if (geo.landMask[region])
@@ -444,28 +423,6 @@ export function buildLayerStatistics(
       return value < 0 ? 0 : value < 1 ? 1 : value < 2.5 ? 2 : value < 4.5 ? 3 : 4
     })
   }
-
-  /*
-  if (mode === 'crust') {
-    return countBuckets(mode, total, [
-      { label: '海洋地壳', color: '#144d85' },
-      { label: '大陆地壳', color: '#b88447' },
-    ], region => geology.tectonics.regionCrustType[region] === CRUST_TYPE.Continental ? 1 : 0)
-  }
-
-  if (mode === 'density') {
-    const categories = [
-      { label: '< 2.675', color: '#f5c752' },
-      { label: '2.675 至 < 2.95', color: '#cf8351' },
-      { label: '2.95 至 < 3.225', color: '#884279' },
-      { label: '≥ 3.225', color: '#40147a' },
-    ]
-    return countBuckets(mode, total, categories, (region) => {
-      const value = geology.tectonics.regionDensity[region]
-      return value < 2.675 ? 0 : value < 2.95 ? 1 : value < 3.225 ? 2 : 3
-    })
-  }
-  */
 
   if (mode === 'subduction') {
     const categories = [

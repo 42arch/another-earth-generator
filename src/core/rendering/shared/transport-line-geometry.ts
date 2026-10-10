@@ -2,7 +2,7 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { BufferAttribute, BufferGeometry } from 'three'
 import { elevationKmToDisplayCoordinate } from '@/core/geography/elevation-units'
-import { getSurfaceDaylight } from '@/core/rendering/shared/day-night-lighting'
+import { getSurfaceDaylight } from '@/core/math/daylight'
 
 const ROAD_COLOR = [0.96, 0.68, 0.28] as const
 const SEA_COLOR = [0.3, 0.72, 0.95] as const

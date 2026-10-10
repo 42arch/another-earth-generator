@@ -4,7 +4,7 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { stitchSphericalSegments } from '@/core/math/polyline'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
-
+import { buildDisplayRegionIds, buildSmoothedRegionCornersForMode } from '@/core/rendering/shared/region-display'
 import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
 
 /** Borders are derived from neighboring ownership, never stored as simulation state. */
@@ -44,14 +44,7 @@ export function createPolityBorderGeometry(
 
 /** Labels used by the polity surface, including separate ocean and unassigned land categories. */
 export function createPolityRegionIds(mesh: SphericalMesh, data: WorldSimulationState): Int32Array {
-  const regionIds = new Int32Array(mesh.numRegions)
-  const owners = data.society?.polities?.polityByRegion
-  for (let region = 0; region < mesh.numRegions; region++) {
-    regionIds[region] = data.geography.landMask[region] === 0
-      ? -2147483648
-      : owners?.[region] ?? -1
-  }
-  return regionIds
+  return buildDisplayRegionIds(mesh, data, 'polities')
 }
 
 /** Compute the same smoothed corners used when the polity layer is the active base map. */
@@ -60,8 +53,7 @@ export function createPolitySmoothedCornerPositions(
   data: WorldSimulationState,
   topologyBuilder = new SphericalRegionTopologyBuilder(),
 ): Float32Array {
-  const topology = topologyBuilder.build(mesh, createPolityRegionIds(mesh, data))
-  return topologyBuilder.buildSmoothedCornerPositions(mesh, topology)
+  return buildSmoothedRegionCornersForMode(mesh, data, 'polities', topologyBuilder)
 }
 
 /** Stitch the selected Voronoi border edges into continuous spherical paths. */

@@ -1,6 +1,7 @@
 import type { ClimateSurfaceData } from '@/core/climate/climate-data'
 import type SphericalMesh from '@/core/mesh/mesh'
-import { averageEdgeKm, clamp, EARTH_RADIUS_KM, graphDistance, smoothMasked, smoothstep } from '@/core/climate/climate-geometry'
+import { averageEdgeKm, EARTH_RADIUS_KM, graphDistance, smoothMasked } from '@/core/climate/climate-geometry'
+import { clamp, smoothstep } from '@/core/math/math'
 
 export interface MonthlySpatialFields {
   coastDistanceKm: Float32Array

@@ -1,6 +1,7 @@
 import type { MapProjection } from '@/core/projections/map-projection'
 import { BufferAttribute, BufferGeometry } from 'three'
 import { cartesianToGeographic, FULL_LONGITUDE, unwrapLongitudeNear, wrapLongitude } from '@/core/projections/projection-math'
+import { clipSegmentParameterRange } from '@/core/math/segment-clipping'
 
 interface LinePoint {
   longitude: number
@@ -98,32 +99,20 @@ export class MapLineGeometry {
     minimumLatitude: number,
     maximumLatitude: number,
   ): readonly [LinePoint, LinePoint] | null {
-    let minimumAmount = 0
-    let maximumAmount = 1
-
-    const axes = [
-      [start.longitude, end.longitude - start.longitude, minimumLongitude, maximumLongitude],
-      [start.latitude, end.latitude - start.latitude, minimumLatitude, maximumLatitude],
-    ] as const
-    for (const [origin, difference, minimum, maximum] of axes) {
-      if (Math.abs(difference) <= Number.EPSILON) {
-        if (origin < minimum || origin > maximum)
-          return null
-        continue
-      }
-      const amountA = (minimum - origin) / difference
-      const amountB = (maximum - origin) / difference
-      minimumAmount = Math.max(0, Math.min(amountA, amountB))
-      maximumAmount = Math.min(1, Math.max(amountA, amountB))
-      if (minimumAmount > maximumAmount)
-        return null
-    }
-    if (maximumAmount - minimumAmount <= 1e-12)
+    const range = clipSegmentParameterRange(
+      { x: start.longitude, y: start.latitude },
+      { x: end.longitude, y: end.latitude },
+      minimumLongitude,
+      maximumLongitude,
+      minimumLatitude,
+      maximumLatitude,
+    )
+    if (!range)
       return null
 
     return [
-      this.interpolate(start, end, minimumAmount),
-      this.interpolate(start, end, maximumAmount),
+      this.interpolate(start, end, range[0]),
+      this.interpolate(start, end, range[1]),
     ]
   }
 

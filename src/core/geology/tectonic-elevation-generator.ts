@@ -13,7 +13,7 @@ import { TectonicEdificeGenerator } from '@/core/geology/tectonic-edifice-genera
 import { TectonicSpatialFieldGenerator } from '@/core/geology/tectonic-spatial-fields'
 import { TerrainClassifier } from '@/core/geology/terrain-classifier'
 import { referenceCellsToAngle } from '@/core/math/distance-field'
-import { clamp } from '@/core/math/math'
+import { clamp, gaussian, smoothstep } from '@/core/math/math'
 
 export interface ElevationFields {
   elevation: Float32Array
@@ -182,12 +182,12 @@ export class TectonicElevationGenerator {
     const mountainBoost = Number.isFinite(fields.convergentDistance[region])
       && subduction < 0.45
       && fields.convergentDistance[region] < coastDistance
-      ? (1 - this.smoothstep(0, LAND_INTERIOR_WIDTH * 1.25, fields.convergentDistance[region]))
+      ? (1 - smoothstep(0, LAND_INTERIOR_WIDTH * 1.25, fields.convergentDistance[region]))
       * LAND_INTERIOR_WIDTH * 0.35
       : 0
     const effectiveCoastDistance = coastDistance + mountainBoost
-    const downRamp = this.smoothstep(0, LAND_INTERIOR_WIDTH, effectiveCoastDistance)
-    const upRamp = this.smoothstep(0, LAND_INTERIOR_WIDTH * 0.4, effectiveCoastDistance)
+    const downRamp = smoothstep(0, LAND_INTERIOR_WIDTH, effectiveCoastDistance)
+    const upRamp = smoothstep(0, LAND_INTERIOR_WIDTH * 0.4, effectiveCoastDistance)
     const interiorBase = INTERIOR_BASE_SHIELD * (1 - personality)
       + INTERIOR_BASE_BASIN * personality
     const interiorUplift = interiorBase + activity * INTERIOR_TECTONIC_UPLIFT
@@ -211,8 +211,8 @@ export class TectonicElevationGenerator {
     ) {
       const t = mountainDistance / (LAND_INTERIOR_WIDTH * 0.3)
       const profile = t < 0.2
-        ? this.smoothstep(0, 0.2, t)
-        : 1 - this.smoothstep(0.2, 1, t)
+        ? smoothstep(0, 0.2, t)
+        : 1 - smoothstep(0.2, 1, t)
       elevation -= 0.05 * profile * (0.5 + personality * 0.5)
     }
 
@@ -249,7 +249,7 @@ export class TectonicElevationGenerator {
       }
       else if (riftDistance <= outerEnd) {
         riftEffect = 0.5
-          * (1 - this.smoothstep(shoulderEnd, outerEnd, riftDistance))
+          * (1 - smoothstep(shoulderEnd, outerEnd, riftDistance))
           * 0.35
       }
       elevation += riftEffect * fields.divergentInfluence[region]
@@ -257,11 +257,11 @@ export class TectonicElevationGenerator {
 
     const overridingDistance = fields.overridingDistance[region]
     if (Number.isFinite(overridingDistance)) {
-      const foreland = this.gaussian(
+      const foreland = gaussian(
         overridingDistance - FORELAND_CENTER,
         FORELAND_WIDTH,
       )
-      const backArc = this.gaussian(
+      const backArc = gaussian(
         fields.backArcDistance[region] - BACK_ARC_CENTER,
         BACK_ARC_WIDTH,
       )
@@ -291,7 +291,7 @@ export class TectonicElevationGenerator {
         z * 2.5 + 8.9,
         2,
       )
-      elevation += this.gaussian(distanceFromPeak, sigma)
+      elevation += gaussian(distanceFromPeak, sigma)
         * convergent
         * 0.12
         * ridgeHeightVariation
@@ -307,14 +307,14 @@ export class TectonicElevationGenerator {
       && mountainDistance <= coastDistance + ACTIVE_COASTAL_MARGIN_TOLERANCE
     if (coastDistance < PASSIVE_COASTAL_PLAIN_WIDTH && !activeCoastalMargin && elevation > 0.02) {
       const suppression = PASSIVE_COASTAL_PLAIN_STRENGTH
-        * (1 - this.smoothstep(0, PASSIVE_COASTAL_PLAIN_WIDTH, coastDistance))
+        * (1 - smoothstep(0, PASSIVE_COASTAL_PLAIN_WIDTH, coastDistance))
       elevation -= (elevation - 0.02) * suppression
     }
 
     const insideRiftFloor = Number.isFinite(riftDistance)
       && riftDistance <= RIFT_HALF_WIDTH * 0.35 + RIFT_AXIS_WIDTH
     if (!insideRiftFloor) {
-      const floor = 0.008 * this.smoothstep(0, referenceCellsToAngle(2.5), coastDistance)
+      const floor = 0.008 * smoothstep(0, referenceCellsToAngle(2.5), coastDistance)
       elevation = Math.max(elevation, floor)
     }
     elevation -= fields.transformInfluence[region] * 0.018
@@ -334,11 +334,11 @@ export class TectonicElevationGenerator {
     let oceanBase: number
 
     if (coastDistance <= shelfWidth) {
-      const t = this.smoothstep(0, shelfWidth, coastDistance)
+      const t = smoothstep(0, shelfWidth, coastDistance)
       oceanBase = SHELF_START + (SHELF_END - SHELF_START) * t
     }
     else if (coastDistance <= shelfWidth + CONTINENTAL_SLOPE_WIDTH) {
-      const t = this.smoothstep(
+      const t = smoothstep(
         shelfWidth,
         shelfWidth + CONTINENTAL_SLOPE_WIDTH,
         coastDistance,
@@ -359,7 +359,7 @@ export class TectonicElevationGenerator {
     let elevation = Math.min(baseElevation, oceanBase)
     const ridgeDistance = fields.ridgeDistance[region]
     if (Number.isFinite(ridgeDistance) && ridgeDistance <= referenceCellsToAngle(3)) {
-      const fade = 1 - this.smoothstep(0, referenceCellsToAngle(3), ridgeDistance)
+      const fade = 1 - smoothstep(0, referenceCellsToAngle(3), ridgeDistance)
       const position = region * 3
       const ridged = this.ridgedFbm(
         noise,
@@ -374,7 +374,7 @@ export class TectonicElevationGenerator {
     elevation += fields.overridingInfluence[region] * 0.11
     const fractureDistance = fields.fractureDistance[region]
     if (Number.isFinite(fractureDistance)) {
-      const fractureFade = 1 - this.smoothstep(0, referenceCellsToAngle(2.5), fractureDistance)
+      const fractureFade = 1 - smoothstep(0, referenceCellsToAngle(2.5), fractureDistance)
       elevation -= fractureFade * fields.transformInfluence[region] * 0.04
     }
     return elevation
@@ -398,21 +398,6 @@ export class TectonicElevationGenerator {
     return (inverseMountain - inverseOcean)
       / (inverseMountain + inverseOcean + 1 / c)
       * BASE_SCALE
-  }
-
-  private smoothstep(edge0: number, edge1: number, value: number): number {
-    if (edge0 === edge1)
-      return value < edge0 ? 0 : 1
-    const t = clamp((value - edge0) / (edge1 - edge0), 0, 1)
-    return t * t * (3 - 2 * t)
-  }
-
-  private gaussian(distance: number, sigma: number): number {
-    if (!Number.isFinite(distance))
-      return 0
-    const safeSigma = Math.max(sigma, Number.EPSILON)
-    const normalized = distance / safeSigma
-    return Math.exp(-0.5 * normalized * normalized)
   }
 
   private fbm(

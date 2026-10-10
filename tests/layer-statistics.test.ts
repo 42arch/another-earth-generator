@@ -1,6 +1,7 @@
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { describe, expect, it } from 'vitest'
-import { buildLayerStatistics, formatLayerStatistics } from '@/core/world/layer-statistics'
+import { buildLayerStatistics } from '@/core/world/layer-statistics'
+import { formatLayerStatistics } from '@/ui/hud/layer-presentation'
 
 describe('active-layer cell statistics', () => {
   it('reports independently moving plate regions', () => {

@@ -1,8 +1,39 @@
 import type { SphericalPoint, SphericalStrokePath } from '@/core/math/polyline'
+import type { MapProjection } from '@/core/projections/map-projection'
 import { describe, expect, it } from 'vitest'
-import { EQUIRECTANGULAR_PROJECTION } from '@/core/projections/equirectangular'
-import { geographicToCartesian } from '@/core/projections/projection-math'
+import {
+  FULL_LONGITUDE,
+  geographicToCartesian,
+  wrapLongitude,
+} from '@/core/projections/projection-math'
 import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
+
+const MINIMUM_LATITUDE = -Math.PI / 2
+const MAXIMUM_LATITUDE = Math.PI / 2
+
+const EQUIRECTANGULAR_PROJECTION: MapProjection = {
+  id: 'equirectangular-test',
+  wrapX: true,
+  worldWidth: FULL_LONGITUDE,
+  worldHeight: Math.PI,
+  minimumLatitude: MINIMUM_LATITUDE,
+  maximumLatitude: MAXIMUM_LATITUDE,
+  project(longitude, latitude, centralMeridian) {
+    if (latitude < MINIMUM_LATITUDE || latitude > MAXIMUM_LATITUDE)
+      return null
+    return { x: wrapLongitude(longitude - centralMeridian), y: latitude }
+  },
+  projectRelative(relativeLongitude, latitude) {
+    if (latitude < MINIMUM_LATITUDE || latitude > MAXIMUM_LATITUDE)
+      return null
+    return { x: relativeLongitude, y: latitude }
+  },
+  unproject(x, y, centralMeridian) {
+    if (y < MINIMUM_LATITUDE || y > MAXIMUM_LATITUDE)
+      return null
+    return { longitude: wrapLongitude(x + centralMeridian), latitude: y }
+  },
+}
 
 function sphericalPoint(longitude: number, latitude: number): SphericalPoint {
   const point = geographicToCartesian(longitude, latitude)

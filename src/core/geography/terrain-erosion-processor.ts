@@ -1,5 +1,5 @@
 import type SphericalMesh from '@/core/mesh/mesh'
-import { clamp } from '@/core/math/math'
+import { clamp, smoothstep } from '@/core/math/math'
 import { IndexPriorityQueue } from '@/core/math/priority-queue'
 
 export interface TerrainErosionFields {
@@ -344,17 +344,17 @@ export class TerrainErosionProcessor {
       if (oceanMask[region] !== 0)
         continue
       const latitude = Math.abs(mesh.regionLatitude[region])
-      const latitudeFactor = this.smoothstep(
+      const latitudeFactor = smoothstep(
         thresholdLatitude,
         Math.PI / 2,
         latitude,
       )
-      const elevationFactor = this.smoothstep(
+      const elevationFactor = smoothstep(
         GLACIAL_ELEVATION_LOW,
         GLACIAL_ELEVATION_HIGH,
         elevation[region],
       )
-      const latitudeScale = this.smoothstep(Math.PI / 8, Math.PI / 3, latitude)
+      const latitudeScale = smoothstep(Math.PI / 8, Math.PI / 3, latitude)
       result[region] = Math.max(
         latitudeFactor,
         elevationFactor
@@ -628,8 +628,4 @@ export class TerrainErosionProcessor {
     return hash / 0xFFFFFFFF * FLOOD_NOISE_AMPLITUDE
   }
 
-  private smoothstep(edge0: number, edge1: number, value: number): number {
-    const ratio = clamp((value - edge0) / (edge1 - edge0), 0, 1)
-    return ratio * ratio * (3 - 2 * ratio)
-  }
 }

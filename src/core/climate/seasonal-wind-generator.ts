@@ -3,7 +3,8 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import alea from 'alea'
 import { createNoise3D } from 'simplex-noise'
 import { CLIMATE_SEASON_COUNT, ITCZ_LONGITUDE_SAMPLES } from '@/core/climate/climate-data'
-import { averageEdgeKm, clamp, DEG, gaussian, graphDistance, smoothMasked, smoothstep } from '@/core/climate/climate-geometry'
+import { averageEdgeKm, DEG, graphDistance, smoothMasked } from '@/core/climate/climate-geometry'
+import { clamp, gaussian, smoothstep } from '@/core/math/math'
 import { makeClimateCoastFields } from '@/core/climate/monthly-spatial-fields'
 
 const LAT_BINS = 36

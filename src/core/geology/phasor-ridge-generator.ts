@@ -4,6 +4,7 @@ import type { TerrainClassificationFields } from '@/core/geology/terrain-classif
 import type SphericalMesh from '@/core/mesh/mesh'
 import alea from 'alea'
 import { createNoise3D } from 'simplex-noise'
+import { smoothstep } from '@/core/math/math'
 
 const EARTH_RADIUS_KM = 6371
 const NUM_KERNELS = 4000
@@ -303,9 +304,7 @@ export class PhasorRidgeGenerator {
       return 1
     if (value >= SUBDUCTING_GATE_ZERO)
       return 0
-    const t = (value - SUBDUCTING_GATE_FULL)
-      / (SUBDUCTING_GATE_ZERO - SUBDUCTING_GATE_FULL)
-    return 1 - t * t * (3 - 2 * t)
+    return 1 - smoothstep(SUBDUCTING_GATE_FULL, SUBDUCTING_GATE_ZERO, value)
   }
 
   private shuffle(values: number[], random: () => number): void {

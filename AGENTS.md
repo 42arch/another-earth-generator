@@ -24,7 +24,7 @@
   - **包管理器**: **pnpm**
   - **核心语言与构建**: TypeScript, Vite
   - **3D 渲染与几何**: **Three.js** (WebGL), **d3-geo-voronoi**, **Simplex Noise**, **Alea**
-  - **前端交互**: **Svelte 5** (Runes), **TailwindCSS v4**, **Bits UI**, **Tweakpane**
+  - **前端交互**: **Svelte 5** (Runes), **TailwindCSS v4**, **Bits UI**
   - **质量保证**: **Vitest**, **ESLint** (`@antfu/eslint-config`)
 
 ## 代码结构导航

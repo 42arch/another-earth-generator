@@ -13,7 +13,7 @@ import {
   computeSphericalInfluenceField,
   referenceCellsToAngle,
 } from '@/core/math/distance-field'
-import { clamp } from '@/core/math/math'
+import { clamp, gaussian } from '@/core/math/math'
 
 export interface TectonicEdificeFields {
   islandArc: Float32Array
@@ -218,7 +218,7 @@ export class TectonicEdificeGenerator {
         continue
       const excess = (ridged - patchThreshold) / (1 - patchThreshold)
       const peak = 1 - Math.abs(peakNoise(x * 30, y * 30, z * 30))
-      const distanceWeight = this.gaussian(distance - ARC_PEAK_DISTANCE, ARC_BAND_WIDTH)
+      const distanceWeight = gaussian(distance - ARC_PEAK_DISTANCE, ARC_BAND_WIDTH)
       const stressFactor = 0.5 + arcStress[region]
       const requestedUplift = distanceWeight
         * stressFactor
@@ -276,7 +276,7 @@ export class TectonicEdificeGenerator {
       const stress = fields.overridingInfluence[region]
       if (!Number.isFinite(distance) || stress < 0.04)
         continue
-      const distanceWeight = this.gaussian(
+      const distanceWeight = gaussian(
         distance - VOLCANIC_ARC_DISTANCE,
         VOLCANIC_ARC_WIDTH,
       )
@@ -664,8 +664,4 @@ export class TectonicEdificeGenerator {
     return weight > 0 ? value / weight : 0
   }
 
-  private gaussian(distance: number, sigma: number): number {
-    const normalized = distance / Math.max(sigma, Number.EPSILON)
-    return Math.exp(-0.5 * normalized * normalized)
-  }
 }

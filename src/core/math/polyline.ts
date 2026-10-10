@@ -1,3 +1,5 @@
+import { smoothstep } from '@/core/math/math'
+
 export type SphericalPoint = [number, number, number]
 
 export type SphericalColor = readonly [number, number, number]
@@ -208,7 +210,7 @@ function interpolateStrokePoint(
   position: SphericalPoint,
   amount: number,
 ): SphericalStrokePoint {
-  const easedAmount = amount * amount * (3 - 2 * amount)
+  const easedAmount = smoothstep(0, 1, amount)
   return {
     position,
     width: start.width + (end.width - start.width) * easedAmount,
