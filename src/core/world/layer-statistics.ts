@@ -176,7 +176,9 @@ export function buildLayerStatistics(
           areaKm2: polity.areaKm2,
         })),
         {
-          key: 'unassigned', label: '未归属', color: 'rgb(77, 84, 87)',
+          key: 'unassigned',
+          label: '未归属',
+          color: 'rgb(77, 84, 87)',
           count: polities.unassignedPopulation,
           percentage: totalPopulation > 0 ? polities.unassignedPopulation / totalPopulation * 100 : 0,
           areaKm2: polities.unassignedAreaKm2,
@@ -215,7 +217,9 @@ export function buildLayerStatistics(
           percentage: totalPopulation > 0 ? counts[religion.id] / totalPopulation * 100 : 0,
         })),
         {
-          key: 'unaffiliated', label: '无归属', color: 'rgb(115, 102, 92)',
+          key: 'unaffiliated',
+          label: '无归属',
+          color: 'rgb(115, 102, 92)',
           count: unaffiliated,
           percentage: totalPopulation > 0 ? unaffiliated / totalPopulation * 100 : 0,
         },

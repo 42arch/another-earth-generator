@@ -71,7 +71,6 @@ function windConvergence(mesh: SphericalMesh, wind: MonthlyWind, edgeKm: number)
   const neighborDy = mesh.neighborDy
   const neighborDz = mesh.neighborDz
   for (let region = 0; region < count; region++) {
-    const index = 3 * region
     let inward = 0
     let neighbors = 0
     for (let edge = mesh.neighborOffsets[region]; edge < mesh.neighborOffsets[region + 1]; edge++) {
@@ -156,7 +155,6 @@ function advectMoisture(
         target[region] = localSupply[region]
         continue
       }
-      const index = 3 * region
       let incoming = 0
       let weight = 0
       let sourceHeight = 0

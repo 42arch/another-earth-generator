@@ -59,13 +59,6 @@ export class SphericalVoronoi {
   }
 }
 
-interface EdgeRecord {
-  regionA: number
-  regionB: number
-  cornerA: number
-  cornerB: number
-}
-
 export class SphericalVoronoiBuilder {
   build(mesh: SphericalMeshData): SphericalVoronoiData {
     const cornerPosition = this.buildCornerPositions(mesh)
@@ -146,7 +139,8 @@ export class SphericalVoronoiBuilder {
       const start = cellCornerOffsets[region]
       const end = cellCornerOffsets[region + 1]
       const deg = end - start
-      if (deg <= 1) continue
+      if (deg <= 1)
+        continue
 
       const position = region * 3
       const nx = mesh.regionPosition[position]

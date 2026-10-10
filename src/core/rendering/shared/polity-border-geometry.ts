@@ -1,11 +1,11 @@
+import type { BufferAttribute } from 'three'
 import type { SphericalLinePath, SphericalPoint } from '@/core/math/polyline'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldSimulationState } from '@/core/simulation/state'
-import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
-import { BufferAttribute, BufferGeometry } from 'three'
+import { stitchSphericalSegments } from '@/core/math/polyline'
 import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
 
-import { stitchSphericalSegments } from '@/core/math/polyline'
+import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
 
 /** Borders are derived from neighboring ownership, never stored as simulation state. */
 export function createPolityBorderGeometry(

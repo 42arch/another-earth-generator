@@ -160,8 +160,10 @@ export function applyShareHash(config: WorldConfig, hash: string): boolean {
   try {
     const fields: readonly ShareField[] = match[1] === '2'
       ? LEGACY_SHARE_FIELDS
-      : match[1] === '3' ? SHARE_FIELDS_V3
-        : match[1] === '7' ? SHARE_FIELDS_V7
+      : match[1] === '3'
+        ? SHARE_FIELDS_V3
+        : match[1] === '7'
+          ? SHARE_FIELDS_V7
           : match[1] === '8' ? SHARE_FIELDS : SHARE_FIELDS_V6
     const compressed = fromBase64Url(match[2])
     const payload = JSON.parse(new TextDecoder().decode(inflateSync(compressed))) as unknown

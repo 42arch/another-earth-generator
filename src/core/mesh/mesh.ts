@@ -67,7 +67,7 @@ export default class SphericalMesh implements SphericalMeshData {
         const start = this.neighborOffsets[region]
         const end = this.neighborOffsets[region + 1]
         for (let j = start; j < end; j++) {
-           this._neighborDistances[j] = this.distanceBetweenRegions(region, this.neighbors[j])
+          this._neighborDistances[j] = this.distanceBetweenRegions(region, this.neighbors[j])
         }
       }
     }
@@ -90,7 +90,8 @@ export default class SphericalMesh implements SphericalMeshData {
   }
 
   private ensureNeighborVectors(): void {
-    if (this._neighborDx) return
+    if (this._neighborDx)
+      return
     const length = this.neighbors.length
     this._neighborDx = new Float32Array(length)
     this._neighborDy = new Float32Array(length)

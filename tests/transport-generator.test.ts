@@ -81,10 +81,12 @@ it('crosses a one-cell strait only through a port-to-port sea route', () => {
 })
 
 it('adds a coastal shortcut between road-connected settlements one land cell inland', () => {
-  const land = [...Array.from({ length: 11 }, () => 1), 0, 0]
+  const land = [...Array.from({ length: 11 }).fill(1), 0, 0]
   const edges = [
     ...Array.from({ length: 10 }, (_, region) => [region, region + 1] as const),
-    [1, 11], [11, 12], [12, 9],
+    [1, 11],
+    [11, 12],
+    [12, 9],
   ] as const
   const { mesh, data } = fixture(land, edges, [0, 10])
   const result = new TransportGenerator().generate(mesh, data, cloneWorldConfig(DEFAULT_WORLD_CONFIG))
@@ -96,10 +98,12 @@ it('adds a coastal shortcut between road-connected settlements one land cell inl
 })
 
 it('preserves the full two-step land access path into each port', () => {
-  const land = [...Array.from({ length: 17 }, () => 1), 0, 0]
+  const land = [...Array.from({ length: 17 }).fill(1), 0, 0]
   const edges = [
     ...Array.from({ length: 16 }, (_, region) => [region, region + 1] as const),
-    [2, 17], [17, 18], [18, 14],
+    [2, 17],
+    [17, 18],
+    [18, 14],
   ] as const
   const { mesh, data } = fixture(land, edges, [0, 16])
   const result = new TransportGenerator().generate(mesh, data, cloneWorldConfig(DEFAULT_WORLD_CONFIG))

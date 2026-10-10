@@ -30,7 +30,8 @@ export function drainageGeometry(mesh: SphericalMesh): DrainageGeometry {
   let distance: Float64Array
   if (offsets === mesh.neighborOffsets && neighbors === mesh.neighbors) {
     distance = mesh.neighborDistances
-  } else {
+  }
+  else {
     distance = new Float64Array(neighbors.length)
     for (let region = 0; region < mesh.numRegions; region++) {
       for (let entry = offsets[region]; entry < offsets[region + 1]; entry++)

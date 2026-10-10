@@ -13,7 +13,6 @@ const MIN_RIVER_THRESHOLD = 0.02
 
 export const SURFACE_HYDROLOGY_VERSION = 4
 
-
 export interface SurfaceDrainageData {
   /** Depression-resolved surface used to build a monotonic drainage tree. */
   drainageElevation: Float32Array

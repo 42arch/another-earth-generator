@@ -101,9 +101,7 @@ export class PopulationGenerator {
   ): Settlement[] {
     if (habitableArea === 0 || config.society.settlementDensity <= 0)
       return []
-    const target = Math.min(MAX_SETTLEMENTS, Math.max(1,
-      Math.round(habitableArea / 350_000 * config.society.settlementDensity),
-    ))
+    const target = Math.min(MAX_SETTLEMENTS, Math.max(1, Math.round(habitableArea / 350_000 * config.society.settlementDensity)))
     const bestByBin = new Map<number, Candidate>()
     const landMask = data.geography.landMask
     const riverMask = data.hydrology!.riverMask
@@ -208,11 +206,15 @@ export class PopulationGenerator {
     for (const settlement of settlements) {
       const served = hinterland[settlement.id]
       settlement.hinterlandPopulation = served
-      settlement.rank = served >= 8_000_000 ? 'metropolis'
-        : served >= 2_000_000 ? 'city'
+      settlement.rank = served >= 8_000_000
+        ? 'metropolis'
+        : served >= 2_000_000
+          ? 'city'
           : served >= 300_000 ? 'town' : 'village'
-      const rankFactor = settlement.rank === 'metropolis' ? 0.65
-        : settlement.rank === 'city' ? 0.45
+      const rankFactor = settlement.rank === 'metropolis'
+        ? 0.65
+        : settlement.rank === 'city'
+          ? 0.45
           : settlement.rank === 'town' ? 0.22 : 0.08
       urbanShare[settlement.id] = clamp(config.society.urbanization * rankFactor, 0, 0.8)
       const region = settlement.region

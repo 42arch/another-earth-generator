@@ -258,7 +258,8 @@ export class IcosphereBuilder {
       const start = u * MAX_DEGREE
       const deg = degree[u]
       for (let i = 0; i < deg; i++) {
-        if (adj[start + i] === v) return
+        if (adj[start + i] === v)
+          return
       }
       if (deg < MAX_DEGREE) {
         adj[start + deg] = v

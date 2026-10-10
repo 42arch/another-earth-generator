@@ -5,6 +5,7 @@ import {
   Map,
   Mountain,
   Satellite,
+  Tag,
   Thermometer,
   Waves,
   Wind,
@@ -68,6 +69,10 @@ export const LAYER_REGISTRY: Record<string, LayerDefinition> = {
 
   // Human overlays
   'nation-borders': { id: 'nation-borders', name: '国界线', icon: Map, dataType: 'vector-line', category: 'human', isBaseMap: false, canOverlay: true },
+  'nation-labels': { id: 'nation-labels', name: '国家标签', icon: Tag, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
+  'religion-labels': { id: 'religion-labels', name: '宗教标签', icon: Tag, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
+  'ethnicity-labels': { id: 'ethnicity-labels', name: '民族标签', icon: Tag, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
+  'language-labels': { id: 'language-labels', name: '语言标签', icon: Tag, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
   'cities': { id: 'cities', name: '聚落', icon: Component, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },
   'routes': { id: 'routes', name: '道路与航线', icon: Workflow, dataType: 'vector-line', category: 'human', isBaseMap: false, canOverlay: true },
   'sacred-sites': { id: 'sacred-sites', name: '圣地', icon: Component, dataType: 'vector-point', category: 'human', isBaseMap: false, canOverlay: true },

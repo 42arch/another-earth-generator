@@ -1,51 +1,39 @@
-import type { Material, Object3D } from 'three'
+import type { BufferGeometry, Material, Object3D } from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection, MapProjectionId } from '@/core/projections/map-projection'
 import type { SphericalRegionTopology } from '@/core/rendering/shared/spherical-region-topology'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
-  BufferAttribute,
-  BufferGeometry,
   Color,
   DoubleSide,
   Group,
-  LineBasicMaterial,
-  LineSegments,
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
-  Points,
   RingGeometry,
   Scene,
-  ShaderMaterial,
-  Vector2,
   Vector3,
 } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
-import { Line2 } from 'three/addons/lines/Line2.js'
-import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
 import { getMapProjection } from '@/core/projections/d3-map-projection'
-import { cartesianToGeographic, FULL_LONGITUDE, unwrapLongitudeNear, wrapLongitude } from '@/core/projections/projection-math'
-import { MapLineGeometry } from '@/core/rendering/map/line-geometry'
+import { FULL_LONGITUDE, wrapLongitude } from '@/core/projections/projection-math'
+import { MapCellBoundaryLayer } from '@/core/rendering/map/layers/map-cell-boundary-layer'
+import { MapCloudLayer } from '@/core/rendering/map/layers/map-cloud-layer'
+import { MapGraticuleLayer } from '@/core/rendering/map/layers/map-graticule-layer'
+import { MapLabelLayer } from '@/core/rendering/map/layers/map-label-layer'
+import { MapPolityBorderLayer } from '@/core/rendering/map/layers/map-polity-border-layer'
+import { MapRiverLayer } from '@/core/rendering/map/layers/map-river-layer'
+import { MapRouteLayer } from '@/core/rendering/map/layers/map-route-layer'
+import { MapSettlementLayer } from '@/core/rendering/map/layers/map-settlement-layer'
+import { MapClimateVectorLayer } from '@/core/rendering/map/layers/map-vector-layer'
 import { MapPicker } from '@/core/rendering/map/picker'
-import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
-import { MapRibbonMaterial } from '@/core/rendering/map/ribbon-material'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
-import { SphericalCellBoundaryGeometry } from '@/core/rendering/shared/cell-boundary-geometry'
-import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
-import { CLOUD_FRAGMENT_SHADER, CLOUD_MAP_VERTEX_SHADER } from '@/core/rendering/shared/cloud-shaders'
-import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
 import {
-  createPolityBorderPaths,
   createPolityRegionIds,
-  createPolitySmoothedCornerPositions,
 } from '@/core/rendering/shared/polity-border-geometry'
-import { RiverGeometry } from '@/core/rendering/shared/river-geometry'
 import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
-import { createMapMarkerMaterial } from '@/core/rendering/shared/settlement-marker-material'
-import { createTransportLineGeometry } from '@/core/rendering/shared/transport-line-geometry'
 import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
 
 interface MapLayerResource {
@@ -60,12 +48,7 @@ export class MapView {
   private readonly colorizer = new WorldColorizer()
   private readonly controls: MapControls
   private readonly geometryBuilder = new MapSurfaceGeometry()
-  private readonly cellBoundaryGeometryBuilder = new SphericalCellBoundaryGeometry()
   private readonly regionTopologyBuilder = new SphericalRegionTopologyBuilder()
-  private readonly graticuleGeometryBuilder = new SphericalGraticuleGeometry()
-  private readonly riverGeometryBuilder = new RiverGeometry()
-  private readonly riverRibbonGeometryBuilder = new MapRibbonGeometry()
-  private readonly lineGeometryBuilder = new MapLineGeometry()
   private readonly picker = new MapPicker()
   private projection: MapProjection = getMapProjection('mercator')
   private readonly selectionGroup = new Group()
@@ -87,9 +70,19 @@ export class MapView {
   private active = false
   private surfaceDirty = false
   private overlaysDirty = false
+  private settlementLayer: MapSettlementLayer | null = null
+  private labelLayerInstance: MapLabelLayer | null = null
+  private cloudLayer: MapCloudLayer | null = null
+  private riverLayer: MapRiverLayer | null = null
+  private vectorLayer: MapClimateVectorLayer | null = null
+  private routeLayer: MapRouteLayer | null = null
+  private cellBoundaryLayer: MapCellBoundaryLayer | null = null
+  private polityBorderLayer: MapPolityBorderLayer | null = null
+  private graticuleLayer: MapGraticuleLayer | null = null
   private selectedRegion = -1
   private regionTopology: SphericalRegionTopology | null = null
   private smoothedRegionCorners: Float32Array | null = null
+
   private viewportWidth = 1
   private viewportHeight = 1
 
@@ -111,10 +104,10 @@ export class MapView {
     this.controls.enableRotate = false
     this.controls.enablePan = true
     this.controls.screenSpacePanning = true
-    this.controls.zoomSpeed = 0.8
+    this.controls.zoomSpeed = 1.0
     this.controls.panSpeed = 0.8
     this.controls.minZoom = 1
-    this.controls.maxZoom = 18
+    this.controls.maxZoom = 300
     this.controls.enabled = false
 
     this.rebuildSelectionMarkers()
@@ -129,7 +122,21 @@ export class MapView {
     this.prepareRegionSmoothing()
     this.centralMeridian = this.chooseCentralMeridian(mesh, data)
     this.disposeSurface()
-    this.disposeOverlays()
+    this.settlementLayer?.dispose()
+    this.labelLayerInstance?.dispose()
+    this.cloudLayer?.dispose()
+    this.riverLayer?.dispose()
+    this.vectorLayer?.dispose()
+    this.routeLayer?.dispose()
+    this.cellBoundaryLayer?.dispose()
+    this.polityBorderLayer?.dispose()
+    this.graticuleLayer?.dispose()
+    this.cloudLayer?.dispose()
+    this.riverLayer?.dispose()
+    this.vectorLayer?.dispose()
+    this.cloudLayer?.dispose()
+    this.riverLayer?.dispose()
+    this.vectorLayer?.dispose()
     this.surfaceDirty = true
     this.overlaysDirty = true
     this.selectedRegion = -1
@@ -264,303 +271,47 @@ export class MapView {
   }
 
   private rebuildOverlays(): void {
-    this.disposeOverlays()
     if (!this.mesh || !this.data)
       return
 
-    this.addCellBoundaries()
-    this.addPolityBorders()
-    this.addGraticule()
-    this.addClimateVectors()
-    this.addClouds()
-    this.addRivers()
-    this.addSettlements()
-    this.addSacredSites()
-    this.addRoutes()
+    this.settlementLayer?.dispose()
+    this.labelLayerInstance?.dispose()
+    this.cloudLayer?.dispose()
+    this.riverLayer?.dispose()
+    this.vectorLayer?.dispose()
+    this.routeLayer?.dispose()
+    this.cellBoundaryLayer?.dispose()
+    this.polityBorderLayer?.dispose()
+    this.graticuleLayer?.dispose()
+    if (this.mesh && this.data) {
+      this.settlementLayer = new MapSettlementLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian)
+      this.scene.add(this.settlementLayer.group)
+
+      this.labelLayerInstance = new MapLabelLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian)
+      this.scene.add(this.labelLayerInstance.group)
+
+      this.cloudLayer = new MapCloudLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian)
+      this.scene.add(this.cloudLayer.group)
+
+      this.riverLayer = new MapRiverLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian, this.smoothedRegionCorners, this.viewportWidth, this.viewportHeight)
+      this.scene.add(this.riverLayer.group)
+
+      this.vectorLayer = new MapClimateVectorLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian)
+      this.scene.add(this.vectorLayer.group)
+
+      this.routeLayer = new MapRouteLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian)
+      this.scene.add(this.routeLayer.group)
+
+      this.cellBoundaryLayer = new MapCellBoundaryLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian, this.smoothedRegionCorners ?? null)
+      this.scene.add(this.cellBoundaryLayer.group)
+
+      this.polityBorderLayer = new MapPolityBorderLayer(this.mesh, this.data, this.params, this.projection, this.centralMeridian, this.smoothedRegionCorners ?? null, this.regionTopologyBuilder, this.viewportWidth, this.viewportHeight)
+      this.scene.add(this.polityBorderLayer.group)
+
+      this.graticuleLayer = new MapGraticuleLayer(this.params, this.projection, this.centralMeridian)
+      this.scene.add(this.graticuleLayer.group)
+    }
     this.overlaysDirty = false
-  }
-
-  private addRoutes(): void {
-    if (!this.params.appearance.overlays.routes || !this.mesh || !this.data?.society?.transport)
-      return
-    this.addProjectedSourceGeometry(
-      createTransportLineGeometry(this.mesh, this.data),
-      0xFFFFFF,
-      0.85,
-      0.4,
-      7.5,
-      true,
-    )
-  }
-
-  private addSettlements(): void {
-    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.society)
-      return
-    const positions: number[] = []
-    const colors: number[] = []
-    const markerLevels: number[] = []
-    const palette = { village: 0xB7E4B3, town: 0xF4D777, city: 0xFFAE59, metropolis: 0xFF665C }
-    const level = { village: 0, town: 1, city: 2, metropolis: 3 }
-    for (const settlement of this.data.society.settlements) {
-      const projected = this.projection.project(
-        this.mesh.regionLongitude[settlement.region],
-        this.mesh.regionLatitude[settlement.region],
-        this.centralMeridian,
-      )
-      if (!projected)
-        continue
-      positions.push(projected.x, projected.y, 0.5)
-      const color = new Color(palette[settlement.rank])
-      colors.push(color.r, color.g, color.b)
-      markerLevels.push(level[settlement.rank])
-    }
-    if (positions.length === 0)
-      return
-    const geometry = new BufferGeometry()
-    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
-    geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
-    geometry.setAttribute('markerLevel', new BufferAttribute(new Float32Array(markerLevels), 1))
-    const material = createMapMarkerMaterial(false)
-    const layer = new Points(geometry, material)
-    layer.renderOrder = 8
-    this.addWrappedLayer(layer, geometry, material)
-  }
-
-  private addSacredSites(): void {
-    if (!this.params.appearance.overlays['sacred-sites'] || !this.mesh || !this.data?.society?.religions)
-      return
-    const positions: number[] = []
-    const colors: number[] = []
-    const markerLevels: number[] = []
-    const color = new Color(0xEAC2FF)
-    for (const site of this.data.society.religions.sacredSites) {
-      const projected = this.projection.project(
-        this.mesh.regionLongitude[site.region],
-        this.mesh.regionLatitude[site.region],
-        this.centralMeridian,
-      )
-      if (projected) {
-        positions.push(projected.x, projected.y, 0.56)
-        colors.push(color.r, color.g, color.b)
-        markerLevels.push(2)
-      }
-    }
-    if (positions.length === 0)
-      return
-    const geometry = new BufferGeometry()
-    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
-    geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
-    geometry.setAttribute('markerLevel', new BufferAttribute(new Float32Array(markerLevels), 1))
-    const material = createMapMarkerMaterial(false)
-    const layer = new Points(geometry, material)
-    layer.renderOrder = 9
-    this.addWrappedLayer(layer, geometry, material)
-  }
-
-  private addClouds(): void {
-    if (!this.params.appearance.overlays.clouds || !this.mesh)
-      return
-    const geometry = this.geometryBuilder.create(
-      this.mesh,
-      new Float32Array(this.mesh.numRegions * 3),
-      this.projection,
-      this.centralMeridian,
-      undefined,
-      undefined,
-      true,
-    )
-    geometry.translate(0, 0, 0.002)
-    const material = new ShaderMaterial({
-      vertexShader: CLOUD_MAP_VERTEX_SHADER,
-      fragmentShader: CLOUD_FRAGMENT_SHADER,
-      uniforms: {
-        uSeed: { value: this.params.core.seed },
-        uCoverage: { value: 0.66 },
-      },
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      side: DoubleSide,
-      toneMapped: false,
-    })
-    const layer = new Mesh(geometry, material)
-    layer.renderOrder = 6
-    this.addWrappedLayer(layer, geometry, material)
-  }
-
-  private addRivers(): void {
-    if (
-      !this.params.appearance.overlays.rivers
-      || !this.mesh
-      || !this.data?.hydrology
-    ) {
-      return
-    }
-    const geometry = this.riverRibbonGeometryBuilder.create(
-      this.riverGeometryBuilder.createStrokePaths(
-        this.mesh,
-        this.data,
-        undefined,
-        this.smoothedRegionCorners ?? undefined,
-      ),
-      this.projection,
-      this.centralMeridian,
-      0.3,
-    )
-    if ((geometry.getAttribute('position')?.count ?? 0) === 0) {
-      geometry.dispose()
-      return
-    }
-    const material = new MapRibbonMaterial(
-      0xFFFFFF,
-      0.6,
-      this.viewportWidth,
-      this.viewportHeight,
-    )
-    // Width scale is updated dynamically in update() based on camera zoom.
-    const layer = new Mesh(geometry, material)
-    layer.renderOrder = 7
-    this.addWrappedLayer(layer, geometry, material)
-  }
-
-  private addClimateVectors(): void {
-    const mode = this.params.appearance.baseMap
-    const vectors = this.data?.climate?.displayVector
-    if (!this.mesh || !this.data || (mode !== 'wind' && mode !== 'ocean-current') || vectors?.kind !== mode)
-      return
-    const geometry = createClimateVectorGeometry(this.mesh, vectors, this.data.geography.landMask, 1)
-    this.addProjectedSourceGeometry(geometry, mode === 'wind' ? 0xA9FFF1 : 0xFFFFFF, 0.94, 0.4, 5, mode === 'ocean-current')
-  }
-
-  private addCellBoundaries(): void {
-    if (!this.params.appearance.overlays.wireframe || !this.mesh)
-      return
-    // Surface polygons use straight projected edges. Keep the overlay on the
-    // same endpoint segments so non-linear map projections cannot introduce
-    // a visible offset between the fill boundary and the cell line.
-    const geometry = this.cellBoundaryGeometryBuilder.create(
-      this.mesh,
-      1,
-      Number.POSITIVE_INFINITY,
-      undefined,
-      0,
-      1,
-      undefined,
-      undefined,
-      this.smoothedRegionCorners ?? undefined,
-    )
-    this.addProjectedSourceGeometry(
-      geometry,
-      0xB8D6E8,
-      0.5,
-      0.24,
-      2,
-    )
-  }
-
-  private addPolityBorders(): void {
-    if (!this.params.appearance.overlays['nation-borders'] || !this.mesh || !this.data?.society?.polities)
-      return
-    const smoothedCorners = this.getRegionSmoothingMode(this.params) === 'polities' && this.smoothedRegionCorners
-      ? this.smoothedRegionCorners
-      : createPolitySmoothedCornerPositions(this.mesh, this.data, this.regionTopologyBuilder)
-    const paths = createPolityBorderPaths(this.mesh, this.data, 1, 0, 1, smoothedCorners)
-    const group = new Group()
-    const geometries: BufferGeometry[] = []
-    const material = new LineMaterial({
-      color: 0x747A80,
-      linewidth: 3.4,
-      dashed: true,
-      dashSize: 0.05,
-      gapSize: 0.035,
-      resolution: new Vector2(this.viewportWidth, this.viewportHeight),
-      transparent: true,
-      opacity: 0.95,
-      depthTest: false,
-      depthWrite: false,
-    })
-
-    for (const path of paths) {
-      const geographic = path.points.map((point) => {
-        const location = cartesianToGeographic(point[0], point[1], point[2])
-        return {
-          longitude: wrapLongitude(location.longitude - this.centralMeridian),
-          latitude: location.latitude,
-        }
-      })
-      for (let index = 1; index < geographic.length; index++) {
-        geographic[index].longitude = unwrapLongitudeNear(
-          geographic[index].longitude,
-          geographic[index - 1].longitude,
-        )
-      }
-      if (path.closed) {
-        const first = geographic[0]
-        geographic.push({
-          ...first,
-          longitude: unwrapLongitudeNear(first.longitude, geographic[geographic.length - 1].longitude),
-        })
-      }
-
-      const fragments: [number, number, number][][] = []
-      for (const worldOffset of [-FULL_LONGITUDE, 0, FULL_LONGITUDE]) {
-        let current: [number, number, number][] = []
-        for (let index = 1; index < geographic.length; index++) {
-          const start = { ...geographic[index - 1], longitude: geographic[index - 1].longitude + worldOffset }
-          const end = { ...geographic[index], longitude: geographic[index].longitude + worldOffset }
-          const clipped = clipBorderSegment(
-            start,
-            end,
-            -Math.PI,
-            Math.PI,
-            this.projection.minimumLatitude,
-            this.projection.maximumLatitude,
-          )
-          if (!clipped) {
-            if (current.length >= 2)
-              fragments.push(current)
-            current = []
-            continue
-          }
-          const projectedStart = this.projection.projectRelative(clipped[0].longitude, clipped[0].latitude)
-          const projectedEnd = this.projection.projectRelative(clipped[1].longitude, clipped[1].latitude)
-          if (!projectedStart || !projectedEnd) {
-            if (current.length >= 2)
-              fragments.push(current)
-            current = []
-            continue
-          }
-          const start3: [number, number, number] = [projectedStart.x, projectedStart.y, 0.35]
-          const end3: [number, number, number] = [projectedEnd.x, projectedEnd.y, 0.35]
-          const last = current[current.length - 1]
-          if (last && Math.hypot(last[0] - start3[0], last[1] - start3[1]) > 1e-6) {
-            if (current.length >= 2)
-              fragments.push(current)
-            current = []
-          }
-          if (current.length === 0)
-            current.push(start3)
-          current.push(end3)
-        }
-        if (current.length >= 2)
-          fragments.push(current)
-      }
-
-      for (const fragment of fragments) {
-        const geometry = new LineGeometry().setPositions(fragment.flatMap(point => point))
-        const line = new Line2(geometry, material)
-        line.computeLineDistances()
-        line.renderOrder = 6
-        group.add(line)
-        geometries.push(geometry)
-      }
-    }
-
-    if (geometries.length === 0) {
-      material.dispose()
-      return
-    }
-    this.addWrappedLayer(group, geometries, material)
   }
 
   private buildDisplayRegionIds(): Int32Array {
@@ -636,65 +387,6 @@ export class MapView {
       this.mesh,
       this.regionTopology,
     )
-  }
-
-  private addGraticule(): void {
-    if (!this.params.appearance.overlays.graticule)
-      return
-    const geometry = this.graticuleGeometryBuilder.create(1)
-    this.addProjectedSourceGeometry(geometry, 0xB8D6E8, 0.36, 0.28, 3)
-  }
-
-  private addProjectedSourceGeometry(
-    source: BufferGeometry,
-    color: number,
-    opacity: number,
-    z: number,
-    renderOrder: number,
-    vertexColors = false,
-  ): void {
-    const geometry = this.lineGeometryBuilder.create(
-      source,
-      this.projection,
-      this.centralMeridian,
-      z,
-    )
-    if (source.userData.areaPolygons)
-      geometry.userData.areaPolygons = source.userData.areaPolygons
-    source.dispose()
-    if ((geometry.getAttribute('position')?.count ?? 0) === 0) {
-      geometry.dispose()
-      return
-    }
-    const material = new LineBasicMaterial({
-      color,
-      vertexColors,
-      transparent: opacity < 1,
-      opacity,
-      depthTest: false,
-      depthWrite: false,
-    })
-    const layer = new LineSegments(geometry, material)
-    layer.renderOrder = renderOrder
-    this.addWrappedLayer(layer, geometry, material)
-  }
-
-  private addWrappedLayer(
-    layer: Object3D,
-    geometry: BufferGeometry | BufferGeometry[],
-    material: Material,
-  ): void {
-    const objects: Object3D[] = []
-    const worldOffsets = this.projection.wrapX
-      ? [-this.projection.worldWidth, 0, this.projection.worldWidth]
-      : [0]
-    for (const worldOffset of worldOffsets) {
-      const object = worldOffset === 0 ? layer : layer.clone()
-      object.position.x += worldOffset
-      this.scene.add(object)
-      objects.push(object)
-    }
-    this.overlayResources.push({ objects, geometry, material })
   }
 
   private chooseCentralMeridian(
@@ -826,24 +518,24 @@ export class MapView {
       this.camera.bottom = -halfHeight
     }
     this.camera.updateProjectionMatrix()
+    this.riverLayer?.updateViewport(this.viewportWidth, this.viewportHeight)
+    this.vectorLayer?.updateViewport(this.viewportWidth, this.viewportHeight)
+    this.polityBorderLayer?.updateViewport(this.viewportWidth, this.viewportHeight)
     for (const resource of this.overlayResources) {
-      if (resource.material instanceof MapRibbonMaterial)
-        resource.material.setResolution(this.viewportWidth, this.viewportHeight)
-      else if (resource.material instanceof LineMaterial)
+      if (resource.material instanceof LineMaterial)
         resource.material.resolution.set(this.viewportWidth, this.viewportHeight)
     }
   }
 
   update(): void {
     this.controls.update()
+    this.labelLayerInstance?.updateLOD(this.camera.zoom)
+    this.riverLayer?.updateWidthScale(this.camera.zoom)
+    this.vectorLayer?.updateLineWidth(this.camera.zoom)
+    this.polityBorderLayer?.updateLineWidth(this.camera.zoom)
     for (const resource of this.overlayResources) {
-      if (resource.material instanceof MapRibbonMaterial) {
-        // Base scale 100 multiplied by zoom ensures rivers shrink when zooming out
-        // and grow proportionally when zooming in.
-        resource.material.setWidthScale(100 * this.camera.zoom)
-      }
-      else if (resource.material instanceof LineMaterial) {
-        resource.material.linewidth = Math.max(1.2, 3.4 / Math.sqrt(this.camera.zoom))
+      if (resource.material instanceof LineMaterial) {
+        resource.material.linewidth = Math.max(1.0, 3.4 / Math.sqrt(this.camera.zoom))
       }
     }
     const visibleHalfWidth = (this.camera.right - this.camera.left)
@@ -955,40 +647,4 @@ export class MapView {
     this.surface = null
     this.surfaceCopies = []
   }
-}
-
-function clipBorderSegment(
-  start: { longitude: number, latitude: number },
-  end: { longitude: number, latitude: number },
-  minimumLongitude: number,
-  maximumLongitude: number,
-  minimumLatitude: number,
-  maximumLatitude: number,
-): readonly [{ longitude: number, latitude: number }, { longitude: number, latitude: number }] | null {
-  let minimumAmount = 0
-  let maximumAmount = 1
-  const axes = [
-    [start.longitude, end.longitude - start.longitude, minimumLongitude, maximumLongitude],
-    [start.latitude, end.latitude - start.latitude, minimumLatitude, maximumLatitude],
-  ] as const
-  for (const [origin, difference, minimum, maximum] of axes) {
-    if (Math.abs(difference) <= Number.EPSILON) {
-      if (origin < minimum || origin > maximum)
-        return null
-      continue
-    }
-    const amountA = (minimum - origin) / difference
-    const amountB = (maximum - origin) / difference
-    minimumAmount = Math.max(minimumAmount, Math.min(amountA, amountB))
-    maximumAmount = Math.min(maximumAmount, Math.max(amountA, amountB))
-    if (minimumAmount > maximumAmount)
-      return null
-  }
-  if (maximumAmount - minimumAmount <= 1e-12)
-    return null
-  const interpolate = (amount: number) => ({
-    longitude: start.longitude + (end.longitude - start.longitude) * amount,
-    latitude: start.latitude + (end.latitude - start.latitude) * amount,
-  })
-  return [interpolate(minimumAmount), interpolate(maximumAmount)]
 }

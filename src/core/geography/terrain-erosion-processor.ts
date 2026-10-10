@@ -61,7 +61,7 @@ export class TerrainErosionProcessor {
       hydraulicIterations,
     )
     const before = Float32Array.from(elevation)
-    const neighborDistance = mesh.neighborDistances
+    const neighborDistance = this.buildNeighborDistances(mesh)
     const landRegions = this.collectLandRegions(mesh, oceanMask)
     const flowReceiver = new Int32Array(mesh.numRegions).fill(-1)
     const flowAccumulation = new Float32Array(mesh.numRegions)
@@ -111,7 +111,6 @@ export class TerrainErosionProcessor {
         }
 
         if (applyHydraulic) {
-
           this.buildDrainage(
             mesh,
             elevation,

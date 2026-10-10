@@ -71,7 +71,7 @@ export class TectonicElevationGenerator {
       tectonics,
     )
     console.timeEnd('spatialFieldGenerator.generate')
-    
+
     console.time('terrainClassifier.generate')
     const classification = this.terrainClassifier.generate(
       mesh,
@@ -81,7 +81,7 @@ export class TectonicElevationGenerator {
       seed,
     )
     console.timeEnd('terrainClassifier.generate')
-    
+
     console.time('buildElevation loop')
     const skeletonElevation = new Float32Array(mesh.numRegions)
     const skeletonNoise = createNoise3D(alea(seed + 557))
@@ -104,7 +104,7 @@ export class TectonicElevationGenerator {
       skeletonElevation[region] = clamp(value, -0.75, 1.2)
     }
     console.timeEnd('buildElevation loop')
-    
+
     console.time('phasorRidgeGenerator.generate')
     const phasor = this.phasorRidgeGenerator.generate(
       mesh,
@@ -116,7 +116,7 @@ export class TectonicElevationGenerator {
       seed,
     )
     console.timeEnd('phasorRidgeGenerator.generate')
-    
+
     console.time('edificeGenerator.generate')
     const { elevation, edifices } = this.edificeGenerator.generate(
       mesh,

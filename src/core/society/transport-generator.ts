@@ -366,7 +366,7 @@ export class TransportGenerator {
 
   private appendRoute(
     mesh: SphericalMesh,
-    society: SocietyData,
+    _society: SocietyData,
     candidate: Candidate,
     parent: Int32Array,
     kind: 'road' | 'sea',

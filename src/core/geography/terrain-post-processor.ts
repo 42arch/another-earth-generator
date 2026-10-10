@@ -100,24 +100,24 @@ export class TerrainPostProcessor {
         textured.elevation[region] += dynamicTopography[region]
     }
     console.timeEnd('textureGenerator.generate')
-    
+
     console.time('finalizer.generate')
     const finalized = this.finalizer.generate(mesh, textured.elevation, candidateLandMask)
     const elevation = Float32Array.from(finalized.elevation)
     console.timeEnd('finalizer.generate')
-    
+
     console.time('warpTerrain')
     this.warpTerrain(mesh, elevation, seed, terrainWarp, hotspot)
     console.timeEnd('warpTerrain')
-    
+
     const beforePostProcess = Float32Array.from(elevation)
     console.time('regularizeShoreline')
     this.regularizeShoreline(mesh, elevation, candidateLandMask, edifices)
     console.timeEnd('regularizeShoreline')
-    
+
     // Freeze the stabilized shoreline for later erosion and land-only detail.
     const oceanMask = this.buildOceanMask(elevation)
-    
+
     console.time('smooth')
     if (smoothing > 0) {
       const iterations = Math.round(1 + smoothing * 4)
@@ -125,7 +125,7 @@ export class TerrainPostProcessor {
       this.smooth(mesh, elevation, oceanMask, iterations, strength)
     }
     console.timeEnd('smooth')
-    
+
     const beforeDetail = Float32Array.from(elevation)
     console.time('applyDetailNoise')
     this.applyDetailNoise(mesh, elevation, oceanMask, classification, seed)
@@ -138,13 +138,13 @@ export class TerrainPostProcessor {
       seedOffset: 13579,
     })
     console.timeEnd('applyDetailNoise')
-    
+
     for (let region = 0; region < mesh.numRegions; region++) {
       const detailDelta = elevation[region] - beforeDetail[region]
       textured.texture.postDetail[region] = detailDelta
       textured.texture.total[region] += detailDelta
     }
-    
+
     console.time('erosionProcessor.generate')
     const erosion = this.erosionProcessor.generate(mesh, elevation, oceanMask, {
       glacial: glacialErosion,
@@ -152,7 +152,7 @@ export class TerrainPostProcessor {
       drainageDiagnostics: false,
     })
     console.timeEnd('erosionProcessor.generate')
-    
+
     const sharpening = Math.max(0, Math.min(1, ridgeSharpening))
     console.time('sharpenRidges')
     if (sharpening > 0) {
@@ -165,11 +165,11 @@ export class TerrainPostProcessor {
       )
     }
     console.timeEnd('sharpenRidges')
-    
+
     console.time('applySoilCreep')
     this.applySoilCreep(mesh, elevation, oceanMask, 3, 0.1125)
     console.timeEnd('applySoilCreep')
-    
+
     console.time('rebuildDrainage')
     if (!deferDrainage)
       this.erosionProcessor.rebuildDrainage(mesh, elevation, oceanMask, erosion)

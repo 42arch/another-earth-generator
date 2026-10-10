@@ -20,9 +20,9 @@ const MIN_CAPITAL_SPACING_KM = 900
 const SEA_LOADING_COST_KM = 120
 const GOVERNING_FORMS: Polity['governingForm'][] = ['kingdom', 'republic', 'league', 'city-state']
 const FORM_SUFFIX: Record<Polity['governingForm'], string> = {
-  kingdom: '王国',
-  republic: '共和国',
-  league: '联盟',
+  'kingdom': '王国',
+  'republic': '共和国',
+  'league': '联盟',
   'city-state': '城邦',
 }
 
@@ -77,7 +77,13 @@ export class PolityGenerator {
         const next = mesh.neighbors[edge]
         if (land[next]) {
           offer(next, current.owner, current.cost + landTravelCost(
-            mesh, data, config, current.region, next, edge, society.transport.roadRegionMask,
+            mesh,
+            data,
+            config,
+            current.region,
+            next,
+            edge,
+            society.transport.roadRegionMask,
           ) / budget)
         }
       }
@@ -185,7 +191,13 @@ export class PolityGenerator {
         const next = mesh.neighbors[edge]
         if (polityByRegion[next] === polityId) {
           offerDistrict(next, current.cost + landTravelCost(
-            mesh, data, config, current.region, next, edge, society.transport.roadRegionMask,
+            mesh,
+            data,
+            config,
+            current.region,
+            next,
+            edge,
+            society.transport.roadRegionMask,
           ))
         }
       }
@@ -294,7 +306,13 @@ export class PolityGenerator {
         const next = mesh.neighbors[edge]
         if (land[next]) {
           offer(next, current.owner, current.cost + landTravelCost(
-            mesh, data, config, current.region, next, edge, roadMask,
+            mesh,
+            data,
+            config,
+            current.region,
+            next,
+            edge,
+            roadMask,
           ) / budget)
         }
       }

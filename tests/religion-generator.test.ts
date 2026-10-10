@@ -15,13 +15,18 @@ function fixture(routes: TransportRoute[] = []): { mesh: SphericalMesh, data: Wo
     neighborOffsets: offsets,
     neighbors: Uint32Array.from(adjacency.flat()),
     neighborDistances: new Float64Array(8).fill(0.02),
-    forEachNeighborOfRegion: function* (region: number) { yield* adjacency[region] },
+    * forEachNeighborOfRegion(region: number) { yield* adjacency[region] },
     distanceBetweenRegions: (a: number, b: number) => Math.abs(a - b) * 0.04,
   } as unknown as SphericalMesh
   const population = new Float32Array([1200, 500, 0, 500, 1000, 200])
   const settlements = [0, 4, 5].map((region, id) => ({
-    id, region, name: `聚落${id}`, rank: 'city' as const,
-    population: population[region], hinterlandPopulation: [300_000, 200_000, 50_000][id], reasons: [],
+    id,
+    region,
+    name: `聚落${id}`,
+    rank: 'city' as const,
+    population: population[region],
+    hinterlandPopulation: [300_000, 200_000, 50_000][id],
+    reasons: [],
   }))
   const society: SocietyData = {
     habitability: new Float32Array(land.length),
@@ -40,9 +45,12 @@ function fixture(routes: TransportRoute[] = []): { mesh: SphericalMesh, data: Wo
       roadRegionMask: new Uint8Array(land.length),
     },
     ethnicity: {
-      groups: [], languages: [], languageFamilies: [],
+      groups: [],
+      languages: [],
+      languageFamilies: [],
       regionOffsets: new Uint32Array(land.length + 1),
-      groupIds: new Uint32Array(), residents: new Float64Array(),
+      groupIds: new Uint32Array(),
+      residents: new Float64Array(),
       dominantGroup: new Int32Array(land.length).fill(-1),
       dominantGroupShare: new Float32Array(land.length),
       dominantLanguage: new Int32Array(land.length).fill(-1),
@@ -50,9 +58,14 @@ function fixture(routes: TransportRoute[] = []): { mesh: SphericalMesh, data: Wo
     },
     polities: {
       polities: settlements.map(settlement => ({
-        id: settlement.id, name: `邦${settlement.id}`, capitalSettlementId: settlement.id,
-        governingForm: 'city-state' as const, officialLanguageId: -1,
-        governanceBudgetKm: 1500, population: 0, areaKm2: 0,
+        id: settlement.id,
+        name: `邦${settlement.id}`,
+        capitalSettlementId: settlement.id,
+        governingForm: 'city-state' as const,
+        officialLanguageId: -1,
+        governanceBudgetKm: 1500,
+        population: 0,
+        areaKm2: 0,
       })),
       districts: [],
       polityByRegion: new Int32Array([0, 0, -1, 1, 1, 2]),
@@ -94,8 +107,13 @@ it('conserves resident population, includes unaffiliated people, and keeps ocean
 
 it('spreads a belief across water only along a selected sea route', () => {
   const route: TransportRoute = {
-    id: 0, kind: 'sea', fromSettlement: 0, toSettlement: 1,
-    regions: new Uint32Array([0, 1, 2, 3, 4]), distanceKm: 450, costKm: 450,
+    id: 0,
+    kind: 'sea',
+    fromSettlement: 0,
+    toSettlement: 1,
+    regions: new Uint32Array([0, 1, 2, 3, 4]),
+    distanceKm: 450,
+    costKm: 450,
   }
   const config = cloneWorldConfig(DEFAULT_WORLD_CONFIG)
   const isolated = fixture()

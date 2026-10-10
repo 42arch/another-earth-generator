@@ -21,6 +21,7 @@
     "lint:fix": "eslint --fix",
     "changeset": "changeset",
     "version-packages": "changeset version",
+    "build:icons": "npx fantasticon public/icons/maki -o public/fonts -n maki -t woff ttf -g ts json --normalize true && cp public/fonts/maki.ts src/core/rendering/shared/maki.ts",
     "release": "changeset tag && git push --follow-tags"
   },
   "dependencies": {
@@ -34,6 +35,7 @@
     "fflate": "^0.8.3",
     "simplex-noise": "^4.0.3",
     "three": "^0.185.1",
+    "troika-three-text": "^0.52.5",
     "tweakpane": "^4.0.5",
     "workbox-window": "^7.4.1"
   },

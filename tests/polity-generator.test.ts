@@ -17,7 +17,7 @@ function fixture(): { mesh: SphericalMesh, data: WorldSimulationState } {
     neighbors: Uint32Array.from(adjacency.flat()),
     neighborDistances: new Float64Array(10).fill(0.02),
     regionArea: new Float32Array(land.length).fill(0.001),
-    forEachNeighborOfRegion: function* (region: number) { yield* adjacency[region] },
+    * forEachNeighborOfRegion(region: number) { yield* adjacency[region] },
     distanceBetweenRegions: (from: number, to: number) => Math.abs(from - to) * 0.02,
   } as unknown as SphericalMesh
   const population = new Float32Array([1000, 500, 100, 0, 300, 800, 0])
@@ -27,8 +27,13 @@ function fixture(): { mesh: SphericalMesh, data: WorldSimulationState } {
     populationDensity: new Float32Array(land.length),
     settlementByRegion: new Int32Array([0, -1, -1, -1, -1, 1, -1]),
     settlements: [0, 5].map((region, id) => ({
-      id, region, name: `聚落${id}`, rank: 'city' as const,
-      population: population[region], hinterlandPopulation: 100_000, reasons: [],
+      id,
+      region,
+      name: `聚落${id}`,
+      rank: 'city' as const,
+      population: population[region],
+      hinterlandPopulation: 100_000,
+      reasons: [],
     })),
     totalPopulation: population.reduce((sum, value) => sum + value, 0),
     transport: {
@@ -41,9 +46,13 @@ function fixture(): { mesh: SphericalMesh, data: WorldSimulationState } {
       roadRegionMask: new Uint8Array(land.length),
     },
     ethnicity: {
-      groups: [], languages: [], languageFamilies: [],
-      regionOffsets: new Uint32Array(land.length + 1), groupIds: new Uint32Array(),
-      residents: new Float64Array(), dominantGroup: new Int32Array(land.length).fill(-1),
+      groups: [],
+      languages: [],
+      languageFamilies: [],
+      regionOffsets: new Uint32Array(land.length + 1),
+      groupIds: new Uint32Array(),
+      residents: new Float64Array(),
+      dominantGroup: new Int32Array(land.length).fill(-1),
       dominantGroupShare: new Float32Array(land.length),
       dominantLanguage: new Int32Array([0, 0, 0, -1, 1, 1, -1]),
       dominantLanguageShare: new Float32Array(land.length),
