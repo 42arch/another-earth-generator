@@ -7,16 +7,29 @@ import {
   REFERENCE_PLATE_SUBDIVISION_COUNT,
 } from '@/core/simulation/config'
 
-it('round-trips tectonic controls and reads legacy subdivision counts', () => {
+it('round-trips tectonic and civilization controls and reads legacy subdivision counts', () => {
   const config = cloneWorldConfig(DEFAULT_WORLD_CONFIG)
   config.geology.primaryPlateCount = 12
   config.geology.microPlateCount = 4
   config.geology.plateSizeVariety = 0.6
+  config.civilization.populationScale = 1.7
+  config.civilization.settlementDensity = 0.8
+  config.civilization.urbanization = 0.55
+  config.civilization.roadConnectivity = 0.7
+  config.civilization.terrainResistance = 1.5
   const restored = cloneWorldConfig(DEFAULT_WORLD_CONFIG)
   const currentHash = createShareHash(config)
-  expect(currentHash.startsWith('#w=6.')).toBe(true)
+  expect(currentHash.startsWith('#w=8.')).toBe(true)
   expect(applyShareHash(restored, currentHash)).toBe(true)
   expect(restored.geology).toEqual(config.geology)
+  expect(restored.civilization).toEqual(config.civilization)
+
+  const previousPayload = deflateSync(new TextEncoder().encode(JSON.stringify([[[18, 1.4]]])))
+  const previousHash = `#w=7.${btoa(String.fromCharCode(...previousPayload)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '')}`
+  const previousConfig = cloneWorldConfig(DEFAULT_WORLD_CONFIG)
+  expect(applyShareHash(previousConfig, previousHash)).toBe(true)
+  expect(previousConfig.civilization.populationScale).toBe(1.4)
+  expect(previousConfig.civilization.roadConnectivity).toBe(DEFAULT_WORLD_CONFIG.civilization.roadConnectivity)
 
   for (const version of [2, 3, 4, 5]) {
     const changes = version === 2 ? [[3, 64]] : version === 3 ? [[3, 64], [16, 12]] : []

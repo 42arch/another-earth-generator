@@ -1,7 +1,7 @@
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { CandidateLandGenerator } from '@/core/geography/candidate-land-generator'
-import { PlatePropertiesGenerator } from '@/core/geology/plate-properties-generator'
-import { SuperPlateGenerator } from '@/core/geology/super-plate-generator'
+import { CandidateLandGenerator } from '@/core/simulation/geography/candidate-land-generator'
+import { PlatePropertiesGenerator } from '@/core/simulation/geology/plate-properties-generator'
+import { SuperPlateGenerator } from '@/core/simulation/geology/super-plate-generator'
 
 export class ContinentalCrustStage implements ISimulationStage {
   name = 'ContinentalCrust'

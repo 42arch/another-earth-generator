@@ -1,6 +1,6 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import { BufferAttribute, BufferGeometry } from 'three'
-import { elevationKmToDisplayCoordinate } from '@/core/geography/elevation-units'
+import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
 
 const DEFAULT_MAXIMUM_ARC_STEP = Math.PI / 90
 

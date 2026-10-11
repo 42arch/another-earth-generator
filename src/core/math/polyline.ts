@@ -1,3 +1,5 @@
+import { smoothstep } from '@/core/math/math'
+
 export type SphericalPoint = [number, number, number]
 
 export type SphericalColor = readonly [number, number, number]
@@ -16,6 +18,7 @@ export interface SphericalLinePath {
 export interface SphericalStrokePoint {
   position: SphericalPoint
   width: number
+  flowAccumulation?: number
   color?: SphericalColor
   /** Optional radial offset from the base sphere for draping over displaced terrain. */
   surfaceOffset?: number
@@ -182,6 +185,7 @@ export function sampleSmoothSphericalStrokePath(
       return {
         position,
         width: last.width,
+        flowAccumulation: last.flowAccumulation,
         color: last.color,
         surfaceOffset: last.surfaceOffset,
         widthFloorScale: last.widthFloorScale,
@@ -208,10 +212,13 @@ function interpolateStrokePoint(
   position: SphericalPoint,
   amount: number,
 ): SphericalStrokePoint {
-  const easedAmount = amount * amount * (3 - 2 * amount)
+  const easedAmount = smoothstep(0, 1, amount)
   return {
     position,
     width: start.width + (end.width - start.width) * easedAmount,
+    flowAccumulation: start.flowAccumulation !== undefined && end.flowAccumulation !== undefined
+      ? start.flowAccumulation + (end.flowAccumulation - start.flowAccumulation) * amount
+      : start.flowAccumulation ?? end.flowAccumulation,
     surfaceOffset: start.surfaceOffset !== undefined && end.surfaceOffset !== undefined
       ? start.surfaceOffset + (end.surfaceOffset - start.surfaceOffset) * amount
       : start.surfaceOffset ?? end.surfaceOffset,

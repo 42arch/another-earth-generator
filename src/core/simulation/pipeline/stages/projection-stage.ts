@@ -1,6 +1,6 @@
 import type { ISimulationStage, SimulationContext } from '../types'
-import type { SphericalCrustData } from '@/core/geology/geology-data'
-import { SphericalPlateBoundaryAnalyzer } from '@/core/geology/plate-boundary-analyzer'
+import type { SphericalCrustData } from '@/core/simulation/geology/geology-data'
+import { SphericalPlateBoundaryAnalyzer } from '@/core/simulation/geology/plate-boundary-analyzer'
 
 export class ProjectionStage implements ISimulationStage {
   name = 'DataProjection'

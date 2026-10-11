@@ -1,7 +1,7 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { generateSeasonalOcean } from '@/core/climate/seasonal-ocean-generator'
-import { generateSeasonalWind } from '@/core/climate/seasonal-wind-generator'
+import { generateSeasonalOcean } from '@/core/simulation/climate/seasonal-ocean-generator'
+import { generateSeasonalWind } from '@/core/simulation/climate/seasonal-wind-generator'
 
 interface ClimateSurface {
   mesh: SphericalMesh

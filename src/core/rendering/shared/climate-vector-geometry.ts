@@ -1,5 +1,5 @@
-import type { ClimateVectorDisplayData } from '@/core/climate/climate-data'
 import type SphericalMesh from '@/core/mesh/mesh'
+import type { ClimateVectorDisplayData } from '@/core/simulation/climate/climate-data'
 import { BufferAttribute, BufferGeometry, Color } from 'three'
 import { getOceanCurrentThermalColor } from '@/core/rendering/shared/climate-color-scale'
 

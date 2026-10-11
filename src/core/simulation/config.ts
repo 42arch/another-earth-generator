@@ -52,8 +52,21 @@ export interface WorldConfig {
     /** Converts the generated daily precipitation rate to calibrated rainfall. */
     precipitationScale: number
   }
+  civilization: {
+    /** Global multiplier for resident population. */
+    populationScale: number
+    /** Relative number of settlement centres. */
+    settlementDensity: number
+    /** Share of hinterland residents concentrated in settlements. */
+    urbanization: number
+    /** Relative number of redundant road connections. */
+    roadConnectivity: number
+    /** Extra land travel resistance from relief and difficult biomes. */
+    terrainResistance: number
+  }
   appearance: {
     baseMap: string
+    mapStyle: string
     overlays: Record<string, boolean>
     /** Zero-based calendar month used by the climate layers. */
     climateMonth: number
@@ -94,12 +107,28 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
     temperatureOffsetC: 0,
     precipitationScale: 1.8,
   },
+  civilization: {
+    populationScale: 1,
+    settlementDensity: 1,
+    urbanization: 0.35,
+    roadConnectivity: 0.35,
+    terrainResistance: 1,
+  },
   appearance: {
-    baseMap: 'satellite',
+    baseMap: 'cartographic',
+    mapStyle: 'standard',
     overlays: {
       'rivers': true,
+      'cities': true,
+      'routes': true,
+      'nation-borders': true,
+      'nation-labels': true,
+      'religion-labels': false,
+      'ethnicity-labels': false,
+      'language-labels': false,
+      'sacred-sites': true,
       'atmosphere': true,
-      'day-night': true,
+      'day-night': false,
     },
     climateMonth: 0,
     elevationDisplacement: false,
@@ -113,6 +142,7 @@ export function cloneWorldConfig(config: WorldConfig): WorldConfig {
     geology: { ...config.geology },
     terrain: { ...config.terrain },
     climate: { ...config.climate },
+    civilization: { ...config.civilization },
     appearance: {
       ...config.appearance,
       overlays: { ...config.appearance.overlays },

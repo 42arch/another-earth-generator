@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest'
-import { SphericalPlateBoundaryAnalyzer } from '@/core/geology/plate-boundary-analyzer'
-import { SphericalPlateGenerator } from '@/core/geology/plate-generator'
-import { PlatePropertiesGenerator } from '@/core/geology/plate-properties-generator'
-import { SuperPlateGenerator } from '@/core/geology/super-plate-generator'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
+import { SphericalPlateBoundaryAnalyzer } from '@/core/simulation/geology/plate-boundary-analyzer'
+import { SphericalPlateGenerator } from '@/core/simulation/geology/plate-generator'
+import { PlatePropertiesGenerator } from '@/core/simulation/geology/plate-properties-generator'
+import { SuperPlateGenerator } from '@/core/simulation/geology/super-plate-generator'
 
 it('forms connected moving plates and keeps subdivision seams inactive', () => {
   const seed = 42

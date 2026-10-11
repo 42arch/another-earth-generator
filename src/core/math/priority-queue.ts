@@ -93,7 +93,7 @@ export class IndexPriorityQueue {
 
     const lastId = this.ids[this.size]
     const lastCost = this.costs[this.size]
-    
+
     let index = 0
     while (true) {
       const left = (index << 1) + 1

@@ -1,5 +1,5 @@
 import type { ISimulationStage, SimulationContext } from '../types'
-import type { SphericalTectonicData } from '@/core/geology/geology-data'
+import type { SphericalTectonicData } from '@/core/simulation/geology/geology-data'
 
 export class TectonicStage implements ISimulationStage {
   name = 'MantleAndTectonics'

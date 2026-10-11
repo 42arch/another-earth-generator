@@ -1,13 +1,14 @@
-import type { ClimateData } from '@/core/climate/climate-data'
-import type { BiomeData } from '@/core/ecology/biome-data'
-import type { TerrainErosionFields } from '@/core/geography/terrain-erosion-processor'
-import type { TerrainFinalizationFields } from '@/core/geography/terrain-finalizer'
-import type { TerrainTextureFields } from '@/core/geography/terrain-texture-generator'
-import type { SphericalTectonicData } from '@/core/geology/geology-data'
-import type { TectonicEdificeFields } from '@/core/geology/tectonic-edifice-generator'
-import type { TectonicSpatialFields } from '@/core/geology/tectonic-spatial-fields'
-import type { TerrainClassificationFields } from '@/core/geology/terrain-classifier'
-import type { SurfaceHydrologyData } from '@/core/hydrology/surface-hydrology-generator'
+import type { CivilizationData } from '@/core/simulation/civilization/civilization-data'
+import type { ClimateData } from '@/core/simulation/climate/climate-data'
+import type { BiomeData } from '@/core/simulation/ecology/biome-data'
+import type { TerrainErosionFields } from '@/core/simulation/geography/terrain-erosion-processor'
+import type { TerrainFinalizationFields } from '@/core/simulation/geography/terrain-finalizer'
+import type { TerrainTextureFields } from '@/core/simulation/geography/terrain-texture-generator'
+import type { SphericalTectonicData } from '@/core/simulation/geology/geology-data'
+import type { TectonicEdificeFields } from '@/core/simulation/geology/tectonic-edifice-generator'
+import type { TectonicSpatialFields } from '@/core/simulation/geology/tectonic-spatial-fields'
+import type { TerrainClassificationFields } from '@/core/simulation/geology/terrain-classifier'
+import type { SurfaceHydrologyData } from '@/core/simulation/hydrology/surface-hydrology-generator'
 
 export interface GeologyData {
   regionPlate: Int16Array
@@ -45,6 +46,8 @@ export interface WorldSimulationState {
   hydrology?: SurfaceHydrologyData
   /** Climate and elevation-derived terrestrial biome classification. */
   biome?: BiomeData
+  /** Residents, settlements, transport, ethnic/language composition, governance, and belief affiliation on the output mesh. */
+  civilization?: CivilizationData
 }
 
 export interface SelectedWorldRegion {

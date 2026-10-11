@@ -1,7 +1,7 @@
-import type { MonthlyClimateData } from '@/core/climate/climate-data'
+import type { MonthlyClimateData } from '@/core/simulation/climate/climate-data'
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { CLIMATE_MONTH_COUNT } from '@/core/climate/climate-data'
-import { buildClimateOutputProjection, projectClimateMonth } from '@/core/climate/climate-output-projector'
+import { CLIMATE_MONTH_COUNT } from '@/core/simulation/climate/climate-data'
+import { buildClimateOutputProjection, projectClimateMonth } from '@/core/simulation/climate/climate-output-projector'
 
 const MAX_MATERIALIZED_REGIONS = 250000
 

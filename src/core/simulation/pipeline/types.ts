@@ -1,10 +1,10 @@
-import type { CandidateLandData } from '@/core/geography/candidate-land-generator'
-import type { SphericalBoundaryData, SphericalCrustData, SphericalTectonicData } from '@/core/geology/geology-data'
-import type { SphericalPlateData } from '@/core/geology/plate-generator'
-import type { SuperPlateData, SuperPlateTopologyData } from '@/core/geology/super-plate-generator'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { ReferenceGridProjector } from '@/core/mesh/reference-grid-projector'
 import type { WorldConfig } from '@/core/simulation/config'
+import type { CandidateLandData } from '@/core/simulation/geography/candidate-land-generator'
+import type { SphericalBoundaryData, SphericalCrustData, SphericalTectonicData } from '@/core/simulation/geology/geology-data'
+import type { SphericalPlateData } from '@/core/simulation/geology/plate-generator'
+import type { SuperPlateData, SuperPlateTopologyData } from '@/core/simulation/geology/super-plate-generator'
 import type { WorldSimulationState } from '@/core/simulation/state'
 
 export interface GeneratedSphericalWorld {

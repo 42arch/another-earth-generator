@@ -1,11 +1,10 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { Color } from 'three'
-import { KOPPEN_COLORS } from '@/core/climate/koppen-climate-classifier'
-import { BIOME_COLORS } from '@/core/ecology/biome-data'
-import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/geology/geology-data'
+import { resolveRasterCellSource } from '@/core/data-source/data-sources'
 import { clamp } from '@/core/math/math'
 import { getOceanCurrentSpeedColor, getWindColor } from '@/core/rendering/shared/climate-color-scale'
+import { isGeoJsonAreaBaseMap } from '@/core/rendering/shared/region-display'
 import {
   getHeightmapLandColor,
   getHeightmapOceanColor,
@@ -13,6 +12,10 @@ import {
   HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
 } from '@/core/rendering/shared/heightmap-color-scale'
 import { SatelliteColorizer } from '@/core/rendering/shared/satellite-colorizer'
+import { evaluateStyleValue, getMapStyleDocument, getRasterStyleLayer } from '@/core/rendering/styles/style-runtime'
+import { KOPPEN_COLORS } from '@/core/simulation/climate/koppen-climate-classifier'
+import { BIOME_COLORS } from '@/core/simulation/ecology/biome-data'
+import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/simulation/geology/geology-data'
 
 type Rgb = readonly [number, number, number]
 
@@ -23,7 +26,32 @@ export class WorldColorizer {
   private readonly windPalette = this.buildClimatePalette(getWindColor)
   private readonly oceanCurrentSpeedPalette = this.buildClimatePalette(getOceanCurrentSpeedColor)
 
-  build(data: WorldSimulationState, mode: string, mesh?: SphericalMesh, mapHillshade = false): Float32Array {
+  build(data: WorldSimulationState, mode: string, mesh?: SphericalMesh, mapHillshade = false, mapStyle?: string): Float32Array {
+    if (isGeoJsonAreaBaseMap(mode)) {
+      const colors = new Float32Array(data.geography.elevation.length * 3)
+      const tokens = getMapStyleDocument(mapStyle).tokens
+      const ocean = new Color(String(tokens.ocean ?? '#1D1D1F'))
+      const land = new Color(String(tokens.landLow ?? '#29292B'))
+      for (let region = 0; region < data.geography.elevation.length; region++) {
+        const color = data.geography.landMask[region] ? land : ocean
+        const offset = region * 3
+        colors[offset] = color.r
+        colors[offset + 1] = color.g
+        colors[offset + 2] = color.b
+      }
+      return colors
+    }
+    if (mode === 'cartographic' && (!mapStyle || mapStyle === 'light' || mapStyle === 'standard' || mapStyle === 'dark')) {
+      if (!mesh)
+        throw new Error('Cartographic rendering requires the world mesh')
+      return this.buildCartographicSolid(data, mesh, mapStyle)
+    }
+    const rasterLayer = getRasterStyleLayer(mapStyle, mode)
+    if (mesh && rasterLayer) {
+      const styled = this.buildStyledRaster(data, mesh, mode, mapStyle)
+      if (styled)
+        return styled
+    }
     if (mode === 'satellite') {
       if (!mesh)
         throw new Error('Satellite rendering requires the world mesh')
@@ -32,7 +60,6 @@ export class WorldColorizer {
 
     const numRegions = data.geography.elevation.length
     const colors = new Float32Array(numRegions * 3)
-
     let plateColors: Float32Array | null = null
     if (mode === 'plates' || mode === 'plates-smoothed') {
       const regions = data.geology.regionSuperPlate
@@ -169,6 +196,29 @@ export class WorldColorizer {
       else if (mode === 'biome' || mode === 'biome-smoothed') {
         color = BIOME_COLORS[data.biome?.biomeClass[region] ?? 0] ?? BIOME_COLORS[0]
       }
+      else if (mode === 'population') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const density = data.civilization?.populationDensity[region] ?? 0
+          const intensity = clamp(Math.log1p(density) / Math.log1p(1000), 0, 1)
+          color = intensity < 0.5
+            ? this.mix([0.18, 0.23, 0.19], [0.86, 0.69, 0.25], intensity * 2)
+            : this.mix([0.86, 0.69, 0.25], [0.96, 0.29, 0.17], (intensity - 0.5) * 2)
+        }
+      }
+      else if (mode === 'market-access') {
+        if (!data.geography.landMask[region]) {
+          color = [0.025, 0.07, 0.13]
+        }
+        else {
+          const access = data.civilization?.transport?.marketAccess[region] ?? 0
+          color = access < 0.5
+            ? this.mix([0.16, 0.18, 0.22], [0.28, 0.58, 0.58], access * 2)
+            : this.mix([0.28, 0.58, 0.58], [0.97, 0.76, 0.31], (access - 0.5) * 2)
+        }
+      }
       else if (mode === 'temperature') {
         color = this.temperatureColor(data.climate?.displayMonth?.temperatureC[region] ?? 0)
       }
@@ -200,6 +250,47 @@ export class WorldColorizer {
       colors[target + 2] = color[2]
     }
 
+    return colors
+  }
+
+  private buildCartographicSolid(data: WorldSimulationState, mesh: SphericalMesh, mapStyle?: string): Float32Array {
+    const landMask = resolveRasterCellSource('world-surface', mesh, data)?.fields.isLand ?? data.geography.landMask
+    const tokens = getMapStyleDocument(mapStyle).tokens
+    const ocean = new Color(String(tokens.ocean ?? '#70C8F2'))
+    const land = new Color(String(tokens.landLow ?? '#D9F0D1'))
+    const colors = new Float32Array(mesh.numRegions * 3)
+    for (let region = 0; region < mesh.numRegions; region++) {
+      const color = landMask[region] ? land : ocean
+      const offset = region * 3
+      colors[offset] = color.r
+      colors[offset + 1] = color.g
+      colors[offset + 2] = color.b
+    }
+    return colors
+  }
+
+  private buildStyledRaster(data: WorldSimulationState, mesh: SphericalMesh, mode: string, mapStyle?: string): Float32Array | null {
+    const layer = getRasterStyleLayer(mapStyle, mode)
+    if (!layer)
+      return null
+    const source = resolveRasterCellSource(layer.source, mesh, data)
+    if (!source)
+      return null
+    const colors = new Float32Array(mesh.numRegions * 3)
+    const color = new Color()
+    const properties: Record<string, number> = {}
+    const tokens = getMapStyleDocument(mapStyle).tokens
+    const fields = Object.entries(source.fields)
+    const colorExpression = layer.paint['raster-color'] ?? '#000000'
+    for (let region = 0; region < mesh.numRegions; region++) {
+      for (const [name, field] of fields)
+        properties[name] = field[region]
+      const value = evaluateStyleValue(colorExpression, { zoom: 0, tokens, properties })
+      color.set(String(value ?? '#000000'))
+      colors[region * 3] = color.r
+      colors[region * 3 + 1] = color.g
+      colors[region * 3 + 2] = color.b
+    }
     return colors
   }
 

@@ -25,6 +25,23 @@ export class GlobePicker {
     if (faceRegions)
       return faceRegions[intersection.faceIndex!] ?? null
 
+    if (surface.userData.cartographicOcean) {
+      const direction = surface.worldToLocal(intersection.point.clone()).normalize()
+      let selected = -1
+      let bestDot = -Infinity
+      for (let region = 0; region < mesh.numRegions; region++) {
+        const offset = region * 3
+        const dot = direction.x * mesh.regionPosition[offset]
+          + direction.y * mesh.regionPosition[offset + 1]
+          + direction.z * mesh.regionPosition[offset + 2]
+        if (dot > bestDot) {
+          bestDot = dot
+          selected = region
+        }
+      }
+      return selected >= 0 ? selected : null
+    }
+
     const triangleIndex = intersection.faceIndex! * 3
     const candidates = [
       mesh.triangles[triangleIndex],

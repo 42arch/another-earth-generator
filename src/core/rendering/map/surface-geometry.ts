@@ -11,6 +11,12 @@ interface UnwrappedPoint {
   blue: number
 }
 
+export interface GeographicFillTriangle {
+  vertices: readonly [readonly [number, number], readonly [number, number], readonly [number, number]]
+  color: readonly [number, number, number]
+  featureIndex: number
+}
+
 export class MapSurfaceGeometry {
   create(
     mesh: SphericalMesh,
@@ -121,6 +127,56 @@ export class MapSurfaceGeometry {
     geometry.setAttribute('color', new BufferAttribute(new Float32Array(vertexColors), 3))
     if (cloudDirections)
       geometry.setAttribute('cloudDirection', new BufferAttribute(new Float32Array(cloudDirections), 3))
+    geometry.userData.faceRegions = new Uint32Array(faceRegions)
+    geometry.computeBoundingSphere()
+    return geometry
+  }
+
+  /** Projects already-triangulated GeoJSON areas through the same seam and latitude clipping as cell surfaces. */
+  createFromGeographicTriangles(
+    triangles: readonly GeographicFillTriangle[],
+    projection: MapProjection,
+    centralMeridian: number,
+  ): BufferGeometry {
+    const positions: number[] = []
+    const vertexColors: number[] = []
+    const faceRegions: number[] = []
+    const halfLongitude = FULL_LONGITUDE * 0.5
+    for (const triangle of triangles) {
+      const firstLongitude = wrapLongitude(triangle.vertices[0][0] * Math.PI / 180 - centralMeridian)
+      let previousLongitude = firstLongitude
+      const points: UnwrappedPoint[] = triangle.vertices.map((vertex, index) => {
+        const longitude = index === 0
+          ? firstLongitude
+          : unwrapLongitudeNear(wrapLongitude(vertex[0] * Math.PI / 180 - centralMeridian), previousLongitude)
+        previousLongitude = longitude
+        return {
+          longitude,
+          latitude: vertex[1] * Math.PI / 180,
+          red: triangle.color[0],
+          green: triangle.color[1],
+          blue: triangle.color[2],
+        }
+      })
+      const minimum = Math.min(...points.map(point => point.longitude))
+      const maximum = Math.max(...points.map(point => point.longitude))
+      for (const offset of [-FULL_LONGITUDE, 0, FULL_LONGITUDE]) {
+        if (maximum + offset < -halfLongitude || minimum + offset > halfLongitude)
+          continue
+        const shifted = offset === 0 ? points : points.map(point => ({ ...point, longitude: point.longitude + offset }))
+        const clipped = this.clipGeographicRange(
+          shifted,
+          -halfLongitude,
+          halfLongitude,
+          projection.minimumLatitude,
+          projection.maximumLatitude,
+        )
+        this.appendPolygon(positions, vertexColors, faceRegions, clipped, triangle.featureIndex, projection, centralMeridian)
+      }
+    }
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+    geometry.setAttribute('color', new BufferAttribute(new Float32Array(vertexColors), 3))
     geometry.userData.faceRegions = new Uint32Array(faceRegions)
     geometry.computeBoundingSphere()
     return geometry

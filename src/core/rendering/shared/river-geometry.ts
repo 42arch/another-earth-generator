@@ -8,21 +8,12 @@ const RIVER_COLOR = [0.1, 0.62, 0.92] as const
 
 /** Builds width-aware river strokes and a globe-ready ribbon mesh. */
 export class RiverGeometry {
-  create(
-    mesh: SphericalMesh,
-    data: WorldSimulationState,
-    radius: number,
-    surfaceOffsets?: Float32Array,
-    smoothedCorners?: Float32Array | null,
-  ): BufferGeometry {
+  createFromPaths(paths: readonly SphericalStrokePath[], radius: number): BufferGeometry {
     const positions: number[] = []
     const colors: number[] = []
     const indices: number[] = []
-    const paths = this.createStrokePaths(mesh, data, surfaceOffsets, smoothedCorners)
-
     for (const path of paths)
       this.appendRibbon(path, radius, positions, colors, indices)
-
     return this.createGeometry(positions, colors, indices)
   }
 
@@ -30,7 +21,6 @@ export class RiverGeometry {
     mesh: SphericalMesh,
     data: WorldSimulationState,
     surfaceOffsets?: Float32Array,
-    smoothedCorners?: Float32Array | null,
   ): SphericalStrokePath[] {
     const hydrology = data.hydrology
     if (!hydrology)
@@ -78,13 +68,13 @@ export class RiverGeometry {
         points.push({
           position: sourcePosition,
           width: isPathSource ? sourceWidth * 0.7 : sourceWidth,
-          color: RIVER_COLOR,
+          flowAccumulation: hydrology.flowAccumulation[region],
           surfaceOffset: surfaceOffsets?.[region],
           widthFloorScale: isPathSource ? 0.7 : 1,
         })
 
         if (hydrology.outletMask[region] !== 0) {
-          const coast = this.coastPoint(mesh, region, target, smoothedCorners)
+          const coast = this.coastPoint(mesh, region, target)
             ?? this.normalize(this.add(sourcePosition, this.regionPoint(mesh, target)))
           if (coast) {
             const coastOffset = surfaceOffsets
@@ -93,7 +83,7 @@ export class RiverGeometry {
             points.push({
               position: coast,
               width: sourceWidth * 1.18,
-              color: RIVER_COLOR,
+              flowAccumulation: hydrology.flowAccumulation[region],
               surfaceOffset: coastOffset,
             })
           }
@@ -114,7 +104,7 @@ export class RiverGeometry {
           points.push({
             position: finalPosition,
             width: sourceWidth,
-            color: RIVER_COLOR,
+            flowAccumulation: hydrology.flowAccumulation[target],
             surfaceOffset: surfaceOffsets?.[target],
           })
           break
@@ -225,7 +215,6 @@ export class RiverGeometry {
     mesh: SphericalMesh,
     landRegion: number,
     oceanRegion: number,
-    smoothedCorners?: Float32Array | null,
   ): SphericalPoint | null {
     const targetCorners = new Set<number>()
     const targetStart = mesh.voronoi.cellCornerOffsets[oceanRegion]
@@ -242,7 +231,7 @@ export class RiverGeometry {
         continue
       const a = cornerA * 3
       const b = cornerB * 3
-      const srcPositions = smoothedCorners ?? mesh.voronoi.cornerPosition
+      const srcPositions = mesh.voronoi.cornerPosition
       return this.normalize([
         srcPositions[a] + srcPositions[b],
         srcPositions[a + 1] + srcPositions[b + 1],

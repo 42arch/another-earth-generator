@@ -1,5 +1,5 @@
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { classifyOutputBiomes } from '@/core/ecology/biome-classifier'
+import { classifyOutputBiomes } from '@/core/simulation/ecology/biome-classifier'
 
 export class BiomeStage implements ISimulationStage {
   name = 'Biome'

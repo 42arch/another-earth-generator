@@ -4,6 +4,7 @@
   interface Props {
     label: string
     checked: boolean
+    disabled?: boolean
     description?: string
     onchange?: (checked: boolean) => void
     oncommit?: (checked: boolean) => void
@@ -12,6 +13,7 @@
   let {
     label,
     checked = $bindable(false),
+    disabled = false,
     description = '',
     onchange,
     oncommit,
@@ -34,6 +36,7 @@
 
   <Switch.Root
     bind:checked
+    {disabled}
     onCheckedChange={(val) => {
       checked = val
       onchange?.(val)

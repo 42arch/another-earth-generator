@@ -29,8 +29,7 @@ export interface SphericalRegionTopology {
 /**
  * Joins cell boundaries into shared area outlines and per-label polygon rings.
  * Rings follow the orientation of their cells, so hole rings wind opposite to
- * exterior rings. Fill geometry can continue using the cells as a robust
- * triangulation of these same regions.
+ * exterior rings. The derived GeoJSON fill uses these same shared outlines.
  */
 export class SphericalRegionTopologyBuilder {
   build(mesh: SphericalMesh, regionIds: Int32Array): SphericalRegionTopology {

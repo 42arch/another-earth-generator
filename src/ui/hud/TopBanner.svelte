@@ -139,10 +139,11 @@
             checked={appState.params.appearance.elevationDisplacement}
             oncommit={checked => appState.updateParam('appearance', 'elevationDisplacement', checked)}
           />
-          <div class={appState.viewMode === 'map' ? 'opacity-30 pointer-events-none' : ''}>
+          <div class={appState.viewMode === 'map' || appState.params.appearance.baseMap !== 'satellite' ? 'opacity-30 pointer-events-none' : ''}>
             <Toggle
-              label='昼夜效果'
+              label='昼夜效果（卫星图）'
               checked={!!appState.params.appearance.overlays['day-night']}
+              disabled={appState.viewMode === 'map' || appState.params.appearance.baseMap !== 'satellite'}
               oncommit={() => appState.toggleOverlay('day-night')}
             />
           </div>

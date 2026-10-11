@@ -1,5 +1,5 @@
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { generateMonthlyClimate } from '@/core/climate/monthly-climate-generator'
+import { generateMonthlyClimate } from '@/core/simulation/climate/monthly-climate-generator'
 
 export class MonthlyClimateStage implements ISimulationStage {
   name = 'MonthlyClimate'

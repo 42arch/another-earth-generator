@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyKoppenSeries, KOPPEN_CODES } from '@/core/climate/koppen-climate-classifier'
+import { classifyKoppenSeries, KOPPEN_CODES } from '@/core/simulation/climate/koppen-climate-classifier'
 
 function classify(temperature: number[], precipitation: number[], southern = false): string {
   return KOPPEN_CODES[classifyKoppenSeries(temperature, precipitation, southern)]

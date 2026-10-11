@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { HYDROLOGY_RADIUS_M, HYDROLOGY_YEAR_SECONDS } from '@/core/hydrology/hydrology-units'
-import { SurfaceHydrologyGenerator } from '@/core/hydrology/surface-hydrology-generator'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
+import { HYDROLOGY_RADIUS_M, HYDROLOGY_YEAR_SECONDS } from '@/core/simulation/hydrology/hydrology-units'
+import { SurfaceHydrologyGenerator } from '@/core/simulation/hydrology/surface-hydrology-generator'
 
 const mesh = new SphericalMesh(new FibonacciSphereBuilder().build(1024, 73, 0.3))
 const elevation = Float32Array.from(mesh.regionLatitude, latitude => latitude < -0.5 ? -1 : 0.1 + latitude + 0.5)

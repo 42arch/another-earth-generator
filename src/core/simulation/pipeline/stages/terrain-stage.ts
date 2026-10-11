@@ -3,9 +3,9 @@ import type { WorldSimulationState } from '@/core/simulation/state'
 import {
   normalizedElevationArrayToKm,
   normalizedElevationDeltaArrayToKm,
-} from '@/core/geography/elevation-units'
-import { TerrainPostProcessor } from '@/core/geography/terrain-post-processor'
-import { TectonicElevationGenerator } from '@/core/geology/tectonic-elevation-generator'
+} from '@/core/simulation/geography/elevation-units'
+import { TerrainPostProcessor } from '@/core/simulation/geography/terrain-post-processor'
+import { TectonicElevationGenerator } from '@/core/simulation/geology/tectonic-elevation-generator'
 
 export class TerrainStage implements ISimulationStage {
   name = 'ElevationAndTerrain'

@@ -41,6 +41,7 @@ export class Stars {
   }
 
   public dispose(): void {
+    this.group.removeFromParent()
     for (const child of this.group.children) {
       if (child instanceof Points) {
         child.geometry.dispose()

@@ -1,5 +1,6 @@
 import type { MapProjection } from '@/core/projections/map-projection'
 import { BufferAttribute, BufferGeometry } from 'three'
+import { clipSegmentParameterRange } from '@/core/math/segment-clipping'
 import { cartesianToGeographic, FULL_LONGITUDE, unwrapLongitudeNear, wrapLongitude } from '@/core/projections/projection-math'
 
 interface LinePoint {
@@ -17,8 +18,14 @@ export class MapLineGeometry {
   ): BufferGeometry {
     const sourcePositions = source.getAttribute('position') as BufferAttribute | undefined
     const sourceColors = source.getAttribute('color') as BufferAttribute | undefined
+    const sourceFeatures = source.getAttribute('featureIndex') as BufferAttribute | undefined
+    const sourceOpacities = source.getAttribute('featureOpacity') as BufferAttribute | undefined
+    const sourceBrightness = source.getAttribute('brightness') as BufferAttribute | undefined
     const positions: number[] = []
     const colors: number[] = []
+    const featureIndices: number[] = []
+    const featureOpacities: number[] = []
+    const brightness: number[] = []
     const halfLongitude = FULL_LONGITUDE * 0.5
 
     if (sourcePositions) {
@@ -58,6 +65,12 @@ export class MapLineGeometry {
           )
           if (clipped[0].color && clipped[1].color)
             colors.push(...clipped[0].color, ...clipped[1].color)
+          if (sourceFeatures)
+            featureIndices.push(sourceFeatures.getX(vertex), sourceFeatures.getX(vertex))
+          if (sourceOpacities)
+            featureOpacities.push(sourceOpacities.getX(vertex), sourceOpacities.getX(vertex + 1))
+          if (sourceBrightness)
+            brightness.push(sourceBrightness.getX(vertex), sourceBrightness.getX(vertex + 1))
         }
       }
     }
@@ -66,6 +79,12 @@ export class MapLineGeometry {
     geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
     if (colors.length > 0)
       geometry.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3))
+    if (featureIndices.length > 0)
+      geometry.setAttribute('featureIndex', new BufferAttribute(new Uint32Array(featureIndices), 1))
+    if (featureOpacities.length > 0)
+      geometry.setAttribute('featureOpacity', new BufferAttribute(new Float32Array(featureOpacities), 1))
+    if (brightness.length > 0)
+      geometry.setAttribute('brightness', new BufferAttribute(new Float32Array(brightness), 1))
     geometry.computeBoundingSphere()
     return geometry
   }
@@ -98,32 +117,20 @@ export class MapLineGeometry {
     minimumLatitude: number,
     maximumLatitude: number,
   ): readonly [LinePoint, LinePoint] | null {
-    let minimumAmount = 0
-    let maximumAmount = 1
-
-    const axes = [
-      [start.longitude, end.longitude - start.longitude, minimumLongitude, maximumLongitude],
-      [start.latitude, end.latitude - start.latitude, minimumLatitude, maximumLatitude],
-    ] as const
-    for (const [origin, difference, minimum, maximum] of axes) {
-      if (Math.abs(difference) <= Number.EPSILON) {
-        if (origin < minimum || origin > maximum)
-          return null
-        continue
-      }
-      const amountA = (minimum - origin) / difference
-      const amountB = (maximum - origin) / difference
-      minimumAmount = Math.max(0, Math.min(amountA, amountB))
-      maximumAmount = Math.min(1, Math.max(amountA, amountB))
-      if (minimumAmount > maximumAmount)
-        return null
-    }
-    if (maximumAmount - minimumAmount <= 1e-12)
+    const range = clipSegmentParameterRange(
+      { x: start.longitude, y: start.latitude },
+      { x: end.longitude, y: end.latitude },
+      minimumLongitude,
+      maximumLongitude,
+      minimumLatitude,
+      maximumLatitude,
+    )
+    if (!range)
       return null
 
     return [
-      this.interpolate(start, end, minimumAmount),
-      this.interpolate(start, end, maximumAmount),
+      this.interpolate(start, end, range[0]),
+      this.interpolate(start, end, range[1]),
     ]
   }
 

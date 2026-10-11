@@ -1,5 +1,5 @@
 import type { ISimulationStage, SimulationContext } from '../types'
-import { PlatePhysicsProcessor } from '@/core/geology/plate-physics'
+import { PlatePhysicsProcessor } from '@/core/simulation/geology/plate-physics'
 
 export class SuperPlateStage implements ISimulationStage {
   name = 'PlateDynamics'

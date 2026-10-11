@@ -1,12 +1,12 @@
 import { expect, it } from 'vitest'
-import { CandidateLandGenerator } from '@/core/geography/candidate-land-generator'
-import { CRUST_TYPE, PLATE_BOUNDARY } from '@/core/geology/geology-data'
-import { SphericalPlateBoundaryAnalyzer } from '@/core/geology/plate-boundary-analyzer'
-import { SphericalPlateGenerator } from '@/core/geology/plate-generator'
-import { PlatePropertiesGenerator } from '@/core/geology/plate-properties-generator'
-import { SuperPlateGenerator } from '@/core/geology/super-plate-generator'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
+import { CandidateLandGenerator } from '@/core/simulation/geography/candidate-land-generator'
+import { CRUST_TYPE, PLATE_BOUNDARY } from '@/core/simulation/geology/geology-data'
+import { SphericalPlateBoundaryAnalyzer } from '@/core/simulation/geology/plate-boundary-analyzer'
+import { SphericalPlateGenerator } from '@/core/simulation/geology/plate-generator'
+import { PlatePropertiesGenerator } from '@/core/simulation/geology/plate-properties-generator'
+import { SuperPlateGenerator } from '@/core/simulation/geology/super-plate-generator'
 
 it.each([2501, 42, 137])('contours continental crust across plate interiors for seed %i', (seed) => {
   const mesh = new SphericalMesh(new FibonacciSphereBuilder().build(20_000, seed, 0.75))

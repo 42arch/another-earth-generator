@@ -1,6 +1,7 @@
 import { mount } from 'svelte'
 import WorldEngine from '@/core/world/world-engine'
 import AppUI from '@/ui/AppUI.svelte'
+import { getPipelineStageLabel } from '@/ui/hud/pipeline-stage-labels'
 import { appState } from '@/ui/state/app.svelte'
 import './style.css'
 
@@ -14,19 +15,17 @@ function main() {
   if (!(canvas instanceof HTMLCanvasElement))
     throw new TypeError('Globe canvas element was not found')
 
-  const info = document.getElementById('globe-info')
-  if (info)
-    info.style.display = 'none'
-
-  const worldEngine = new WorldEngine(canvas, info, appState.params, {
+  const worldEngine = new WorldEngine(canvas, appState.params, {
     onRegionSelected: (regionInfo) => {
       appState.selectedRegion = regionInfo
+      if (regionInfo?.settlement || regionInfo?.route)
+        appState.inspectorOpen = true
     },
     onWorldSummary: (summary) => {
       appState.worldSummary = summary
     },
-    onPipelineProgress: (text) => {
-      appState.setGenerating(true, text)
+    onPipelineStageStart: (stageName) => {
+      appState.setGenerating(true, getPipelineStageLabel(stageName))
     },
   })
 

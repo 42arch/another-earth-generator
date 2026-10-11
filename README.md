@@ -27,8 +27,12 @@ Open the local address provided in the terminal. Use `pnpm test` to run existing
 
 ## Where to start reading
 
-Non-developers can start with the [Wiki Introduction](docs/wiki/README.md) to sequentially understand "Spherical Grid → Plates and Landmasses → Terrain → Seasonal Circulation and Climate → Rivers → Ecology → Visualization". Each chapter first explains the phenomena, then provides the algorithms, fields, and source code entry points.
+Non-developers can start with the [Nature Wiki](docs/wiki/nature/README.md) to sequentially understand "Spherical Grid → Plates and Landmasses → Terrain → Seasonal Circulation and Climate → Rivers → Ecology → Visualization". Each chapter first explains the phenomena, then provides the algorithms, fields, and source code entry points.
 
-Developers can first look at the [System Architecture](docs/wiki/01-system-architecture.md) and the [Worker Pipeline](src/core/simulation/worker/simulation.worker.ts). The core code is located in `src/core/`, and the user interface is in `src/ui/`.
+Developers can first look at the [System Architecture](docs/wiki/nature/01-system-architecture.md) and the [Worker Pipeline](src/core/simulation/worker/simulation.worker.ts). The core code is located in `src/core/`, and the user interface is in `src/ui/`.
+
+Core modules are grouped by responsibility: [`simulation`](src/core/simulation/) contains the generation pipeline and domain models, [`data-source`](src/core/data-source/README.md) provides raster and GeoJSON sources, and [`rendering`](src/core/rendering/styles/README.md) contains the 2D/3D renderers and map styles. The shared spherical grid remains in [`mesh`](src/core/mesh/).
+
+The first two human geography stages now generate population, settlements, transport, and market access. Their implementation and later plans are documented in the [Civilization Wiki](docs/wiki/civilization/README.md).
 
 Tech Stack: TypeScript, Vite, Svelte 5, Three.js, Tailwind CSS, Vitest. The project uses pnpm for dependency management.

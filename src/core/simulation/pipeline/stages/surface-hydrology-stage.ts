@@ -1,8 +1,8 @@
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { CLIMATE_MONTH_COUNT } from '@/core/climate/climate-data'
-import { getOutputClimateMonth } from '@/core/climate/climate-output-projector'
-import { MONTH_DAYS } from '@/core/climate/monthly-forcing'
-import { SurfaceHydrologyGenerator } from '@/core/hydrology/surface-hydrology-generator'
+import { CLIMATE_MONTH_COUNT } from '@/core/simulation/climate/climate-data'
+import { getOutputClimateMonth } from '@/core/simulation/climate/climate-output-projector'
+import { MONTH_DAYS } from '@/core/simulation/climate/monthly-forcing'
+import { SurfaceHydrologyGenerator } from '@/core/simulation/hydrology/surface-hydrology-generator'
 
 /** Route climate-derived annual runoff across the finalized output terrain. */
 export class SurfaceHydrologyStage implements ISimulationStage {

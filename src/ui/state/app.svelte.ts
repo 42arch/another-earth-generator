@@ -3,39 +3,10 @@ import type { WorldViewMode } from '@/core/rendering/view-mode'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { LayerStatistics } from '@/core/world/layer-statistics'
 import type WorldEngine from '@/core/world/world-engine'
+import type { SelectedRegionInfo, WorldSummaryInfo } from '@/core/world/world-info'
 import { tick } from 'svelte'
 import { applyShareHash, createShareHash } from '@/core/sharing/share-link'
 import { cloneWorldConfig, DEFAULT_WORLD_CONFIG } from '@/core/simulation/config'
-
-export interface SelectedRegionInfo {
-  region: number
-  latitude: number
-  longitude: number
-  elevation: number
-  plate: number
-  plateDetail: number
-  continent?: number
-  geometricFlowCount?: number
-  koppenLabel?: string
-  biomeLabel?: string
-  aridityIndex?: number
-  growingSeasonMonths?: number
-  isLand?: boolean
-  annualTemperatureC?: number
-  annualPrecipitationMm?: number
-  monthlyTemperatureC?: number[]
-  monthlyPrecipitationMm?: number[]
-  vectorKind?: 'wind' | 'ocean-current'
-  vectorEast?: number
-  vectorNorth?: number
-  vectorWarmth?: number
-}
-
-export interface WorldSummaryInfo {
-  regionCount: number
-  triangleCount: number
-  plateCount: number
-}
 
 export class AppState {
   engine: WorldEngine | null = null
@@ -45,17 +16,29 @@ export class AppState {
     regionCount: 0,
     triangleCount: 0,
     plateCount: 0,
+    totalPopulation: 0,
+    settlementCount: 0,
+    roadCount: 0,
+    seaRouteCount: 0,
+    ethnicGroupCount: 0,
+    languageCount: 0,
+    polityCount: 0,
+    districtCount: 0,
+    religionCount: 0,
+    sacredSiteCount: 0,
   })
 
   lastGeneratedParamsString = $state('')
 
   get hasUnappliedChanges(): boolean {
     if (!this.lastGeneratedParamsString)
-return false
+      return false
     const current = JSON.stringify({
       core: $state.snapshot(this.params.core),
       terrain: $state.snapshot(this.params.terrain),
       geology: $state.snapshot(this.params.geology),
+      climate: $state.snapshot(this.params.climate),
+      civilization: $state.snapshot(this.params.civilization),
     })
     return current !== this.lastGeneratedParamsString
   }
@@ -137,6 +120,17 @@ return false
     this.updateParam('appearance', 'baseMap', mode)
   }
 
+  setMapStyle(style: WorldConfig['appearance']['mapStyle']) {
+    this.params.appearance.mapStyle = style
+    this.params.appearance.baseMap = 'cartographic'
+    if (!this.engine)
+      return
+    this.engine.updateParams(this.params)
+    this.engine.updateAppearance()
+    if (this.layerDrawerOpen)
+      this.refreshLayerStatistics()
+  }
+
   toggleLayerDrawer() {
     this.layerDrawerOpen = !this.layerDrawerOpen
     if (this.layerDrawerOpen) {
@@ -200,6 +194,8 @@ return false
       core: $state.snapshot(this.params.core),
       terrain: $state.snapshot(this.params.terrain),
       geology: $state.snapshot(this.params.geology),
+      climate: $state.snapshot(this.params.climate),
+      civilization: $state.snapshot(this.params.civilization),
     })
 
     try {

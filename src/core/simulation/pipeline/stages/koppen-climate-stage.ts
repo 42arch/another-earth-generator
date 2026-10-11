@@ -1,5 +1,5 @@
 import type { ISimulationStage, SimulationContext } from '@/core/simulation/pipeline/types'
-import { classifyOutputKoppen } from '@/core/climate/koppen-climate-classifier'
+import { classifyOutputKoppen } from '@/core/simulation/climate/koppen-climate-classifier'
 
 export class KoppenClimateStage implements ISimulationStage {
   name = 'KoppenClimate'

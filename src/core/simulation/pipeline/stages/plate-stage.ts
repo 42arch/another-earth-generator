@@ -1,11 +1,11 @@
 import type { ISimulationStage, SimulationContext } from '../types'
-import type { SphericalPlateData } from '@/core/geology/plate-generator'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldConfig } from '@/core/simulation/config'
+import type { SphericalPlateData } from '@/core/simulation/geology/plate-generator'
 
-import { SphericalPlateGenerator } from '@/core/geology/plate-generator'
-import { SuperPlateGenerator } from '@/core/geology/super-plate-generator'
 import { REFERENCE_PLATE_SUBDIVISION_COUNT } from '@/core/simulation/config'
+import { SphericalPlateGenerator } from '@/core/simulation/geology/plate-generator'
+import { SuperPlateGenerator } from '@/core/simulation/geology/super-plate-generator'
 
 export class PlateStage implements ISimulationStage {
   name = 'PlateTectonics'

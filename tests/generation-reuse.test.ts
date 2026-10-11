@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SurfaceHydrologyGenerator } from '@/core/hydrology/surface-hydrology-generator'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
 import { SphericalVoronoiBuilder } from '@/core/mesh/voronoi'
+import { SurfaceHydrologyGenerator } from '@/core/simulation/hydrology/surface-hydrology-generator'
 
 const mesh = new SphericalMesh(new FibonacciSphereBuilder().build(1024, 73, 0.3))
 
