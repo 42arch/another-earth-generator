@@ -1,7 +1,17 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { ClimateVectorDisplayData } from '@/core/simulation/climate/climate-data'
 import { BufferAttribute, BufferGeometry, Color } from 'three'
-import { getOceanCurrentThermalColor } from '@/core/rendering/shared/climate-color-scale'
+export interface OceanCurrentThermalPalette {
+  cold: string
+  neutral: string
+  warm: string
+}
+
+export const DEFAULT_OCEAN_CURRENT_THERMAL_PALETTE: OceanCurrentThermalPalette = {
+  cold: '#2166AC',
+  neutral: '#F7F7F7',
+  warm: '#B2182B',
+}
 
 type Vector3 = readonly [number, number, number]
 
@@ -44,6 +54,7 @@ export function createClimateVectorGeometry(
   vectors: ClimateVectorDisplayData,
   landMask: Uint8Array,
   radius: number,
+  thermalPalette: OceanCurrentThermalPalette = DEFAULT_OCEAN_CURRENT_THERMAL_PALETTE,
 ): BufferGeometry {
   if (vectors.east.length !== mesh.numRegions || vectors.north.length !== mesh.numRegions)
     throw new Error('Climate vector field does not match the output mesh')
@@ -51,6 +62,10 @@ export function createClimateVectorGeometry(
     throw new Error('Ocean-current thermal field does not match the output mesh')
   const positions: number[] = []
   const colors: number[] | undefined = vectors.kind === 'ocean-current' ? [] : undefined
+  const coldColor = new Color(thermalPalette.cold)
+  const neutralColor = new Color(thermalPalette.neutral)
+  const warmColor = new Color(thermalPalette.warm)
+  const tempColor = new Color()
   const count = vectors.kind === 'wind'
     ? Math.min(MAX_WIND_ARROWS, Math.max(1, Math.round(mesh.numRegions * WIND_ARROW_SAMPLE_RATIO)))
     : Math.min(MAX_ARROWS, mesh.numRegions)
@@ -93,7 +108,17 @@ export function createClimateVectorGeometry(
     const headWidth = length * 0.075
     const left = normalize(base[0] + side[0] * headWidth, base[1] + side[1] * headWidth, base[2] + side[2] * headWidth)
     const right = normalize(base[0] - side[0] * headWidth, base[1] - side[1] * headWidth, base[2] - side[2] * headWidth)
-    const color = colors ? new Color(getOceanCurrentThermalColor(vectors.warmth![region])) : undefined
+    let color: Color | undefined
+    if (colors && vectors.warmth) {
+      const warmth = Math.max(-1, Math.min(1, vectors.warmth[region]))
+      if (warmth < 0) {
+        tempColor.copy(coldColor).lerp(neutralColor, warmth + 1)
+      }
+      else {
+        tempColor.copy(neutralColor).lerp(warmColor, warmth)
+      }
+      color = tempColor
+    }
     appendSegment(positions, start, tip, radius, colors, color)
     appendSegment(positions, tip, left, radius, colors, color)
     appendSegment(positions, tip, right, radius, colors, color)

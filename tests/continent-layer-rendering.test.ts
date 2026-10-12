@@ -1,6 +1,6 @@
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { expect, it } from 'vitest'
-import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
+import { RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
 
 it('colors the continent layer by final land and sea while retaining candidate continent IDs', () => {
   const data = {
@@ -13,7 +13,7 @@ it('colors the continent layer by final land and sea while retaining candidate c
     },
   } as unknown as WorldSimulationState
 
-  const colors = new WorldColorizer().build(data, 'continents')
+  const colors = new RasterSurfaceRenderer().render(data, 'continents')
   const colorAt = (region: number) => [...colors.subarray(region * 3, region * 3 + 3)]
 
   expect(colorAt(0)).toEqual(colorAt(3))

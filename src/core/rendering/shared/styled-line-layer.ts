@@ -4,13 +4,14 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection } from '@/core/projections/map-projection'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
+import type { StyledLayerBehavior, StyledLayerUpdateContext } from '@/core/rendering/shared/styled-layer-behavior'
 import { BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, Vector3 } from 'three'
 import { resolveGeoJsonSource } from '@/core/data-source/geojson-source-runtime'
 import { getMapStyleSource } from '@/core/data-source/source-registry'
 import { getSurfaceDaylight } from '@/core/math/daylight'
 import { geographicToCartesian } from '@/core/projections/projection-math'
 import { MapLineGeometry } from '@/core/rendering/map/line-geometry'
-import { getMapStyleDocument, getMapStyleLayer, isMapStyleLayerVisible, matchesMapStyleLayerFilter, resolveMapStyleLayer } from '@/core/rendering/styles/style-runtime'
+import { getMapStyleDocument, getMapStyleLayer, isMapStyleLayerVisible, matchesMapStyleLayerFilter, resolveEffectiveSurfaceMode, resolveMapStyleLayer } from '@/core/rendering/styles/style-runtime'
 import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
 
 type LinePlacement
@@ -18,7 +19,7 @@ type LinePlacement
     | { view: 'globe', terrainVerticalScale: number, usesElevationGeometry: boolean, sunDirection?: readonly [number, number, number], renderOrder: number }
 
 /** Compiles GeoJSON line features into one batched line geometry per style layer. */
-export class StyledLineLayer {
+export class StyledLineLayer implements StyledLayerBehavior {
   readonly group = new Group()
   private geometry: BufferGeometry | null = null
   private material: LineBasicMaterial | null = null
@@ -44,15 +45,10 @@ export class StyledLineLayer {
     const source = layer && getMapStyleSource(layer.source, getMapStyleDocument(params.appearance.mapStyle).sources)
     if (!layer || layer.renderer !== 'line' || !source || source.kind !== 'geojson')
       return
-    if (source.overlay && !params.appearance.overlays[source.overlay])
+    const overlayId = layer.overlay ?? source.overlay
+    if (overlayId && !params.appearance.overlays[overlayId])
       return
-    const collection = resolveGeoJsonSource(
-      layer.source,
-      mesh,
-      data,
-      params,
-      'smoothed',
-    )?.data
+    const collection = resolveGeoJsonSource(layer.source, mesh, data, params)?.data
     if (!collection)
       return
     const positions: number[] = []
@@ -69,7 +65,8 @@ export class StyledLineLayer {
         : 0
       const radius = placement.view === 'globe' ? params.core.planetRadius + 0.4 + elevation : 1
       positions.push(unit[0] * radius, unit[1] * radius, unit[2] * radius)
-      const brightness = placement.view === 'globe' && params.appearance.baseMap === 'satellite'
+      const isSatellite = resolveEffectiveSurfaceMode(params.appearance) === 'satellite'
+      const brightness = placement.view === 'globe' && isSatellite
         && params.appearance.overlays['day-night'] && placement.sunDirection
         ? getSurfaceDaylight(unit[0], unit[1], unit[2], ...placement.sunDirection)
         : 1
@@ -155,6 +152,10 @@ export class StyledLineLayer {
     this.updateStyleZoom(params.appearance.mapStyle, 0)
   }
 
+  updateStyle(context: StyledLayerUpdateContext): void {
+    this.updateStyleZoom(context.styleId, context.styleZoom)
+  }
+
   updateStyleZoom(styleId: string, zoom: number): void {
     this.group.visible = isMapStyleLayerVisible(styleId, this.layerId, zoom, this.view)
     if (this.lastStyleId === styleId && Math.abs(zoom - this.lastStyleZoom) < 0.03)
@@ -191,7 +192,7 @@ export class StyledLineLayer {
     opacities.needsUpdate = true
   }
 
-  pickFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
+  pickGeoJsonFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
     if (!this.group.visible || !this.geometry)
       return null
     const positions = this.geometry.getAttribute('position')

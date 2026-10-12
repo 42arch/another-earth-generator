@@ -27,10 +27,6 @@ export class MapGraticuleLayer {
     projection: MapProjection,
     centralMeridian: number,
   ): void {
-    if (!params.appearance.overlays.graticule) {
-      return
-    }
-
     const sourceGeometry = this.graticuleGeometryBuilder.create(1)
     this.geometry = this.lineGeometryBuilder.create(
       sourceGeometry,
@@ -58,6 +54,7 @@ export class MapGraticuleLayer {
     const layer = new LineSegments(this.geometry, this.material)
     layer.renderOrder = 3
     this.addWrappedCopies(layer, projection)
+    this.group.visible = Boolean(params.appearance.overlays.graticule)
   }
 
   private addWrappedCopies(baseLayer: LineSegments, projection: MapProjection): void {

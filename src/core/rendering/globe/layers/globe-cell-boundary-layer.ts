@@ -22,10 +22,9 @@ export class GlobeCellBoundaryLayer {
     params: WorldConfig,
     terrainVerticalScale: number,
     usesElevationGeometry: boolean,
-    smoothedRegionCorners: Float32Array | null,
   ) {
     this.group.name = 'GlobeCellBoundaries'
-    this.build(mesh, data, params, terrainVerticalScale, usesElevationGeometry, smoothedRegionCorners)
+    this.build(mesh, data, params, terrainVerticalScale, usesElevationGeometry)
   }
 
   private build(
@@ -34,9 +33,8 @@ export class GlobeCellBoundaryLayer {
     params: WorldConfig,
     terrainVerticalScale: number,
     usesElevationGeometry: boolean,
-    smoothedRegionCorners: Float32Array | null,
   ): void {
-    if (!params.appearance.overlays.wireframe || !mesh) {
+    if (!mesh) {
       return
     }
 
@@ -47,9 +45,6 @@ export class GlobeCellBoundaryLayer {
       usesElevationGeometry && data ? data.geography.elevation : undefined,
       terrainVerticalScale,
       OCEAN_DEPTH_SCALE,
-      undefined,
-      undefined,
-      smoothedRegionCorners ?? undefined,
     )
 
     if ((this.geometry.getAttribute('position')?.count ?? 0) === 0) {
@@ -69,6 +64,7 @@ export class GlobeCellBoundaryLayer {
     this.meshCopy = new LineSegments(this.geometry, this.material)
     this.meshCopy.renderOrder = 3
     this.group.add(this.meshCopy)
+    this.group.visible = Boolean(params.appearance.overlays.wireframe)
   }
 
   dispose(): void {

@@ -33,7 +33,7 @@ The layer bar relies on [LayerBar.svelte](../../../src/ui/hud/LayerBar.svelte), 
 | Prevailing Winds, Ocean Currents | Relative vector fields for the current month; ocean current arrow color also denotes cold/warm proxy |
 | Climate Class., Biomes | Köppen and ecological categories for final output regions |
 
-"Geometry Convergence" is used to view topographic basin shapes, not annual flow in m³/s. Some tectonic and terrain diagnostic modes are still kept in the coloring code, but they are commented out in the layer bar and cannot be selected directly in the normal UI. Rivers and clouds are independent display toggles; rivers read the final annual hydrology results.
+"Geometry Convergence" is used to view topographic basin shapes, not annual flow in m³/s. Tectonic stress and mantle convection are no longer exposed as independent display layers; their simulation fields still contribute to plate motion and terrain generation. Rivers and clouds are independent display toggles; rivers read the final annual hydrology results.
 
 ## Picking and Region Inspection
 

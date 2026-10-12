@@ -27,10 +27,6 @@ export const LAYER_REGISTRY: Record<string, LayerDefinition> = {
   'satellite': { id: 'satellite', name: '卫星影像', dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
   'heightmap': { id: 'heightmap', name: '高度图', dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
   'dem': { id: 'dem', name: 'DEM图', dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
-  'plates': { id: 'plates', name: '板块构造', dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
-  'plates-smoothed': { id: 'plates-smoothed', name: '平滑板块', dataType: 'vector-area', category: 'physics', isBaseMap: true, canOverlay: false },
-  'continents': { id: 'continents', name: '大陆区划', dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
-  'continents-smoothed': { id: 'continents-smoothed', name: '平滑大陆', dataType: 'vector-area', category: 'physics', isBaseMap: true, canOverlay: false },
 
   // Geography / Topology
   'geometric-flow': { id: 'geometric-flow', name: '几何汇流', dataType: 'raster', category: 'physics', isBaseMap: true, canOverlay: false },
@@ -42,20 +38,12 @@ export const LAYER_REGISTRY: Record<string, LayerDefinition> = {
   'ocean-current': { id: 'ocean-current', name: '洋流', dataType: 'raster', category: 'climate', isBaseMap: true, canOverlay: false },
 
   // Ecology
-  'koppen': { id: 'koppen', name: '气候分类', dataType: 'raster', category: 'ecology', isBaseMap: true, canOverlay: false },
-  'koppen-smoothed': { id: 'koppen-smoothed', name: '平滑气候区', dataType: 'vector-area', category: 'ecology', isBaseMap: true, canOverlay: false },
-  'biome': { id: 'biome', name: '生物群系', dataType: 'raster', category: 'ecology', isBaseMap: true, canOverlay: false },
-  'biome-smoothed': { id: 'biome-smoothed', name: '平滑群系', dataType: 'vector-area', category: 'ecology', isBaseMap: true, canOverlay: false },
   'population': { id: 'population', name: '人口密度', dataType: 'raster', category: 'civilization', isBaseMap: true, canOverlay: false },
   'market-access': { id: 'market-access', name: '市场可达性', dataType: 'raster', category: 'civilization', isBaseMap: true, canOverlay: false },
   'ethnicity': { id: 'ethnicity', name: '民族分布', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
-  'ethnicity-smoothed': { id: 'ethnicity-smoothed', name: '平滑民族分布', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
   'languages': { id: 'languages', name: '语言分布', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
-  'languages-smoothed': { id: 'languages-smoothed', name: '平滑语言分布', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
   'polities': { id: 'polities', name: '国家归属', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
-  'polities-smoothed': { id: 'polities-smoothed', name: '平滑国家归属', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
   'religions': { id: 'religions', name: '宗教与信仰', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
-  'religions-smoothed': { id: 'religions-smoothed', name: '平滑宗教分布', dataType: 'vector-area', category: 'civilization', isBaseMap: true, canOverlay: false },
 
   // civilization overlays
   'nation-borders': { id: 'nation-borders', name: '国界线', dataType: 'vector-line', category: 'civilization', isBaseMap: false, canOverlay: true },

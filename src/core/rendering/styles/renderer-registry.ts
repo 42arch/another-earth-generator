@@ -1,5 +1,6 @@
 import type { GeoJsonGeometryKind } from '@/core/data-source/geojson'
 import type { MapStyleSourceKind } from '@/core/data-source/source-registry'
+import type { MapStyleRenderer } from '@/core/rendering/styles/style-spec'
 
 export interface MapStyleRendererDefinition {
   id: string
@@ -9,36 +10,43 @@ export interface MapStyleRendererDefinition {
   paintProperties: readonly string[]
 }
 
-/** Style renderer capabilities. New renderer kinds can be registered without changing style documents. */
-export const MAP_STYLE_RENDERERS: Record<string, MapStyleRendererDefinition> = {
-  raster: {
+/** Style renderer capabilities; keep this registry aligned with MapStyleRenderer. */
+export const MAP_STYLE_RENDERERS: Record<MapStyleRenderer, MapStyleRendererDefinition> = {
+  'raster': {
     id: 'raster',
     sourceKinds: ['raster'],
     layoutProperties: ['visibility'],
     paintProperties: ['raster-color', 'raster-opacity'],
   },
-  fill: {
+  'fill': {
     id: 'fill',
     sourceKinds: ['geojson'],
     geometries: ['polygon'],
-    layoutProperties: ['visibility', 'boundary-mode'],
+    layoutProperties: ['visibility'],
     paintProperties: ['fill-color', 'fill-opacity'],
   },
-  line: {
+  'line': {
     id: 'line',
     sourceKinds: ['geojson'],
     geometries: ['line', 'polygon'],
     layoutProperties: ['visibility', 'line-cap', 'line-join'],
     paintProperties: ['line-color', 'line-opacity', 'line-width', 'line-dasharray'],
   },
-  circle: {
+  'river-ribbon': {
+    id: 'river-ribbon',
+    sourceKinds: ['geojson'],
+    geometries: ['line'],
+    layoutProperties: ['visibility'],
+    paintProperties: ['line-color', 'line-opacity', 'line-width'],
+  },
+  'circle': {
     id: 'circle',
     sourceKinds: ['geojson'],
     geometries: ['point'],
     layoutProperties: ['visibility'],
     paintProperties: ['circle-color', 'circle-opacity', 'circle-radius', 'circle-stroke-color', 'circle-stroke-width'],
   },
-  symbol: {
+  'symbol': {
     id: 'symbol',
     sourceKinds: ['geojson'],
     geometries: ['point', 'line', 'polygon'],

@@ -71,7 +71,7 @@ export default class WorldEngine {
     prepareClimateDisplayFields(this.simulation.state, this.params)
     const renderStart = performance.now()
     this.renderer.setWorld(generated.mesh, generated.data, this.params)
-    // eslint-disable-next-line no-console
+
     console.info('Generation timing (ms)', {
       renderSetup: Math.round(performance.now() - renderStart),
       total: Math.round(performance.now() - generationStart),
@@ -106,7 +106,7 @@ export default class WorldEngine {
     if (cached)
       return cached
     prepareClimateDisplayFields(state, this.params)
-    const result = buildLayerStatistics(state.data, mode, month, this.params.geology.primaryPlateCount)
+    const result = buildLayerStatistics(state.data, mode, month)
     if (result) {
       result.seed = this.generatedSeed ?? undefined
       this.layerStatisticsCache.set(key, result)

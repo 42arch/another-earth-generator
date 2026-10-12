@@ -12,26 +12,18 @@ import {
   Wind,
   Workflow,
 } from '@lucide/svelte'
-import { getOceanCurrentThermalColor } from '@/core/rendering/shared/climate-color-scale'
+import { getMapStyleDocument } from '@/core/rendering/styles'
 
 const LAYER_ICONS: Record<string, typeof Component> = {
   'satellite': Satellite,
   'cartographic': Map,
   'heightmap': Mountain,
   'dem': Mountain,
-  'plates': Workflow,
-  'plates-smoothed': Workflow,
-  'continents': Map,
-  'continents-smoothed': Map,
   'geometric-flow': Workflow,
   'temperature': Thermometer,
   'precipitation': CloudRain,
   'wind': Wind,
   'ocean-current': Waves,
-  'koppen': Layers,
-  'koppen-smoothed': Layers,
-  'biome': Layers,
-  'biome-smoothed': Layers,
   'population': Layers,
   'market-access': Map,
   'ethnicity': Layers,
@@ -57,17 +49,18 @@ export function getLayerIcon(id: string): typeof Component {
   return LAYER_ICONS[id] ?? Component
 }
 
-export function getLayerStatisticColor(mode: string, row: LayerStatisticRow): string {
+export function getLayerStatisticColor(mode: string, row: LayerStatisticRow, mapStyle?: string): string {
   if (row.color)
     return row.color
 
   if (mode === 'ocean-current') {
+    const tokens = getMapStyleDocument(mapStyle).tokens
     if (row.key === 'cold')
-      return getOceanCurrentThermalColor(-1)
+      return String(tokens.oceanCurrentCold ?? '#2166AC')
     if (row.key === 'neutral')
-      return getOceanCurrentThermalColor(0)
+      return String(tokens.oceanCurrentNeutral ?? '#F7F7F7')
     if (row.key === 'warm')
-      return getOceanCurrentThermalColor(1)
+      return String(tokens.oceanCurrentWarm ?? '#B2182B')
   }
 
   return '#888888'
@@ -83,9 +76,6 @@ export function formatLayerStatistics(statistics: LayerStatistics): string {
     ...(statistics.measure === 'people'
       ? [`模型总人口（人）\t${statistics.totalPopulation ?? 0}`]
       : [`总 cell\t${statistics.totalCells}`]),
-    ...(statistics.plateCounts
-      ? [`主要板块\t${statistics.plateCounts.primary}`, `小板块\t${statistics.plateCounts.micro}`]
-      : []),
     ...(statistics.description ? [`说明\t${statistics.description}`] : []),
     statistics.mode.startsWith('polities') ? '分类\t居民人数（人）\t占比\t面积（km²）' : statistics.measure === 'people' ? '分类\t居民人数（人）\t占比' : '分类\tcell 数\t占比',
     ...statistics.rows.map(item => `${item.label}\t${item.count}\t${item.percentage.toFixed(6)}%${item.areaKm2 === undefined ? '' : `\t${item.areaKm2}`}`),

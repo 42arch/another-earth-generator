@@ -1,31 +1,33 @@
 <script lang='ts'>
   import {
+    Activity,
     Check,
+    CloudRain,
+    Compass,
     Copy,
+    Globe,
     Layers,
+    Map,
+    MapPin,
+    Mountain,
+    Navigation,
+    Sparkles,
+    Tag,
+    Thermometer,
+    Waves,
+    Wind,
+    Workflow,
     X,
   } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
-  import {
-    getOceanCurrentSpeedColor,
-    getOceanCurrentThermalColor,
-    getWindColor,
-  } from '@/core/rendering/shared/climate-color-scale'
-  import {
-    getHeightmapLandColor,
-    getHeightmapOceanColor,
-    HEIGHTMAP_MAX_LAND_ELEVATION_KM,
-    HEIGHTMAP_MAX_OCEAN_DEPTH_KM,
-  } from '@/core/rendering/shared/heightmap-color-scale'
   import { CARTOGRAPHIC_STYLES } from '@/core/rendering/styles/cartographic-styles'
-  import { getBaseMaps, getOverlays } from '@/core/world/layer-registry'
+  import { getMapStyleDocument } from '@/core/rendering/styles'
   import { hasLayerStatistics } from '@/core/world/layer-statistics'
   import Checkbox from '@/ui/components/Checkbox.svelte'
-  import { formatLayerStatistics, getLayerIcon, getLayerStatisticColor } from '@/ui/hud/layer-presentation'
+  import { formatLayerStatistics, getLayerStatisticColor } from '@/ui/hud/layer-presentation'
   import { appState } from '@/ui/state/app.svelte'
 
   const numberFormat = new Intl.NumberFormat('zh-CN')
-  const smoothableBaseMaps = new Set(['plates', 'continents', 'biome', 'koppen'])
   let copyStatus = $state<'idle' | 'copied' | 'error'>('idle')
   let resetTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -49,115 +51,176 @@
     resetTimer = setTimeout(() => copyStatus = 'idle', 2400)
   }
 
-  const heightmapOceanLegend = [8, 6, 4, 2, 0]
-    .map((depth) => {
-      const position = (HEIGHTMAP_MAX_OCEAN_DEPTH_KM - depth) / HEIGHTMAP_MAX_OCEAN_DEPTH_KM * 100
-      return `${getHeightmapOceanColor(depth)} ${position}%`
-    })
-    .join(', ')
-  const heightmapLandLegend = [0, 1, 2.5, 4.5, 6]
-    .map((elevation) => {
-      const position = elevation / HEIGHTMAP_MAX_LAND_ELEVATION_KM * 100
-      return `${getHeightmapLandColor(elevation)} ${position}%`
-    })
-    .join(', ')
-  const windStrengthLegend = [0, 0.25, 0.5, 0.75, 1]
-    .map((strength, index, values) => `${getWindColor(strength)} ${index / (values.length - 1) * 100}%`)
-    .join(', ')
-  const oceanCurrentSpeedLegend = [0, 0.25, 0.5, 0.75, 1]
-    .map((strength, index, values) => `${getOceanCurrentSpeedColor(strength)} ${index / (values.length - 1) * 100}%`)
-    .join(', ')
-  const oceanCurrentThermalLegend = [-1, -0.5, 0, 0.5, 1]
-    .map((warmth, index, values) => `${getOceanCurrentThermalColor(warmth)} ${index / (values.length - 1) * 100}%`)
-    .join(', ')
+  // 地表底层物理场定义
+  const SURFACE_FIELDS = [
+    { id: 'default', name: '主题地表', icon: Map, desc: '跟随当前制图主题的默认地表着色' },
+    { id: 'dem', name: '高程DEM', icon: Mountain, desc: '数字高程灰度模型' },
+    { id: 'heightmap', name: '阶梯高度', icon: Mountain, desc: '经典多级等高阶梯调色' },
+    { id: 'temperature', name: '月均气温', icon: Thermometer, desc: '地表月均温场连续色带' },
+    { id: 'precipitation', name: '月降水', icon: CloudRain, desc: '月降水量分级色带' },
+    { id: 'population', name: '人口密度', icon: Activity, desc: '人口空间对数分布密度' },
+    { id: 'market-access', name: '市场潜力', icon: Compass, desc: '通达度与相对市场腹地潜力' },
+    { id: 'geometric-flow', name: '几何汇流', icon: Workflow, desc: 'D8 汇流拓扑流域累积' },
+    { id: 'wind', name: '盛行风', icon: Wind, desc: '三圈环流近地表风矢量场' },
+    { id: 'ocean-current', name: '大洋环流', icon: Waves, desc: '风生大洋表层环流场' },
+  ] as const
+
+  // 专题区域多选填充
+  const THEMATIC_FILLS = [
+    { id: 'plates', name: '板块构造', desc: '独立运动板块分布（平滑面）', icon: Workflow },
+    { id: 'continents', name: '大陆区划', desc: '自然构造大陆分区（平滑面）', icon: Globe },
+    { id: 'koppen', name: '气候分类', desc: '柯本-盖革陆地区域（平滑面）', icon: Thermometer },
+    { id: 'biome', name: '生物群系', desc: 'Whittaker 陆地生态群系（平滑面）', icon: Sparkles },
+    { id: 'polities', name: '国家疆域', desc: '各政权主权控制范围', icon: Map },
+    { id: 'ethnicity', name: '民族分布', desc: '优势民族人口分布区', icon: Globe },
+    { id: 'languages', name: '语言区划', desc: '优势语言地理分布', icon: Tag },
+    { id: 'religions', name: '宗教信仰', desc: '主流宗教与信仰分布', icon: Layers },
+  ] as const
+
+  // 要素图层分组
+  const VECTOR_GROUPS = [
+    {
+      label: '水系与交通',
+      items: [
+        { id: 'rivers', name: '水系河流', icon: Waves },
+        { id: 'routes', name: '道路与航线', icon: Navigation },
+      ],
+    },
+    {
+      label: '疆域与聚落',
+      items: [
+        { id: 'nation-borders', name: '国界线', icon: Map },
+        { id: 'cities', name: '聚落中心', icon: MapPin },
+        { id: 'sacred-sites', name: '宗教圣地', icon: Sparkles },
+      ],
+    },
+    {
+      label: '地名注记',
+      items: [
+        { id: 'nation-labels', name: '国家名称', icon: Tag },
+        { id: 'ethnicity-labels', name: '民族名称', icon: Tag },
+        { id: 'language-labels', name: '语言名称', icon: Tag },
+        { id: 'religion-labels', name: '宗教名称', icon: Tag },
+      ],
+    },
+  ] as const
+
+  const heightmapOceanLegend = 'linear-gradient(to right, #061a33, #1a5f7a)'
+  const heightmapLandLegend = 'linear-gradient(to right, #2d5a27, #c2b280, #ffffff)'
+  const windStrengthLegend = $derived.by(() => {
+    const tokens = getMapStyleDocument(appState.params.appearance.mapStyle).tokens
+    const windColor = String(tokens.wind ?? '#A9FFF1')
+    return `linear-gradient(to right, #0a131c, #1e5163, #38989b, ${windColor})`
+  })
+  const oceanCurrentSpeedLegend = $derived.by(() => {
+    const tokens = getMapStyleDocument(appState.params.appearance.mapStyle).tokens
+    const slow = String(tokens.oceanCurrentSpeedSlow ?? '#10355E')
+    const fast = String(tokens.oceanCurrentSpeedFast ?? '#9ECAE1')
+    return `linear-gradient(to right, #040a14, ${slow}, #2f84ba, ${fast})`
+  })
+  const oceanCurrentThermalLegend = $derived.by(() => {
+    const tokens = getMapStyleDocument(appState.params.appearance.mapStyle).tokens
+    const cold = String(tokens.oceanCurrentCold ?? '#2166AC')
+    const neutral = String(tokens.oceanCurrentNeutral ?? '#F7F7F7')
+    const warm = String(tokens.oceanCurrentWarm ?? '#B2182B')
+    return `linear-gradient(to right, ${cold}, ${neutral}, ${warm})`
+  })
 
   const monthNames = ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月', '8 月', '9 月', '10 月', '11 月', '12 月']
+
+  // 当前有效底图模式识别
+  const activeSurfaceMode = $derived.by(() => {
+    const raw = appState.params.appearance.surfaceField ?? 'default'
+    if (raw !== 'default')
+      return raw
+    if (appState.params.appearance.mapStyle === 'satellite')
+      return 'satellite'
+    return appState.params.appearance.baseMap
+  })
 </script>
 
 {#if appState.layerDrawerOpen}
   <aside
-    transition:fly={{ x: 300, duration: 200 }}
-    class='pointer-events-auto fixed right-4 top-16 bottom-20 z-40 w-[22rem] max-w-[calc(100vw-32px)] bg-[#1e1e20]/85 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.4)] flex flex-col text-obs-text-main overflow-hidden'
+    transition:fly={{ x: 320, duration: 220 }}
+    class='pointer-events-auto fixed right-4 top-16 bottom-20 z-40 w-[23.5rem] max-w-[calc(100vw-32px)] bg-[#1a1b1e]/90 backdrop-blur-xl border border-white/[0.12] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col text-obs-text-main overflow-hidden'
   >
-    <!-- 头部 -->
-    <header class='flex items-center justify-between px-4 py-2 border-b border-white/[0.06] select-none'>
-      <div class='flex items-center justify-center gap-2'>
-        <Layers class='w-4 h-4 text-obs-primary' />
-        <h2 class='font-heading text-sm font-bold tracking-wider uppercase text-obs-text-main m-0 leading-tight'>
-          图层
-        </h2>
+    <!-- 面板顶栏 -->
+    <header class='flex items-center justify-between px-4 py-3 border-b border-white/[0.08] select-none bg-white/[0.02]'>
+      <div class='flex items-center gap-2'>
+        <div class='p-1.5 rounded-lg bg-obs-primary/15 text-obs-primary border border-obs-primary/20'>
+          <Layers class='w-4 h-4' />
+        </div>
+        <div>
+          <h2 class='font-heading text-xs font-bold tracking-wider uppercase text-obs-text-main m-0 leading-tight'>
+            地图与地理图层
+          </h2>
+          <span class='text-[10px] text-obs-text-dim leading-none'>分层控制与正交专题分析</span>
+        </div>
       </div>
 
       <button
         type='button'
         onclick={() => appState.layerDrawerOpen = false}
-        class='text-obs-text-dim hover:text-obs-text-main p-1 rounded-md hover:bg-white/[0.06] transition-colors cursor-pointer'
+        class='text-obs-text-dim hover:text-obs-text-main p-1.5 rounded-lg hover:bg-white/[0.08] transition-colors cursor-pointer'
         title='关闭图层面板'
       >
         <X class='w-4 h-4' />
       </button>
     </header>
 
-    <!-- 滚动内容区 -->
-    <div class='flex-1 overflow-y-auto p-3.5 flex flex-col gap-3 custom-scrollbar text-xs'>
-      <div class='flex flex-col gap-1.5'>
-        <span class='text-[10px] text-obs-text-dim px-1 font-medium'>制图样式</span>
-        <div class='grid grid-cols-3 gap-1'>
+    <!-- 滚动内容容器 -->
+    <div class='flex-1 overflow-y-auto p-3.5 flex flex-col gap-4 custom-scrollbar text-xs'>
+      <!-- 1. 顶栏：制图风格（Theme & Style） -->
+      <section class='flex flex-col gap-1.5'>
+        <div class='flex items-center justify-between px-0.5'>
+          <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>1. 制图主题风格</span>
+          <span class='text-[10px] text-obs-text-dim font-mono'>MapStyle</span>
+        </div>
+        <div class='grid grid-cols-4 gap-1.5'>
           {#each Object.values(CARTOGRAPHIC_STYLES) as style}
-            {@const isActive = appState.params.appearance.baseMap === 'cartographic' && appState.params.appearance.mapStyle === style.id}
+            {@const isActive = appState.params.appearance.mapStyle === style.id}
             <button
               type='button'
               onclick={() => appState.setMapStyle(style.id)}
               aria-pressed={isActive}
               title={style.description}
-              class="flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 transition-colors {isActive ? 'border-obs-primary/50 bg-obs-primary/15 text-obs-primary' : 'border-white/[0.08] text-obs-text-muted hover:bg-white/[0.05] hover:text-obs-text-main'}"
+              class="flex flex-col items-center justify-center gap-1 rounded-xl border p-2 transition-all cursor-pointer {isActive ? 'border-obs-primary/60 bg-obs-primary/20 text-obs-primary shadow-sm shadow-obs-primary/20 font-semibold' : 'border-white/[0.08] bg-white/[0.02] text-obs-text-muted hover:bg-white/[0.06] hover:text-obs-text-main'}"
             >
-              <span class='h-3 w-3 rounded-sm border border-black/15' style:background-color={style.swatch}></span>
-              <span>{style.name}</span>
+              <span class='h-3.5 w-3.5 rounded-full border border-black/30 shadow-inner' style:background-color={style.swatch}></span>
+              <span class='text-[11px] leading-none'>{style.name}</span>
             </button>
           {/each}
         </div>
-      </div>
-      <!-- 着色模式 -->
-      <div class='flex flex-col gap-1.5'>
+      </section>
+
+      <!-- 2. 第一区：底层地表（Surface Field） -->
+      <section class='flex flex-col gap-2 pt-2 border-t border-white/[0.06]'>
+        <div class='flex items-center justify-between px-0.5'>
+          <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>2. 底层地表（单选）</span>
+          <span class='text-[10px] text-obs-text-dim font-mono'>Surface Field</span>
+        </div>
         <div class='grid grid-cols-4 gap-1'>
-          {#each getBaseMaps().filter(m => !m.id.endsWith('-smoothed')) as item}
-            {@const Icon = getLayerIcon(item.id)}
-            {@const isActive = appState.params.appearance.baseMap.replace('-smoothed', '') === item.id}
+          {#each SURFACE_FIELDS as field}
+            {@const isSelected = activeSurfaceMode === field.id || (field.id === 'default' && (activeSurfaceMode === 'cartographic' || activeSurfaceMode === 'satellite'))}
+            {@const Icon = field.icon}
             <button
               type='button'
-              onclick={() => {
-                const isSmoothed = appState.params.appearance.baseMap.endsWith('-smoothed')
-                appState.setBaseMap(isSmoothed && smoothableBaseMaps.has(item.id) ? `${item.id}-smoothed` : item.id)
-              }}
-              title={item.name}
-              class="flex flex-row items-center gap-1 p-1.5 rounded-lg transition-all text-center cursor-pointer border {isActive ? 'bg-obs-primary/15 text-obs-primary border-obs-primary/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
+              onclick={() => appState.setSurfaceField(field.id)}
+              title={field.desc}
+              class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all text-left cursor-pointer border {isSelected ? 'bg-obs-primary/20 text-obs-primary border-obs-primary/50 font-semibold' : 'text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.04] border-transparent'}"
             >
-              <Icon class="w-3 h-3 shrink-0 {isActive ? 'text-obs-primary' : 'opacity-80'}" />
-              <span class='leading-none text-[11px] whitespace-nowrap overflow-hidden text-ellipsis'>{item.name}</span>
+              <Icon class="w-3.5 h-3.5 shrink-0 {isSelected ? 'text-obs-primary' : 'opacity-70'}" />
+              <span class='leading-none text-[11px] truncate'>{field.name}</span>
             </button>
           {/each}
         </div>
 
-        {#if smoothableBaseMaps.has(appState.params.appearance.baseMap.replace('-smoothed', ''))}
-          <div class='pt-2 pl-1'>
-            <Checkbox
-              label='平滑边界'
-              checked={appState.params.appearance.baseMap.endsWith('-smoothed')}
-              onchange={() => {
-                const isSmoothed = appState.params.appearance.baseMap.endsWith('-smoothed')
-                const baseId = appState.params.appearance.baseMap.replace('-smoothed', '')
-                appState.setBaseMap(isSmoothed ? baseId : `${baseId}-smoothed`)
-              }}
-            />
-          </div>
-        {/if}
-
-        {#if appState.params.appearance.baseMap === 'temperature' || appState.params.appearance.baseMap === 'precipitation' || appState.params.appearance.baseMap === 'wind' || appState.params.appearance.baseMap === 'ocean-current'}
-          <label class='flex items-center justify-between gap-2 px-1 pt-2 text-[11px] text-obs-text-muted'>
-            <span>显示月份</span>
+        <!-- 气候月份选择 -->
+        {#if ['temperature', 'precipitation', 'wind', 'ocean-current'].includes(activeSurfaceMode)}
+          <div class='flex items-center justify-between px-2 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-muted'>显示月份（季节水热强迫）</span>
             <select
-              class='rounded-md border border-white/[0.12] bg-obs-surface px-2 py-1 text-obs-text-main'
+              class='rounded-lg border border-white/[0.12] bg-[#141517] px-2 py-1 text-obs-text-main text-[11px] outline-none cursor-pointer'
               value={appState.params.appearance.climateMonth}
               onchange={event => appState.updateParam('appearance', 'climateMonth', Number(event.currentTarget.value))}
             >
@@ -165,240 +228,242 @@
                 <option value={index}>{name}</option>
               {/each}
             </select>
-          </label>
-        {/if}
-
-        {#if getOverlays().length > 0}
-          {@const overlays = getOverlays()}
-          {@const groups = [
-            { label: '自然边界', items: overlays.filter(o => o.category === 'physics' || o.category === 'ecology' || o.category === 'climate') },
-            { label: '人文', items: overlays.filter(o => o.category === 'civilization') },
-          ].filter(g => g.items.length > 0)}
-          <div class='mt-1.5 flex flex-col gap-1.5 pt-2 border-t border-white/[0.06]'>
-            <span class='text-[10px] text-obs-text-dim px-1 font-medium'>叠加层</span>
-
-            {#each groups as group}
-              <div class='px-1 pt-1'>
-                <div class='text-[9px] text-obs-text-dim/50 mb-1.5 pl-0.5'>{group.label}</div>
-                <div class='grid grid-cols-2 gap-1.5'>
-                  {#each group.items as overlay}
-                    <Checkbox
-                      label={overlay.name}
-                      checked={appState.params.appearance.overlays[overlay.id]}
-                      onchange={() => appState.toggleOverlay(overlay.id)}
-                    />
-                  {/each}
-                </div>
-              </div>
-            {/each}
           </div>
         {/if}
-        <!--
-        {#if appState.params.appearance.displayMode === 'crust'}
-          <div class='flex items-center gap-3 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#b88447]'></i>大陆地壳</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#144d85]'></i>海洋地壳</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'density'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>低密度</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#f5c752] to-[#40147a]'></i><span>高密度</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'subduction'}
-        -->
-        <!--
-        {#if appState.params.appearance.displayMode === 'subduction'}
-          <div class='flex items-center gap-3 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ff7314]'></i>上覆侧</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#268cff]'></i>俯冲侧</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'stress'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>低应力</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#04050a] via-[#73105e] to-[#fff273]'></i><span>高应力</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'volcanism'}
-          <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#1abfff]'></i>岛弧</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ff3d0f]'></i>陆缘火山弧</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ffd114]'></i>热点链</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#b833ff]'></i>大型火成岩省</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'mantle'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>下沉</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#156bff] via-[#070811] to-[#ff3d0f]'></i><span>上涌</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'classification'}
-          <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#bdaa47]'></i>克拉通</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#1f7ab8]'></i>盆地</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#f04014]'></i>褶皱带</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#9e45d1]'></i>高原</span>
-          </div>
-        {:else if appState.params.appearance.displayMode === 'texture'}
-          <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#b84dff]'></i>方向性山脊</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ff6614]'></i>构造带纹理</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#14ccb8]'></i>表面细节</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ff2e8c]'></i>海岸细化</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#add133]'></i>陆地背景</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#4db8ff]'></i>物理尺度细节</span>
-          </div>
-        -->
-        {#if appState.params.appearance.baseMap === 'satellite'}
-          <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <div class='flex items-center gap-2'><span>干旱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#b9a27a] via-[#8e8851] to-[#315b2b]'></i><span>湿润</span></div>
-            <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#3b6230] via-[#777565] to-[#d5e0e5]'></i><span>高山雪线</span></div>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'dem'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>低谷/深海</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-black to-white border border-white/20'></i><span>高山</span>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'heightmap'}
-          <div class='flex flex-col gap-1.5 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <div class='flex items-center gap-2'><span>深海</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${heightmapOceanLegend})`}></i><span>浅海</span></div>
-            <div class='flex items-center gap-2'><span>低地</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${heightmapLandLegend})`}></i><span>高山</span></div>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'geometric-flow'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>低汇流</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#030509] via-[#0a6bb8] to-[#b8fff5]'></i><span>高汇流</span>
-          </div>
-          <div class='px-1 text-[9px] text-obs-text-dim/80'>沿地形排水图累加上游单元数量，用于观察流域几何</div>
-        {:else if appState.params.appearance.baseMap === 'koppen'}
-          <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#127a47]'></i>A 热带</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ec632b]'></i>B 干旱</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#2fac87]'></i>C 温带</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#5b61b0]'></i>D 大陆性</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#c3d6df]'></i>E 极地</span>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'biome'}
-          <div class='grid grid-cols-2 gap-x-3 gap-y-1 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#091f47]'></i>海洋</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#0d6b2e]'></i>热带雨林</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#1f9438]'></i>热带季节林</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ada838]'></i>稀树草原</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#d47a38]'></i>热沙漠</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#a67a6b]'></i>冷沙漠</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#b8ad66]'></i>半干旱草原</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#ad9447]'></i>地中海灌丛</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#7a9e52]'></i>温带草原</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#2e7a47]'></i>温带季节林</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#29997a]'></i>温带雨林</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#336b80]'></i>针叶林</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#8eadd2]'></i>苔原</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#e6eff5]'></i>冰原</span>
-            <span class='flex items-center gap-1'><i class='w-2 h-2 rounded-sm bg-[#bad4ca]'></i>高山苔原</span>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'population'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>稀疏</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#303b30] via-[#dbb040] to-[#f54a2b]'></i><span>密集</span>
-          </div>
-          <div class='px-1 text-[9px] text-obs-text-dim/80'>陆地人口密度（人/km²）；海洋以深蓝色显示。</div>
-          <div class='px-1 text-[10px] text-obs-text-dim'>模型总人口 {numberFormat.format(Math.round(appState.worldSummary.totalPopulation))} · 聚落 {numberFormat.format(appState.worldSummary.settlementCount)} 处</div>
-        {:else if appState.params.appearance.baseMap === 'market-access'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>弱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#292e38] via-[#479494] to-[#f7c24f]'></i><span>强</span>
-          </div>
-          <div class='px-1 text-[9px] text-obs-text-dim/80'>按地形通行成本与可达腹地估算的相对市场潜力，并非贸易额。</div>
-          <div class='px-1 text-[10px] text-obs-text-dim'>陆路 {numberFormat.format(appState.worldSummary.roadCount)} 条 · 航线 {numberFormat.format(appState.worldSummary.seaRouteCount)} 条</div>
-        {:else if ['ethnicity', 'languages'].includes(appState.params.appearance.baseMap.replace('-smoothed', ''))}
-          <div class='px-1 text-[10px] text-obs-text-dim'>颜色区分当地人数最多的{appState.params.appearance.baseMap.replace('-smoothed', '') === 'ethnicity' ? '民族' : '语言'}；灰色为无人居住的陆地。</div>
-          <div class='px-1 text-[9px] text-obs-text-dim/80'>颜色越鲜明，主要群体在当地居民中的占比越高；具体人数见下方统计。</div>
-          <div class='px-1 text-[10px] text-obs-text-dim'>民族 {numberFormat.format(appState.worldSummary.ethnicGroupCount)} 个 · 语言 {numberFormat.format(appState.worldSummary.languageCount)} 种</div>
-        {:else if appState.params.appearance.baseMap.replace('-smoothed', '') === 'polities'}
-          <div class='px-1 text-[10px] text-obs-text-dim'>颜色区分国家；颜色越鲜明，首都到当地的治理通达性越强。灰色为未接入国家的独立陆地。</div>
-          <div class='px-1 text-[10px] text-obs-text-dim'>国家 {numberFormat.format(appState.worldSummary.polityCount)} 个 · 行政区 {numberFormat.format(appState.worldSummary.districtCount)} 个</div>
-        {:else if appState.params.appearance.baseMap.replace('-smoothed', '') === 'religions'}
-          <div class='px-1 text-[10px] text-obs-text-dim'>颜色区分当地人数最多的主要信仰归属；棕灰色为无归属，浅灰色为无人居住的陆地。</div>
-          <div class='px-1 text-[9px] text-obs-text-dim/80'>颜色越鲜明，主要归属份额越高；各信仰和无归属人口见下方统计。</div>
-          <div class='px-1 text-[10px] text-obs-text-dim'>宗教 {numberFormat.format(appState.worldSummary.religionCount)} 个 · 圣地 {numberFormat.format(appState.worldSummary.sacredSiteCount)} 处</div>
-        {:else if appState.params.appearance.baseMap === 'temperature'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>−30°C</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#2e52b8] via-[#e0eddb] to-[#db451f]'></i><span>40°C</span>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'precipitation'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>0 mm</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#cca66b] via-[#57ad7d] to-[#144092]'></i><span>600+ mm</span>
-          </div>
-        {:else if appState.params.appearance.baseMap === 'wind'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>弱</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${windStrengthLegend})`}></i><span>强</span>
-          </div>
-          <div class='px-1 text-[9px] leading-relaxed text-obs-text-dim'>底色表示相对风力并与地形融合；箭头表示气流方向。仅为相对值，非 m/s。</div>
-        {:else if appState.params.appearance.baseMap === 'ocean-current'}
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>冷</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${oceanCurrentThermalLegend})`}></i><span>暖</span>
-          </div>
-          <div class='flex items-center gap-2 px-1 pt-1 text-[10px] text-obs-text-dim'>
-            <span>弱</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: linear-gradient(to right, ${oceanCurrentSpeedLegend})`}></i><span>强</span>
-          </div>
-          <div class='px-1 text-[9px] text-obs-text-dim'>箭头颜色表示海温异常指标；底色深浅表示相对流速。指标非 °C，流速非 m/s。</div>
-        {/if}
-      </div>
+      </section>
 
-      {#if hasLayerStatistics(appState.params.appearance.baseMap)}
-        <!-- 图层统计 -->
-        <div class='flex flex-col gap-1.5 mt-2'>
-          <div class='flex items-center justify-between'>
-            <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>当前图层统计</span>
-            <button
-              type='button'
-              onclick={copyStatistics}
-              disabled={!appState.layerStatistics}
-              class='flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
-              title='复制统计数据'
+      <!-- 3. 第二区：专题区域（Thematic Fills） -->
+      <section class='flex flex-col gap-2 pt-2 border-t border-white/[0.06]'>
+        <div class='flex items-center justify-between px-0.5'>
+          <div class='flex items-center gap-1'>
+            <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>3. 专题面（多选叠加）</span>
+            <span class='text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-obs-text-dim'>独立图层</span>
+          </div>
+          <span class='text-[10px] text-obs-text-dim font-mono'>Thematic Fills</span>
+        </div>
+        <div class='grid grid-cols-2 gap-1.5'>
+          {#each THEMATIC_FILLS as thematic}
+            {@const isChecked = Boolean(appState.params.appearance.thematicFills?.[thematic.id]) || activeSurfaceMode === thematic.id}
+            {@const Icon = thematic.icon}
+            <div
+              class="flex items-center justify-between px-2.5 py-1.5 rounded-xl border transition-colors {isChecked ? 'border-obs-primary/30 bg-obs-primary/10' : 'border-white/[0.06] bg-white/[0.02]'}"
+              title={thematic.desc}
             >
-              {#if copyStatus === 'copied'}
-                <Check class='w-3 h-3 text-obs-primary' />
-              {:else}
-                <Copy class='w-3 h-3' />
-              {/if}
-            </button>
-          </div>
+              <span class="flex items-center gap-1.5 text-[11px] {isChecked ? 'text-obs-primary font-medium' : 'text-obs-text-muted'}"><Icon class='w-3 h-3' />{thematic.name}</span>
+              <Checkbox
+                label=''
+                checked={isChecked}
+                onchange={() => appState.toggleThematicFill(thematic.id)}
+              />
+            </div>
+          {/each}
+        </div>
+      </section>
 
-          <div class='flex flex-col bg-black/20 rounded-lg border border-white/[0.04] overflow-hidden'>
-            {#if appState.layerStatistics}
-              <div class='px-3 py-2 border-b border-white/[0.04]'>
-                <div class='text-[11px] font-semibold text-obs-text-main'>{appState.layerStatistics.title}</div>
-                <div class='mt-0.5 text-[10px] text-obs-text-dim'>
-                  {#if appState.layerStatistics.measure === 'people'}
-                    占模型总人口 {numberFormat.format(Math.round(appState.layerStatistics.totalPopulation ?? 0))} 人
-                  {:else}
-                    占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元
-                  {/if}
-                </div>
-                {#if appState.layerStatistics.plateCounts}
-                  <div class='mt-2 flex gap-3 text-[10px] text-obs-text-main'>
-                    <span>主要板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.primary}</strong></span>
-                    <span>小板块 <strong class='font-mono text-obs-primary'>{appState.layerStatistics.plateCounts.micro}</strong></span>
-                  </div>
-                {/if}
-                {#if appState.layerStatistics.description}
-                  <p class='mt-1.5 text-[10px] leading-relaxed text-obs-text-dim'>{appState.layerStatistics.description}</p>
-                {/if}
-              </div>
-              <div class='flex flex-col px-1.5 py-1.5'>
-                {#each appState.layerStatistics.rows as item (item.key)}
-                  {@const color = getLayerStatisticColor(appState.layerStatistics.mode, item)}
-                  <div class='rounded-md px-1.5 py-1.5 hover:bg-white/[0.04]'>
-                    <div class='flex items-center gap-2 text-[10px]'>
-                      <span class='w-2 h-2 rounded-sm shrink-0' style:background-color={color}></span>
-                      <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
-                      <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(appState.layerStatistics.measure === 'people' ? Math.round(item.count) : item.count)}</span>
-                      <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
+      <!-- 4. 第三区：要素图层（Vector & Annotations） -->
+      <section class='flex flex-col gap-2 pt-2 border-t border-white/[0.06]'>
+        <div class='flex items-center justify-between px-0.5'>
+          <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>4. 矢量要素与注记</span>
+          <span class='text-[10px] text-obs-text-dim font-mono'>Vectors</span>
+        </div>
+        <div class='flex flex-col gap-2'>
+          {#each VECTOR_GROUPS as group}
+            <div class='flex flex-col gap-1 px-1'>
+              <span class='text-[9px] font-medium text-obs-text-dim/60'>{group.label}</span>
+              <div class='grid grid-cols-2 gap-1.5'>
+                {#each group.items as item}
+                  {@const Icon = item.icon}
+                  <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] transition-colors'>
+                    <div class='flex items-center gap-1.5'>
+                      <Icon class='w-3 h-3 text-obs-text-dim' />
+                      <span class='text-[11px] text-obs-text-main'>{item.name}</span>
                     </div>
-                    {#if item.areaKm2 !== undefined}<div class='ml-4 text-[9px] text-obs-text-dim'>面积 {numberFormat.format(Math.round(item.areaKm2))} km²</div>{/if}
-                    <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
-                      <div class='h-full rounded-full' style:background-color={color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
-                    </div>
+                    <Checkbox
+                      label=''
+                      checked={Boolean(appState.params.appearance.overlays[item.id])}
+                      onchange={() => appState.toggleOverlay(item.id)}
+                    />
                   </div>
                 {/each}
               </div>
-            {:else}
-              <div class='py-4 text-center text-[10px] text-obs-text-dim'>世界生成完成后显示统计</div>
-            {/if}
+            </div>
+          {/each}
+        </div>
+      </section>
+
+      <!-- 5. 第四区：环境与物理辅助（Environment & Aux） -->
+      <section class='flex flex-col gap-2 pt-2 border-t border-white/[0.06]'>
+        <div class='flex items-center justify-between px-0.5'>
+          <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>5. 环境与辅助</span>
+          <span class='text-[10px] text-obs-text-dim font-mono'>Environment</span>
+        </div>
+        <div class='grid grid-cols-2 gap-1.5 px-1'>
+          <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-main'>大气圈微光</span>
+            <Checkbox
+              label=''
+              checked={Boolean(appState.params.appearance.overlays.atmosphere)}
+              onchange={() => appState.toggleOverlay('atmosphere')}
+            />
+          </div>
+          <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-main'>动态云层</span>
+            <Checkbox
+              label=''
+              checked={Boolean(appState.params.appearance.overlays.clouds)}
+              onchange={() => appState.toggleOverlay('clouds')}
+            />
+          </div>
+          <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-main'>昼夜光照分界</span>
+            <Checkbox
+              label=''
+              checked={Boolean(appState.params.appearance.overlays['day-night'])}
+              onchange={() => appState.toggleOverlay('day-night')}
+            />
+          </div>
+          <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-main'>经纬网格</span>
+            <Checkbox
+              label=''
+              checked={Boolean(appState.params.appearance.overlays.graticule)}
+              onchange={() => appState.toggleOverlay('graticule')}
+            />
+          </div>
+          <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-main'>球面网格线框</span>
+            <Checkbox
+              label=''
+              checked={Boolean(appState.params.appearance.overlays.wireframe)}
+              onchange={() => appState.toggleOverlay('wireframe')}
+            />
+          </div>
+          <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
+            <span class='text-[11px] text-obs-text-main'>真实高程起伏</span>
+            <Checkbox
+              label=''
+              checked={Boolean(appState.params.appearance.elevationDisplacement)}
+              onchange={() => appState.toggleLayer('elevationDisplacement')}
+            />
           </div>
         </div>
-      {/if}
+      </section>
+
+      <!-- 6. 图例说明 & 物理统计 -->
+      <section class='flex flex-col gap-2 pt-2 border-t border-white/[0.06]'>
+        <div class='flex items-center justify-between px-0.5'>
+          <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>图例说明</span>
+          <span class='text-[10px] text-obs-text-dim font-mono'>{activeSurfaceMode}</span>
+        </div>
+
+        {#if activeSurfaceMode === 'satellite'}
+          <div class='flex flex-col gap-1.5 px-1 text-[10px] text-obs-text-dim'>
+            <div class='flex items-center gap-2'><span>干旱</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#b9a27a] via-[#8e8851] to-[#315b2b]'></i><span>湿润植被</span></div>
+            <div class='flex items-center gap-2'><span>低地森林</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#3b6230] via-[#777565] to-[#d5e0e5]'></i><span>高山雪线</span></div>
+          </div>
+        {:else if activeSurfaceMode === 'dem'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>海平面(0m)</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-black to-white border border-white/20'></i><span>珠峰(8848m)</span>
+          </div>
+        {:else if activeSurfaceMode === 'heightmap'}
+          <div class='flex flex-col gap-1.5 px-1 text-[10px] text-obs-text-dim'>
+            <div class='flex items-center gap-2'><span>深海</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: ${heightmapOceanLegend}`}></i><span>浅海</span></div>
+            <div class='flex items-center gap-2'><span>沿海平原</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: ${heightmapLandLegend}`}></i><span>高原山脉</span></div>
+          </div>
+        {:else if activeSurfaceMode === 'temperature'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>−30°C</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#2e52b8] via-[#e0eddb] to-[#dc451f]'></i><span>40°C</span>
+          </div>
+        {:else if activeSurfaceMode === 'precipitation'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>0 mm</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#cca66b] via-[#57ad7d] to-[#144092]'></i><span>600+ mm</span>
+          </div>
+        {:else if activeSurfaceMode === 'wind'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>微风</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: ${windStrengthLegend}`}></i><span>强气流</span>
+          </div>
+        {:else if activeSurfaceMode === 'ocean-current'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>寒流</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: ${oceanCurrentThermalLegend}`}></i><span>暖流</span>
+          </div>
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>缓流</span><i class='h-1.5 flex-1 rounded-full border border-white/20' style={`background: ${oceanCurrentSpeedLegend}`}></i><span>急流</span>
+          </div>
+        {:else if activeSurfaceMode === 'population'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>稀疏</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#2e3b31] via-[#dcb040] to-[#f54a2b]'></i><span>高密度</span>
+          </div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>模型总人口 {numberFormat.format(Math.round(appState.worldSummary.totalPopulation))} · 聚落 {numberFormat.format(appState.worldSummary.settlementCount)} 处</div>
+        {:else if activeSurfaceMode === 'market-access'}
+          <div class='flex items-center gap-2 px-1 text-[10px] text-obs-text-dim'>
+            <span>交通阻隔</span><i class='h-1.5 flex-1 rounded-full bg-gradient-to-r from-[#292e38] via-[#479494] to-[#f7c24f]'></i><span>贸易枢纽</span>
+          </div>
+          <div class='px-1 text-[10px] text-obs-text-dim'>陆路 {numberFormat.format(appState.worldSummary.roadCount)} 条 · 航线 {numberFormat.format(appState.worldSummary.seaRouteCount)} 条</div>
+        {:else}
+          <div class='px-1 text-[10px] text-obs-text-dim leading-relaxed'>
+            遵循地球物理与气候地理自洽演化，通过 Map Style 声明表达式渲染。
+          </div>
+        {/if}
+
+        <!-- 专题统计信息卡片 -->
+        {#if hasLayerStatistics(appState.params.appearance.baseMap)}
+          <div class='flex flex-col gap-1.5 mt-1'>
+            <div class='flex items-center justify-between'>
+              <span class='text-[10px] uppercase tracking-wider text-obs-text-dim font-medium'>当前要素分布统计</span>
+              <button
+                type='button'
+                onclick={copyStatistics}
+                disabled={!appState.layerStatistics}
+                class='flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-obs-text-muted hover:text-obs-text-main hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
+                title='复制统计数据'
+              >
+                {#if copyStatus === 'copied'}
+                  <Check class='w-3 h-3 text-obs-primary' />
+                {:else}
+                  <Copy class='w-3 h-3' />
+                {/if}
+              </button>
+            </div>
+
+            <div class='flex flex-col bg-black/30 rounded-xl border border-white/[0.06] overflow-hidden'>
+              {#if appState.layerStatistics}
+                <div class='px-3 py-2 border-b border-white/[0.04] bg-white/[0.01]'>
+                  <div class='text-[11px] font-semibold text-obs-text-main'>{appState.layerStatistics.title}</div>
+                  <div class='mt-0.5 text-[10px] text-obs-text-dim'>
+                    {#if appState.layerStatistics.measure === 'people'}
+                      占模型总人口 {numberFormat.format(Math.round(appState.layerStatistics.totalPopulation ?? 0))} 人
+                    {:else}
+                      占全部 {numberFormat.format(appState.layerStatistics.totalCells)} 单元
+                    {/if}
+                  </div>
+                  {#if appState.layerStatistics.description}
+                    <p class='mt-1.5 text-[10px] leading-relaxed text-obs-text-dim'>{appState.layerStatistics.description}</p>
+                  {/if}
+                </div>
+                <div class='flex flex-col px-1.5 py-1.5'>
+                  {#each appState.layerStatistics.rows as item (item.key)}
+                    {@const color = getLayerStatisticColor(appState.layerStatistics.mode, item, appState.params.appearance.mapStyle)}
+                    <div class='rounded-lg px-2 py-1.5 hover:bg-white/[0.04] transition-colors'>
+                      <div class='flex items-center gap-2 text-[10px]'>
+                        <span class='w-2 h-2 rounded-full shrink-0 shadow-sm' style:background-color={color}></span>
+                        <span class='flex-1 min-w-0 break-words leading-tight text-obs-text-main'>{item.label}</span>
+                        <span class='font-mono text-obs-text-muted tabular-nums'>{numberFormat.format(appState.layerStatistics.measure === 'people' ? Math.round(item.count) : item.count)}</span>
+                        <span class='font-mono text-obs-primary tabular-nums w-12 text-right'>{percentage(item.percentage)}</span>
+                      </div>
+                      {#if item.areaKm2 !== undefined}<div class='ml-4 text-[9px] text-obs-text-dim'>面积 {numberFormat.format(Math.round(item.areaKm2))} km²</div>{/if}
+                      <div class='ml-4 mt-1.5 h-1 rounded-full bg-white/[0.06] overflow-hidden'>
+                        <div class='h-full rounded-full transition-all' style:background-color={color} style:width={`${item.count > 0 ? Math.max(item.percentage, 0.3) : 0}%`}></div>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <div class='py-4 text-center text-[10px] text-obs-text-dim'>世界生成完成后显示详细统计</div>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      </section>
     </div>
   </aside>
 {/if}

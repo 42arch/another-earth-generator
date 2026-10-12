@@ -13,8 +13,12 @@ export interface MapStyleSourceDefinition {
 
 /** Built-in data sources; style documents may register additional sources. */
 export const MAP_STYLE_SOURCES: Record<string, MapStyleSourceDefinition> = {
-  'world-surface': { id: 'world-surface', kind: 'raster', provider: 'world:surface', properties: ['isLand', 'elevation', 'biome', 'temperature', 'precipitation'] },
+  'world-surface': { id: 'world-surface', kind: 'raster', provider: 'world:surface', properties: ['isLand', 'elevation', 'temperature', 'precipitation'] },
   'land-areas': { id: 'land-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:land-areas', properties: ['kind'] },
+  'plate-areas': { id: 'plate-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:plate-areas', properties: ['groupId', 'name'] },
+  'continent-areas': { id: 'continent-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:continent-areas', properties: ['groupId', 'name'] },
+  'koppen-areas': { id: 'koppen-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:koppen-areas', properties: ['groupId', 'name'] },
+  'biome-areas': { id: 'biome-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:biome-areas', properties: ['groupId', 'name'] },
   'polity-areas': { id: 'polity-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:polity-areas', properties: ['groupId', 'name', 'population'] },
   'ethnicity-areas': { id: 'ethnicity-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:ethnicity-areas', properties: ['groupId', 'name'] },
   'language-areas': { id: 'language-areas', kind: 'geojson', geometry: 'polygon', provider: 'generated:language-areas', properties: ['groupId', 'name'] },

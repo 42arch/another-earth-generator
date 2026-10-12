@@ -1,5 +1,6 @@
 import type { GeoJsonFeatureCollection } from '@/core/data-source/geojson'
 import type SphericalMesh from '@/core/mesh/mesh'
+import type { ClimateVectorDisplayData } from '@/core/simulation/climate/climate-data'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { geoJsonGeometryKind, validateGeoJson } from '@/core/data-source/geojson'
 import { MAP_STYLE_SOURCES } from '@/core/data-source/source-registry'
@@ -208,20 +209,75 @@ export function removeGeoJsonSource(id: string): void {
   }
 }
 
+export function extractVectorSpeed(
+  vector: ClimateVectorDisplayData | undefined,
+  count: number,
+  isLand?: Uint8Array,
+  maskLand = false,
+): Float32Array {
+  const speed = new Float32Array(count)
+  if (!vector || vector.east.length !== count || vector.north.length !== count)
+    return speed
+  const east = vector.east
+  const north = vector.north
+  for (let i = 0; i < count; i++) {
+    if (maskLand && isLand && isLand[i])
+      continue
+    speed[i] = Math.hypot(east[i], north[i])
+  }
+  return speed
+}
+
+export function extractOceanWarmth(
+  vector: ClimateVectorDisplayData | undefined,
+  count: number,
+  isLand?: Uint8Array,
+): Float32Array {
+  const warmth = new Float32Array(count)
+  if (!vector || !vector.warmth || vector.warmth.length !== count)
+    return warmth
+  const raw = vector.warmth
+  for (let i = 0; i < count; i++) {
+    if (isLand && isLand[i])
+      continue
+    warmth[i] = raw[i]
+  }
+  return warmth
+}
+
 export function createWorldRasterSource(mesh: SphericalMesh, data: WorldSimulationState): RasterCellSource {
+  const count = mesh.numRegions
+  const windVector = data.climate?.displayWindVector ?? (data.climate?.displayVector?.kind === 'wind' ? data.climate.displayVector : undefined)
+  const oceanVector = data.climate?.displayOceanVector ?? (data.climate?.displayVector?.kind === 'ocean-current' ? data.climate.displayVector : undefined)
+  const isLand = data.geography.landMask
+
   return {
     type: 'raster',
     id: 'world-surface',
     mesh,
     gridId: rasterGridId(mesh),
-    units: { elevation: 'km', temperature: '°C', precipitation: 'mm/month' },
+    units: {
+      elevation: 'km',
+      temperature: '°C',
+      precipitation: 'mm/month',
+      windSpeed: 'relative',
+      oceanCurrentSpeed: 'relative',
+    },
     revision: 0,
     fields: {
       isLand: data.geography.landMask,
       elevation: data.geography.elevation,
-      biome: data.biome?.biomeClass ?? new Uint8Array(mesh.numRegions),
-      temperature: data.climate?.displayMonth?.temperatureC ?? new Float32Array(mesh.numRegions),
-      precipitation: data.climate?.displayMonth?.precipitationMm ?? new Float32Array(mesh.numRegions),
+      temperature: data.climate?.displayMonth?.temperatureC ?? new Float32Array(count),
+      precipitation: data.climate?.displayMonth?.precipitationMm ?? new Float32Array(count),
+      flowAccumulation: data.geography.terrainErosion?.flowAccumulation ?? new Float32Array(count),
+      populationDensity: data.civilization?.populationDensity ?? new Float32Array(count),
+      marketAccess: data.civilization?.transport?.marketAccess ?? new Float32Array(count),
+      glacialIndex: data.geography.terrainErosion?.glacialIndex ?? new Float32Array(count),
+      subductionOverriding: data.geography.terrainFields?.overridingInfluence ?? new Float32Array(count),
+      subductionSubducting: data.geography.terrainFields?.subductingInfluence ?? new Float32Array(count),
+      windSpeed: extractVectorSpeed(windVector, count),
+      oceanCurrentSpeed: extractVectorSpeed(oceanVector, count, isLand, true),
+      oceanWarmth: extractOceanWarmth(oceanVector, count, isLand),
     },
   }
 }

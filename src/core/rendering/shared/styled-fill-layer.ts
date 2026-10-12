@@ -3,6 +3,7 @@ import type { GeoJsonFeature } from '@/core/data-source/geojson'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection } from '@/core/projections/map-projection'
 import type { GeographicFillTriangle } from '@/core/rendering/map/surface-geometry'
+import type { StyledLayerBehavior, StyledLayerUpdateContext } from '@/core/rendering/shared/styled-layer-behavior'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { BufferAttribute, BufferGeometry, Color, DoubleSide, Group, Mesh, MeshBasicMaterial, Raycaster, Vector2, Vector3 } from 'three'
@@ -11,8 +12,8 @@ import { getLandAreaGeometry } from '@/core/data-source/geojson-area-sources'
 import { resolveGeoJsonSource } from '@/core/data-source/geojson-source-runtime'
 import { geographicToCartesian } from '@/core/projections/projection-math'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
-import { triangulateGeoJsonFeature } from '@/core/rendering/shared/geojson-fill-triangulation'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
+import { triangulateGeoJsonFeature } from '@/core/rendering/shared/geojson-fill-triangulation'
 import { getMapStyleLayer, isMapStyleLayerVisible, matchesMapStyleLayerFilter, resolveMapStyleLayer } from '@/core/rendering/styles/style-runtime'
 
 type FillPlacement
@@ -63,7 +64,7 @@ function createGlobeGeometry(triangles: readonly GeographicFillTriangle[], radiu
 }
 
 /** Shared GeoJSON polygon fill renderer for 2D maps and the globe. */
-export class StyledFillLayer {
+export class StyledFillLayer implements StyledLayerBehavior {
   readonly group = new Group()
   private readonly geometry: BufferGeometry
   private readonly material: MeshBasicMaterial
@@ -82,12 +83,7 @@ export class StyledFillLayer {
     const styleLayer = getMapStyleLayer(params.appearance.mapStyle, layerId)
     const sourceId = styleLayer?.source ?? ''
     this.sourceId = sourceId
-    const smoothed = params.appearance.baseMap.endsWith('-smoothed')
-    const configuredBoundary = resolveMapStyleLayer(params.appearance.mapStyle, layerId, 0)?.layout['boundary-mode']
-    const boundaryMode = configuredBoundary === 'raw' || configuredBoundary === 'smoothed'
-      ? configuredBoundary
-      : smoothed ? 'smoothed' : 'raw'
-    const collection = resolveGeoJsonSource(sourceId, mesh, data, params, boundaryMode)?.data
+    const collection = resolveGeoJsonSource(sourceId, mesh, data, params)?.data
     const generatedLand = sourceId === 'land-areas' && !getImportedGeoJsonSource(sourceId)
     this.generatedLand = generatedLand
     const sourceFeatures = collection?.features ?? []
@@ -98,7 +94,7 @@ export class StyledFillLayer {
       // Use the shared coast as the polygon boundary. Interior cell fans provide
       // a stable triangulation for large landmasses, islands and lake holes.
       const { landMask, smoothedCorners } = getLandAreaGeometry(mesh, data)
-      const cornerPositions = boundaryMode === 'smoothed' ? smoothedCorners : mesh.voronoi.cornerPosition
+      const cornerPositions = smoothedCorners
       const colors = new Float32Array(mesh.numRegions * 3).fill(1)
       this.geometry = placement.view === 'map'
         ? new MapSurfaceGeometry().create(mesh, colors, placement.projection, placement.centralMeridian, landMask, undefined, false, undefined, cornerPositions)
@@ -150,6 +146,10 @@ export class StyledFillLayer {
     this.updateStyleZoom(params.appearance.mapStyle, 0)
   }
 
+  updateStyle(context: StyledLayerUpdateContext): void {
+    this.updateStyleZoom(context.styleId, context.styleZoom)
+  }
+
   updateStyleZoom(styleId: string, zoom: number): void {
     this.group.visible = isMapStyleLayerVisible(styleId, this.layerId, zoom, this.view)
     if (this.generatedLand) {
@@ -188,7 +188,7 @@ export class StyledFillLayer {
     opacityAttribute.needsUpdate = true
   }
 
-  pickFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
+  pickGeoJsonFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
     if (!this.group.visible)
       return null
     const rect = canvas.getBoundingClientRect()

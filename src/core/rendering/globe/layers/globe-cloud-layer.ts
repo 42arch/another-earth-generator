@@ -35,7 +35,7 @@ export class GlobeCloudLayer {
     terrainVerticalScale: number,
     usesElevationGeometry: boolean,
   ): void {
-    if (!params.appearance.overlays.clouds || !data) {
+    if (!data) {
       return
     }
 
@@ -66,6 +66,7 @@ export class GlobeCloudLayer {
     this.meshCopy = new Mesh(this.geometry, this.material)
     this.meshCopy.renderOrder = 6
     this.group.add(this.meshCopy)
+    this.group.visible = Boolean(params.appearance.overlays.clouds)
   }
 
   dispose(): void {

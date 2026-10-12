@@ -3,16 +3,17 @@ import type { GeoJsonFeatureCollection, GeoJsonPosition } from '@/core/data-sour
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
+import type { StyledLayerBehavior, StyledLayerUpdateContext } from '@/core/rendering/shared/styled-layer-behavior'
 import { Color, DoubleSide, Group, Mesh, MeshLambertMaterial, NotEqualStencilFunc, ReplaceStencilOp, Vector3 } from 'three'
 import { resolveGeoJsonSource } from '@/core/data-source/geojson-source-runtime'
 import { riverStrokePaths } from '@/core/data-source/river-geojson'
 import { geographicToCartesian } from '@/core/projections/projection-math'
 import { pickGeoJsonLineFeature } from '@/core/rendering/shared/geojson-line-picking'
 import { RiverGeometry } from '@/core/rendering/shared/river-geometry'
-import { getMapStylePaint } from '@/core/rendering/styles/style-runtime'
+import { getMapStylePaint, isMapStyleLayerVisible } from '@/core/rendering/styles/style-runtime'
 import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
 
-export class GlobeRiverLayer {
+export class GlobeRiverLayer implements StyledLayerBehavior {
   readonly group = new Group()
 
   private riverGeometryBuilder = new RiverGeometry()
@@ -113,7 +114,15 @@ export class GlobeRiverLayer {
     this.geometry.computeBoundingSphere()
   }
 
-  pickFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
+  updateStyle(context: StyledLayerUpdateContext): void {
+    this.group.visible = isMapStyleLayerVisible(context.styleId, context.layerId, context.styleZoom, 'globe')
+    if (!this.group.visible)
+      return
+    const styleWidth = Number(getMapStylePaint(context.styleId, context.layerId, 'line-width', context.styleZoom) ?? 1)
+    this.updateWidthScale(styleWidth)
+  }
+
+  pickGeoJsonFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
     if (!this.group.visible || !this.source)
       return null
     const featureId = pickGeoJsonLineFeature(this.source, event, canvas, camera, (coordinate: GeoJsonPosition) => {

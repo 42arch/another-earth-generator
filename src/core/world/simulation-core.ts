@@ -92,7 +92,7 @@ export class SimulationCore {
             data.mesh = new SphericalMesh(data.mesh as any)
             data.referenceMesh = sameMesh ? data.mesh : new SphericalMesh(data.referenceMesh as any)
             this.stageTimings.push({ stage: 'RestoreMesh', durationMs: performance.now() - restoreStart })
-            // eslint-disable-next-line no-console
+
             console.table(this.stageTimings.map(({ stage, durationMs }) => ({ stage, ms: Math.round(durationMs) })))
 
             succeed(data)

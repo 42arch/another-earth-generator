@@ -53,14 +53,13 @@ export class SphericalRegionTopologyBuilder {
       boundaryEdges.push(edge)
       const cornerA = edgeCorners[offset]
       const cornerB = edgeCorners[offset + 1]
-      const [startA, endA] = this.orientForRegion(mesh, regionA, cornerA, cornerB)
-      const [startB, endB] = this.orientForRegion(mesh, regionB, cornerA, cornerB)
+      const [startA, endA] = this.orientForRegion(mesh, regionA, regionB, cornerA, cornerB)
       this.addEdge(edgesByRegion, labelA, startA, endA, edge)
-      this.addEdge(edgesByRegion, labelB, startB, endB, edge)
+      this.addEdge(edgesByRegion, labelB, endA, startA, edge)
     }
 
     const polygons = [...edgesByRegion]
-      .map(([regionId, edges]) => ({ regionId, rings: this.buildRings(mesh, edges) }))
+      .map(([regionId, edges]) => ({ regionId, rings: this.buildRings(mesh, regionId, edges) }))
       .filter(polygon => polygon.rings.length > 0)
     return {
       boundaryEdges: new Uint32Array(boundaryEdges),
@@ -146,39 +145,24 @@ export class SphericalRegionTopologyBuilder {
   private orientForRegion(
     mesh: SphericalMesh,
     region: number,
+    neighbor: number,
     cornerA: number,
     cornerB: number,
   ): readonly [number, number] {
-    const start = mesh.voronoi.cellCornerOffsets[region]
-    const end = mesh.voronoi.cellCornerOffsets[region + 1]
-    for (let index = start; index < end; index++) {
-      const current = mesh.voronoi.cellCorners[index]
-      const next = mesh.voronoi.cellCorners[index + 1 < end ? index + 1 : start]
-      if (current === cornerA && next === cornerB)
-        return [cornerA, cornerB]
-      if (current === cornerB && next === cornerA)
+    // Each Voronoi corner is a Delaunay triangle. Its vertex order tells us
+    // which of the two dual edges enters and leaves this region at the corner.
+    // Geometric sorting of a cell's corners can disagree with that adjacency
+    // at degenerate triangles and leave an otherwise closed border open.
+    const offset = cornerA * 3
+    for (let index = 0; index < 3; index++) {
+      if (mesh.triangles[offset + index] !== region)
+        continue
+      if (mesh.triangles[offset + (index + 1) % 3] === neighbor)
         return [cornerB, cornerA]
+      if (mesh.triangles[offset + (index + 2) % 3] === neighbor)
+        return [cornerA, cornerB]
     }
-
-    // Degenerate Delaunay neighborhoods can leave the shared edge absent from
-    // the sorted cell ring. Use the region center's side of the spherical arc
-    // to keep the border direction valid without aborting rendering.
-    const a = cornerA * 3
-    const b = cornerB * 3
-    const center = region * 3
-    const ax = mesh.voronoi.cornerPosition[a]
-    const ay = mesh.voronoi.cornerPosition[a + 1]
-    const az = mesh.voronoi.cornerPosition[a + 2]
-    const bx = mesh.voronoi.cornerPosition[b]
-    const by = mesh.voronoi.cornerPosition[b + 1]
-    const bz = mesh.voronoi.cornerPosition[b + 2]
-    const cx = mesh.regionPosition[center]
-    const cy = mesh.regionPosition[center + 1]
-    const cz = mesh.regionPosition[center + 2]
-    const side = (ay * bz - az * by) * cx
-      + (az * bx - ax * bz) * cy
-      + (ax * by - ay * bx) * cz
-    return side >= 0 ? [cornerA, cornerB] : [cornerB, cornerA]
+    throw new Error(`Voronoi edge ${region}:${neighbor} is not incident to triangle ${cornerA}`)
   }
 
   private addEdge(
@@ -196,14 +180,49 @@ export class SphericalRegionTopologyBuilder {
     edges.push({ start, end, edgeIndex })
   }
 
-  private buildRings(mesh: SphericalMesh, edges: readonly DirectedBoundaryEdge[]): SphericalAreaRing[] {
+  private buildRings(mesh: SphericalMesh, regionId: number, edges: readonly DirectedBoundaryEdge[]): SphericalAreaRing[] {
+    const incoming = new Map<number, number[]>()
     const outgoing = new Map<number, number[]>()
     for (let edge = 0; edge < edges.length; edge++) {
+      const ends = incoming.get(edges[edge].end)
+      if (ends)
+        ends.push(edge)
+      else
+        incoming.set(edges[edge].end, [edge])
+
       const starts = outgoing.get(edges[edge].start)
       if (starts)
         starts.push(edge)
       else
         outgoing.set(edges[edge].start, [edge])
+    }
+
+    // Resolve every corner's incoming/outgoing pairing up front. Choosing the
+    // next unused edge while tracing rings can make two paths claim the same
+    // successor at a junction, leaving the remaining edges as open fragments.
+    const successors = new Int32Array(edges.length).fill(-1)
+    for (const [corner, incomingEdges] of incoming) {
+      const outgoingEdges = outgoing.get(corner) ?? []
+      if (incomingEdges.length !== outgoingEdges.length)
+        throw new Error(`Unbalanced area boundary for region ${regionId} at corner ${corner}`)
+
+      if (incomingEdges.length === 1) {
+        successors[incomingEdges[0]] = outgoingEdges[0]
+        continue
+      }
+
+      const costs = incomingEdges.map((incomingEdge) => {
+        const edge = edges[incomingEdge]
+        return outgoingEdges.map((outgoingEdge) => {
+          const next = edges[outgoingEdge]
+          return this.clockwiseTurn(mesh, edge.start, corner, next.end)
+        })
+      })
+      const assignments = this.minimumCostAssignment(costs)
+      for (let index = 0; index < incomingEdges.length; index++) {
+        const outgoingIndex = assignments[index]
+        successors[incomingEdges[index]] = outgoingEdges[outgoingIndex]
+      }
     }
 
     const used = new Uint8Array(edges.length)
@@ -214,18 +233,10 @@ export class SphericalRegionTopologyBuilder {
 
       const ring: number[] = []
       const ringEdges: number[] = []
-      const start = edges[firstEdge].start
       let edgeIndex = firstEdge
       for (let step = 0; step <= edges.length; step++) {
-        if (used[edgeIndex])
-          break
-        used[edgeIndex] = 1
-        const edge = edges[edgeIndex]
-        ringEdges.push(edge.edgeIndex)
-        if (ring.length === 0)
-          ring.push(edge.start)
-        if (edge.end === start) {
-          if (ring.length >= 3) {
+        if (edgeIndex < 0 || used[edgeIndex]) {
+          if (edgeIndex === firstEdge && ring.length >= 3) {
             rings.push({
               corners: new Uint32Array(ring),
               edgeIndices: new Uint32Array(ringEdges),
@@ -233,31 +244,25 @@ export class SphericalRegionTopologyBuilder {
           }
           break
         }
-        ring.push(edge.end)
-        const nextEdge = this.chooseNextEdge(
-          mesh,
-          edges,
-          outgoing.get(edge.end) ?? [],
-          edge.start,
-          edge.end,
-          used,
-        )
-        if (nextEdge === undefined)
-          break
-        edgeIndex = nextEdge
+        used[edgeIndex] = 1
+        const edge = edges[edgeIndex]
+        ringEdges.push(edge.edgeIndex)
+        ring.push(edge.start)
+        edgeIndex = successors[edgeIndex]
       }
     }
+    const closedEdgeCount = rings.reduce((sum, ring) => sum + ring.edgeIndices.length, 0)
+    if (closedEdgeCount !== edges.length)
+      throw new Error(`Incomplete area boundary for region ${regionId}: ${closedEdgeCount}/${edges.length} edges closed`)
     return rings
   }
 
-  private chooseNextEdge(
+  private clockwiseTurn(
     mesh: SphericalMesh,
-    edges: readonly DirectedBoundaryEdge[],
-    candidates: readonly number[],
     previous: number,
     current: number,
-    used: Uint8Array,
-  ): number | undefined {
+    next: number,
+  ): number {
     const currentOffset = current * 3
     const previousOffset = previous * 3
     const px = mesh.voronoi.cornerPosition[previousOffset]
@@ -275,36 +280,87 @@ export class SphericalRegionTopologyBuilder {
     fromY /= fromLength
     fromZ /= fromLength
 
-    let bestEdge: number | undefined
-    let bestClockwiseTurn = Number.POSITIVE_INFINITY
-    for (const candidate of candidates) {
-      if (used[candidate])
-        continue
-      const nextOffset = edges[candidate].end * 3
-      const nx = mesh.voronoi.cornerPosition[nextOffset]
-      const ny = mesh.voronoi.cornerPosition[nextOffset + 1]
-      const nz = mesh.voronoi.cornerPosition[nextOffset + 2]
-      const nextDot = nx * cx + ny * cy + nz * cz
-      let toX = nx - nextDot * cx
-      let toY = ny - nextDot * cy
-      let toZ = nz - nextDot * cz
-      const toLength = Math.hypot(toX, toY, toZ) || 1
-      toX /= toLength
-      toY /= toLength
-      toZ /= toLength
-      const crossX = fromY * toZ - fromZ * toY
-      const crossY = fromZ * toX - fromX * toZ
-      const crossZ = fromX * toY - fromY * toX
-      const signedTurn = Math.atan2(
-        cx * crossX + cy * crossY + cz * crossZ,
-        fromX * toX + fromY * toY + fromZ * toZ,
-      )
-      const clockwiseTurn = signedTurn <= 0 ? -signedTurn : 2 * Math.PI - signedTurn
-      if (clockwiseTurn < bestClockwiseTurn) {
-        bestClockwiseTurn = clockwiseTurn
-        bestEdge = candidate
-      }
+    const nextOffset = next * 3
+    const nx = mesh.voronoi.cornerPosition[nextOffset]
+    const ny = mesh.voronoi.cornerPosition[nextOffset + 1]
+    const nz = mesh.voronoi.cornerPosition[nextOffset + 2]
+    const nextDot = nx * cx + ny * cy + nz * cz
+    let toX = nx - nextDot * cx
+    let toY = ny - nextDot * cy
+    let toZ = nz - nextDot * cz
+    const toLength = Math.hypot(toX, toY, toZ) || 1
+    toX /= toLength
+    toY /= toLength
+    toZ /= toLength
+    const crossX = fromY * toZ - fromZ * toY
+    const crossY = fromZ * toX - fromX * toZ
+    const crossZ = fromX * toY - fromY * toX
+    const signedTurn = Math.atan2(
+      cx * crossX + cy * crossY + cz * crossZ,
+      fromX * toX + fromY * toY + fromZ * toZ,
+    )
+    return signedTurn <= 0 ? -signedTurn : 2 * Math.PI - signedTurn
+  }
+
+  /** Finds a deterministic one-to-one pairing for the edges meeting at a corner. */
+  private minimumCostAssignment(costs: readonly (readonly number[])[]): Int32Array {
+    const size = costs.length
+    const rowPotential = new Float64Array(size + 1)
+    const columnPotential = new Float64Array(size + 1)
+    const matchedRow = new Int32Array(size + 1)
+    const previousColumn = new Int32Array(size + 1)
+
+    for (let row = 1; row <= size; row++) {
+      matchedRow[0] = row
+      let column = 0
+      const minimumCost = new Float64Array(size + 1).fill(Number.POSITIVE_INFINITY)
+      const visited = new Uint8Array(size + 1)
+
+      do {
+        visited[column] = 1
+        const activeRow = matchedRow[column]
+        let delta = Number.POSITIVE_INFINITY
+        let nextColumn = 0
+        for (let candidate = 1; candidate <= size; candidate++) {
+          if (visited[candidate])
+            continue
+          const reducedCost = costs[activeRow - 1][candidate - 1]
+            - rowPotential[activeRow]
+            - columnPotential[candidate]
+          if (reducedCost < minimumCost[candidate]) {
+            minimumCost[candidate] = reducedCost
+            previousColumn[candidate] = column
+          }
+          if (minimumCost[candidate] < delta) {
+            delta = minimumCost[candidate]
+            nextColumn = candidate
+          }
+        }
+
+        for (let candidate = 0; candidate <= size; candidate++) {
+          if (visited[candidate]) {
+            rowPotential[matchedRow[candidate]] += delta
+            columnPotential[candidate] -= delta
+          }
+          else {
+            minimumCost[candidate] -= delta
+          }
+        }
+        column = nextColumn
+      } while (matchedRow[column] !== 0)
+
+      do {
+        const nextColumn = previousColumn[column]
+        matchedRow[column] = matchedRow[nextColumn]
+        column = nextColumn
+      } while (column !== 0)
     }
-    return bestEdge
+
+    const assignments = new Int32Array(size).fill(-1)
+    for (let column = 1; column <= size; column++) {
+      if (matchedRow[column] > 0)
+        assignments[matchedRow[column] - 1] = column - 1
+    }
+    return assignments
   }
 }

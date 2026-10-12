@@ -8,9 +8,9 @@ const EARTH_RADIUS_KM = 6371
 const ROCK_COLOR: Rgb = [0.39, 0.37, 0.33]
 const SNOW_COLOR: Rgb = [0.83, 0.87, 0.9]
 
-/** Creates natural-looking surface colors from continuous climate and terrain fields. */
-export class SatelliteColorizer {
-  build(data: WorldSimulationState, mesh: SphericalMesh, hillshade = false): Float32Array {
+/** Renders natural-looking satellite colors from continuous climate and terrain fields. */
+export class SatelliteSurfaceRenderer {
+  render(data: WorldSimulationState, mesh: SphericalMesh, hillshade = false): Float32Array {
     const count = mesh.numRegions
     const colors = new Float32Array(count * 3)
     const gradients = hillshade ? this.buildLandGradients(mesh, data) : undefined

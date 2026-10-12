@@ -91,5 +91,7 @@ export interface ClimateData {
   /** One projected month held on the main thread for visualization. */
   displayMonth?: { month: number, temperatureC: Float32Array, precipitationMm: Float32Array }
   displayVector?: ClimateVectorDisplayData
+  displayWindVector?: ClimateVectorDisplayData
+  displayOceanVector?: ClimateVectorDisplayData
   koppen?: KoppenClimateData
 }

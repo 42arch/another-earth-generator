@@ -4,6 +4,7 @@ import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { Group, Mesh, MeshPhongMaterial, SphereGeometry } from 'three'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
+import { resolveEffectiveSurfaceMode } from '@/core/rendering/styles'
 
 const WATER_SURFACE_OFFSET = 0.1
 
@@ -31,7 +32,8 @@ export class GlobeWaterLayer {
     params: WorldConfig,
     usesElevationGeometry: boolean,
   ): void {
-    if (params.appearance.baseMap !== 'satellite' || !params.appearance.overlays.atmosphere) {
+    const effectiveMode = resolveEffectiveSurfaceMode(params.appearance)
+    if (effectiveMode !== 'satellite') {
       return
     }
 
@@ -63,6 +65,7 @@ export class GlobeWaterLayer {
 
     this.meshCopy = new Mesh(this.geometry, this.material)
     this.group.add(this.meshCopy)
+    this.group.visible = Boolean(params.appearance.overlays.atmosphere)
   }
 
   dispose(): void {

@@ -4,6 +4,7 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection } from '@/core/projections/map-projection'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
+import type { SettlementPickableLayer, StyledLayerBehavior, StyledLayerUpdateContext, SymbolCollisionBox } from '@/core/rendering/shared/styled-layer-behavior'
 import { FrontSide, Group, Matrix4, MeshBasicMaterial, Vector3 } from 'three'
 import { BatchedText, Text } from 'troika-three-text'
 import { getImportedGeoJsonSource } from '@/core/data-source/data-sources'
@@ -14,13 +15,6 @@ import { getMapStyleLayer, getMapStyleLayout, getMapStylePaint, isMapStyleLayerV
 type SymbolPlacement
   = | { view: 'map', projection: MapProjection, centralMeridian: number, renderOrder: number }
     | { view: 'globe', terrainVerticalScale: number, usesElevationGeometry: boolean, planetRadius: number, renderOrder: number }
-
-export interface SymbolCollisionBox {
-  minX: number
-  maxX: number
-  minY: number
-  maxY: number
-}
 
 interface PlacedGlyph {
   text: Text
@@ -45,7 +39,7 @@ function intersects(a: SymbolCollisionBox, b: SymbolCollisionBox) {
 }
 
 /** One renderer for every style-document symbol layer; sources provide feature layout. */
-export class StyledSymbolLayer {
+export class StyledSymbolLayer implements StyledLayerBehavior, SettlementPickableLayer {
   readonly group = new Group()
   private readonly layerId: string
   private readonly sourceId: string
@@ -59,6 +53,7 @@ export class StyledSymbolLayer {
   private readonly material = new MeshBasicMaterial({ side: FrontSide, depthTest: true, depthWrite: false })
   private lastZoom = Number.NaN
   private lastLodState = ''
+  private lastStyleVisible: boolean | undefined
 
   constructor(
     mesh: SphericalMesh,
@@ -317,6 +312,15 @@ export class StyledSymbolLayer {
     this.entries.push({ feature, glyphs, icons, names, baseX: 0, baseY: 0, width: 0, height: 0 })
   }
 
+  updateStyle(context: StyledLayerUpdateContext): void {
+    if (context.view === 'map') {
+      this.updateMapZoom(context.styleId, context.viewZoom, context.styleZoom, context.occupiedSymbols ?? [])
+    }
+    else {
+      this.updateGlobeZoom(context.styleId, context.styleZoom, context.viewZoom)
+    }
+  }
+
   updateMapZoom(styleId: string, cameraZoom: number, styleZoom: number, occupied: SymbolCollisionBox[]): void {
     if (this.placement.view !== 'map')
       return
@@ -379,12 +383,15 @@ export class StyledSymbolLayer {
   updateGlobeZoom(styleId: string, zoom: number, distance: number): void {
     if (this.placement.view !== 'globe')
       return
-    this.group.visible = isMapStyleLayerVisible(styleId, this.layerId, zoom, 'globe')
+    const styleVisible = isMapStyleLayerVisible(styleId, this.layerId, zoom, 'globe')
+    const visibilityChanged = styleVisible !== this.lastStyleVisible
+    this.group.visible = styleVisible
     const lodState = `${distance < 265}:${distance < 185}`
-    if (Math.abs(zoom - this.lastZoom) < 0.03 && lodState === this.lastLodState)
+    if (Math.abs(zoom - this.lastZoom) < 0.03 && lodState === this.lastLodState && !visibilityChanged)
       return
     this.lastZoom = zoom
     this.lastLodState = lodState
+    this.lastStyleVisible = styleVisible
     for (const entry of this.entries) {
       const tier = entry.feature.tier
       const lodVisible = !tier || tier === 'high'
@@ -490,6 +497,10 @@ export class StyledSymbolLayer {
       }
     }
     return chosen
+  }
+
+  pickSettlementFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): number | null {
+    return this.pickFeature(event, canvas, camera, feature => !feature.properties.isSacredSite)
   }
 
   pickGeoJsonFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {

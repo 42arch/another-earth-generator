@@ -21,10 +21,9 @@ export class MapCellBoundaryLayer {
     params: WorldConfig,
     projection: MapProjection,
     centralMeridian: number,
-    smoothedRegionCorners: Float32Array | null,
   ) {
     this.group.name = 'MapCellBoundaries'
-    this.build(mesh, data, params, projection, centralMeridian, smoothedRegionCorners)
+    this.build(mesh, data, params, projection, centralMeridian)
   }
 
   private build(
@@ -33,9 +32,8 @@ export class MapCellBoundaryLayer {
     params: WorldConfig,
     projection: MapProjection,
     centralMeridian: number,
-    smoothedRegionCorners: Float32Array | null,
   ): void {
-    if (!params.appearance.overlays.wireframe || !mesh) {
+    if (!mesh) {
       return
     }
 
@@ -46,9 +44,6 @@ export class MapCellBoundaryLayer {
       undefined,
       0,
       1,
-      undefined,
-      undefined,
-      smoothedRegionCorners ?? undefined,
     )
 
     this.geometry = this.lineGeometryBuilder.create(
@@ -77,6 +72,7 @@ export class MapCellBoundaryLayer {
     const layer = new LineSegments(this.geometry, this.material)
     layer.renderOrder = 2
     this.addWrappedCopies(layer, projection)
+    this.group.visible = Boolean(params.appearance.overlays.wireframe)
   }
 
   private addWrappedCopies(baseLayer: LineSegments, projection: MapProjection): void {

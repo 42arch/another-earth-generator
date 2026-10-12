@@ -21,19 +21,15 @@ import { FULL_LONGITUDE, wrapLongitude } from '@/core/projections/projection-mat
 import { MapLayerSet } from '@/core/rendering/map/layers/map-layer-set'
 import { MapPicker } from '@/core/rendering/map/picker'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
-import { buildSmoothedRegionCorners, getSurfaceRegionSmoothingMode, isGeoJsonAreaBaseMap } from '@/core/rendering/shared/region-display'
-import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
-import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
-import { haveSegmentLineStyleOverlayChanges } from '@/core/rendering/styles/line-layer-discovery'
-import { getMapStyleDocument, getMapStylePaint, getMapStyleZoom, getRasterStyleLayer, havePointStyleOverlayChanges, isMapStyleLayerVisible, usesVectorCartographicBaseMap } from '@/core/rendering/styles/style-runtime'
+import { RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
+import { getMapStyleDocument, getMapStylePaint, getMapStyleZoom, getRasterStyleLayer, isMapStyleLayerVisible, resolveEffectiveSurfaceMode, usesVectorCartographicBaseMap } from '@/core/rendering/styles'
 
 export class MapView {
   readonly scene = new Scene()
   readonly camera = new OrthographicCamera(-Math.PI, Math.PI, Math.PI / 2, -Math.PI / 2, 0.1, 100)
-  private readonly colorizer = new WorldColorizer()
+  private readonly surfaceRenderer = new RasterSurfaceRenderer()
   private readonly controls: MapControls
   private readonly geometryBuilder = new MapSurfaceGeometry()
-  private readonly regionTopologyBuilder = new SphericalRegionTopologyBuilder()
   private readonly picker = new MapPicker()
   private projection: MapProjection = getMapProjection('mercator')
   private readonly selectionGroup = new Group()
@@ -57,7 +53,6 @@ export class MapView {
   private surfaceDirty = false
   private overlaysDirty = false
   private selectedRegion = -1
-  private smoothedRegionCorners: Float32Array | null = null
 
   private viewportWidth = 1
   private viewportHeight = 1
@@ -73,7 +68,8 @@ export class MapView {
     this.updateBackground()
     this.layers = new MapLayerSet(this.scene, () => this.getLayerContext())
     this.unsubscribeSourceChanges = subscribeMapDataSourceChanges((id) => {
-      const active = getRasterStyleLayer(this.params.appearance.mapStyle, this.params.appearance.baseMap)
+      const mode = resolveEffectiveSurfaceMode(this.params.appearance)
+      const active = getRasterStyleLayer(this.params.appearance.mapStyle, mode)
       if (id !== '*' && active?.source !== id)
         return
       this.surfaceDirty = true
@@ -104,7 +100,6 @@ export class MapView {
     this.data = data
     this.params = { ...params }
     this.updateBackground()
-    this.prepareRegionSmoothing()
     this.centralMeridian = this.chooseCentralMeridian(mesh, data)
     this.disposeSurface()
     this.layers.disposeAll()
@@ -117,44 +112,42 @@ export class MapView {
   }
 
   updateAppearance(params: WorldConfig): void {
-    const previousMode = this.params.appearance.baseMap
-    const modeChanged = previousMode !== params.appearance.baseMap
-    const mapStyleChanged = this.params.appearance.mapStyle !== params.appearance.mapStyle
-    const satelliteTransition = modeChanged && (previousMode === 'satellite' || params.appearance.baseMap === 'satellite')
-    const vectorCartographicChanged = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, previousMode)
-      !== usesVectorCartographicBaseMap(params.appearance.mapStyle, params.appearance.baseMap)
-    const regionSmoothingChanged = getSurfaceRegionSmoothingMode(this.params.appearance.baseMap)
-      !== getSurfaceRegionSmoothingMode(params.appearance.baseMap)
-    const monthChanged = this.params.appearance.climateMonth !== params.appearance.climateMonth
-    const oldOverlays = this.params.appearance.overlays
-    const newOverlays = params.appearance.overlays
+    const previousParams = this.params
+    const previousMode = resolveEffectiveSurfaceMode(previousParams.appearance)
+    const currentMode = resolveEffectiveSurfaceMode(params.appearance)
+    const modeChanged = previousMode !== currentMode
+    const mapStyleChanged = previousParams.appearance.mapStyle !== params.appearance.mapStyle
+    const satelliteTransition = modeChanged && (previousMode === 'satellite' || currentMode === 'satellite')
+    const vectorCartographicChanged = usesVectorCartographicBaseMap(previousParams.appearance.mapStyle, previousMode)
+      !== usesVectorCartographicBaseMap(params.appearance.mapStyle, currentMode)
+    const monthChanged = previousParams.appearance.climateMonth !== params.appearance.climateMonth
 
     this.params = { ...params }
     this.updateBackground()
-    if (regionSmoothingChanged) {
-      this.prepareRegionSmoothing()
-      this.surfaceDirty = true
-    }
     const elevationColorModeChanged = modeChanged
-      && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(params.appearance.baseMap))
+      && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(currentMode))
     if (satelliteTransition || elevationColorModeChanged || vectorCartographicChanged)
       this.surfaceDirty = true
 
     const surfaceNeedsRebuild = this.surfaceDirty || !this.surface
     this.ensureSurface()
     if (!surfaceNeedsRebuild && this.surface && this.data && (modeChanged || monthChanged || mapStyleChanged)
-      && !satelliteTransition && !this.isElevationColorMode(params.appearance.baseMap)
-      && params.appearance.baseMap !== 'satellite') {
+      && !satelliteTransition && !this.isElevationColorMode(currentMode)
+      && currentMode !== 'satellite') {
       this.geometryBuilder.updateColors(
         this.surface.geometry,
-        this.colorizer.build(this.data, params.appearance.baseMap, this.mesh ?? undefined, false, params.appearance.mapStyle),
+        this.surfaceRenderer.render(this.data, currentMode, this.mesh ?? undefined, false, params.appearance.mapStyle),
       )
     }
-    if (this.surface) {
-      const opacity = Number(getMapStylePaint(params.appearance.mapStyle, getRasterStyleLayer(params.appearance.mapStyle, params.appearance.baseMap)?.id ?? 'surface', 'raster-opacity', 0) ?? 1)
-      this.surface.material.opacity = opacity
-      this.surface.material.transparent = opacity < 1
-      this.surface.material.depthWrite = opacity >= 1
+    if (this.surface && !Array.isArray(this.surface.material)) {
+      const material = this.surface.material as MeshBasicMaterial
+      const activeRaster = getRasterStyleLayer(params.appearance.mapStyle, currentMode)
+      const opacity = Number((activeRaster
+        ? getMapStylePaint(params.appearance.mapStyle, activeRaster.id, 'raster-opacity', 0)
+        : undefined) ?? 1)
+      material.opacity = opacity
+      material.transparent = opacity < 1
+      material.depthWrite = opacity >= 1
     }
 
     if (this.overlaysDirty) {
@@ -162,41 +155,15 @@ export class MapView {
       return
     }
 
-    const settlementOverlaysChanged = oldOverlays.cities !== newOverlays.cities
-      || oldOverlays['sacred-sites'] !== newOverlays['sacred-sites']
-      || mapStyleChanged
-    if (mapStyleChanged || havePointStyleOverlayChanges(params.appearance.mapStyle, oldOverlays, newOverlays))
-      this.layers.rebuildPointLayers()
-    if (modeChanged || mapStyleChanged)
-      this.layers.rebuildFillLayers()
-
-    const labelsChanged = modeChanged || mapStyleChanged
-      || settlementOverlaysChanged
-      || oldOverlays['nation-labels'] !== newOverlays['nation-labels']
-      || oldOverlays['religion-labels'] !== newOverlays['religion-labels']
-      || oldOverlays['ethnicity-labels'] !== newOverlays['ethnicity-labels']
-      || oldOverlays['language-labels'] !== newOverlays['language-labels']
-    if (labelsChanged)
-      this.layers.rebuildSymbolLayers()
-
-    if (oldOverlays.clouds !== newOverlays.clouds)
-      this.layers.rebuild('clouds')
-    if (oldOverlays.rivers !== newOverlays.rivers || regionSmoothingChanged || mapStyleChanged)
-      this.layers.rebuild('rivers')
-    if (mapStyleChanged
-      || haveSegmentLineStyleOverlayChanges(params.appearance.mapStyle, oldOverlays, newOverlays)) {
-      this.layers.rebuildLineLayers()
-    }
-    if (oldOverlays.wireframe !== newOverlays.wireframe || regionSmoothingChanged)
-      this.layers.rebuild('cell-boundaries')
-    if (oldOverlays.graticule !== newOverlays.graticule)
-      this.layers.rebuild('graticule')
+    this.layers.updateOverlayVisibility()
 
     const vectorMode = (mode: string) => mode === 'wind' || mode === 'ocean-current'
-    if ((modeChanged && (vectorMode(previousMode) || vectorMode(params.appearance.baseMap)))
-      || (monthChanged && vectorMode(params.appearance.baseMap))) {
+    if ((modeChanged && (vectorMode(previousMode) || vectorMode(currentMode)))
+      || (monthChanged && vectorMode(currentMode))) {
       this.layers.rebuild('vectors')
     }
+
+    this.layers.reconcileAppearance(previousParams, params)
   }
 
   setActive(active: boolean): void {
@@ -247,14 +214,14 @@ export class MapView {
     if (!this.mesh || !this.data)
       return
     this.disposeSurface()
-    if (usesVectorCartographicBaseMap(this.params.appearance.mapStyle, this.params.appearance.baseMap)) {
+    const mode = resolveEffectiveSurfaceMode(this.params.appearance)
+    if (usesVectorCartographicBaseMap(this.params.appearance.mapStyle, mode)) {
       this.surfaceDirty = false
       return
     }
-    const mode = this.params.appearance.baseMap
-    const colors = this.colorizer.build(this.data, mode, this.mesh, mode === 'satellite', this.params.appearance.mapStyle)
+    const colors = this.surfaceRenderer.render(this.data, mode, this.mesh, mode === 'satellite', this.params.appearance.mapStyle)
     const cornerColors = mode === 'dem'
-      ? this.colorizer.buildDEMCorners(this.mesh, this.data.geography.elevation, this.data.geography.landMask)
+      ? this.surfaceRenderer.buildDEMCorners(this.mesh, this.data.geography.elevation, this.data.geography.landMask)
       : undefined
     const geometry = this.geometryBuilder.create(
       this.mesh,
@@ -265,10 +232,11 @@ export class MapView {
       cornerColors,
       false,
       mode === 'dem' ? this.data.geography.landMask : undefined,
-      this.smoothedRegionCorners ?? undefined,
     )
-    const rasterLayerId = getRasterStyleLayer(this.params.appearance.mapStyle, mode)?.id ?? 'surface'
-    const opacity = Number(getMapStylePaint(this.params.appearance.mapStyle, rasterLayerId, 'raster-opacity', 0) ?? 1)
+    const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, mode)
+    const opacity = Number((activeRaster
+      ? getMapStylePaint(this.params.appearance.mapStyle, activeRaster.id, 'raster-opacity', 0)
+      : undefined) ?? 1)
     const material = new MeshBasicMaterial({
       vertexColors: true,
       side: DoubleSide,
@@ -287,18 +255,6 @@ export class MapView {
     for (const surface of this.surfaceCopies)
       this.scene.add(surface)
     this.surfaceDirty = false
-  }
-
-  private prepareRegionSmoothing(): void {
-    this.smoothedRegionCorners = null
-    if (!this.mesh || !this.data || isGeoJsonAreaBaseMap(this.params.appearance.baseMap))
-      return
-    this.smoothedRegionCorners = buildSmoothedRegionCorners(
-      this.mesh,
-      this.data,
-      this.params.appearance.baseMap,
-      this.regionTopologyBuilder,
-    )
   }
 
   private chooseCentralMeridian(
@@ -413,8 +369,11 @@ export class MapView {
   update(): void {
     this.controls.update()
     if (this.surface) {
+      const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
       const styleZoom = getMapStyleZoom(this.camera.zoom)
-      const visible = isMapStyleLayerVisible(this.params.appearance.mapStyle, getRasterStyleLayer(this.params.appearance.mapStyle, this.params.appearance.baseMap)?.id ?? 'surface', styleZoom, 'map')
+      const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, effectiveMode)
+      const visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)
+        || (activeRaster ? isMapStyleLayerVisible(this.params.appearance.mapStyle, activeRaster.id, styleZoom, 'map') : true)
       for (const surface of this.surfaceCopies)
         surface.visible = visible
     }
@@ -489,12 +448,14 @@ export class MapView {
   }
 
   private ensureSurface(): void {
-    if (this.surfaceDirty || (!this.surface && !usesVectorCartographicBaseMap(this.params.appearance.mapStyle, this.params.appearance.baseMap)))
+    const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
+    if (this.surfaceDirty || (!this.surface && !usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)))
       this.rebuildSurface()
   }
 
   private updateBackground(): void {
-    this.scene.background = this.params.appearance.baseMap === 'cartographic'
+    const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
+    this.scene.background = effectiveMode === 'cartographic'
       ? new Color(String(getMapStyleDocument(this.params.appearance.mapStyle).tokens.ocean ?? '#70C8F2'))
       : new Color(0x07101F)
   }
@@ -523,7 +484,6 @@ export class MapView {
       params: this.params,
       projection: this.projection,
       centralMeridian: this.centralMeridian,
-      smoothedRegionCorners: this.smoothedRegionCorners,
       viewportWidth: this.viewportWidth,
       viewportHeight: this.viewportHeight,
     }

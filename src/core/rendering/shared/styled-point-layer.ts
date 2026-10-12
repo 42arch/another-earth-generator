@@ -4,11 +4,12 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection } from '@/core/projections/map-projection'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
+import type { StyledLayerBehavior, StyledLayerUpdateContext } from '@/core/rendering/shared/styled-layer-behavior'
 import { BufferAttribute, BufferGeometry, Color, Group, Points, Vector3 } from 'three'
 import { resolveGeoJsonSource } from '@/core/data-source/geojson-source-runtime'
 import { geographicToCartesian } from '@/core/projections/projection-math'
 import { createMapMarkerMaterial } from '@/core/rendering/shared/settlement-marker-material'
-import { getMapStyleLayer, isMapStyleLayerVisible, matchesMapStyleLayerFilter, resolveMapStyleLayer } from '@/core/rendering/styles/style-runtime'
+import { getMapStyleLayer, isMapStyleLayerVisible, matchesMapStyleLayerFilter, resolveEffectiveSurfaceMode, resolveMapStyleLayer } from '@/core/rendering/styles/style-runtime'
 import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
 
 type PointPlacement
@@ -16,7 +17,7 @@ type PointPlacement
     | { view: 'globe', sunlight: Vector3, terrainVerticalScale: number, usesElevationGeometry: boolean, renderOrder: number }
 
 /** Batched GPU point attributes for any registered point source and circle style layer. */
-export class StyledPointLayer {
+export class StyledPointLayer implements StyledLayerBehavior {
   readonly group = new Group()
   readonly points: Points<BufferGeometry, ReturnType<typeof createMapMarkerMaterial>>
 
@@ -91,9 +92,10 @@ export class StyledPointLayer {
     geometry.setAttribute('markerStyleScale', new BufferAttribute(new Float32Array(count), 1))
     geometry.setAttribute('markerStrokeColor', new BufferAttribute(new Float32Array(count * 3), 3))
     geometry.setAttribute('markerStrokeWidth', new BufferAttribute(new Float32Array(count), 1))
+    const isSatellite = resolveEffectiveSurfaceMode(params.appearance) === 'satellite'
     this.points = new Points(geometry, createMapMarkerMaterial(
       placement.view === 'globe',
-      placement.view === 'globe' && params.appearance.baseMap === 'satellite' && params.appearance.overlays['day-night'],
+      placement.view === 'globe' && isSatellite && params.appearance.overlays['day-night'],
       placement.view === 'globe' ? placement.sunlight : undefined,
     ))
     this.points.renderOrder = placement.renderOrder
@@ -107,6 +109,10 @@ export class StyledPointLayer {
       }
     }
     this.updateStyleZoom(params.appearance.mapStyle, 0)
+  }
+
+  updateStyle(context: StyledLayerUpdateContext): void {
+    this.updateStyleZoom(context.styleId, context.styleZoom)
   }
 
   updateStyleZoom(styleId: string, zoom: number): void {
@@ -142,7 +148,7 @@ export class StyledPointLayer {
     strokeWidths.needsUpdate = true
   }
 
-  pickFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
+  pickGeoJsonFeature(event: PointerEvent, canvas: HTMLCanvasElement, camera: Camera): { sourceId: string, featureId: string | number } | null {
     if (!this.group.visible)
       return null
     const rect = canvas.getBoundingClientRect()

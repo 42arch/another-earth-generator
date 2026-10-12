@@ -2,18 +2,17 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection } from '@/core/projections/map-projection'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
-import { Group } from 'three'
-import { Line2 } from 'three/addons/lines/Line2.js'
-import { LineGeometry } from 'three/addons/lines/LineGeometry.js'
-import { LineMaterial } from 'three/addons/lines/LineMaterial.js'
-import { cartesianToGeographic, unwrapLongitudeNear } from '@/core/projections/projection-math'
+import { BufferGeometry, Color, Group, LineBasicMaterial, LineSegments } from 'three'
+import { MapLineGeometry } from '@/core/rendering/map/line-geometry'
 import { createClimateVectorGeometry } from '@/core/rendering/shared/climate-vector-geometry'
+import { getMapStyleDocument, resolveEffectiveSurfaceMode } from '@/core/rendering/styles'
 
 export class MapClimateVectorLayer {
   readonly group = new Group()
 
-  private geometries: LineGeometry[] = []
-  private material: LineMaterial | null = null
+  private geometry: BufferGeometry | null = null
+  private material: LineBasicMaterial | null = null
+  private meshCopy: LineSegments | null = null
 
   constructor(
     mesh: SphericalMesh,
@@ -33,142 +32,70 @@ export class MapClimateVectorLayer {
     projection: MapProjection,
     centralMeridian: number,
   ): void {
-    const mode = params.appearance.baseMap
+    const mode = resolveEffectiveSurfaceMode(params.appearance)
     const vectors = data.climate?.displayVector
     if (!mesh || !data || (mode !== 'wind' && mode !== 'ocean-current') || vectors?.kind !== mode) {
       return
     }
 
-    const geometry = createClimateVectorGeometry(mesh, vectors, data.geography.landMask, 1)
-    this.addProjectedSourceGeometry(
-      geometry,
-      mode === 'wind' ? 0xA9FFF1 : 0xFFFFFF,
-      0.94,
-      0.4,
-      5,
-      mode === 'ocean-current',
+    const tokens = getMapStyleDocument(params.appearance.mapStyle).tokens
+    const thermalPalette = {
+      cold: String(tokens.oceanCurrentCold ?? '#2166AC'),
+      neutral: String(tokens.oceanCurrentNeutral ?? '#F7F7F7'),
+      warm: String(tokens.oceanCurrentWarm ?? '#B2182B'),
+    }
+
+    const sourceGeometry = createClimateVectorGeometry(mesh, vectors, data.geography.landMask, 1, thermalPalette)
+    if ((sourceGeometry.getAttribute('position')?.count ?? 0) === 0) {
+      sourceGeometry.dispose()
+      return
+    }
+
+    const mapLineGeometry = new MapLineGeometry()
+    this.geometry = mapLineGeometry.create(
+      sourceGeometry,
       projection,
       centralMeridian,
+      0.4,
     )
-  }
+    sourceGeometry.dispose()
 
-  private addProjectedSourceGeometry(
-    sourceGeometry: ReturnType<typeof createClimateVectorGeometry>,
-    color: number,
-    opacity: number,
-    depthOffset: number,
-    renderOrder: number,
-    isOceanCurrent: boolean,
-    projection: MapProjection,
-    centralMeridian: number,
-  ): void {
-    const lines = sourceGeometry.userData.lines as number[][][]
-    const geometries: LineGeometry[] = []
+    if ((this.geometry.getAttribute('position')?.count ?? 0) === 0) {
+      this.geometry.dispose()
+      this.geometry = null
+      return
+    }
 
-    this.material = new LineMaterial({
-      color,
-      linewidth: 1.2,
-      worldUnits: false,
+    const windColor = new Color(String(tokens.wind ?? '#A9FFF1')).getHex()
+    this.material = new LineBasicMaterial({
+      color: mode === 'wind' ? windColor : 0xFFFFFF,
+      vertexColors: mode === 'ocean-current',
       transparent: true,
-      opacity,
+      opacity: 0.94,
       depthTest: false,
       depthWrite: false,
     })
 
-    const group = new Group()
-    const worldOffsets = projection.wrapX
-      ? [-projection.worldWidth, 0, projection.worldWidth]
-      : [0]
-
-    for (const worldOffset of worldOffsets) {
-      const fragments: number[][][] = []
-
-      for (const line of lines) {
-        if (line.length < 2)
-          continue
-
-        let current: number[][] = []
-        let lastLon = Number.POSITIVE_INFINITY
-
-        for (let i = 0; i < line.length; i++) {
-          const pt = line[i]
-          const geo = cartesianToGeographic(pt[0], pt[1], pt[2])
-          const lon = unwrapLongitudeNear(geo.longitude, lastLon)
-          const lat = geo.latitude
-          lastLon = lon
-
-          const p = projection.project(lon, lat, centralMeridian)
-          if (!p) {
-            if (current.length >= 2)
-              fragments.push(current)
-            current = []
-            continue
-          }
-
-          if (isOceanCurrent && i > 0) {
-            const last = line[i - 1]
-            const distSq = (pt[0] - last[0]) ** 2 + (pt[1] - last[1]) ** 2 + (pt[2] - last[2]) ** 2
-            if (distSq > 0.05) {
-              if (current.length >= 2)
-                fragments.push(current)
-              current = []
-            }
-          }
-
-          const end3 = [p.x + worldOffset, p.y, depthOffset]
-          if (current.length > 0) {
-            const lastP = current[current.length - 1]
-            const dx = end3[0] - lastP[0]
-            if (Math.abs(dx) > projection.worldWidth * 0.5) {
-              if (current.length >= 2)
-                fragments.push(current)
-              current = []
-            }
-          }
-          current.push(end3)
-        }
-        if (current.length >= 2)
-          fragments.push(current)
-      }
-
-      for (const fragment of fragments) {
-        const geometry = new LineGeometry().setPositions(fragment.flatMap(point => point))
-        const lineMesh = new Line2(geometry, this.material)
-        lineMesh.computeLineDistances()
-        lineMesh.renderOrder = renderOrder
-        group.add(lineMesh)
-        geometries.push(geometry)
-      }
-    }
-
-    if (geometries.length === 0) {
-      this.material.dispose()
-      this.material = null
-      return
-    }
-
-    this.group.add(group)
-    this.geometries = geometries
+    this.meshCopy = new LineSegments(this.geometry, this.material)
+    this.meshCopy.renderOrder = 5
+    this.group.add(this.meshCopy)
   }
 
-  updateLineWidth(zoom: number): void {
-    if (this.material) {
-      this.material.linewidth = Math.max(1.0, 3.4 / Math.sqrt(zoom))
-    }
+  updateLineWidth(_zoom: number): void {
+    // LineSegments renders 1px batched lines in WebGL
   }
 
-  updateViewport(width: number, height: number): void {
-    if (this.material) {
-      this.material.resolution.set(width, height)
-    }
+  updateViewport(_width: number, _height: number): void {
+    // LineSegments does not require viewport resolution updates
   }
 
   dispose(): void {
     this.group.clear()
-    for (const g of this.geometries) {
-      g.dispose()
-    }
-    this.geometries = []
+    this.geometry?.dispose()
+    this.geometry = null
     this.material?.dispose()
+    this.material = null
+    this.meshCopy = null
   }
 }
+

@@ -8,7 +8,6 @@ import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherica
 export interface GeoJsonLineSourceContext {
   mesh: SphericalMesh
   data: WorldSimulationState
-  boundaryMode?: 'raw' | 'smoothed'
 }
 
 export type GeoJsonLineSourceAdapter = (context: GeoJsonLineSourceContext) => GeoJsonFeatureCollection
@@ -23,13 +22,11 @@ function cornerPosition(positions: Float32Array, corner: number, altitudeMeters 
   return [geographic.longitude * 180 / Math.PI, geographic.latitude * 180 / Math.PI, altitudeMeters]
 }
 
-function polityBoundaries({ mesh, data, boundaryMode = 'smoothed' }: GeoJsonLineSourceContext): GeoJsonFeatureCollection {
+function polityBoundaries({ mesh, data }: GeoJsonLineSourceContext): GeoJsonFeatureCollection {
   const polities = data.civilization?.polities
   if (!polities)
     return { type: 'FeatureCollection', features: [] }
-  const positions = boundaryMode === 'smoothed'
-    ? buildSmoothedRegionCornersForMode(mesh, data, 'polities', new SphericalRegionTopologyBuilder())
-    : mesh.voronoi.cornerPosition
+  const positions = buildSmoothedRegionCornersForMode(mesh, data, 'polities', new SphericalRegionTopologyBuilder())
   const grouped = new Map<string, { properties: Record<string, unknown>, coordinates: GeoJsonPosition[][] }>()
   const cornerElevation = new Float32Array(positions.length / 3)
   const cornerCount = new Uint8Array(cornerElevation.length)

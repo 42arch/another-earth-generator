@@ -14,10 +14,9 @@ export class SphericalCellBoundaryGeometry {
     oceanDepthScale = 1,
     regionIds?: Int32Array,
     boundaryEdges?: Uint32Array,
-    cornerPositions?: Float32Array,
   ): BufferGeometry {
     const positions: number[] = []
-    const corners = cornerPositions ?? mesh.voronoi.cornerPosition
+    const corners = mesh.voronoi.cornerPosition
     const edges = mesh.voronoi.edgeCorners
     const displayElevations = terrainElevation?.length === mesh.numRegions
       ? this.buildDisplayElevations(terrainElevation)

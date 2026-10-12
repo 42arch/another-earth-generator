@@ -120,9 +120,43 @@ export class AppState {
     this.updateParam('appearance', 'baseMap', mode)
   }
 
+  setSurfaceField(field: string) {
+    if (field === 'plates' || field === 'continents' || field === 'koppen' || field === 'biome') {
+      this.params.appearance.thematicFills = {
+        ...this.params.appearance.thematicFills,
+        [field]: true,
+      }
+      this.params.appearance.surfaceField = 'default'
+      this.params.appearance.baseMap = this.params.appearance.mapStyle === 'satellite' ? 'satellite' : 'cartographic'
+      this.updateParam('appearance', 'thematicFills', { ...this.params.appearance.thematicFills })
+      this.updateParam('appearance', 'baseMap', this.params.appearance.baseMap)
+      return
+    }
+
+    const normalizedField = field
+    this.params.appearance.surfaceField = normalizedField
+    if (normalizedField === 'default') {
+      this.params.appearance.baseMap = this.params.appearance.mapStyle === 'satellite' ? 'satellite' : 'cartographic'
+    }
+    else {
+      this.params.appearance.baseMap = normalizedField
+    }
+    this.updateParam('appearance', 'baseMap', this.params.appearance.baseMap)
+  }
+
+  toggleThematicFill(fillId: string) {
+    if (!this.params.appearance.thematicFills)
+      this.params.appearance.thematicFills = {}
+    const current = Boolean(this.params.appearance.thematicFills[fillId])
+    this.params.appearance.thematicFills[fillId] = !current
+    this.updateParam('appearance', 'thematicFills', { ...this.params.appearance.thematicFills })
+  }
+
   setMapStyle(style: WorldConfig['appearance']['mapStyle']) {
     this.params.appearance.mapStyle = style
-    this.params.appearance.baseMap = 'cartographic'
+    if (!this.params.appearance.surfaceField || this.params.appearance.surfaceField === 'default') {
+      this.params.appearance.baseMap = style === 'satellite' ? 'satellite' : 'cartographic'
+    }
     if (!this.engine)
       return
     this.engine.updateParams(this.params)

@@ -7,10 +7,18 @@ import { resolveRasterCellSource } from '@/core/data-source/data-sources'
 import { cartesianToGeographic } from '@/core/projections/projection-math'
 import { buildDisplayRegionIds } from '@/core/rendering/shared/region-display'
 import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
+import { KOPPEN_CODES, KOPPEN_LABELS } from '@/core/simulation/climate/koppen-climate-classifier'
+import { BIOME_LABELS } from '@/core/simulation/ecology/biome-data'
 
-export type AreaSourceId = 'polity-areas' | 'ethnicity-areas' | 'language-areas' | 'religion-areas'
-export type AreaBoundaryMode = 'raw' | 'smoothed'
-
+export type AreaSourceId
+  = | 'plate-areas'
+    | 'continent-areas'
+    | 'koppen-areas'
+    | 'biome-areas'
+    | 'polity-areas'
+    | 'ethnicity-areas'
+    | 'language-areas'
+    | 'religion-areas'
 export interface LandAreaGeometry {
   landMask: Uint8Array
   topology: SphericalRegionTopology
@@ -44,6 +52,10 @@ export function getLandAreaGeometry(mesh: SphericalMesh, data: WorldSimulationSt
 }
 
 const sourceModes = {
+  'plate-areas': 'plates',
+  'continent-areas': 'continents',
+  'koppen-areas': 'koppen',
+  'biome-areas': 'biome',
   'polity-areas': 'polities',
   'ethnicity-areas': 'ethnicity',
   'language-areas': 'languages',
@@ -122,7 +134,6 @@ function polygonsFromRings(rings: SphericalAreaRing[], positions: Float32Array, 
 export function createLandGeoJsonSource(
   mesh: SphericalMesh,
   data: WorldSimulationState,
-  boundaryMode: AreaBoundaryMode,
 ): GeoJsonFeatureCollection {
   const { landMask, topology, smoothedCorners } = getLandAreaGeometry(mesh, data)
   const area = topology.polygons.find(polygon => polygon.regionId === 1)
@@ -134,8 +145,7 @@ export function createLandGeoJsonSource(
   const end = mesh.voronoi.cellCornerOffsets[firstLandRegion + 1]
   const cellCorners = mesh.voronoi.cellCorners.subarray(start, end)
   const outerSign = Math.sign(sphericalWinding(cellCorners, mesh.voronoi.cornerPosition)) || 1
-  const positions = boundaryMode === 'smoothed' ? smoothedCorners : mesh.voronoi.cornerPosition
-  const polygons = polygonsFromRings(area.rings, positions, outerSign)
+  const polygons = polygonsFromRings(area.rings, smoothedCorners, outerSign)
   if (polygons.length === 0)
     return { type: 'FeatureCollection', features: [] }
   return {
@@ -152,6 +162,14 @@ export function createLandGeoJsonSource(
 }
 
 function propertiesFor(id: AreaSourceId, groupId: number, data: WorldSimulationState): Record<string, unknown> {
+  if (id === 'plate-areas')
+    return { groupId, name: `板块 ${groupId + 1}` }
+  if (id === 'continent-areas')
+    return { groupId, name: `大陆 ${groupId + 1}` }
+  if (id === 'koppen-areas')
+    return { groupId, name: KOPPEN_LABELS[groupId] ?? KOPPEN_CODES[groupId] ?? '未知气候' }
+  if (id === 'biome-areas')
+    return { groupId, name: BIOME_LABELS[groupId] ?? '未知群系' }
   if (id === 'polity-areas') {
     const polity = data.civilization?.polities?.polities.find(item => item.id === groupId)
     return { groupId, name: polity?.name ?? '', population: polity?.population ?? 0 }
@@ -167,22 +185,27 @@ export function createAreaGeoJsonSource(
   id: AreaSourceId,
   mesh: SphericalMesh,
   data: WorldSimulationState,
-  boundaryMode: AreaBoundaryMode,
   topologyBuilder = new SphericalRegionTopologyBuilder(),
 ): GeoJsonFeatureCollection {
   const mode = sourceModes[id]
-  const hasData = id === 'polity-areas'
-    ? Boolean(data.civilization?.polities)
-    : id === 'religion-areas'
-      ? Boolean(data.civilization?.religions)
-      : Boolean(data.civilization?.ethnicity)
+  const hasData = id === 'plate-areas'
+    ? Boolean(data.geology.regionSuperPlate)
+    : id === 'continent-areas'
+    ? Boolean(data.geography.visibleContinentId)
+    : id === 'koppen-areas'
+      ? Boolean(data.climate?.koppen?.climateClass)
+      : id === 'biome-areas'
+        ? Boolean(data.biome?.biomeClass)
+        : id === 'polity-areas'
+          ? Boolean(data.civilization?.polities)
+          : id === 'religion-areas'
+            ? Boolean(data.civilization?.religions)
+            : Boolean(data.civilization?.ethnicity)
   if (!hasData)
     return { type: 'FeatureCollection', features: [] }
   const regionIds = buildDisplayRegionIds(mesh, data, mode)
   const topology = topologyBuilder.build(mesh, regionIds)
-  const positions = boundaryMode === 'smoothed'
-    ? topologyBuilder.buildSmoothedCornerPositions(mesh, topology)
-    : mesh.voronoi.cornerPosition
+  const positions = topologyBuilder.buildSmoothedCornerPositions(mesh, topology)
   const features: GeoJsonFeature[] = []
   for (const area of topology.polygons) {
     if (area.regionId < 0)

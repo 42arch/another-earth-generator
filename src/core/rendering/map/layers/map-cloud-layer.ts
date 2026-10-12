@@ -30,9 +30,6 @@ export class MapCloudLayer {
     projection: MapProjection,
     centralMeridian: number,
   ): void {
-    if (!params.appearance.overlays.clouds)
-      return
-
     this.geometry = this.geometryBuilder.create(
       mesh,
       new Float32Array(mesh.numRegions * 3),
@@ -61,6 +58,7 @@ export class MapCloudLayer {
     const layer = new Mesh(this.geometry, this.material)
     layer.renderOrder = 6
     this.addWrappedCopies(layer, projection)
+    this.group.visible = Boolean(params.appearance.overlays.clouds)
   }
 
   private addWrappedCopies(baseLayer: Mesh, projection: MapProjection): void {

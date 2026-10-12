@@ -2,7 +2,7 @@ import type SphericalMesh from '@/core/mesh/mesh'
 import type { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
 import type { WorldSimulationState } from '@/core/simulation/state'
 
-export type RegionSmoothingMode
+export type AreaClassificationMode
   = | 'plates'
     | 'continents'
     | 'biome'
@@ -15,53 +15,28 @@ export type RegionSmoothingMode
 const OCEAN_REGION_ID = -2147483648
 
 export function isGeoJsonAreaBaseMap(baseMap: string): boolean {
-  const mode = baseMap.endsWith('-smoothed') ? baseMap.slice(0, -'-smoothed'.length) : baseMap
-  return mode === 'ethnicity' || mode === 'languages' || mode === 'polities' || mode === 'religions'
-}
-
-export function getRegionSmoothingMode(baseMap: string): RegionSmoothingMode | null {
-  switch (baseMap) {
-    case 'plates-smoothed':
-      return 'plates'
-    case 'continents-smoothed':
-      return 'continents'
-    case 'biome-smoothed':
-      return 'biome'
-    case 'koppen-smoothed':
-      return 'koppen'
-    case 'ethnicity-smoothed':
-      return 'ethnicity'
-    case 'languages-smoothed':
-      return 'languages'
-    case 'polities-smoothed':
-      return 'polities'
-    case 'religions-smoothed':
-      return 'religions'
-    default:
-      return null
-  }
-}
-
-/** Only raster surfaces need a rebuilt cell mesh when this value changes. */
-export function getSurfaceRegionSmoothingMode(baseMap: string): RegionSmoothingMode | null {
-  return isGeoJsonAreaBaseMap(baseMap) ? null : getRegionSmoothingMode(baseMap)
+  return baseMap === 'continents'
+    || baseMap === 'biome'
+    || baseMap === 'koppen'
+    || baseMap === 'ethnicity'
+    || baseMap === 'languages'
+    || baseMap === 'polities'
+    || baseMap === 'religions'
 }
 
 export function buildDisplayRegionIds(
   mesh: SphericalMesh,
   data: WorldSimulationState,
-  mode: RegionSmoothingMode,
+  mode: AreaClassificationMode,
 ): Int32Array {
   const regionIds = new Int32Array(mesh.numRegions)
   for (let region = 0; region < mesh.numRegions; region++) {
-    if (data.geography.landMask[region] === 0
-      && (mode === 'ethnicity' || mode === 'languages' || mode === 'religions')) {
+    if (mode !== 'plates' && data.geography.landMask[region] === 0) {
       regionIds[region] = OCEAN_REGION_ID
+      continue
     }
     else if (mode === 'polities') {
-      regionIds[region] = data.geography.landMask[region] === 0
-        ? OCEAN_REGION_ID
-        : data.civilization?.polities?.polityByRegion[region] ?? -1
+      regionIds[region] = data.civilization?.polities?.polityByRegion[region] ?? -1
     }
     else if (mode === 'ethnicity') {
       regionIds[region] = data.civilization?.ethnicity?.dominantGroup[region] ?? -1
@@ -90,23 +65,10 @@ export function buildDisplayRegionIds(
   return regionIds
 }
 
-export function buildSmoothedRegionCorners(
-  mesh: SphericalMesh,
-  data: WorldSimulationState,
-  baseMap: string,
-  topologyBuilder: SphericalRegionTopologyBuilder,
-): Float32Array | null {
-  const mode = getRegionSmoothingMode(baseMap)
-  if (!mode)
-    return null
-
-  return buildSmoothedRegionCornersForMode(mesh, data, mode, topologyBuilder)
-}
-
 export function buildSmoothedRegionCornersForMode(
   mesh: SphericalMesh,
   data: WorldSimulationState,
-  mode: RegionSmoothingMode,
+  mode: AreaClassificationMode,
   topologyBuilder: SphericalRegionTopologyBuilder,
 ): Float32Array {
   const regionIds = buildDisplayRegionIds(mesh, data, mode)

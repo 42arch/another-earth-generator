@@ -67,6 +67,10 @@ export interface WorldConfig {
   appearance: {
     baseMap: string
     mapStyle: string
+    /** Slot for overriding the underlying surface field (defaults to 'default' which follows mapStyle) */
+    surfaceField?: string
+    /** Optional thematic polygon fills (e.g. plates, continents, climate, biomes, polities) */
+    thematicFills?: Record<string, boolean>
     overlays: Record<string, boolean>
     /** Zero-based calendar month used by the climate layers. */
     climateMonth: number
@@ -117,6 +121,17 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
   appearance: {
     baseMap: 'cartographic',
     mapStyle: 'standard',
+    surfaceField: 'default',
+    thematicFills: {
+      plates: false,
+      polities: false,
+      ethnicity: false,
+      languages: false,
+      religions: false,
+      continents: false,
+      koppen: false,
+      biome: false,
+    },
     overlays: {
       'rivers': true,
       'cities': true,
@@ -137,6 +152,33 @@ export const DEFAULT_WORLD_CONFIG: WorldConfig = {
 }
 
 export function cloneWorldConfig(config: WorldConfig): WorldConfig {
+  const appearance = config.appearance
+  let surfaceField = appearance.surfaceField ?? 'default'
+  let baseMap = appearance.baseMap
+  let thematicFills = appearance.thematicFills ? { ...appearance.thematicFills } : undefined
+  if (thematicFills && thematicFills.biome === undefined && thematicFills.biomes !== undefined)
+    thematicFills.biome = thematicFills.biomes
+  if (thematicFills)
+    delete thematicFills.biomes
+
+  const selectedSurface = surfaceField !== 'default' ? surfaceField : baseMap
+  if (selectedSurface === 'stress' || selectedSurface === 'mantle') {
+    surfaceField = 'default'
+    baseMap = appearance.mapStyle === 'satellite' ? 'satellite' : 'cartographic'
+  }
+  if (selectedSurface === 'plates' || selectedSurface === 'continents' || selectedSurface === 'koppen' || selectedSurface === 'biome') {
+    thematicFills ??= {}
+    thematicFills[selectedSurface] = true
+    surfaceField = 'default'
+    baseMap = appearance.mapStyle === 'satellite' ? 'satellite' : 'cartographic'
+  }
+  else if (selectedSurface && ['ethnicity', 'languages', 'polities', 'religions'].includes(selectedSurface)) {
+    if (surfaceField !== 'default')
+      surfaceField = selectedSurface
+    if (baseMap === selectedSurface)
+      baseMap = selectedSurface
+  }
+
   return {
     core: { ...config.core },
     geology: { ...config.geology },
@@ -144,10 +186,13 @@ export function cloneWorldConfig(config: WorldConfig): WorldConfig {
     climate: { ...config.climate },
     civilization: { ...config.civilization },
     appearance: {
-      ...config.appearance,
-      overlays: { ...config.appearance.overlays },
-      elevationDisplacement: config.appearance.elevationDisplacement ?? false,
-      autoRotate: config.appearance.autoRotate ?? false,
+      ...appearance,
+      baseMap,
+      surfaceField,
+      thematicFills: thematicFills ? { ...thematicFills } : undefined,
+      overlays: { ...appearance.overlays },
+      elevationDisplacement: appearance.elevationDisplacement ?? false,
+      autoRotate: appearance.autoRotate ?? false,
     },
   }
 }

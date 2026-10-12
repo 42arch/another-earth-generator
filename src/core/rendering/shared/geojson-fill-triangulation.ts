@@ -8,7 +8,12 @@ import { cartesianToGeographic, geographicToCartesian } from '@/core/projections
 type Position = readonly [number, number]
 
 const FACE_CENTERS: readonly Position[] = [
-  [0, 0], [90, 0], [180, 0], [-90, 0], [0, 90], [0, -90],
+  [0, 0],
+  [90, 0],
+  [180, 0],
+  [-90, 0],
+  [0, 90],
+  [0, -90],
 ]
 const DEFAULT_MAX_TRIANGLE_ARC = 0.18
 
@@ -56,7 +61,10 @@ function projectedPolygons(polygon: GeoJsonPosition[][], projection: GeoProjecti
   let current: Vector2[] = []
   const collector: GeoStream = {
     polygonStart: () => { rings = [] },
-    polygonEnd: () => { if (rings.length > 0) polygons.push(rings) },
+    polygonEnd: () => {
+      if (rings.length > 0)
+        polygons.push(rings)
+    },
     lineStart: () => { current = [] },
     lineEnd: () => {
       if (current.length > 1 && current[0].distanceToSquared(current[current.length - 1]) < 1e-16)

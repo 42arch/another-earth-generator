@@ -4,6 +4,7 @@ import type { WorldSimulationState } from '@/core/simulation/state'
 import { Matrix4, Vector3 } from 'three'
 import { wrapLongitude } from '@/core/projections/projection-math'
 import { getCartographicStyle } from '@/core/rendering/styles/cartographic-styles'
+import { resolveEffectiveSurfaceMode } from '@/core/rendering/styles/style-runtime'
 
 export interface WorldGlyphItem {
   char: string
@@ -74,7 +75,10 @@ function buildTerritorySpine(
     return null
 
   // 1. 计算三维加权几何中心 C
-  let sumX = 0; let sumY = 0; let sumZ = 0; let totalW = 0
+  let sumX = 0
+  let sumY = 0
+  let sumZ = 0
+  let totalW = 0
   for (const r of regions) {
     const pop = populationArray ? populationArray[r] : 1
     const w = pop + 1
@@ -102,7 +106,8 @@ function buildTerritorySpine(
   U.crossVectors(C, E).normalize()
 
   // 3. 计算切平面上的加权 2D 协方差矩阵 (PCA 分析版图延伸主方向)
-  let meanX = 0; let meanY = 0
+  let meanX = 0
+  let meanY = 0
   for (const r of regions) {
     const pop = populationArray ? populationArray[r] : 1
     const w = pop + 1
@@ -118,7 +123,9 @@ function buildTerritorySpine(
   meanX /= totalW
   meanY /= totalW
 
-  let covXX = 0; let covYY = 0; let covXY = 0
+  let covXX = 0
+  let covYY = 0
+  let covXY = 0
   for (const r of regions) {
     const pop = populationArray ? populationArray[r] : 1
     const w = pop + 1
@@ -148,7 +155,8 @@ function buildTerritorySpine(
   if (elongation < 1.35)
     return null
 
-  let v1x = 1; let v1y = 0
+  let v1x = 1
+  let v1y = 0
   if (Math.abs(covXY) > 1e-8) {
     v1x = lambda1 - covYY
     v1y = covXY
@@ -171,7 +179,8 @@ function buildTerritorySpine(
 
   // 5. 将各区域投影到主轴标量坐标 s_r
   const sValues: number[] = Array.from({ length: regions.length })
-  let sMin = Infinity; let sMax = -Infinity
+  let sMin = Infinity
+  let sMax = -Infinity
   for (let i = 0; i < regions.length; i++) {
     const r = regions[i]
     const idx = r * 3
@@ -200,7 +209,9 @@ function buildTerritorySpine(
   for (let sIdx = 0; sIdx < sliceCount; sIdx++) {
     const sStart = sMin + sIdx * sliceStep
     const sEnd = sStart + sliceStep
-    let sliceSumX = 0; let sliceSumY = 0; let sliceSumZ = 0
+    let sliceSumX = 0
+    let sliceSumY = 0
+    let sliceSumZ = 0
     let sliceWeight = 0
 
     for (let i = 0; i < regions.length; i++) {
@@ -310,7 +321,9 @@ export function findEntityMedoidRegion(
 ): { region: number, totalPopulation: number, memberRegions: number[] } {
   const numRegions = mesh.numRegions
   const memberRegions: number[] = []
-  let sumX = 0; let sumY = 0; let sumZ = 0
+  let sumX = 0
+  let sumY = 0
+  let sumZ = 0
   let totalPopulation = 0
 
   for (let r = 0; r < numRegions; r++) {
@@ -494,7 +507,7 @@ export function computeWorldLabels(
   if (!data.civilization)
     return []
 
-  const baseMap = params.appearance.baseMap.replace('-smoothed', '')
+  const baseMap = resolveEffectiveSurfaceMode(params.appearance)
   const overlays = params.appearance.overlays
   const items: WorldLabelItem[] = []
   const cartographicStyle = getCartographicStyle(params.appearance.mapStyle)

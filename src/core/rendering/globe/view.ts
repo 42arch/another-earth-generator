@@ -28,11 +28,8 @@ import { GlobePicker } from '@/core/rendering/globe/picker'
 import { Stars } from '@/core/rendering/globe/stars'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
 import { MapView } from '@/core/rendering/map/view'
-import { buildSmoothedRegionCorners, getSurfaceRegionSmoothingMode, isGeoJsonAreaBaseMap } from '@/core/rendering/shared/region-display'
-import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
-import { WorldColorizer } from '@/core/rendering/shared/world-colorizer'
-import { haveSegmentLineStyleOverlayChanges } from '@/core/rendering/styles/line-layer-discovery'
-import { getGlobeStyleZoom, getMapStyleDocument, getMapStylePaint, getRasterStyleLayer, havePointStyleOverlayChanges, isMapStyleLayerVisible, usesVectorCartographicBaseMap } from '@/core/rendering/styles/style-runtime'
+import { RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
+import { getGlobeStyleZoom, getMapStyleDocument, getMapStylePaint, getRasterStyleLayer, isMapStyleLayerVisible, resolveEffectiveSurfaceMode, usesVectorCartographicBaseMap } from '@/core/rendering/styles'
 import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
 
 const TERRAIN_VERTICAL_SCALE = 0.04
@@ -44,8 +41,7 @@ export class GlobeView {
   private readonly camera = new PerspectiveCamera(45, 1, 5, 2500)
   private readonly controls: OrbitControls
   private readonly mapView: MapView
-  private readonly colorizer = new WorldColorizer()
-  private readonly regionTopologyBuilder = new SphericalRegionTopologyBuilder()
+  private readonly surfaceRenderer = new RasterSurfaceRenderer()
   private readonly geometryBuilder = new GlobeSurfaceGeometry()
   private readonly picker = new GlobePicker()
   private readonly resizeObserver: ResizeObserver
@@ -67,7 +63,6 @@ export class GlobeView {
 
   private readonly canvas: HTMLCanvasElement
   private readonly onRegionSelected: (region: number, settlementId?: number, routeId?: number) => void
-  private smoothedRegionCorners: Float32Array | null = null
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -79,13 +74,15 @@ export class GlobeView {
     this.params = { ...params }
     this.layers = new GlobeLayerSet(this.scene, () => this.getLayerContext())
     this.unsubscribeSourceChanges = subscribeMapDataSourceChanges((id) => {
-      const active = getRasterStyleLayer(this.params.appearance.mapStyle, this.params.appearance.baseMap)
-      if (usesVectorCartographicBaseMap(this.params.appearance.mapStyle, this.params.appearance.baseMap)
-        || (id !== '*' && active?.source !== id) || !this.surface || !this.mesh || !this.data)
+      const mode = resolveEffectiveSurfaceMode(this.params.appearance)
+      const active = getRasterStyleLayer(this.params.appearance.mapStyle, mode)
+      if (usesVectorCartographicBaseMap(this.params.appearance.mapStyle, mode)
+        || (id !== '*' && active?.source !== id) || !this.surface || !this.mesh || !this.data) {
         return
-      this.geometryBuilder.updateColors(this.surface.geometry, this.colorizer.build(
+      }
+      this.geometryBuilder.updateColors(this.surface.geometry, this.surfaceRenderer.render(
         this.data,
-        this.params.appearance.baseMap,
+        mode,
         this.mesh,
         false,
         this.params.appearance.mapStyle,
@@ -138,16 +135,16 @@ export class GlobeView {
     this.data = data
     this.params = { ...params }
     this.controls.autoRotate = params.appearance.autoRotate
-    this.prepareRegionSmoothing()
     this.disposeSurface()
-    if (usesVectorCartographicBaseMap(params.appearance.mapStyle, params.appearance.baseMap)) {
+    const effectiveMode = resolveEffectiveSurfaceMode(params.appearance)
+    if (usesVectorCartographicBaseMap(params.appearance.mapStyle, effectiveMode)) {
       this.surface = this.createOceanSurface(params)
     }
     else {
-      const colors = this.colorizer.build(data, params.appearance.baseMap, mesh, false, params.appearance.mapStyle)
+      const colors = this.surfaceRenderer.render(data, effectiveMode, mesh, false, params.appearance.mapStyle)
       const usesElevation = this.usesElevationGeometry(params)
-      const cornerColors = params.appearance.baseMap === 'dem'
-        ? this.colorizer.buildDEMCorners(mesh, data.geography.elevation, data.geography.landMask)
+      const cornerColors = effectiveMode === 'dem'
+        ? this.surfaceRenderer.buildDEMCorners(mesh, data.geography.elevation, data.geography.landMask)
         : undefined
       this.surface = this.createSurface(
         this.geometryBuilder.create(
@@ -159,11 +156,12 @@ export class GlobeView {
           this.getTerrainVerticalScale(params.core.planetRadius),
           OCEAN_DEPTH_SCALE,
           cornerColors,
-          params.appearance.baseMap === 'dem' ? data.geography.landMask : undefined,
-          this.smoothedRegionCorners ?? undefined,
+          effectiveMode === 'dem' ? data.geography.landMask : undefined,
         ),
-        Number(getMapStylePaint(params.appearance.mapStyle, getRasterStyleLayer(params.appearance.mapStyle, params.appearance.baseMap)?.id ?? 'surface', 'raster-opacity', 0) ?? 1),
-        params.appearance.baseMap === 'satellite',
+        Number((getRasterStyleLayer(params.appearance.mapStyle, effectiveMode)
+          ? getMapStylePaint(params.appearance.mapStyle, getRasterStyleLayer(params.appearance.mapStyle, effectiveMode)!.id, 'raster-opacity', 0)
+          : undefined) ?? 1),
+        effectiveMode === 'satellite',
       )
     }
     this.scene.add(this.surface)
@@ -175,45 +173,42 @@ export class GlobeView {
 
   updateAppearance(params: WorldConfig): void {
     const previousParams = this.params
-    const previousMode = previousParams.appearance.baseMap
-    const modeChanged = previousMode !== params.appearance.baseMap
+    const previousMode = resolveEffectiveSurfaceMode(previousParams.appearance)
+    const currentMode = resolveEffectiveSurfaceMode(params.appearance)
+    const modeChanged = previousMode !== currentMode
     const mapStyleChanged = previousParams.appearance.mapStyle !== params.appearance.mapStyle
-    const satelliteTransition = modeChanged && (previousMode === 'satellite' || params.appearance.baseMap === 'satellite')
+    const satelliteTransition = modeChanged && (previousMode === 'satellite' || currentMode === 'satellite')
     const vectorCartographicChanged = usesVectorCartographicBaseMap(previousParams.appearance.mapStyle, previousMode)
-      !== usesVectorCartographicBaseMap(params.appearance.mapStyle, params.appearance.baseMap)
+      !== usesVectorCartographicBaseMap(params.appearance.mapStyle, currentMode)
     const elevationColorModeChanged = modeChanged
-      && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(params.appearance.baseMap))
+      && (this.isElevationColorMode(previousMode) || this.isElevationColorMode(currentMode))
 
     const elevationDisplacementChanged = previousParams.appearance.elevationDisplacement !== params.appearance.elevationDisplacement
-    const regionSmoothingChanged = getSurfaceRegionSmoothingMode(previousParams.appearance.baseMap)
-      !== getSurfaceRegionSmoothingMode(params.appearance.baseMap)
     const monthChanged = previousParams.appearance.climateMonth !== params.appearance.climateMonth
-    const oldOverlays = previousParams.appearance.overlays
-    const newOverlays = params.appearance.overlays
-    const dayNightChanged = oldOverlays['day-night'] !== newOverlays['day-night']
-    const overlayLightingChanged = params.appearance.baseMap === 'satellite'
-      && (dayNightChanged || (monthChanged && newOverlays['day-night']))
 
     this.params = { ...params }
     this.controls.autoRotate = params.appearance.autoRotate
 
-    if ((satelliteTransition || vectorCartographicChanged || elevationColorModeChanged || elevationDisplacementChanged || regionSmoothingChanged) && this.mesh && this.data) {
+    if ((satelliteTransition || vectorCartographicChanged || elevationColorModeChanged || elevationDisplacementChanged) && this.mesh && this.data) {
       this.setWorld(this.mesh, this.data, params)
       return
     }
 
-    const vectorCartographic = usesVectorCartographicBaseMap(params.appearance.mapStyle, params.appearance.baseMap)
+    const vectorCartographic = usesVectorCartographicBaseMap(params.appearance.mapStyle, currentMode)
     if (vectorCartographic && this.surface && mapStyleChanged) {
       this.surface.material.color.set(String(getMapStyleDocument(params.appearance.mapStyle).tokens.ocean ?? '#70C8F2'))
     }
-    else if (!vectorCartographic && (modeChanged || monthChanged || mapStyleChanged) && this.surface && this.data && !this.isElevationColorMode(params.appearance.baseMap) && params.appearance.baseMap !== 'satellite') {
+    else if (!vectorCartographic && (modeChanged || monthChanged || mapStyleChanged) && this.surface && this.data && !this.isElevationColorMode(currentMode) && currentMode !== 'satellite') {
       this.geometryBuilder.updateColors(
         this.surface.geometry,
-        this.colorizer.build(this.data, params.appearance.baseMap, this.mesh ?? undefined, false, params.appearance.mapStyle),
+        this.surfaceRenderer.render(this.data, currentMode, this.mesh ?? undefined, false, params.appearance.mapStyle),
       )
     }
     if (this.surface && !vectorCartographic) {
-      const opacity = Number(getMapStylePaint(params.appearance.mapStyle, getRasterStyleLayer(params.appearance.mapStyle, params.appearance.baseMap)?.id ?? 'surface', 'raster-opacity', 0) ?? 1)
+      const activeRaster = getRasterStyleLayer(params.appearance.mapStyle, currentMode)
+      const opacity = Number((activeRaster
+        ? getMapStylePaint(params.appearance.mapStyle, activeRaster.id, 'raster-opacity', 0)
+        : undefined) ?? 1)
       this.surface.material.opacity = opacity
       this.surface.material.transparent = opacity < 1
       this.surface.material.depthWrite = opacity >= 1
@@ -222,43 +217,15 @@ export class GlobeView {
     this.mapView.updateAppearance(params)
     this.updateLighting(params)
 
-    if (oldOverlays.atmosphere !== newOverlays.atmosphere) {
-      this.layers.rebuild('atmosphere')
-      this.layers.rebuild('water')
-    }
+    this.layers.updateOverlayVisibility()
 
-    if (oldOverlays.clouds !== newOverlays.clouds)
-      this.layers.rebuild('clouds')
-    if (oldOverlays.graticule !== newOverlays.graticule)
-      this.layers.rebuild('graticule')
-    if (oldOverlays.rivers !== newOverlays.rivers || mapStyleChanged)
-      this.layers.rebuild('rivers')
-    if (overlayLightingChanged || mapStyleChanged
-      || haveSegmentLineStyleOverlayChanges(params.appearance.mapStyle, oldOverlays, newOverlays)) {
-      this.layers.rebuildLineLayers()
-    }
-    if (oldOverlays.wireframe !== newOverlays.wireframe)
-      this.layers.rebuild('cell-boundaries')
     const vectorMode = (mode: string) => mode === 'wind' || mode === 'ocean-current'
-    if ((modeChanged && (vectorMode(previousMode) || vectorMode(params.appearance.baseMap)))
-      || (monthChanged && vectorMode(params.appearance.baseMap))) {
+    if ((modeChanged && (vectorMode(previousMode) || vectorMode(currentMode)))
+      || (monthChanged && vectorMode(currentMode))) {
       this.layers.rebuild('vectors')
     }
 
-    if (havePointStyleOverlayChanges(params.appearance.mapStyle, oldOverlays, newOverlays)
-      || overlayLightingChanged || mapStyleChanged) {
-      this.layers.rebuildPointLayers()
-    }
-    if (modeChanged || mapStyleChanged)
-      this.layers.rebuildFillLayers()
-    const labelOverlaysChanged = oldOverlays['nation-labels'] !== newOverlays['nation-labels']
-      || oldOverlays['religion-labels'] !== newOverlays['religion-labels']
-      || oldOverlays['ethnicity-labels'] !== newOverlays['ethnicity-labels']
-      || oldOverlays['language-labels'] !== newOverlays['language-labels']
-      || oldOverlays.cities !== newOverlays.cities
-      || oldOverlays['sacred-sites'] !== newOverlays['sacred-sites']
-    if (labelOverlaysChanged || modeChanged || mapStyleChanged)
-      this.layers.rebuildSymbolLayers()
+    this.layers.reconcileAppearance(previousParams, params)
   }
 
   selectRegion(region: number): void {
@@ -327,7 +294,8 @@ export class GlobeView {
   }
 
   private updateLighting(params: WorldConfig): void {
-    if (params.appearance.baseMap === 'satellite' && params.appearance.overlays['day-night']) {
+    const effectiveMode = resolveEffectiveSurfaceMode(params.appearance)
+    if (effectiveMode === 'satellite' && params.appearance.overlays['day-night']) {
       // Night mode ambient (make it slightly dark, but not pitch black)
       this.ambientLight.color.setHex(0x667799)
       this.ambientLight.intensity = 1.6
@@ -380,18 +348,6 @@ export class GlobeView {
       : this.layers.pickGeoJsonFeature(event, this.canvas, this.camera)
   }
 
-  private prepareRegionSmoothing(): void {
-    this.smoothedRegionCorners = null
-    if (!this.mesh || !this.data || isGeoJsonAreaBaseMap(this.params.appearance.baseMap))
-      return
-    this.smoothedRegionCorners = buildSmoothedRegionCorners(
-      this.mesh,
-      this.data,
-      this.params.appearance.baseMap,
-      this.regionTopologyBuilder,
-    )
-  }
-
   private getLayerContext(): GlobeLayerContext | null {
     if (!this.mesh || !this.data)
       return null
@@ -400,7 +356,6 @@ export class GlobeView {
       mesh: this.mesh,
       data: this.data,
       params: this.params,
-      smoothedRegionCorners: this.smoothedRegionCorners,
       sunlight: this.sunlight.position,
     }
   }
@@ -445,10 +400,11 @@ export class GlobeView {
   }
 
   private usesElevationGeometry(params: WorldConfig): boolean {
+    const effectiveMode = resolveEffectiveSurfaceMode(params.appearance)
     return params.appearance.elevationDisplacement
-      && (params.appearance.baseMap === 'dem'
-        || params.appearance.baseMap === 'heightmap'
-        || params.appearance.baseMap === 'satellite')
+      && (effectiveMode === 'dem'
+        || effectiveMode === 'heightmap'
+        || effectiveMode === 'satellite')
   }
 
   private isElevationColorMode(mode: string): mode is 'dem' | 'heightmap' {
@@ -515,9 +471,11 @@ export class GlobeView {
     this.controls.update()
     const distance = this.camera.position.distanceTo(this.controls.target)
     if (this.surface) {
+      const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
       const styleZoom = getGlobeStyleZoom(distance, this.params.core.planetRadius)
-      this.surface.visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, this.params.appearance.baseMap)
-        || isMapStyleLayerVisible(this.params.appearance.mapStyle, getRasterStyleLayer(this.params.appearance.mapStyle, this.params.appearance.baseMap)?.id ?? 'surface', styleZoom, 'globe')
+      const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, effectiveMode)
+      this.surface.visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)
+        || (activeRaster ? isMapStyleLayerVisible(this.params.appearance.mapStyle, activeRaster.id, styleZoom, 'globe') : true)
     }
     this.layers.updateStyleZoom(distance)
     this.renderer.render(this.scene, this.camera)

@@ -1,5 +1,6 @@
 import type { MAP_STYLE_SOURCES } from '@/core/data-source/source-registry'
 import type { MapStyleDocument, MapStyleLayer, MapStyleView, StyleEvaluationContext, StyleValue } from '@/core/rendering/styles/style-spec'
+import { Color } from 'three'
 import { getImportedGeoJsonSource, notifyMapDataSourceChanges } from '@/core/data-source/data-sources'
 import { geoJsonGeometryKind } from '@/core/data-source/geojson'
 import { hasGeoJsonSource } from '@/core/data-source/geojson-source-runtime'
@@ -45,6 +46,22 @@ export function evaluateStyleValue(value: StyleValue, context: StyleEvaluationCo
     case 'group-color': {
       const [red, green, blue] = civilizationGroupColor(Number(evaluate(args[0]) ?? 0))
       return `#${[red, green, blue].map(channel => Math.round(channel * 255).toString(16).padStart(2, '0')).join('')}`
+    }
+    case 'plate-color': {
+      const id = Math.max(0, Math.floor(Number(evaluate(args[0]) ?? 0)))
+      const hue = ((id * 137.508) % 360) / 360
+      return `#${new Color().setHSL(hue, 0.65, 0.55).getHexString()}`
+    }
+    case 'palette': {
+      const index = Math.max(0, Math.floor(Number(evaluate(args[0]) ?? 0)))
+      const rawPalette = args[1]
+      const palette = Array.isArray(rawPalette) && typeof rawPalette[0] === 'string' && rawPalette[0].startsWith('#')
+        ? rawPalette
+        : evaluate(rawPalette)
+      if (Array.isArray(palette)) {
+        return palette[index] ?? palette[0] ?? '#000000'
+      }
+      return '#000000'
     }
     case 'coalesce':
       for (const arg of args) {
@@ -200,7 +217,8 @@ export function getPointStyleLayerEntries(
     }
     if (layer.views && !layer.views.includes(view))
       return
-    if (source.overlay && !overlays[source.overlay])
+    const overlayId = layer.overlay ?? source.overlay
+    if (overlayId && !overlays[overlayId])
       return
     entries.push({ layer, order })
   })
@@ -215,7 +233,7 @@ export function havePointStyleOverlayChanges(
   return getMapStyleDocument(styleId).layers.some((layer) => {
     if (layer.renderer !== 'circle')
       return false
-    const overlay = getMapStyleSource(layer.source, getMapStyleDocument(styleId).sources)?.overlay
+    const overlay = layer.overlay ?? getMapStyleSource(layer.source, getMapStyleDocument(styleId).sources)?.overlay
     return overlay !== undefined && previous[overlay] !== next[overlay]
   })
 }
@@ -290,6 +308,8 @@ const EXPRESSION_OPERATORS = new Set([
   'token',
   'zoom',
   'get',
+  'palette',
+  'plate-color',
   'group-color',
   'coalesce',
   'case',
@@ -409,11 +429,27 @@ export function validateMapStyleDocument(style: MapStyleDocument): string[] {
 
 /** Register a complete custom style after its source and renderer references are checked. */
 export function registerMapStyleDocument(style: MapStyleDocument): void {
-  if (style.id === 'light' || style.id === 'standard' || style.id === 'dark')
+  if (style.id === 'light' || style.id === 'standard' || style.id === 'dark' || style.id === 'satellite')
     throw new Error(`Built-in map style "${style.id}" cannot be replaced`)
   const errors = validateMapStyleDocument(style)
   if (errors.length > 0)
     throw new Error(`Invalid map style "${style.id}": ${errors.join('; ')}`)
   MAP_STYLE_PRESETS[style.id] = structuredClone(style)
   notifyMapDataSourceChanges('*')
+}
+
+/**
+ * Resolves the active surface rendering mode from the combined appearance settings.
+ * Supports the slot-based surfaceField while remaining 100% backward-compatible with legacy baseMap.
+ */
+export function resolveEffectiveSurfaceMode(params: {
+  baseMap?: string
+  mapStyle?: string
+  surfaceField?: string
+}): string {
+  if (params.surfaceField && params.surfaceField !== 'default')
+    return params.surfaceField
+  if (params.mapStyle === 'satellite')
+    return 'satellite'
+  return params.baseMap || 'cartographic'
 }

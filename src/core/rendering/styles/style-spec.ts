@@ -1,13 +1,18 @@
 import type { MapStyleSourceDefinition } from '@/core/data-source/source-registry'
 
 export type StyleExpression = readonly [operator: string, ...operands: StyleValue[]]
-export type StyleValue = string | number | boolean | null | StyleExpression
+export type StyleValue = string | number | boolean | null | readonly StyleValue[] | StyleExpression
 export type MapStyleView = 'map' | 'globe'
+export type MapStyleRenderer = 'raster' | 'fill' | 'line' | 'river-ribbon' | 'circle' | 'symbol'
 
 export interface MapStyleLayer {
   id: string
   source: string
-  renderer: string
+  renderer: MapStyleRenderer
+  /** Optional overlay toggle id (e.g. 'routes', 'cities', 'nation-borders') */
+  overlay?: string
+  /** Optional thematic fill category (e.g. 'plates', 'continents', 'koppen', 'biome', 'polities') */
+  thematic?: string
   /** Omitted means the layer is available in both views. */
   views?: readonly MapStyleView[]
   /** Restrict generated base-map fills to selected display modes. */

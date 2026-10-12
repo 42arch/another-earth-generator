@@ -26,10 +26,6 @@ export class GlobeGraticuleLayer {
     terrainVerticalScale: number,
     usesElevationGeometry: boolean,
   ): void {
-    if (!params.appearance.overlays.graticule) {
-      return
-    }
-
     const terrainClearance = usesElevationGeometry ? terrainVerticalScale : 0
     this.geometry = this.graticuleGeometryBuilder.create(
       params.core.planetRadius + GRATICULE_LAYER_OFFSET + terrainClearance,
@@ -52,6 +48,7 @@ export class GlobeGraticuleLayer {
     this.meshCopy = new LineSegments(this.geometry, this.material)
     this.meshCopy.renderOrder = 4
     this.group.add(this.meshCopy)
+    this.group.visible = Boolean(params.appearance.overlays.graticule)
   }
 
   dispose(): void {

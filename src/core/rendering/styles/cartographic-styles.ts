@@ -1,6 +1,6 @@
 import { MAP_STYLE_PRESETS } from '@/core/rendering/styles/presets'
 
-export type CartographicStyleId = 'light' | 'standard' | 'dark'
+export type CartographicStyleId = 'light' | 'standard' | 'dark' | 'satellite' | string
 
 export interface CartographicStyle {
   id: string

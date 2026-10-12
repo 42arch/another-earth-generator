@@ -7,3 +7,4 @@ Wiki 按领域组织。自然领域记录自然系统；人文领域已实现人
 - [自然领域](nature/README.zh-CN.md)：系统架构、球面网格、地质、地貌、气候、水文、生物群系与渲染。
 - [人文领域](civilization/README.zh-CN.md)：已实现的人口、聚落、交通与市场、民族与语言、国家与行政、宗教与信仰，以及规划中的文化与历史。
 - [渲染数据源与图层架构设计](../rendering-data-sources.zh-CN.md)：`raster`（球面 cell）与 GeoJSON 数据源、通用图层和迁移方案。
+- [地图图层与样式系统重构实施方案](../map-layer-refactoring-plan.zh-CN.md)：顶级制图风格、插槽式地表物理场与五层渲染架构落地路线图。

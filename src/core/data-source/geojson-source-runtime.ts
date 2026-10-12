@@ -1,6 +1,6 @@
 import type { GeoJsonDataSource } from '@/core/data-source/data-sources'
 import type { GeoJsonFeatureCollection } from '@/core/data-source/geojson'
-import type { AreaBoundaryMode, AreaSourceId } from '@/core/data-source/geojson-area-sources'
+import type { AreaSourceId } from '@/core/data-source/geojson-area-sources'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
@@ -12,8 +12,17 @@ import { POINT_SOURCE_ADAPTERS } from '@/core/data-source/point-source-adapters'
 import { createRiverGeoJsonSource } from '@/core/data-source/river-geojson'
 import { SYMBOL_SOURCE_ADAPTERS } from '@/core/data-source/symbol-source-adapters'
 
-const areaIds = new Set(['polity-areas', 'ethnicity-areas', 'language-areas', 'religion-areas'])
-export type GeneratedGeoJsonProvider = (mesh: SphericalMesh, data: WorldSimulationState, params: WorldConfig, boundaryMode: AreaBoundaryMode) => GeoJsonFeatureCollection
+const areaIds = new Set([
+  'plate-areas',
+  'continent-areas',
+  'koppen-areas',
+  'biome-areas',
+  'polity-areas',
+  'ethnicity-areas',
+  'language-areas',
+  'religion-areas',
+])
+export type GeneratedGeoJsonProvider = (mesh: SphericalMesh, data: WorldSimulationState, params: WorldConfig) => GeoJsonFeatureCollection
 const registeredProviders = new Map<string, GeneratedGeoJsonProvider>()
 let generatedCache = new WeakMap<WorldSimulationState, WeakMap<SphericalMesh, Map<string, GeoJsonDataSource>>>()
 let generatedRevision = 0
@@ -64,25 +73,24 @@ function createGeneratedCollection(
   mesh: SphericalMesh,
   data: WorldSimulationState,
   params: WorldConfig,
-  boundaryMode: AreaBoundaryMode,
 ): GeoJsonFeatureCollection | undefined {
   const registered = registeredProviders.get(id)
   if (registered) {
-    const collection = registered(mesh, data, params, boundaryMode)
+    const collection = registered(mesh, data, params)
     const errors = validateGeoJson(collection)
     if (errors.length > 0)
       throw new Error(`Generated GeoJSON source "${id}" is invalid: ${errors.join('; ')}`)
     return collection
   }
   if (areaIds.has(id))
-    return createAreaGeoJsonSource(id as AreaSourceId, mesh, data, boundaryMode)
+    return createAreaGeoJsonSource(id as AreaSourceId, mesh, data)
   if (id === 'land-areas')
-    return createLandGeoJsonSource(mesh, data, boundaryMode)
+    return createLandGeoJsonSource(mesh, data)
   if (id === 'river-network')
     return createRiverGeoJsonSource(mesh, data)
   const line = GEOJSON_LINE_SOURCE_ADAPTERS[id]
   if (line)
-    return line({ mesh, data, boundaryMode })
+    return line({ mesh, data })
   const point = POINT_SOURCE_ADAPTERS[id]
   if (point)
     return point(mesh, data)
@@ -94,7 +102,6 @@ export function resolveGeoJsonSource(
   mesh: SphericalMesh,
   data: WorldSimulationState,
   params: WorldConfig,
-  boundaryMode: AreaBoundaryMode = 'raw',
 ): GeoJsonDataSource | undefined {
   const imported = getImportedGeoJsonSource(id)
   if (imported)
@@ -110,12 +117,12 @@ export function resolveGeoJsonSource(
     byMesh.set(mesh, cache)
   }
   const key = id === 'land-areas'
-    ? `${id}:${boundaryMode}:${landMaskCacheKey(mesh, data)}`
-    : `${id}:${boundaryMode}:${params.appearance.mapStyle}:${params.appearance.overlays.cities}:${params.appearance.overlays['sacred-sites']}`
+    ? `${id}:${landMaskCacheKey(mesh, data)}`
+    : `${id}:${params.appearance.mapStyle}:${params.appearance.overlays.cities}:${params.appearance.overlays['sacred-sites']}`
   const existing = cache.get(key)
   if (existing)
     return existing
-  const collection = createGeneratedCollection(id, mesh, data, params, boundaryMode)
+  const collection = createGeneratedCollection(id, mesh, data, params)
   if (!collection)
     return undefined
   const source: GeoJsonDataSource = { type: 'geojson', id, data: collection, revision: generatedRevision }
@@ -128,9 +135,8 @@ export function exportGeneratedGeoJsonSource(
   mesh: SphericalMesh,
   data: WorldSimulationState,
   params: WorldConfig,
-  boundaryMode: AreaBoundaryMode = 'raw',
 ) {
-  const source = resolveGeoJsonSource(id, mesh, data, params, boundaryMode)
+  const source = resolveGeoJsonSource(id, mesh, data, params)
   return source ? structuredClone(source.data) : undefined
 }
 
@@ -139,8 +145,7 @@ export function exportGeneratedGeoJsonSourceBundle(
   mesh: SphericalMesh,
   data: WorldSimulationState,
   params: WorldConfig,
-  boundaryMode: AreaBoundaryMode = 'raw',
-): { sourceId: string, revision: number, boundaryMode: AreaBoundaryMode, data: GeoJsonFeatureCollection } | undefined {
-  const source = resolveGeoJsonSource(id, mesh, data, params, boundaryMode)
-  return source ? { sourceId: id, revision: source.revision, boundaryMode, data: structuredClone(source.data) } : undefined
+): { sourceId: string, revision: number, data: GeoJsonFeatureCollection } | undefined {
+  const source = resolveGeoJsonSource(id, mesh, data, params)
+  return source ? { sourceId: id, revision: source.revision, data: structuredClone(source.data) } : undefined
 }

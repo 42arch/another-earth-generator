@@ -8,24 +8,42 @@ export function prepareClimateDisplayFields(world: GeneratedSphericalWorld | nul
   if (!world || !climate)
     return
 
-  const mode = config.appearance.baseMap
+  const surfaceField = config.appearance.surfaceField
+  const mode = (surfaceField && surfaceField !== 'default')
+    ? surfaceField
+    : config.appearance.baseMap
   const month = config.appearance.climateMonth
   const climateMesh = world.mesh.numRegions <= world.referenceMesh.numRegions
     ? world.mesh
     : world.referenceMesh
 
-  if (mode === 'wind' || mode === 'ocean-current') {
-    if (climate.displayVector?.month !== month || climate.displayVector.kind !== mode) {
-      climate.displayVector = projectMonthlyVectorField(
+  if (mode === 'wind') {
+    if (climate.displayWindVector?.month !== month) {
+      climate.displayWindVector = projectMonthlyVectorField(
         world.mesh,
         climateMesh,
         world.data.geography,
         climate,
         month,
         config.climate.axialTiltDeg,
-        mode,
+        'wind',
       )
     }
+    climate.displayVector = climate.displayWindVector
+  }
+  else if (mode === 'ocean-current') {
+    if (climate.displayOceanVector?.month !== month) {
+      climate.displayOceanVector = projectMonthlyVectorField(
+        world.mesh,
+        climateMesh,
+        world.data.geography,
+        climate,
+        month,
+        config.climate.axialTiltDeg,
+        'ocean-current',
+      )
+    }
+    climate.displayVector = climate.displayOceanVector
   }
   else if (mode === 'temperature' || mode === 'precipitation') {
     if (climate.displayMonth?.month === month)
