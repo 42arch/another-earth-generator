@@ -1,6 +1,8 @@
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { civilizationGroupCssColor } from '@/core/simulation/civilization/group-color'
+import { KOPPEN_CODES, KOPPEN_COLORS, KOPPEN_LABELS } from '@/core/simulation/climate/koppen-climate-classifier'
 import { classifyOceanCurrentThermal } from '@/core/simulation/climate/ocean-current-thermal'
+import { BIOME_CODES, BIOME_COLORS, BIOME_LABELS } from '@/core/simulation/ecology/biome-data'
 import { CRUST_TYPE, SUBDUCTION_ROLE } from '@/core/simulation/geology/geology-data'
 
 interface Category {
@@ -24,6 +26,7 @@ export interface LayerStatistics {
   totalCells: number
   measure?: 'people'
   totalPopulation?: number
+  plateCounts?: { primary: number, micro: number }
   description?: string
   rows: LayerStatisticRow[]
 }
@@ -39,11 +42,21 @@ export function hasLayerStatistics(mode: string): boolean {
 const MODE_TITLES: Record<string, string> = {
   'dem': 'DEM图',
   'heightmap': '高度图',
+  'plates': '板块构造',
+  'plates-smoothed': '平滑板块',
+  'continents': '大陆区划',
+  'continents-smoothed': '平滑大陆',
+  'biome': 'Biome 生物群系',
+  'biome-smoothed': 'Biome 平滑群系',
+  'koppen': 'Köppen 气候分类',
+  'koppen-smoothed': 'Köppen 平滑气候分类',
   'ethnicity': '民族分布',
   'languages': '语言分布',
   'polities': '国家归属',
   'religions': '宗教与信仰',
   'subduction': '俯冲极性',
+  'stress': '构造应力',
+  'mantle': '地幔动态地形',
   'volcanism': '火山构造',
   'classification': '地形分类',
   'texture': '地形纹理',
@@ -59,6 +72,14 @@ const MODE_TITLES: Record<string, string> = {
 
 function row(key: string, category: Category, count: number, totalCells: number): LayerStatisticRow {
   return { key, ...category, count, percentage: totalCells > 0 ? count / totalCells * 100 : 0 }
+}
+
+function plateLabel(plate: number, primaryPlateLimit?: number): string {
+  if (plate < 0)
+    return '未分配板块'
+  if (primaryPlateLimit === undefined)
+    return `板块 #${plate}`
+  return `${plate < primaryPlateLimit ? '主要板块' : '小板块'} #${plate}`
 }
 
 function finish(
@@ -98,6 +119,7 @@ export function buildLayerStatistics(
   data: WorldSimulationState,
   mode: string,
   month: number,
+  primaryPlateCount?: number,
 ): LayerStatistics | null {
   const total = data.geography.elevation.length
   const geo = data.geography
@@ -106,6 +128,87 @@ export function buildLayerStatistics(
 
   if (mode === 'satellite')
     return null
+
+  if (mode === 'koppen' || mode === 'koppen-smoothed') {
+    const classes = data.climate?.koppen?.climateClass
+    if (!classes || classes.length !== total)
+      return null
+    const categories = KOPPEN_CODES.map((code, index) => ({
+      label: `${code} · ${KOPPEN_LABELS[index]}`,
+      color: `rgb(${KOPPEN_COLORS[index].map(value => Math.round(value * 255)).join(', ')})`,
+    }))
+    return countBuckets(mode, total, categories, region => classes[region])
+  }
+
+  if (mode === 'biome' || mode === 'biome-smoothed') {
+    const classes = data.biome?.biomeClass
+    if (!classes || classes.length !== total)
+      return null
+    const categories = BIOME_CODES.map((code, index) => ({
+      label: `${code} · ${BIOME_LABELS[index]}`,
+      color: `rgb(${BIOME_COLORS[index].map(value => Math.round(value * 255)).join(', ')})`,
+    }))
+    return countBuckets(mode, total, categories, region => classes[region])
+  }
+
+  if (mode === 'plates' || mode === 'plates-smoothed') {
+    const regions = geology.regionSuperPlate
+    const primaryPlateLimit = primaryPlateCount === undefined
+      ? undefined
+      : Math.max(2, Math.floor(primaryPlateCount))
+    const counts = new Map<number, number>()
+    for (let region = 0; region < total; region++) {
+      const plate = regions[region]
+      counts.set(plate, (counts.get(plate) ?? 0) + 1)
+    }
+    const plateCounts = primaryPlateLimit !== undefined
+      ? {
+          primary: [...counts.keys()].filter(plate => plate >= 0 && plate < primaryPlateLimit).length,
+          micro: [...counts.keys()].filter(plate => plate >= primaryPlateLimit).length,
+        }
+      : undefined
+    return {
+      mode,
+      title: MODE_TITLES[mode],
+      totalCells: total,
+      plateCounts,
+      description: plateCounts
+        ? '主要板块通常覆盖多个构造细分；小板块从主要板块边界拆出，面积较小，也独立运动。大陆可跨越板块边界。'
+        : undefined,
+      rows: [...counts].map(([plate, count]) => row(
+        String(plate),
+        {
+          label: plateLabel(plate, primaryPlateLimit),
+          color: plate >= 0 ? `hsl(${(plate * 137.508) % 360} 65% 55%)` : '#777b85',
+        },
+        count,
+        total,
+      )).sort((a, b) => b.count - a.count),
+    }
+  }
+
+  if (mode === 'continents' || mode === 'continents-smoothed') {
+    const counts = new Map<number, number>()
+    for (let region = 0; region < total; region++) {
+      const continent = geo.landMask[region] === 0 ? -2 : geo.visibleContinentId[region]
+      counts.set(continent, (counts.get(continent) ?? 0) + 1)
+    }
+    return {
+      mode,
+      title: MODE_TITLES[mode],
+      totalCells: total,
+      description: '按最终海陆显示大陆归属；新露出的陆地继承最近候选大陆的编号。',
+      rows: [...counts].map(([continent, count]) => row(
+        String(continent),
+        {
+          label: continent >= 0 ? `大陆 #${continent}` : continent === -2 ? '海洋' : '未归属大陆的陆地',
+          color: continent >= 0 ? `hsl(${(continent * 137.508) % 360} 65% 55%)` : continent === -2 ? '#1a2633' : '#9e9475',
+        },
+        count,
+        total,
+      )).sort((a, b) => b.count - a.count),
+    }
+  }
 
   if (categoricalMode === 'polities') {
     const polities = data.civilization?.polities
@@ -333,6 +436,36 @@ export function buildLayerStatistics(
       if (subducting > 0 || role === SUBDUCTION_ROLE.Subducting)
         return 3
       return geology.tectonics.regionCrustType[region] === CRUST_TYPE.Continental ? 0 : 1
+    })
+  }
+
+  if (mode === 'stress') {
+    let maximum = 0
+    for (const value of geology.tectonics.regionStress)
+      maximum = Math.max(maximum, value)
+    const categories = [
+      { label: '无应力', color: '#04050a' },
+      { label: '低应力 (0–35%)', color: '#73105e' },
+      { label: '中应力 (35–70%)', color: '#e62e0d' },
+      { label: '高应力 (70–100%)', color: '#fff273' },
+    ]
+    return countBuckets(mode, total, categories, (region) => {
+      const value = maximum > 0 ? geology.tectonics.regionStress[region] / maximum : 0
+      return value <= 0 ? 0 : value < 0.35 ? 1 : value < 0.7 ? 2 : 3
+    })
+  }
+
+  if (mode === 'mantle') {
+    const categories = [
+      { label: '明显下沉 (< −0.25)', color: '#156bff' },
+      { label: '轻微下沉 (−0.25–0)', color: '#31528a' },
+      { label: '中性 (0)', color: '#070811' },
+      { label: '轻微上涌 (0–0.25)', color: '#97452a' },
+      { label: '明显上涌 (≥ 0.25)', color: '#ff3d0f' },
+    ]
+    return countBuckets(mode, total, categories, (region) => {
+      const value = geology.mantleFlow[region]
+      return value < -0.25 ? 0 : value < 0 ? 1 : value === 0 ? 2 : value < 0.25 ? 3 : 4
     })
   }
 

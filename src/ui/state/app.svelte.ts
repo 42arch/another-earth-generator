@@ -1,5 +1,5 @@
 import type { MapProjectionId } from '@/core/projections/map-projection'
-import type { WorldViewMode } from '@/core/rendering/view-mode'
+import type { WorldViewMode } from '@/core/rendering'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { LayerStatistics } from '@/core/world/layer-statistics'
 import type WorldEngine from '@/core/world/world-engine'
@@ -145,11 +145,25 @@ export class AppState {
   }
 
   toggleThematicFill(fillId: string) {
+    this.setThematicFill(fillId, !this.params.appearance.thematicFills?.[fillId])
+  }
+
+  setThematicFill(fillId: string, enabled: boolean) {
     if (!this.params.appearance.thematicFills)
       this.params.appearance.thematicFills = {}
-    const current = Boolean(this.params.appearance.thematicFills[fillId])
-    this.params.appearance.thematicFills[fillId] = !current
+
+    this.params.appearance.thematicFills[fillId] = enabled
+    if (!enabled && (this.params.appearance.surfaceField === fillId
+      || (this.params.appearance.surfaceField === 'default' && this.params.appearance.baseMap === fillId))) {
+      this.params.appearance.surfaceField = 'default'
+      this.params.appearance.baseMap = this.params.appearance.mapStyle === 'satellite' ? 'satellite' : 'cartographic'
+    }
     this.updateParam('appearance', 'thematicFills', { ...this.params.appearance.thematicFills })
+  }
+
+  setOverlay(overlayId: string, enabled: boolean) {
+    this.params.appearance.overlays[overlayId] = enabled
+    this.updateParam('appearance', 'overlays', { ...this.params.appearance.overlays })
   }
 
   setMapStyle(style: WorldConfig['appearance']['mapStyle']) {

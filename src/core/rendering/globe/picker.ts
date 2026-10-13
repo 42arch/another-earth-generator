@@ -1,6 +1,7 @@
 import type { Mesh, PerspectiveCamera } from 'three'
 import type SphericalMesh from '@/core/mesh/mesh'
 import { Raycaster, Vector2 } from 'three'
+import { findNearestCandidateRegion, findNearestMeshRegion, getNormalizedDeviceCoordinates } from '@/core/rendering/shared/picking/spherical-picking'
 
 export class GlobePicker {
   private readonly raycaster = new Raycaster()
@@ -13,9 +14,7 @@ export class GlobePicker {
     surface: Mesh,
     mesh: SphericalMesh,
   ): number | null {
-    const bounds = canvas.getBoundingClientRect()
-    this.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1
-    this.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    getNormalizedDeviceCoordinates(event, canvas, this.pointer)
     this.raycaster.setFromCamera(this.pointer, camera)
     const intersection = this.raycaster.intersectObject(surface, false)[0]
     if (!intersection || intersection.faceIndex === undefined)
@@ -25,21 +24,9 @@ export class GlobePicker {
     if (faceRegions)
       return faceRegions[intersection.faceIndex!] ?? null
 
+    const direction = surface.worldToLocal(intersection.point.clone()).normalize()
     if (surface.userData.cartographicOcean) {
-      const direction = surface.worldToLocal(intersection.point.clone()).normalize()
-      let selected = -1
-      let bestDot = -Infinity
-      for (let region = 0; region < mesh.numRegions; region++) {
-        const offset = region * 3
-        const dot = direction.x * mesh.regionPosition[offset]
-          + direction.y * mesh.regionPosition[offset + 1]
-          + direction.z * mesh.regionPosition[offset + 2]
-        if (dot > bestDot) {
-          bestDot = dot
-          selected = region
-        }
-      }
-      return selected >= 0 ? selected : null
+      return findNearestMeshRegion(mesh, direction.x, direction.y, direction.z)
     }
 
     const triangleIndex = intersection.faceIndex! * 3
@@ -48,19 +35,6 @@ export class GlobePicker {
       mesh.triangles[triangleIndex + 1],
       mesh.triangles[triangleIndex + 2],
     ]
-    const direction = surface.worldToLocal(intersection.point.clone()).normalize()
-    let selected = candidates[0]
-    let bestDot = -Infinity
-    for (const region of candidates) {
-      const index = region * 3
-      const dot = direction.x * mesh.regionPosition[index]
-        + direction.y * mesh.regionPosition[index + 1]
-        + direction.z * mesh.regionPosition[index + 2]
-      if (dot > bestDot) {
-        bestDot = dot
-        selected = region
-      }
-    }
-    return selected
+    return findNearestCandidateRegion(mesh, direction.x, direction.y, direction.z, candidates)
   }
 }

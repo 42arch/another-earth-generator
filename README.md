@@ -31,7 +31,7 @@ Non-developers can start with the [Nature Wiki](docs/wiki/nature/README.md) to s
 
 Developers can first look at the [System Architecture](docs/wiki/nature/01-system-architecture.md) and the [Worker Pipeline](src/core/simulation/worker/simulation.worker.ts). The core code is located in `src/core/`, and the user interface is in `src/ui/`.
 
-Core modules are grouped by responsibility: [`simulation`](src/core/simulation/) contains the generation pipeline and domain models, [`data-source`](src/core/data-source/README.md) provides raster and GeoJSON sources, and [`rendering`](src/core/rendering/styles/README.md) contains the 2D/3D renderers and map styles. The shared spherical grid remains in [`mesh`](src/core/mesh/).
+Core modules are grouped by responsibility: [`simulation`](src/core/simulation/) contains the generation pipeline and domain models, [`data-source`](src/core/data-source/README.md) provides raster and GeoJSON sources, [`styles`](src/core/styles/README.md) defines declarative map styles, and [`rendering`](src/core/rendering/) contains the 2D/3D renderers. The shared spherical grid remains in [`mesh`](src/core/mesh/).
 
 The first two human geography stages now generate population, settlements, transport, and market access. Their implementation and later plans are documented in the [Civilization Wiki](docs/wiki/civilization/README.md).
 

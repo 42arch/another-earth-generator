@@ -6,7 +6,7 @@ import {
   geographicToCartesian,
   wrapLongitude,
 } from '@/core/projections/projection-math'
-import { MapRibbonGeometry } from '@/core/rendering/map/ribbon-geometry'
+import { MapRibbonGeometry } from '@/core/rendering/shared/geometries/ribbon-geometry'
 
 const MINIMUM_LATITUDE = -Math.PI / 2
 const MAXIMUM_LATITUDE = Math.PI / 2

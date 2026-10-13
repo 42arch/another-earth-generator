@@ -1,11 +1,10 @@
 import type {
   BufferGeometry,
 } from 'three'
-import type { GeoJsonFeatureHit } from '@/core/data-source/geojson'
+import type { GeoJsonFeatureHit } from '@/core/data-source'
 import type SphericalMesh from '@/core/mesh/mesh'
-import type { MapProjectionId } from '@/core/projections/map-projection'
-import type { GlobeLayerContext } from '@/core/rendering/globe/layers/globe-layer-set'
-import type { WorldViewMode } from '@/core/rendering/view-mode'
+import type { GlobeLayerContext } from '@/core/rendering/globe/layer-set'
+import type { IPlanetaryView } from '@/core/rendering/planetary-view'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
@@ -18,33 +17,30 @@ import {
   PerspectiveCamera,
   Scene,
   SphereGeometry,
-  SRGBColorSpace,
-  WebGLRenderer,
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { subscribeMapDataSourceChanges } from '@/core/data-source/data-sources'
-import { GlobeLayerSet } from '@/core/rendering/globe/layers/globe-layer-set'
+import { subscribeMapDataSourceChanges } from '@/core/data-source'
+import { GlobeLayerSet } from '@/core/rendering/globe/layer-set'
 import { GlobePicker } from '@/core/rendering/globe/picker'
 import { Stars } from '@/core/rendering/globe/stars'
 import { GlobeSurfaceGeometry } from '@/core/rendering/globe/surface-geometry'
-import { MapView } from '@/core/rendering/map/view'
-import { RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
-import { getGlobeStyleZoom, getMapStyleDocument, getMapStylePaint, getRasterStyleLayer, isMapStyleLayerVisible, resolveEffectiveSurfaceMode, usesVectorCartographicBaseMap } from '@/core/rendering/styles'
+import { RasterSurfaceRenderer } from '@/core/rendering/shared/surfaces/raster-surface-renderer'
 import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
+import { getGlobeStyleZoom, getMapStyleDocument, getMapStylePaint, getRasterStyleLayer, isMapStyleLayerVisible, resolveEffectiveSurfaceMode, usesVectorCartographicBaseMap } from '@/core/styles'
 
 const TERRAIN_VERTICAL_SCALE = 0.04
 const OCEAN_DEPTH_SCALE = 0.3
 
-export class GlobeView {
-  private readonly renderer: WebGLRenderer
-  private readonly scene = new Scene()
-  private readonly camera = new PerspectiveCamera(45, 1, 5, 2500)
+/**
+ * 纯粹的 3D 球体视口场景：管理地球流形网格、大气、星空、日照与三维场景图层
+ */
+export class GlobeView implements IPlanetaryView {
+  readonly scene = new Scene()
+  readonly camera = new PerspectiveCamera(45, 1, 5, 2500)
   private readonly controls: OrbitControls
-  private readonly mapView: MapView
   private readonly surfaceRenderer = new RasterSurfaceRenderer()
   private readonly geometryBuilder = new GlobeSurfaceGeometry()
   private readonly picker = new GlobePicker()
-  private readonly resizeObserver: ResizeObserver
   private readonly selectionMarker: Mesh<SphereGeometry, MeshBasicMaterial>
   private readonly ambientLight: AmbientLight
   private readonly sunlight: DirectionalLight
@@ -57,21 +53,19 @@ export class GlobeView {
   private readonly layers: GlobeLayerSet
   private readonly unsubscribeSourceChanges: () => void
   private params: WorldConfig
-  private pointerStartX = 0
-  private pointerStartY = 0
-  private viewMode: WorldViewMode = 'globe'
+  private active = true
 
   private readonly canvas: HTMLCanvasElement
-  private readonly onRegionSelected: (region: number, settlementId?: number, routeId?: number) => void
 
   constructor(
     canvas: HTMLCanvasElement,
     params: WorldConfig,
-    onRegionSelected: (region: number, settlementId?: number, routeId?: number) => void,
   ) {
     this.canvas = canvas
-    this.onRegionSelected = onRegionSelected
     this.params = { ...params }
+    this.scene.background = new Color(0x030308)
+    this.camera.position.set(0, 0, 320)
+
     this.layers = new GlobeLayerSet(this.scene, () => this.getLayerContext())
     this.unsubscribeSourceChanges = subscribeMapDataSourceChanges((id) => {
       const mode = resolveEffectiveSurfaceMode(this.params.appearance)
@@ -88,12 +82,6 @@ export class GlobeView {
         this.params.appearance.mapStyle,
       ))
     })
-    this.renderer = new WebGLRenderer({ canvas, antialias: true })
-    this.mapView = new MapView(canvas, params)
-    this.renderer.outputColorSpace = SRGBColorSpace
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.scene.background = new Color(0x030308)
-    this.camera.position.set(0, 0, 320)
 
     this.controls = new OrbitControls(this.camera, canvas)
     this.controls.enableDamping = true
@@ -118,16 +106,8 @@ export class GlobeView {
     this.selectionMarker.visible = false
     this.scene.add(this.selectionMarker)
 
-    this.resizeObserver = new ResizeObserver(this.handleResize)
-    this.resizeObserver.observe(canvas)
-    canvas.addEventListener('pointerdown', this.handlePointerDown)
-    canvas.addEventListener('pointerup', this.handlePointerUp)
-    this.handleResize()
-
     this.starsLayer = new Stars()
     this.scene.add(this.starsLayer.group)
-
-    this.renderer.setAnimationLoop(this.render)
   }
 
   setWorld(mesh: SphericalMesh, data: WorldSimulationState, params: WorldConfig): void {
@@ -165,7 +145,6 @@ export class GlobeView {
       )
     }
     this.scene.add(this.surface)
-    this.mapView.setWorld(mesh, data, params)
     this.selectionMarker.visible = false
     this.updateLighting(params)
     this.layers.rebuildAll()
@@ -214,24 +193,44 @@ export class GlobeView {
       this.surface.material.depthWrite = opacity >= 1
     }
 
-    this.mapView.updateAppearance(params)
     this.updateLighting(params)
-
     this.layers.updateOverlayVisibility()
-
-    const vectorMode = (mode: string) => mode === 'wind' || mode === 'ocean-current'
-    if ((modeChanged && (vectorMode(previousMode) || vectorMode(currentMode)))
-      || (monthChanged && vectorMode(currentMode))) {
-      this.layers.rebuild('vectors')
-    }
-
     this.layers.reconcileAppearance(previousParams, params)
+  }
+
+  setActive(active: boolean): void {
+    this.active = active
+    this.controls.enabled = active
+  }
+
+  update(): void {
+    this.controls.update()
+    const distance = this.camera.position.distanceTo(this.controls.target)
+    if (this.surface) {
+      const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
+      const styleZoom = getGlobeStyleZoom(distance, this.params.core.planetRadius)
+      const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, effectiveMode)
+      this.surface.visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)
+        || (activeRaster ? isMapStyleLayerVisible(this.params.appearance.mapStyle, activeRaster.id, styleZoom, 'globe') : true)
+    }
+    this.layers.updateStyleZoom(distance)
+  }
+
+  resize(width: number, height: number): void {
+    this.camera.aspect = width / height
+    this.camera.updateProjectionMatrix()
+    this.layers.updateViewport(width, height)
+  }
+
+  resetCamera(): void {
+    this.camera.position.set(0, 0, 320)
+    this.controls.target.set(0, 0, 0)
+    this.controls.update()
   }
 
   selectRegion(region: number): void {
     if (region < 0 || !this.mesh) {
       this.selectionMarker.visible = false
-      this.mapView.clearSelection()
       return
     }
     const index = region * 3
@@ -249,63 +248,52 @@ export class GlobeView {
       this.mesh.regionPosition[index + 2] * radius,
     )
     this.selectionMarker.visible = true
-    this.mapView.selectRegion(region)
   }
 
-  setViewMode(mode: WorldViewMode): void {
-    if (this.viewMode === mode)
-      return
-    this.viewMode = mode
-    const globeActive = mode === 'globe'
-    this.controls.enabled = globeActive
-    this.mapView.setActive(!globeActive)
+  clearSelection(): void {
+    this.selectionMarker.visible = false
   }
 
-  setMapProjection(id: MapProjectionId): void {
-    this.mapView.setProjection(id)
+  pick(event: PointerEvent): number | null {
+    if (!this.surface || !this.mesh)
+      return null
+    return this.picker.pick(event, this.canvas, this.camera, this.surface, this.mesh)
   }
 
-  resetCamera(): void {
-    if (this.viewMode === 'map') {
-      this.mapView.resetCamera()
-      return
-    }
-    this.camera.position.set(0, 0, 320)
-    this.controls.target.set(0, 0, 0)
-    this.controls.update()
+  pickSettlement(event: PointerEvent): number | null {
+    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.civilization)
+      return null
+    return this.layers.pickSettlement(event, this.canvas, this.camera)
+  }
+
+  pickGeoJsonFeature(event: PointerEvent): GeoJsonFeatureHit | null {
+    return this.layers.pickGeoJsonFeature(event, this.canvas, this.camera)
   }
 
   destroy(): void {
-    this.renderer.setAnimationLoop(null)
-    this.resizeObserver.disconnect()
-    this.canvas.removeEventListener('pointerdown', this.handlePointerDown)
-    this.canvas.removeEventListener('pointerup', this.handlePointerUp)
-    this.controls.dispose()
-    this.mapView.destroy()
-    this.disposeSurface()
     this.unsubscribeSourceChanges()
-    this.layers.destroy()
-    if (this.starsLayer)
-      this.starsLayer.dispose()
-    this.starsLayer = null
-    this.selectionMarker.geometry.dispose()
-    this.selectionMarker.material.dispose()
-    this.renderer.dispose()
+    this.disposeSurface()
+    this.layers.disposeAll()
+    this.controls.dispose()
   }
 
   private updateLighting(params: WorldConfig): void {
-    const effectiveMode = resolveEffectiveSurfaceMode(params.appearance)
-    if (effectiveMode === 'satellite' && params.appearance.overlays['day-night']) {
-      // Night mode ambient (make it slightly dark, but not pitch black)
-      this.ambientLight.color.setHex(0x667799)
-      this.ambientLight.intensity = 1.6
+    const isCartographic = params.appearance.mapStyle !== 'satellite'
+    if (isCartographic) {
+      this.ambientLight.color.setHex(0xFFFFFF)
+      this.ambientLight.intensity = 1.0
+      this.sunlight.intensity = 0.0
+      return
+    }
 
-      this.sunlight.color.setHex(0xFFF8EE)
-      this.sunlight.intensity = 2.2
+    if (params.appearance.overlays.dayNight) {
+      this.ambientLight.color.setHex(0x020205)
+      this.ambientLight.intensity = 0.8
 
-      // Calculate sun direction based on climate month
+      this.sunlight.color.setHex(0xFFFAF0)
+      this.sunlight.intensity = 4.0
+
       const month = params.appearance.climateMonth
-      // Approximation matching monthly-forcing.ts
       const days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
       let midpoint = 0
       for (let i = 0; i < month; i++) midpoint += days[i]
@@ -315,15 +303,11 @@ export class GlobeView {
       const tilt = Math.max(0, Math.min(90, params.climate.axialTiltDeg)) * Math.PI / 180
       const solarDeclination = Math.asin(Math.sin(tilt) * Math.sin(orbitalPhase))
 
-      // Assume sun is at longitude 0 initially, or fixed in world space.
-      // A static direction is enough to show day/night terminator.
-      // In Three.js: Y is up (north pole), Z is prime meridian, X is 90 degrees East.
-      // So sun direction:
       const sunDist = 300
       this.sunlight.position.set(
-        0, // X: looking straight at prime meridian
-        sunDist * Math.sin(solarDeclination), // Y: declination
-        sunDist * Math.cos(solarDeclination), // Z: distance
+        0,
+        sunDist * Math.sin(solarDeclination),
+        sunDist * Math.cos(solarDeclination),
       )
     }
     else {
@@ -336,18 +320,6 @@ export class GlobeView {
     }
   }
 
-  private pickSettlement(event: PointerEvent): number | null {
-    if (!this.params.appearance.overlays.cities || !this.mesh || !this.data?.civilization)
-      return null
-    return this.layers.pickSettlement(event, this.canvas, this.camera)
-  }
-
-  pickGeoJsonFeature(event: PointerEvent): GeoJsonFeatureHit | null {
-    return this.viewMode === 'map'
-      ? this.mapView.pickGeoJsonFeature(event)
-      : this.layers.pickGeoJsonFeature(event, this.canvas, this.camera)
-  }
-
   private getLayerContext(): GlobeLayerContext | null {
     if (!this.mesh || !this.data)
       return null
@@ -357,6 +329,8 @@ export class GlobeView {
       data: this.data,
       params: this.params,
       sunlight: this.sunlight.position,
+      viewportWidth: Math.max(1, this.canvas.clientWidth),
+      viewportHeight: Math.max(1, this.canvas.clientHeight),
     }
   }
 
@@ -409,75 +383,5 @@ export class GlobeView {
 
   private isElevationColorMode(mode: string): mode is 'dem' | 'heightmap' {
     return mode === 'dem' || mode === 'heightmap'
-  }
-
-  private handleResize = () => {
-    const width = Math.max(1, this.canvas.clientWidth)
-    const height = Math.max(1, this.canvas.clientHeight)
-    this.renderer.setSize(width, height, false)
-    this.camera.aspect = width / height
-    this.camera.updateProjectionMatrix()
-    this.mapView.resize(width, height)
-  }
-
-  public enableRegionPicking = false
-
-  private handlePointerDown = (event: PointerEvent) => {
-    this.pointerStartX = event.clientX
-    this.pointerStartY = event.clientY
-  }
-
-  private handlePointerUp = (event: PointerEvent) => {
-    if (
-      Math.hypot(event.clientX - this.pointerStartX, event.clientY - this.pointerStartY) > 4
-      || !this.mesh
-    ) {
-      return
-    }
-    const settlementId = this.viewMode === 'map'
-      ? this.mapView.pickSettlement(event)
-      : this.pickSettlement(event)
-    if (settlementId !== null && this.data?.civilization) {
-      this.onRegionSelected(this.data.civilization.settlements[settlementId].region, settlementId)
-      return
-    }
-    if (!this.enableRegionPicking && !this.params.appearance.overlays.routes)
-      return
-    const region = this.viewMode === 'map'
-      ? this.mapView.pick(event)
-      : this.surface
-        ? this.picker.pick(event, this.canvas, this.camera, this.surface, this.mesh)
-        : null
-    if (region === null)
-      return
-    const routeId = this.params.appearance.overlays.routes
-      ? this.data?.civilization?.transport?.routeByRegion[region] ?? -1
-      : -1
-    if (routeId >= 0) {
-      this.onRegionSelected(region, undefined, routeId)
-      return
-    }
-    if (!this.enableRegionPicking)
-      return
-    this.onRegionSelected(region)
-  }
-
-  private render = () => {
-    if (this.viewMode === 'map') {
-      this.mapView.update()
-      this.renderer.render(this.mapView.scene, this.mapView.camera)
-      return
-    }
-    this.controls.update()
-    const distance = this.camera.position.distanceTo(this.controls.target)
-    if (this.surface) {
-      const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
-      const styleZoom = getGlobeStyleZoom(distance, this.params.core.planetRadius)
-      const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, effectiveMode)
-      this.surface.visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)
-        || (activeRaster ? isMapStyleLayerVisible(this.params.appearance.mapStyle, activeRaster.id, styleZoom, 'globe') : true)
-    }
-    this.layers.updateStyleZoom(distance)
-    this.renderer.render(this.scene, this.camera)
   }
 }

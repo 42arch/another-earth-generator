@@ -1,5 +1,6 @@
 import type SphericalMesh from '@/core/mesh/mesh'
 import { BufferAttribute, BufferGeometry } from 'three'
+import { updateSurfaceVertexColors } from '@/core/rendering/shared/geometries/surface-geometry-helpers'
 import { elevationKmToDisplayCoordinate } from '@/core/simulation/geography/elevation-units'
 
 export class GlobeSurfaceGeometry {
@@ -151,21 +152,7 @@ export class GlobeSurfaceGeometry {
   }
 
   updateColors(geometry: BufferGeometry, colors: Float32Array): void {
-    const faceRegions = geometry.userData.faceRegions as Uint32Array | undefined
-    const colorAttribute = geometry.getAttribute('color') as BufferAttribute
-    if (!faceRegions)
-      return
-    for (let face = 0; face < faceRegions.length; face++) {
-      const source = faceRegions[face] * 3
-      const target = face * 9
-      for (let vertex = 0; vertex < 3; vertex++) {
-        const offset = target + vertex * 3
-        colorAttribute.array[offset] = colors[source]
-        colorAttribute.array[offset + 1] = colors[source + 1]
-        colorAttribute.array[offset + 2] = colors[source + 2]
-      }
-    }
-    colorAttribute.needsUpdate = true
+    updateSurfaceVertexColors(geometry, colors)
   }
 
   private writeVertex(

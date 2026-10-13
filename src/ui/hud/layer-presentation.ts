@@ -12,7 +12,7 @@ import {
   Wind,
   Workflow,
 } from '@lucide/svelte'
-import { getMapStyleDocument } from '@/core/rendering/styles'
+import { getMapStyleDocument } from '@/core/styles'
 
 const LAYER_ICONS: Record<string, typeof Component> = {
   'satellite': Satellite,
@@ -76,6 +76,9 @@ export function formatLayerStatistics(statistics: LayerStatistics): string {
     ...(statistics.measure === 'people'
       ? [`模型总人口（人）\t${statistics.totalPopulation ?? 0}`]
       : [`总 cell\t${statistics.totalCells}`]),
+    ...(statistics.plateCounts
+      ? [`主要板块\t${statistics.plateCounts.primary}`, `小板块\t${statistics.plateCounts.micro}`]
+      : []),
     ...(statistics.description ? [`说明\t${statistics.description}`] : []),
     statistics.mode.startsWith('polities') ? '分类\t居民人数（人）\t占比\t面积（km²）' : statistics.measure === 'people' ? '分类\t居民人数（人）\t占比' : '分类\tcell 数\t占比',
     ...statistics.rows.map(item => `${item.label}\t${item.count}\t${item.percentage.toFixed(6)}%${item.areaKm2 === undefined ? '' : `\t${item.areaKm2}`}`),

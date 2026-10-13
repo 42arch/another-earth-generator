@@ -82,7 +82,7 @@ flowchart TD
 得益于顶级 MapStyle 架构，未来新增任何个性化风格（如羊皮纸、工程蓝图、赛博科幻），**无需侵入任何底层渲染器代码**，只需新增一个声明式样式对象即可直接生效：
 
 ```typescript
-import type { MapStyleDocument } from '@/core/rendering/styles/style-spec'
+import type { MapStyleDocument } from '@/core/styles'
 
 export const parchmentStyle: MapStyleDocument = {
   version: 1,
@@ -224,7 +224,7 @@ export const parchmentStyle: MapStyleDocument = {
 1. **色带迁移为标准样式表达式**：
    - 在样式预设（`Standard`, `Light`, `Dark`, `Satellite`）中，使用声明式表达式表达温度、降水、高程（DEM/Heightmap）以及卫星图层映射。
    - `presets.ts` 中的各个 `MapStyleDocument` 彻底展开为全量对象常量导出，结构清晰一目了然。
-   - 在 `src/core/rendering/styles/default-raster-layers.ts` 中建立全量物理底图（高程、温度、降水、板块、大陆、应力、地幔流、冰川、柯本气候、生物群系、人口密度、市场可达性等）的标准声明式图层规范。
+   - 在 `src/core/styles/` 中建立全量物理底图（高程、温度、降水、板块、大陆、应力、地幔流、冰川、柯本气候、生物群系、人口密度、市场可达性等）的标准声明式图层规范。
 2. **彻底解耦并完全移除 `WorldColorizer` (Zero-Legacy)**：
    - **封装脱离任何具体图层业务的纯通用求值函数 `evaluateRasterField`**：仅接收数据源字段与 `raster-color` 表达式，纯函数式输出颜色数组，彻底消灭渲染器中 500+ 行 `if (mode === ...)` 硬编码分支与私有调色函数；
    - 卫星遥感多场混合算法解耦为独立的 `SatelliteSurfaceRenderer`；

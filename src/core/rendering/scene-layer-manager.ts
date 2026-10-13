@@ -6,14 +6,6 @@ export interface SceneLayer {
 }
 
 export type LayerHideReason = 'configuration' | 'style-visibility' | 'manual'
-export type HiddenLayerResourcePolicy = 'retain' | 'dispose'
-
-/** Hidden layers stay warm; only explicit invalidation/disposal releases resources. */
-export const HIDDEN_LAYER_RESOURCE_POLICY: Readonly<Record<LayerHideReason, HiddenLayerResourcePolicy>> = {
-  configuration: 'retain',
-  'style-visibility': 'retain',
-  manual: 'retain',
-}
 
 export class SceneLayerManager {
   private readonly layers = new Map<string, SceneLayer>()
@@ -67,16 +59,11 @@ export class SceneLayerManager {
     }
   }
 
-  /** Hide a layer according to the explicit retention policy for the reason. */
+  /** Hidden layers retain their resources until explicitly disposed. */
   hide(id: string, reason: LayerHideReason): void {
     const layer = this.layers.get(id)
     if (!layer)
       return
-
-    if (HIDDEN_LAYER_RESOURCE_POLICY[reason] === 'dispose') {
-      this.dispose(id)
-      return
-    }
 
     layer.group.visible = false
     this.hiddenReasons.set(id, reason)
@@ -88,17 +75,6 @@ export class SceneLayerManager {
 
   has(id: string): boolean {
     return this.layers.has(id)
-  }
-
-  replace<T extends SceneLayer>(id: string, create: () => T): T | null {
-    this.dispose(id)
-    if (!this.canCreateLayer())
-      return null
-
-    const next = create()
-    this.scene.add(next.group)
-    this.layers.set(id, next)
-    return next
   }
 
   get<T extends SceneLayer>(id: string): T | null {

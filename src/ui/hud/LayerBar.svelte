@@ -20,8 +20,7 @@
     X,
   } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
-  import { CARTOGRAPHIC_STYLES } from '@/core/rendering/styles/cartographic-styles'
-  import { getMapStyleDocument } from '@/core/rendering/styles'
+  import { CARTOGRAPHIC_STYLES, getMapStyleDocument } from '@/core/styles'
   import { hasLayerStatistics } from '@/core/world/layer-statistics'
   import Checkbox from '@/ui/components/Checkbox.svelte'
   import { formatLayerStatistics, getLayerStatisticColor } from '@/ui/hud/layer-presentation'
@@ -91,7 +90,6 @@
       items: [
         { id: 'nation-borders', name: '国界线', icon: Map },
         { id: 'cities', name: '聚落中心', icon: MapPin },
-        { id: 'sacred-sites', name: '宗教圣地', icon: Sparkles },
       ],
     },
     {
@@ -253,7 +251,7 @@
               <Checkbox
                 label=''
                 checked={isChecked}
-                onchange={() => appState.toggleThematicFill(thematic.id)}
+                onchange={checked => appState.setThematicFill(thematic.id, checked)}
               />
             </div>
           {/each}
@@ -281,7 +279,7 @@
                     <Checkbox
                       label=''
                       checked={Boolean(appState.params.appearance.overlays[item.id])}
-                      onchange={() => appState.toggleOverlay(item.id)}
+                      onchange={checked => appState.setOverlay(item.id, checked)}
                     />
                   </div>
                 {/each}
@@ -303,7 +301,7 @@
             <Checkbox
               label=''
               checked={Boolean(appState.params.appearance.overlays.atmosphere)}
-              onchange={() => appState.toggleOverlay('atmosphere')}
+              onchange={checked => appState.setOverlay('atmosphere', checked)}
             />
           </div>
           <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
@@ -311,7 +309,7 @@
             <Checkbox
               label=''
               checked={Boolean(appState.params.appearance.overlays.clouds)}
-              onchange={() => appState.toggleOverlay('clouds')}
+              onchange={checked => appState.setOverlay('clouds', checked)}
             />
           </div>
           <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
@@ -319,7 +317,7 @@
             <Checkbox
               label=''
               checked={Boolean(appState.params.appearance.overlays['day-night'])}
-              onchange={() => appState.toggleOverlay('day-night')}
+              onchange={checked => appState.setOverlay('day-night', checked)}
             />
           </div>
           <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
@@ -327,7 +325,7 @@
             <Checkbox
               label=''
               checked={Boolean(appState.params.appearance.overlays.graticule)}
-              onchange={() => appState.toggleOverlay('graticule')}
+              onchange={checked => appState.setOverlay('graticule', checked)}
             />
           </div>
           <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>
@@ -335,7 +333,7 @@
             <Checkbox
               label=''
               checked={Boolean(appState.params.appearance.overlays.wireframe)}
-              onchange={() => appState.toggleOverlay('wireframe')}
+              onchange={checked => appState.setOverlay('wireframe', checked)}
             />
           </div>
           <div class='flex items-center justify-between px-2 py-1 rounded-lg bg-white/[0.02] border border-white/[0.04]'>

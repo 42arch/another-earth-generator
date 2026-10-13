@@ -1,7 +1,9 @@
-import type { GeoJsonFeatureHit } from '@/core/data-source/geojson'
+import type { GeoJsonFeatureHit } from '@/core/data-source'
 import type SphericalMesh from '@/core/mesh/mesh'
 import type { MapProjection, MapProjectionId } from '@/core/projections/map-projection'
-import type { MapLayerContext } from '@/core/rendering/map/layers/map-layer-set'
+import type { MapLayerContext } from '@/core/rendering/map/layer-set'
+import type { IPlanetaryView } from '@/core/rendering/planetary-view'
+import type { ViewportBounds } from '@/core/rendering/shared/styled/styled-layer-behavior'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { WorldSimulationState } from '@/core/simulation/state'
 import {
@@ -15,16 +17,16 @@ import {
   Scene,
 } from 'three'
 import { MapControls } from 'three/addons/controls/MapControls.js'
-import { subscribeMapDataSourceChanges } from '@/core/data-source/data-sources'
+import { subscribeMapDataSourceChanges } from '@/core/data-source'
 import { getMapProjection } from '@/core/projections/d3-map-projection'
 import { FULL_LONGITUDE, wrapLongitude } from '@/core/projections/projection-math'
-import { MapLayerSet } from '@/core/rendering/map/layers/map-layer-set'
+import { MapLayerSet } from '@/core/rendering/map/layer-set'
 import { MapPicker } from '@/core/rendering/map/picker'
 import { MapSurfaceGeometry } from '@/core/rendering/map/surface-geometry'
-import { RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
-import { getMapStyleDocument, getMapStylePaint, getMapStyleZoom, getRasterStyleLayer, isMapStyleLayerVisible, resolveEffectiveSurfaceMode, usesVectorCartographicBaseMap } from '@/core/rendering/styles'
+import { RasterSurfaceRenderer } from '@/core/rendering/shared/surfaces/raster-surface-renderer'
+import { getMapStyleDocument, getMapStylePaint, getMapStyleZoom, getRasterStyleLayer, isMapStyleLayerVisible, resolveEffectiveSurfaceMode, usesVectorCartographicBaseMap } from '@/core/styles'
 
-export class MapView {
+export class MapView implements IPlanetaryView {
   readonly scene = new Scene()
   readonly camera = new OrthographicCamera(-Math.PI, Math.PI, Math.PI / 2, -Math.PI / 2, 0.1, 100)
   private readonly surfaceRenderer = new RasterSurfaceRenderer()
@@ -156,13 +158,6 @@ export class MapView {
     }
 
     this.layers.updateOverlayVisibility()
-
-    const vectorMode = (mode: string) => mode === 'wind' || mode === 'ocean-current'
-    if ((modeChanged && (vectorMode(previousMode) || vectorMode(currentMode)))
-      || (monthChanged && vectorMode(currentMode))) {
-      this.layers.rebuild('vectors')
-    }
-
     this.layers.reconcileAppearance(previousParams, params)
   }
 
@@ -368,16 +363,7 @@ export class MapView {
 
   update(): void {
     this.controls.update()
-    if (this.surface) {
-      const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
-      const styleZoom = getMapStyleZoom(this.camera.zoom)
-      const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, effectiveMode)
-      const visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)
-        || (activeRaster ? isMapStyleLayerVisible(this.params.appearance.mapStyle, activeRaster.id, styleZoom, 'map') : true)
-      for (const surface of this.surfaceCopies)
-        surface.visible = visible
-    }
-    this.layers.update(this.camera.zoom)
+
     const visibleHalfWidth = (this.camera.right - this.camera.left)
       / Math.max(this.camera.zoom * 2, Number.EPSILON)
     const maximumX = Math.max(0, this.projection.worldWidth * 0.5 - visibleHalfWidth)
@@ -399,6 +385,24 @@ export class MapView {
       this.controls.target.y += yShift
       this.camera.position.y += yShift
     }
+
+    if (this.surface) {
+      const effectiveMode = resolveEffectiveSurfaceMode(this.params.appearance)
+      const styleZoom = getMapStyleZoom(this.camera.zoom)
+      const activeRaster = getRasterStyleLayer(this.params.appearance.mapStyle, effectiveMode)
+      const visible = usesVectorCartographicBaseMap(this.params.appearance.mapStyle, effectiveMode)
+        || (activeRaster ? isMapStyleLayerVisible(this.params.appearance.mapStyle, activeRaster.id, styleZoom, 'map') : true)
+      for (const surface of this.surfaceCopies)
+        surface.visible = visible
+    }
+
+    const viewportBounds: ViewportBounds = {
+      minX: this.camera.position.x - visibleHalfWidth,
+      maxX: this.camera.position.x + visibleHalfWidth,
+      minY: this.camera.position.y - visibleHalfHeight,
+      maxY: this.camera.position.y + visibleHalfHeight,
+    }
+    this.layers.update(this.camera.zoom, viewportBounds)
   }
 
   resetCamera(): void {

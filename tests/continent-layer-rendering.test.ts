@@ -1,6 +1,6 @@
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { expect, it } from 'vitest'
-import { RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
+import { RasterSurfaceRenderer } from '@/core/rendering/shared/surfaces/raster-surface-renderer'
 
 it('colors the continent layer by final land and sea while retaining candidate continent IDs', () => {
   const data = {

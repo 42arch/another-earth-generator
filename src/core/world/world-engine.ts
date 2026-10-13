@@ -1,5 +1,5 @@
 import type { MapProjectionId } from '@/core/projections/map-projection'
-import type { WorldViewMode } from '@/core/rendering/view-mode'
+import type { WorldViewMode } from '@/core/rendering'
 import type { WorldConfig } from '@/core/simulation/config'
 import type { GeneratedSphericalWorld } from '@/core/simulation/pipeline/types'
 import type { LayerStatistics } from '@/core/world/layer-statistics'

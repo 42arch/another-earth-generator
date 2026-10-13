@@ -5,8 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
 import { getMapProjection } from '@/core/projections/d3-map-projection'
-import { GlobeClimateVectorLayer } from '@/core/rendering/globe/layers/globe-vector-layer'
-import { MapClimateVectorLayer } from '@/core/rendering/map/layers/map-vector-layer'
+import { ClimateVectorOverlayLayer } from '@/core/rendering/shared/layers/climate-vector-layer'
 
 function createMockData(mesh: SphericalMesh, kind: 'wind' | 'ocean-current'): WorldSimulationState {
   const n = mesh.numRegions
@@ -46,36 +45,44 @@ describe('climate vector layers (wind and ocean-current)', () => {
   const mesh = new SphericalMesh(new FibonacciSphereBuilder().build(42, 32))
   const projection = getMapProjection('mercator')
 
-  it('builds and disposes MapClimateVectorLayer without throwing for wind', () => {
+  it('builds and disposes ClimateVectorOverlayLayer in map view without throwing for wind', () => {
     const data = createMockData(mesh, 'wind')
     const params = createConfig('wind')
-    const layer = new MapClimateVectorLayer(mesh, data, params, projection, 0)
+    const layer = new ClimateVectorOverlayLayer(mesh, data, params, {
+      view: 'map',
+      projection,
+      centralMeridian: 0,
+    })
 
     expect(layer.group.children.length).toBeGreaterThan(0)
     expect(() => layer.dispose()).not.toThrow()
     expect(layer.group.children.length).toBe(0)
   })
 
-  it('builds and disposes MapClimateVectorLayer without throwing for ocean-current', () => {
+  it('builds and disposes ClimateVectorOverlayLayer in map view without throwing for ocean-current', () => {
     const data = createMockData(mesh, 'ocean-current')
     const params = createConfig('ocean-current')
-    const layer = new MapClimateVectorLayer(mesh, data, params, projection, 0)
+    const layer = new ClimateVectorOverlayLayer(mesh, data, params, {
+      view: 'map',
+      projection,
+      centralMeridian: 0,
+    })
 
     expect(layer.group.children.length).toBeGreaterThan(0)
     expect(() => layer.dispose()).not.toThrow()
     expect(layer.group.children.length).toBe(0)
   })
 
-  it('builds and disposes GlobeClimateVectorLayer without throwing for wind and ocean-current', () => {
+  it('builds and disposes ClimateVectorOverlayLayer in globe view without throwing for wind and ocean-current', () => {
     const windData = createMockData(mesh, 'wind')
     const windParams = createConfig('wind')
-    const windLayer = new GlobeClimateVectorLayer(mesh, windData, windParams)
+    const windLayer = new ClimateVectorOverlayLayer(mesh, windData, windParams, { view: 'globe' })
     expect(windLayer.group.children.length).toBeGreaterThan(0)
     windLayer.dispose()
 
     const oceanData = createMockData(mesh, 'ocean-current')
     const oceanParams = createConfig('ocean-current')
-    const oceanLayer = new GlobeClimateVectorLayer(mesh, oceanData, oceanParams)
+    const oceanLayer = new ClimateVectorOverlayLayer(mesh, oceanData, oceanParams, { view: 'globe' })
     expect(oceanLayer.group.children.length).toBeGreaterThan(0)
     oceanLayer.dispose()
   })

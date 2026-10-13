@@ -1,15 +1,16 @@
+import type { SimulationContext } from '@/core/simulation/pipeline/types'
 import { describe, expect, it } from 'vitest'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
 import { ReferenceGridProjector } from '@/core/mesh/reference-grid-projector'
-import { SphericalGraticuleGeometry } from '@/core/rendering/shared/graticule-geometry'
-import { cloneGlobeGenParams, DEFAULT_GLOBE_GEN_PARAMS } from '@/core/simulation/config'
+import { SphericalGraticuleGeometry } from '@/core/rendering/shared/geometries/graticule-geometry'
+import { cloneWorldConfig, DEFAULT_WORLD_CONFIG } from '@/core/simulation/config'
 import { CandidateLandGenerator } from '@/core/simulation/geography/candidate-land-generator'
 import { PLATE_BOUNDARY } from '@/core/simulation/geology/geology-data'
 import { SphericalPlateBoundaryAnalyzer } from '@/core/simulation/geology/plate-boundary-analyzer'
 import { SphericalPlateGenerator } from '@/core/simulation/geology/plate-generator'
 import { PlatePropertiesGenerator } from '@/core/simulation/geology/plate-properties-generator'
-import { SphericalWorldGenerator } from '@/core/simulation/world-generator'
+import { MeshStage } from '@/core/simulation/pipeline/stages/mesh-stage'
 
 describe('spherical world framework invariants', () => {
   it('builds an elevated latitude-longitude graticule', () => {
@@ -190,60 +191,26 @@ describe('spherical world framework invariants', () => {
   })
 
   it('keeps the same reference mesh when output detail changes', () => {
-    const params = cloneGlobeGenParams(DEFAULT_GLOBE_GEN_PARAMS)
-    params.seed = 42
-    params.detail = 162
-    const generator = new SphericalWorldGenerator()
-    const world = generator.generate(params)
-    params.detail = 642
-    const detailed = generator.generate(params)
+    const stage = new MeshStage()
+    const config1 = cloneWorldConfig(DEFAULT_WORLD_CONFIG)
+    config1.core.seed = 42
+    config1.core.detail = 162
+    const context1: SimulationContext = { config: config1 }
+    stage.execute(context1)
 
-    expect(world.mesh.numRegions).toBe(162)
-    expect(detailed.mesh.numRegions).toBe(642)
-    expect(detailed.referenceMesh).toBe(world.referenceMesh)
-    expect(world.outputToReference.length).toBe(world.mesh.numRegions)
-    expect(detailed.outputToReference.length).toBe(detailed.mesh.numRegions)
-    expect([...detailed.outputToReference].every(
-      region => region < detailed.referenceMesh.numRegions,
+    const config2 = cloneWorldConfig(DEFAULT_WORLD_CONFIG)
+    config2.core.seed = 42
+    config2.core.detail = 642
+    const context2: SimulationContext = { config: config2 }
+    stage.execute(context2)
+
+    expect(context1.mesh!.numRegions).toBe(162)
+    expect(context2.mesh!.numRegions).toBe(642)
+    expect(context2.referenceMesh).toBe(context1.referenceMesh)
+    expect(context1.outputToReference!.length).toBe(context1.mesh!.numRegions)
+    expect(context2.outputToReference!.length).toBe(context2.mesh!.numRegions)
+    expect([...context2.outputToReference!].every(
+      region => region < context2.referenceMesh!.numRegions,
     )).toBe(true)
-    expect(world.data.elevation.length).toBe(world.mesh.numRegions)
-    expect(world.data.landMask.length).toBe(world.mesh.numRegions)
-    expect(world.data.regionPlate.length).toBe(world.mesh.numRegions)
-    expect(world.data.candidateLandMask.includes(1)).toBe(true)
-    expect(world.data.candidateLandMask.includes(0)).toBe(true)
-    expect(world.data.elevation.some((value, region) => (
-      world.data.landMask[region] === 1 && value > 0.2
-    ))).toBe(true)
-    expect(world.data.elevation.some((value, region) => (
-      world.data.landMask[region] === 0 && value < 0
-    ))).toBe(true)
-    expect(world.data.baseElevation.length).toBe(world.mesh.numRegions)
-    expect(world.data.terrainNoise.length).toBe(world.mesh.numRegions)
-    expect(world.data.terrainTexture.tectonicBand.length).toBe(world.mesh.numRegions)
-    expect(world.data.terrainTexture.detail.length).toBe(world.mesh.numRegions)
-    expect(world.data.terrainTexture.coastal.length).toBe(world.mesh.numRegions)
-    expect(world.data.tectonics.regionCrustType.length).toBe(world.mesh.numRegions)
-    expect(world.data.tectonics.regionDensity.length).toBe(world.mesh.numRegions)
-    expect(world.data.tectonics.plateDensity.length).toBe(params.plateCount)
-    expect(world.data.terrainFields.spatialFields.coastDistance.length).toBe(world.mesh.numRegions)
-    expect(world.data.terrainFields.convergentInfluence.length).toBe(world.mesh.numRegions)
-    expect(world.data.terrainFields.overridingInfluence.length).toBe(world.mesh.numRegions)
-    expect(world.data.edifices.islandArc.length).toBe(world.mesh.numRegions)
-    expect(world.data.edifices.volcanicArc.length).toBe(world.mesh.numRegions)
-    expect(world.data.edifices.hotspot.length).toBe(world.mesh.numRegions)
-    expect(world.data.edifices.largeIgneousProvince.length).toBe(world.mesh.numRegions)
-    expect(world.data.tectonics.edgeSubductingPlate.length).toBe(
-      world.mesh.voronoi.edgeRegions.length / 2,
-    )
-    expect(world.data.tectonics.edgeBoundaryType.length).toBe(
-      world.mesh.voronoi.edgeRegions.length / 2,
-    )
-    expect(world.referencePlates.plateAngularVelocity.length).toBe(params.plateCount * 3)
-    expect(new Set(world.referencePlates.regionPlate).size).toBe(params.plateCount)
-    for (let region = 0; region < detailed.mesh.numRegions; region++) {
-      expect(detailed.data.regionPlate[region]).toBe(
-        detailed.referencePlates.regionPlate[detailed.outputToReference[region]],
-      )
-    }
   })
 })

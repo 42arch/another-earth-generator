@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { FibonacciSphereBuilder } from '@/core/mesh/fibonacci-sphere-builder'
 import SphericalMesh from '@/core/mesh/mesh'
-import { SphericalRegionTopologyBuilder } from '@/core/rendering/shared/spherical-region-topology'
+import { SphericalRegionTopologyBuilder } from '@/core/mesh/spherical-region-topology'
 
 it('closes region borders from Delaunay adjacency when cell corners are geometrically misordered', () => {
   const mesh = new SphericalMesh(new FibonacciSphereBuilder().build(42, 9))

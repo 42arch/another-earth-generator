@@ -31,7 +31,7 @@ pnpm dev
 
 开发者可以首先查看 [系统架构](docs/wiki/nature/01-system-architecture.zh-CN.md) 和 [Worker 流水线](src/core/simulation/worker/simulation.worker.ts)。核心代码位于 `src/core/`，用户界面位于 `src/ui/`。
 
-核心代码按职责分为 [`simulation`](src/core/simulation/)（生成流水线及自然、人文领域模型）、[`data-source`](src/core/data-source/README.md)（raster／GeoJSON 数据源）、[`rendering`](src/core/rendering/styles/README.md)（2D／3D 渲染及制图样式）。共用的球面网格保留在 [`mesh`](src/core/mesh/)。
+核心代码按职责分为 [`simulation`](src/core/simulation/)（生成流水线及自然、人文领域模型）、[`data-source`](src/core/data-source/README.md)（raster／GeoJSON 数据源）、[`styles`](src/core/styles/README.md)（声明式制图样式）、[`rendering`](src/core/rendering/)（2D／3D 渲染器）。共用的球面网格保留在 [`mesh`](src/core/mesh/)。
 
 人文地理的前两阶段已实现人口、聚落、交通与市场可达性；实现说明与后续规划见[人文领域 Wiki](docs/wiki/civilization/README.zh-CN.md)。
 

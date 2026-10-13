@@ -1,7 +1,7 @@
 import type { WorldConfig } from '@/core/simulation/config'
 import { describe, expect, it } from 'vitest'
-import { getActiveStyleLayers, isStyleLayerActive } from '@/core/rendering/shared/layer-factory'
-import { getMapStyleLayer, resolveEffectiveSurfaceMode } from '@/core/rendering/styles'
+import { getActiveStyleLayers, isStyleLayerActive } from '@/core/rendering/shared/styled/layer-factory'
+import { getMapStyleLayer, resolveEffectiveSurfaceMode } from '@/core/styles'
 
 function createTestConfig(overrides: Partial<WorldConfig['appearance']> = {}): WorldConfig {
   return {
@@ -21,14 +21,14 @@ function createTestConfig(overrides: Partial<WorldConfig['appearance']> = {}): W
       climateMonth: 0,
       thematicFills: {},
       overlays: {
-        routes: false,
-        cities: false,
+        'routes': false,
+        'cities': false,
         'sacred-sites': false,
-        atmosphere: true,
-        clouds: true,
-        graticule: false,
-        rivers: true,
-        wireframe: false,
+        'atmosphere': true,
+        'clouds': true,
+        'graticule': false,
+        'rivers': true,
+        'wireframe': false,
         'day-night': false,
         'nation-labels': false,
         'religion-labels': false,

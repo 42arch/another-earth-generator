@@ -2,7 +2,7 @@ import { Group, Scene } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { SceneLayerManager } from '@/core/rendering/scene-layer-manager'
 
-describe('SceneLayerManager', () => {
+describe('sceneLayerManager', () => {
   it('lazily instantiates and reuses layers via ensure without recreation', () => {
     const scene = new Scene()
     const manager = new SceneLayerManager(scene, () => true)
@@ -54,28 +54,19 @@ describe('SceneLayerManager', () => {
     expect(disposeFn).not.toHaveBeenCalled()
   })
 
-  it('disposes layer properly when explicitly replaced or disposed', () => {
+  it('disposes a layer properly', () => {
     const scene = new Scene()
     const manager = new SceneLayerManager(scene, () => true)
-    const disposeFn1 = vi.fn()
-    const group1 = new Group()
+    const disposeFn = vi.fn()
+    const group = new Group()
 
-    manager.ensure('rivers', () => ({ group: group1, dispose: disposeFn1 }))
-    expect(scene.children).toContain(group1)
-
-    // replace should dispose old layer and mount new one
-    const disposeFn2 = vi.fn()
-    const group2 = new Group()
-    manager.replace('rivers', () => ({ group: group2, dispose: disposeFn2 }))
-
-    expect(disposeFn1).toHaveBeenCalledTimes(1)
-    expect(scene.children).not.toContain(group1)
-    expect(scene.children).toContain(group2)
+    manager.ensure('rivers', () => ({ group, dispose: disposeFn }))
+    expect(scene.children).toContain(group)
 
     // dispose should clean up
     manager.dispose('rivers')
-    expect(disposeFn2).toHaveBeenCalledTimes(1)
-    expect(scene.children).not.toContain(group2)
+    expect(disposeFn).toHaveBeenCalledTimes(1)
+    expect(scene.children).not.toContain(group)
     expect(manager.has('rivers')).toBe(false)
   })
 })

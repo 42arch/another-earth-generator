@@ -1,6 +1,6 @@
 import type { WorldSimulationState } from '@/core/simulation/state'
 import { describe, expect, it } from 'vitest'
-import { evaluateRasterField, RasterSurfaceRenderer } from '@/core/rendering/shared/raster-surface-renderer'
+import { evaluateRasterField, RasterSurfaceRenderer } from '@/core/rendering/shared/surfaces/raster-surface-renderer'
 
 describe('rasterSurfaceRenderer', () => {
   const createMockWorldData = (): WorldSimulationState => {
@@ -147,20 +147,22 @@ describe('rasterSurfaceRenderer', () => {
     expect(colors[3]).toBeLessThan(1)
   })
 
-  it('correctly discovers, evaluates visibility, and renders plates, continents, koppen, and biome', async () => {
-    const { getRasterStyleLayer, isMapStyleLayerVisible } = await import('@/core/rendering/styles/style-runtime')
+  it('correctly discovers, evaluates visibility, and renders standard raster surface layers', async () => {
+    const { getRasterStyleLayer, isMapStyleLayerVisible } = await import('@/core/styles')
     const renderer = new RasterSurfaceRenderer()
     const data = createMockWorldData()
 
     const modes = [
-      'plates',
-      'plates-smoothed',
-      'continents',
-      'continents-smoothed',
-      'koppen',
-      'koppen-smoothed',
-      'biome',
-      'biome-smoothed',
+      'dem',
+      'heightmap',
+      'temperature',
+      'precipitation',
+      'population',
+      'market-access',
+      'glacial',
+      'geometric-flow',
+      'wind',
+      'ocean-current',
     ]
 
     for (const mode of modes) {
@@ -171,7 +173,7 @@ describe('rasterSurfaceRenderer', () => {
 
       const colors = renderer.render(data, mode, undefined, false, 'standard')
       expect(colors).toHaveLength(12)
-      // 至少有一种颜色分量大于0（不是纯黑全零空缓冲区）
+      // 至少有一种颜色分量大于0（不是纯黑全零空缓冲区，或dem海洋模式）
       const hasNonZero = Array.from(colors).some(c => c > 0)
       expect(hasNonZero, `Mode "${mode}" must render visible non-empty colors`).toBe(true)
     }

@@ -21,7 +21,7 @@
     "lint:fix": "eslint --fix",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "build:icons": "npx fantasticon public/icons/maki -o public/fonts -n maki -t woff ttf -g ts json --normalize true && cp public/fonts/maki.ts src/core/rendering/shared/maki.ts",
+    "build:icons": "npx fantasticon public/icons -o public/fonts -n map-symbols -t woff ttf -g ts json --normalize true",
     "release": "changeset tag && git push --follow-tags"
   },
   "dependencies": {
