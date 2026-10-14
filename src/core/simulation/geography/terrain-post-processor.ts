@@ -18,7 +18,6 @@ import { TerrainTextureGenerator } from '@/core/simulation/geography/terrain-tex
 export interface TerrainPostProcessData {
   elevation: Float32Array
   landMask: Uint8Array
-  terrainNoise: Float32Array
   texture: TerrainTextureFields
   finalization: TerrainFinalizationFields
   erosion: TerrainErosionFields
@@ -164,7 +163,6 @@ export class TerrainPostProcessor {
     return {
       elevation: normalizedElevationArrayToKm(elevation),
       landMask,
-      terrainNoise: physicalTexture.total,
       texture: physicalTexture,
       finalization: this.finalizationFieldsToKm(finalized.fields),
       erosion: this.erosionFieldsToKm(erosion),

@@ -16,13 +16,10 @@ export interface GeologyData {
   tectonics: SphericalTectonicData
   edifices: TectonicEdificeFields
   mantleFlow: Float32Array
-  dynamicTopography: Float32Array
 }
 
 export interface GeographyData {
-  baseElevation: Float32Array
   elevation: Float32Array
-  terrainNoise: Float32Array
   terrainTexture: TerrainTextureFields
   terrainFinalization: TerrainFinalizationFields
   terrainErosion: TerrainErosionFields
@@ -34,7 +31,6 @@ export interface GeographyData {
   visibleContinentId: Int16Array
   terrainFields: TectonicSpatialFields
   terrainClassification: TerrainClassificationFields
-  landArea?: number
 }
 
 export interface WorldSimulationState {
@@ -50,10 +46,3 @@ export interface WorldSimulationState {
   civilization?: CivilizationData
 }
 
-export interface SelectedWorldRegion {
-  region: number
-  latitude: number
-  longitude: number
-  elevation: number
-  plate?: number
-}

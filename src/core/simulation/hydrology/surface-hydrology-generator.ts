@@ -11,8 +11,6 @@ const FLOOD_TIE_BREAK = 1e-9
 const RIVER_THRESHOLD_FRACTION = 0.00008
 const MIN_RIVER_THRESHOLD = 0.02
 
-export const SURFACE_HYDROLOGY_VERSION = 4
-
 export interface SurfaceDrainageData {
   /** Depression-resolved surface used to build a monotonic drainage tree. */
   drainageElevation: Float32Array
@@ -30,7 +28,6 @@ export interface SurfaceDrainageData {
 }
 
 export interface SurfaceHydrologyData extends SurfaceDrainageData {
-  version: number
   riverMask: Uint8Array
   riverOrder: Uint8Array
   riverThreshold: number
@@ -49,7 +46,7 @@ export class SurfaceHydrologyGenerator {
     const riverThreshold = this.computeRiverThreshold(mesh, oceanMask, flowAccumulation)
     const riverMask = this.buildRiverMask(mesh, oceanMask, downstream, flowAccumulation, riverThreshold)
     const riverOrder = this.buildRiverOrder(mesh, oceanMask, downstream, riverMask)
-    return { version: SURFACE_HYDROLOGY_VERSION, ...drainage, riverMask, riverOrder, riverThreshold }
+    return { ...drainage, riverMask, riverOrder, riverThreshold }
   }
 
   /** Shared routing for erosion and final hydrology; filling affects routing only, never the terrain. */

@@ -61,7 +61,6 @@ export interface SimulationContext {
   elevationFields?: any // Replace with proper type later
   terrain?: any // Replace with proper type later
   landMask?: Uint8Array
-  landArea?: number
 
   // Final Output
   data?: WorldSimulationState

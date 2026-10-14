@@ -46,15 +46,13 @@ export class GlobeView implements IPlanetaryView {
   private readonly sunlight: DirectionalLight
 
   private surface: Mesh<BufferGeometry, MeshBasicMaterial | MeshLambertMaterial> | null = null
-  private starsLayer: Stars | null = null
+  private readonly starsLayer: Stars
 
   private mesh: SphericalMesh | null = null
   private data: WorldSimulationState | null = null
   private readonly layers: GlobeLayerSet
   private readonly unsubscribeSourceChanges: () => void
   private params: WorldConfig
-  private active = true
-
   private readonly canvas: HTMLCanvasElement
 
   constructor(
@@ -199,7 +197,6 @@ export class GlobeView implements IPlanetaryView {
   }
 
   setActive(active: boolean): void {
-    this.active = active
     this.controls.enabled = active
   }
 
@@ -275,6 +272,7 @@ export class GlobeView implements IPlanetaryView {
     this.disposeSurface()
     this.layers.disposeAll()
     this.controls.dispose()
+    this.starsLayer.dispose()
   }
 
   private updateLighting(params: WorldConfig): void {

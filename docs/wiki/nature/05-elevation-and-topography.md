@@ -36,7 +36,7 @@ The terrain processor uses Priority-Flood during the erosion stage to find drain
 
 ## Elevation, Land/Sea, and Display
 
-The topography calculation internally uses calibrated morphological coordinates. Externally, `geography.elevation`, `baseElevation`, and terrain increments use **km**. [Unit Conversions](../../../src/core/simulation/geography/elevation-units.ts) centrally handles these calculations. The 3D globe can apply visual exaggeration to the elevation; this only affects geometric display and does not write back to the physical elevation.
+The topography calculation internally uses calibrated morphological coordinates. Externally, `geography.elevation` and terrain increments use **km**. [Unit Conversions](../../../src/core/simulation/geography/elevation-units.ts) centrally handles these calculations. The 3D globe can apply visual exaggeration to the elevation; this only affects geometric display and does not write back to the physical elevation.
 
 For example, land elevation with internal non-negative morphological coordinate `t ≤ 1` is converted to `h = 6t⁴(5 − 4t)` km; underwater morphological coordinates are converted at 8 km per unit. The formula is an elevation mapping for this project, not a physical law of mountain formation. The outgoing hydrology stage reads the converted km elevation, not the internal `t`.
 

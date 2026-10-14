@@ -70,11 +70,6 @@ export class GlobeLayerSet extends BaseLayerSet<GlobeLayerContext, GlobeLayerId,
     this.syncCommonOverlays(context, effectiveMode)
   }
 
-  rebuildEnvironment(): void {
-    this.updateOverlayVisibility()
-    this.styledLayers.rebuild('line', true)
-  }
-
   updateStyleZoom(distance: number): void {
     const context = this.getContext()
     if (!context)

@@ -68,14 +68,10 @@ export class TerrainStage implements ISimulationStage {
     )
     console.timeEnd('terrainPostProcessor.generate')
 
-    console.time('postProcess array copies')
-
     const landMask = terrain.landMask
     const visibleContinentId = new Int16Array(mesh.numRegions).fill(-1)
-    let landArea = 0
     for (let region = 0; region < mesh.numRegions; region++) {
       if (landMask[region] === 1) {
-        landArea += mesh.regionArea[region]
         visibleContinentId[region] = continentId[region] >= 0
           ? continentId[region]
           : nearestContinentId[region]
@@ -101,12 +97,9 @@ export class TerrainStage implements ISimulationStage {
           total: normalizedElevationDeltaArrayToKm(elevationFields.edifices.total),
         },
         mantleFlow: mantle.normalizedFlow,
-        dynamicTopography: normalizedElevationDeltaArrayToKm(mantle.elevationDelta),
       },
       geography: {
-        baseElevation: normalizedElevationArrayToKm(elevationFields.elevation),
         elevation: terrain.elevation,
-        terrainNoise: terrain.terrainNoise,
         terrainTexture: terrain.texture,
         terrainFinalization: terrain.finalization,
         terrainErosion: terrain.erosion,
@@ -116,14 +109,12 @@ export class TerrainStage implements ISimulationStage {
         visibleContinentId,
         terrainFields: elevationFields.spatialFields,
         terrainClassification: elevationFields.classification,
-        landArea,
       },
     }
 
     context.elevationFields = elevationFields
     context.terrain = terrain
     context.landMask = landMask
-    context.landArea = landArea
     context.data = data
   }
 }

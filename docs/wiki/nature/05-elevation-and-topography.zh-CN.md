@@ -36,7 +36,7 @@
 
 ## 高程、海陆与显示
 
-地貌计算内部使用已校准的形态坐标，对外的 `geography.elevation`、`baseElevation` 与地形增量使用 **km**。[单位转换](../../../src/core/simulation/geography/elevation-units.ts) 集中处理这些换算。3D 地球可对高程做视觉夸张；那只影响几何显示，不会回写物理高程。
+地貌计算内部使用已校准的形态坐标，对外的 `geography.elevation` 与地形增量使用 **km**。[单位转换](../../../src/core/simulation/geography/elevation-units.ts) 集中处理这些换算。3D 地球可对高程做视觉夸张；那只影响几何显示，不会回写物理高程。
 
 例如内部非负形态坐标 `t ≤ 1` 的陆地高程转换为 `h = 6t⁴(5 − 4t)` km；水下形态坐标按每单位 8 km 换算。公式是本项目的高程映射，不是山脉形成的物理定律。出流水文阶段读取转换后的 km 高程，而不是内部 `t`。
 
