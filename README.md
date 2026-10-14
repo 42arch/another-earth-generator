@@ -4,15 +4,15 @@
 
 ![Demo](./demo.png)
 
-An experimental project to generate procedural virtual planets in the browser. The same seed and parameters determine the spherical grid, tectonic plates, continents, terrain, seasonal climate, river networks, and biomes; the same spherical result can be viewed in both a 3D globe and a 2D map.
+An experimental project to generate procedural virtual planets in the browser. The same seed and parameters determine the spherical grid, tectonic plates, continents, terrain, seasonal climate, river networks, biomes, and human geography; the same spherical result can be viewed in both a 3D globe and a 2D map.
 
 ## What it can do now
 
 - Adjust the seed, grid detail, tectonic plate and continent parameters, terrain strength, axial tilt, and temperature/precipitation parameters to regenerate the world.
 - Switch between the globe and map to view satellite imagery, terrain, elevation, tectonic plates, geometric flow, monthly temperature and precipitation, winds, ocean currents, Köppen climate classification, and biomes.
-- Overlay display elements like rivers, clouds, and graticules, and click on regions to inspect elevation, climate, and ecological information.
+- View population, market access, ethnic groups, languages, polities, and religions; overlay settlements, roads, sea routes, and rivers, and click regions to inspect their data.
 
-The generated result is an approximate model for visualization and procedural generation, not a quantitative forecast of the Earth system. Ocean current strength is a relative value; lakes, settlements, and social systems currently have no generation stages.
+The generated result is an approximate model for visualization and procedural generation, not a quantitative forecast of the Earth system. Ocean current strength is a relative value. The hydrology stage does not yet generate visible lakes, and the human geography system is a static world snapshot.
 
 ## Running locally
 
@@ -27,12 +27,10 @@ Open the local address provided in the terminal. Use `pnpm test` to run existing
 
 ## Where to start reading
 
-Non-developers can start with the [Nature Wiki](docs/wiki/nature/README.md) to sequentially understand "Spherical Grid → Plates and Landmasses → Terrain → Seasonal Circulation and Climate → Rivers → Ecology → Visualization". Each chapter first explains the phenomena, then provides the algorithms, fields, and source code entry points.
-
-Developers can first look at the [System Architecture](docs/wiki/nature/01-system-architecture.md) and the [Worker Pipeline](src/core/simulation/worker/simulation.worker.ts). The core code is located in `src/core/`, and the user interface is in `src/ui/`.
+Start with the [documentation index](docs/README.md), then read the [system architecture](docs/architecture.md) and [data contracts](docs/data-contracts.md). These documents are currently in Chinese and link to the implementation for details.
 
 Core modules are grouped by responsibility: [`simulation`](src/core/simulation/) contains the generation pipeline and domain models, [`data-source`](src/core/data-source/README.md) provides raster and GeoJSON sources, [`styles`](src/core/styles/README.md) defines declarative map styles, and [`rendering`](src/core/rendering/) contains the 2D/3D renderers. The shared spherical grid remains in [`mesh`](src/core/mesh/).
 
-The first two human geography stages now generate population, settlements, transport, and market access. Their implementation and later plans are documented in the [Civilization Wiki](docs/wiki/civilization/README.md).
+The generation pipeline now includes population and settlements, transport and markets, ethnic groups and languages, polities and administration, and religions and beliefs. See the [Worker pipeline](src/core/simulation/worker/simulation.worker.ts) for the execution order.
 
 Tech Stack: TypeScript, Vite, Svelte 5, Three.js, Tailwind CSS, Vitest. The project uses pnpm for dependency management.

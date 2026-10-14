@@ -5,7 +5,7 @@ export interface Settlement {
   region: number
   name: string
   rank: SettlementRank
-  /** Residents in the centre region after concentration; already included in population. */
+  /** Residents attributed to this named centre, included in the authoritative regional population. */
   population: number
   /** Total population served by this settlement before urban concentration. */
   hinterlandPopulation: number

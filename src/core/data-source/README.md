@@ -1,6 +1,6 @@
 # 地理数据源 (Data Sources)
 
-完整设计见 [`docs/rendering-data-sources.zh-CN.md`](../../../docs/rendering-data-sources.zh-CN.md)。本模块作为**地理抽象总线**，管理两种运行时数据源：`raster`（球面 cell 字段）和 `geojson`（点、线、面要素）。
+本模块管理两种运行时地理数据源：`raster`（球面 cell 字段）和 `geojson`（点、线、面要素）。整体数据流见[系统架构](../../../docs/architecture.md)。
 
 ## 目录结构与职能分工
 
@@ -9,7 +9,7 @@ src/core/data-source/
 ├── adapters/                     # 要素派生适配器层（纯函数：从 SimulationState 提取要素）
 │   ├── area-adapter.ts          # 面要素：板块/大陆/气候带/国家/民族/宗教区域与陆地拓扑
 │   ├── line-adapter.ts          # 线要素：断裂带/国界线/道路网/海上航线
-│   ├── river-adapter.ts         # 水系要素：D8 汇流树转 LineString 与流量河宽
+│   ├── river-adapter.ts         # 水系要素：球面排水网络转 LineString 与流量河宽
 │   ├── point-adapter.ts         # 点要素：聚落/圣地点标记
 │   └── symbol-adapter.ts        # 注记要素：地名与图标排版
 │
@@ -22,7 +22,7 @@ src/core/data-source/
 │   └── raster-field-extractors.ts # 提取风速、洋流温差等物理场数组
 │
 ├── geojson.ts                   # 标准 GeoJSON 类型定义与合法性校验
-└── index.ts                     # 根目录统一门面导出出口 (100% 向后兼容)
+└── index.ts                     # 模块统一导出入口
 ```
 
 ## 设计准则
