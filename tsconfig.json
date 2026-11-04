@@ -1,29 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "es2023",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "moduleDetection": "force",
-
-    "module": "esnext",
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    },
-    "types": ["vite/client", "svelte", "vite-plugin-pwa/client", "vite-plugin-pwa/svelte"],
-    "allowImportingTsExtensions": true,
-    "strict": true,
-
-    "noFallthroughCasesInSwitch": true,
-    /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noEmit": true,
-    "verbatimModuleSyntax": true,
-    "erasableSyntaxOnly": true,
-    "skipLibCheck": true
-  },
-  "include": ["src/**/*", "src/**/*.svelte"]
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "include": []
 }

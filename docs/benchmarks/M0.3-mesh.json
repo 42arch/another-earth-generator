@@ -1,0 +1,265 @@
+{
+  "algorithmVersion": "icosphere-v1",
+  "measuredAt": "2026-11-02T17:32:20.854Z",
+  "runtime": "v24.17.0",
+  "os": "darwin 25.6.0",
+  "cpu": "Apple M3 Pro",
+  "physicalRadiusKm": 6371,
+  "seed": null,
+  "configuration": "regular mesh; 3 trials, L3 warmup; 5000 deterministic global queries",
+  "memoryNote": "Exact retained TypedArray bytes; RSS sampled after validation, NOT peak memory. Temporary Maps, sort workspace and validator allocations excluded from mesh/index bytes.",
+  "reports": [
+    {
+      "subdivisionLevel": 5,
+      "regionCount": 10242,
+      "trials": [
+        {
+          "icosphereMs": 1.4164170000000098,
+          "topologyMs": 12.195583,
+          "indexMs": 10.09916699999998,
+          "queries": 5000,
+          "queryMs": 2.364167000000009,
+          "queryMicrosecondsMean": 0.4728334000000018,
+          "checksum": 25656820,
+          "arrays": {
+            "centers": 245808,
+            "triangles": 245760,
+            "areaKm2": 81936,
+            "neighborOffsets": 40972,
+            "neighbors": 245760,
+            "dualVertices": 491520,
+            "boundaryCorners": 245760,
+            "edgeRegions": 245760,
+            "edgeTriangles": 245760,
+            "triangleEdges": 245760,
+            "neighborEdges": 245760,
+            "edgeAngularDistances": 245760
+          },
+          "meshBytes": 2826316,
+          "indexBytes": 81936,
+          "rssAfterValidationBytes": 93011968
+        },
+        {
+          "icosphereMs": 0.7600419999999986,
+          "topologyMs": 6.5236659999999915,
+          "indexMs": 11.155791999999991,
+          "queries": 5000,
+          "queryMs": 3.8249999999999886,
+          "queryMicrosecondsMean": 0.7649999999999977,
+          "checksum": 25656820,
+          "arrays": {
+            "centers": 245808,
+            "triangles": 245760,
+            "areaKm2": 81936,
+            "neighborOffsets": 40972,
+            "neighbors": 245760,
+            "dualVertices": 491520,
+            "boundaryCorners": 245760,
+            "edgeRegions": 245760,
+            "edgeTriangles": 245760,
+            "triangleEdges": 245760,
+            "neighborEdges": 245760,
+            "edgeAngularDistances": 245760
+          },
+          "meshBytes": 2826316,
+          "indexBytes": 81936,
+          "rssAfterValidationBytes": 94535680
+        },
+        {
+          "icosphereMs": 2.6749579999999753,
+          "topologyMs": 8.468958000000015,
+          "indexMs": 9.684625000000011,
+          "queries": 5000,
+          "queryMs": 2.219666999999987,
+          "queryMicrosecondsMean": 0.44393339999999737,
+          "checksum": 25656820,
+          "arrays": {
+            "centers": 245808,
+            "triangles": 245760,
+            "areaKm2": 81936,
+            "neighborOffsets": 40972,
+            "neighbors": 245760,
+            "dualVertices": 491520,
+            "boundaryCorners": 245760,
+            "edgeRegions": 245760,
+            "edgeTriangles": 245760,
+            "triangleEdges": 245760,
+            "neighborEdges": 245760,
+            "edgeAngularDistances": 245760
+          },
+          "meshBytes": 2826316,
+          "indexBytes": 81936,
+          "rssAfterValidationBytes": 97337344
+        }
+      ]
+    },
+    {
+      "subdivisionLevel": 6,
+      "regionCount": 40962,
+      "trials": [
+        {
+          "icosphereMs": 3.4027919999999767,
+          "topologyMs": 34.91750000000002,
+          "indexMs": 51.305375,
+          "queries": 5000,
+          "queryMs": 2.5223330000000033,
+          "queryMicrosecondsMean": 0.5044666000000007,
+          "checksum": 102196439,
+          "arrays": {
+            "centers": 983088,
+            "triangles": 983040,
+            "areaKm2": 327696,
+            "neighborOffsets": 163852,
+            "neighbors": 983040,
+            "dualVertices": 1966080,
+            "boundaryCorners": 983040,
+            "edgeRegions": 983040,
+            "edgeTriangles": 983040,
+            "triangleEdges": 983040,
+            "neighborEdges": 983040,
+            "edgeAngularDistances": 983040
+          },
+          "meshBytes": 11305036,
+          "indexBytes": 327696,
+          "rssAfterValidationBytes": 137887744
+        },
+        {
+          "icosphereMs": 3.3758750000000077,
+          "topologyMs": 22.338166,
+          "indexMs": 47.96533400000004,
+          "queries": 5000,
+          "queryMs": 2.3641250000000014,
+          "queryMicrosecondsMean": 0.4728250000000003,
+          "checksum": 102196439,
+          "arrays": {
+            "centers": 983088,
+            "triangles": 983040,
+            "areaKm2": 327696,
+            "neighborOffsets": 163852,
+            "neighbors": 983040,
+            "dualVertices": 1966080,
+            "boundaryCorners": 983040,
+            "edgeRegions": 983040,
+            "edgeTriangles": 983040,
+            "triangleEdges": 983040,
+            "neighborEdges": 983040,
+            "edgeAngularDistances": 983040
+          },
+          "meshBytes": 11305036,
+          "indexBytes": 327696,
+          "rssAfterValidationBytes": 151732224
+        },
+        {
+          "icosphereMs": 3.525332999999989,
+          "topologyMs": 22.765333,
+          "indexMs": 51.289917,
+          "queries": 5000,
+          "queryMs": 3.4199580000000083,
+          "queryMicrosecondsMean": 0.6839916000000017,
+          "checksum": 102196439,
+          "arrays": {
+            "centers": 983088,
+            "triangles": 983040,
+            "areaKm2": 327696,
+            "neighborOffsets": 163852,
+            "neighbors": 983040,
+            "dualVertices": 1966080,
+            "boundaryCorners": 983040,
+            "edgeRegions": 983040,
+            "edgeTriangles": 983040,
+            "triangleEdges": 983040,
+            "neighborEdges": 983040,
+            "edgeAngularDistances": 983040
+          },
+          "meshBytes": 11305036,
+          "indexBytes": 327696,
+          "rssAfterValidationBytes": 160219136
+        }
+      ]
+    },
+    {
+      "subdivisionLevel": 7,
+      "regionCount": 163842,
+      "trials": [
+        {
+          "icosphereMs": 16.93900000000002,
+          "topologyMs": 115.67083300000002,
+          "indexMs": 267.75524999999993,
+          "queries": 5000,
+          "queryMs": 3.9496669999999767,
+          "queryMicrosecondsMean": 0.7899333999999953,
+          "checksum": 409459929,
+          "arrays": {
+            "centers": 3932208,
+            "triangles": 3932160,
+            "areaKm2": 1310736,
+            "neighborOffsets": 655372,
+            "neighbors": 3932160,
+            "dualVertices": 7864320,
+            "boundaryCorners": 3932160,
+            "edgeRegions": 3932160,
+            "edgeTriangles": 3932160,
+            "triangleEdges": 3932160,
+            "neighborEdges": 3932160,
+            "edgeAngularDistances": 3932160
+          },
+          "meshBytes": 45219916,
+          "indexBytes": 1310736,
+          "rssAfterValidationBytes": 238944256
+        },
+        {
+          "icosphereMs": 15.830458000000021,
+          "topologyMs": 114.76904200000001,
+          "indexMs": 276.57770800000003,
+          "queries": 5000,
+          "queryMs": 4.213541999999961,
+          "queryMicrosecondsMean": 0.8427083999999923,
+          "checksum": 409459929,
+          "arrays": {
+            "centers": 3932208,
+            "triangles": 3932160,
+            "areaKm2": 1310736,
+            "neighborOffsets": 655372,
+            "neighbors": 3932160,
+            "dualVertices": 7864320,
+            "boundaryCorners": 3932160,
+            "edgeRegions": 3932160,
+            "edgeTriangles": 3932160,
+            "triangleEdges": 3932160,
+            "neighborEdges": 3932160,
+            "edgeAngularDistances": 3932160
+          },
+          "meshBytes": 45219916,
+          "indexBytes": 1310736,
+          "rssAfterValidationBytes": 347013120
+        },
+        {
+          "icosphereMs": 15.846125000000029,
+          "topologyMs": 102.64416699999992,
+          "indexMs": 260.99199999999996,
+          "queries": 5000,
+          "queryMs": 2.9503330000000005,
+          "queryMicrosecondsMean": 0.5900666000000001,
+          "checksum": 409459929,
+          "arrays": {
+            "centers": 3932208,
+            "triangles": 3932160,
+            "areaKm2": 1310736,
+            "neighborOffsets": 655372,
+            "neighbors": 3932160,
+            "dualVertices": 7864320,
+            "boundaryCorners": 3932160,
+            "edgeRegions": 3932160,
+            "edgeTriangles": 3932160,
+            "triangleEdges": 3932160,
+            "neighborEdges": 3932160,
+            "edgeAngularDistances": 3932160
+          },
+          "meshBytes": 45219916,
+          "indexBytes": 1310736,
+          "rssAfterValidationBytes": 393805824
+        }
+      ]
+    }
+  ]
+}

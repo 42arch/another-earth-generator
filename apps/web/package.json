@@ -1,0 +1,32 @@
+{
+  "name": "@another-earth/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "lint": "eslint src e2e vite.config.ts playwright.config.ts",
+    "test": "vitest run",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "@another-earth/cartography": "workspace:*",
+    "@another-earth/world-core": "workspace:*",
+    "@another-earth/world-data": "workspace:*",
+    "bits-ui": "^2.19.0",
+    "svelte": "^5.56.10",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/three": "^0.185.4",
+    "svelte-check": "^4.7.6",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.0.4",
+    "vitest": "^4.1.10"
+  }
+}

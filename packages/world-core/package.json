@@ -1,0 +1,25 @@
+{
+  "name": "@another-earth/world-core",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src benchmarks vitest.mesh-perf.config.ts vitest.generation-perf.config.ts",
+    "test": "vitest run --config ../../vitest.config.ts --passWithNoTests",
+    "bench:mesh": "vitest run --config vitest.mesh-perf.config.ts",
+    "bench:generation": "vitest run --config vitest.generation-perf.config.ts"
+  },
+  "dependencies": {
+    "@another-earth/world-data": "workspace:*",
+    "alea": "^1.0.1",
+    "delaunator": "^5.1.0"
+  }
+}

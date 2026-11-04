@@ -1,0 +1,39 @@
+{
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "rows": [
+    {
+      "level": 5,
+      "irregularity": 0.5,
+      "regionCount": 10242,
+      "emptyPipelineUs": 3.7610830000000988,
+      "planUs": 47.885625000000005,
+      "firstMs": 228.488792,
+      "cacheHitUs": 82.98957999999969,
+      "cacheBytes": 2826426
+    },
+    {
+      "level": 6,
+      "irregularity": 0.5,
+      "regionCount": 40962,
+      "emptyPipelineUs": 3.7610830000000988,
+      "planUs": 24.72166699999991,
+      "firstMs": 562.348458,
+      "cacheHitUs": 87.24875000000111,
+      "cacheBytes": 11305146
+    },
+    {
+      "level": 7,
+      "irregularity": 0.5,
+      "regionCount": 163842,
+      "emptyPipelineUs": 3.7610830000000988,
+      "planUs": 21.35891700000002,
+      "firstMs": 2412.891708,
+      "cacheHitUs": 43.53084000000308,
+      "cacheBytes": 45220026
+    }
+  ]
+}
