@@ -1,9 +1,9 @@
-import type { SphericalMesh } from '@another-earth/world-core'
+import type { GeologyArtifact, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
 
 const fields = ['centers', 'areaKm2', 'neighborOffsets', 'neighbors', 'triangles', 'dualVertices', 'boundaryCorners', 'edgeRegions', 'edgeTriangles', 'triangleEdges', 'neighborEdges', 'edgeAngularDistances'] as const
 
 /** Clone once without detaching the worker/cache owner, then transfer only cloned buffers. */
-export function transferSnapshot(mesh: SphericalMesh): { mesh: SphericalMesh, buffers: ArrayBuffer[], bytes: number } {
+export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact): { mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, buffers: ArrayBuffer[], bytes: number } {
   const snapshot = structuredClone(mesh)
   const buffers = new Set<ArrayBuffer>()
   for (const field of fields) {
@@ -11,7 +11,15 @@ export function transferSnapshot(mesh: SphericalMesh): { mesh: SphericalMesh, bu
     if (buffer instanceof ArrayBuffer)
       buffers.add(buffer)
   }
-  return { mesh: snapshot, buffers: [...buffers], bytes: [...buffers].reduce((total, buffer) => total + buffer.byteLength, 0) }
+  const geologyCopy = geology ? structuredClone(geology) : undefined
+  const terrainCopy = terrain ? structuredClone(terrain) : undefined
+  for (const artifact of [geologyCopy, terrainCopy]) {
+    for (const value of Object.values(artifact ?? {})) {
+      if (ArrayBuffer.isView(value) && value.buffer instanceof ArrayBuffer)
+        buffers.add(value.buffer)
+    }
+  }
+  return { mesh: snapshot, geology: geologyCopy, terrain: terrainCopy, buffers: [...buffers], bytes: [...buffers].reduce((total, buffer) => total + buffer.byteLength, 0) }
 }
 
 /** Structured clone returns plain data; assert its required shape before consumers use it. */

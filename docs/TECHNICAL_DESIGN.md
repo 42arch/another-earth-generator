@@ -1,51 +1,12 @@
-# Another Earth — 技术设计方案 v0.2
+# Another Earth — 技术设计
 
-> **文档性质**：架构设计、关键数据契约、算法演进、工程任务与验收标准  
-> **更新日期**：2026-11-04
-> **产品依据**：仓库内 `docs/PRD.md`（Another Earth PRD v1.0）
-> **代码审查基线**：[`42arch/another-earth-generator` / `feat-society`](https://github.com/42arch/another-earth-generator/tree/feat-society)，commit `881d95ed14edd9c99f56cbaab9db8e5c733676f4`  
-> **当前实现与验证**：以工作区源码和 [`PROGRESS.md`](PROGRESS.md) 为准；本文的目标目录、示例接口与 V1 方案不自动代表已实现。
-> **目标平台**：桌面浏览器优先、离线优先、单机创世与世界探索；为长期文明演化、编辑与历史分支预留明确边界  
-> **本文优先级**：架构正确性 > 世界数据一致性 > 可复现性 > 可测试性 > 实测性能 > 算法复杂度
+> 更新：2026-11-06。产品规则以 [PRD](PRD.md) 为准；实现与验收状态见 [PROGRESS](PROGRESS.md)。本文保留长期架构和当前算法决策，目标接口不等于已实现 API。精确字段和单位见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，执行与缓存见 [生成管线](GENERATION_PIPELINE.md)，后续自然阶段见 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
-## 0. 总体决策
+## 0. 架构与当前边界
 
-**Another Earth 采用 `pnpm workspace` Monorepo，初期由 `apps/web` 与三个核心 Package 构成：**
+采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-- **`@another-earth/world-data`**：内置内容、生成模板、候选名称、文化与宗教原型、政体、资源、创世预设及内容包版本；不保存某个世界的实际事实。
-- **`@another-earth/world-core`**：球面拓扑、自然与文明生成、统一世界状态、领域约束、未来的时间模拟、编辑命令、事件和历史；不依赖 UI、Three.js 或 DOM。
-- **`@another-earth/cartography`**：数据源、制图表达式、图层样式、2D/3D 视图、投影、Picking 与 GPU 资源管理；只读取已发布的世界状态。
-- **`apps/web`**：Svelte 5 工作台、创世向导、世界图鉴、用户交互、Worker 管理、项目存储和数据导出。
-
-采用 **Three.js + WebGL2** 作为初版渲染后端，**Web Workers** 运行创世计算；世界数据采用 **TypedArray + Graph + 稳定 ID 实体**。初版不采用微服务、后端权威模拟、全面 ECS、强制 WASM 或 WebGPU。
-
-### 0.1 与 v0.1 的主要更新
-
-1. 新增独立的 `world-data` 内容包设计，覆盖 Schema、Content Pack、确定性选择、版本、国际化和未来扩展包。
-2. 将自然算法明确分为“**保留基础算法** / **优化处理边界** / **新增领域模型**”，不以改名或搬文件等同算法升级。
-3. 增加地形海陆掩码、地形侵蚀、气候求解和投影、水文湖泊、生态连续字段的具体改进方案。
-4. 强化 `WorldSnapshot`、Stage Artifact、Derived Data、View State 和用户编辑覆盖之间的所有权与失效规则。
-5. 明确 Stage DAG、配置路径、依赖哈希、资源缓存与 Worker Buffer 转移的实际限制。
-6. 对未来文明演化、历史存储、局部编辑提供可落实的模型，但不将这些完整功能塞入第一版。
-7. 增加算法对照基准、性能门槛、阶段任务和 AI Agent 实施规约。
-
-### 0.2 首版交付定义
-
-首版对应产品 PRD **Genesis & Atlas**：用户完成创世参数配置，生成带有自然地理和静态文明的星球；切换 3D/2D 地图及专题图；选择城市、国家、民族、宗教并查看详情；保存、重开和导出世界。
-
-**首版必须具备**：完整可复现的创世流程、可靠的世界数据、基础样式库、可访问的世界信息、存档往返、错误与取消处理、运行时性能记录。
-
-**首版不要求具备**：完整市场价格与战争 AI、全球逐年历史、自主演化系统、全功能地图编辑、复杂湖泊水位模拟、通用大气数值模型、历史分支界面。预留架构和少量契约，但不开发空壳复杂框架。
-
-### 0.3 当前实现基线与 M1 入口（2026-11-04）
-
-当前工作区已具备 M0 的最小工程前置条件：四个 Workspace Package、内容包与世界快照契约、L0–L7 球面网格、Stage DAG/缓存、Worker 网格调试链路，以及带完整快照校验的版本化 JSON 档案往返。生产 Pipeline **仅有 Mesh Stage**；`WorldSnapshot` 目前只有类型、校验和测试样例，没有从自然 Stage 组装并原子发布真实世界的流程。`cartography` 仅有 Package 入口和 `WorldViewState` 类型；Mesh Debug Viewer 不属于正式地图系统。`core`/`earthlike` 是最小契约数据，不是 M2 内容库。
-
-本地已通过 `pnpm typecheck`、`pnpm lint`、`pnpm test`（`world-data` 8 项、`world-core` 70 项、Web 22 项）和 `pnpm build`；使用本机 Chrome 的真实 Worker 浏览器测试 2/2 通过。`cartography` 暂无单元测试；CI 工作流已在工作区添加，远端尚未运行。Mesh Debug 构建块约 566 kB，Worker/渲染峰值内存尚未测量。这批修改尚未提交，不能把本地通过等同于远端发布验收。
-
-**M1 首个交付**应从已有 Mesh Pipeline 接入板块与地形 Stage，建立固定 Seed 基准、字段单位/海陆不变量和缓存失效测试；随后经完整领域校验组装并原子发布 `WorldSnapshot`。继续接入气候、水文和生态时，沿用 §7 的算法继承与质量约束。M2–M4 的文明、正式地图和浏览器存档仍按各自里程碑实施。
-
----
+当前具备 M0 工程基础与 M1.1 地质/基础地形产物；`terrain-v20` 不执行冰川或水力侵蚀。尚未生成月气候、水文、生态、完整自然快照或初始文明，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -137,30 +98,18 @@ another-earth/
 │   │   └── package.json
 │   ├── world-core/
 │   │   └── src/
-│   │       ├── mesh/                    # 球面、Voronoi、邻接/距离、投影映射
-│   │       ├── math/                    # PRNG、Noise、优先队列、空间工具
-│   │       ├── model/                   # World、单位、身份、状态所有权
-│   │       ├── generation/
-│   │       │   ├── pipeline/            # Stage DAG、依赖、Artifact 缓存
-│   │       │   ├── nature/
-│   │       │   │   ├── geology/
-│   │       │   │   ├── terrain/
-│   │       │   │   ├── climate/
-│   │       │   │   ├── hydrology/
-│   │       │   │   ├── ecology/
-│   │       │   │   └── resources/
-│   │       │   └── civilization/
-│   │       │       ├── population/      # 宜居性、承载力与人口分布
-│   │       │       ├── settlements/     # 聚落与城市
-│   │       │       ├── transport/       # 道路、航线与可达性
-│   │       │       ├── cultures/        # 民族与语言分布
-│   │       │       ├── polities/        # 国家与行政归属
-│   │       │       └── religions/       # 宗教与圣地
-│   │       ├── simulation/              # 后续：时间 Tick、领域系统
-│   │       ├── editing/                 # 后续：Command、Patch、Locks
-│   │       ├── history/                 # 后续：事件、检查点、分支
-│   │       ├── serialization/
-│   │       ├── validation/
+│   │       ├── mesh/                    # 球面、Voronoi、邻接/距离、空间索引与投影
+│   │       ├── math/                    # 标量数学工具、PRNG、球面三角
+│   │       ├── generation/              # 生成系统与领域生成算法
+│   │       │   ├── pipeline/            # Stage DAG 调度器、执行引擎、错误处理与依赖拷贝
+│   │       │   ├── stages/              # 具体生成阶段实现（mesh-stage、geology-stage、terrain-stage）
+│   │       │   ├── nature/              # 自然领域算法与产物
+│   │       │   │   ├── common/          # 自然层公共基建（算法网格适配、距离场、优先队列）
+│   │       │   │   ├── geology/         # 地质与构造骨架（plates/、tectonics/、产物契约与校验）
+│   │       │   │   ├── geography/       # 地形演化与地理（terrain/、高程单位、产物契约与校验）
+│   │       │   │   └── nature-types.ts  # 自然跨域通用数据契约
+│   │       │   └── civilization/        # 文明生成与实体契约（civilization-types）
+│   │       ├── world/                   # 权威快照、Dense Field、档案编解码与校验
 │   │       └── index.ts
 │   └── cartography/
 │       └── src/
@@ -175,15 +124,15 @@ another-earth/
 ├── docs/
 │   ├── PRD.md
 │   ├── TECHNICAL_DESIGN.md
-│   ├── WORLD_DATA_SPEC.md             # 按需拆分
-│   ├── GENERATION_SPEC.md             # 按需拆分
-│   ├── RENDERING_SPEC.md              # 按需拆分
-│   └── ADR/
+│   ├── WORLD_DATA_CONTRACTS.md
+│   ├── GENERATION_PIPELINE.md
+│   ├── PROGRESS.md
+│   └── M1_IMPLEMENTATION_PLAN.md
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
 ```
 
-**当前实现（2026-11-04）**：四个 Workspace Package 已存在，但目录尚未按上图展开。`world-core/src/generation/` 目前只有 Mesh Stage、Pipeline 及错误类型；`world-core/src/nature/` 和 `civilization/` 目前存放世界状态类型，`world/` 存放快照、字段、校验与档案代码。未来的生成算法可分别进入 `generation/nature/` 和 `generation/civilization/`，并在实现增长后按领域细分；现有事实类型不需要为匹配目标树而搬迁。`apps/web/src` 目前以 Mesh Debug Viewer、`lib/generation/` 和 Worker 链路为主；`world-data/src` 目前有内容 Schema、Catalog、内置包和校验；`cartography/src` 目前仅有入口和视图状态类型。实际文件和进度以工作区源码及 [`PROGRESS.md`](PROGRESS.md) 为准。
+**当前实现（2026-11-06）**：网格、地质和基础地形 Pipeline 已接入；领域生成算法与管线调度统一组织在 `world-core/src/generation/`（包含 `pipeline/` 调度引擎、`stages/` 生成阶段、`nature/` 自然领域算法、`civilization/` 文明契约），Worker 与调试入口在 Web。文明生成、正式 Cartography、浏览器项目存储和完整自然快照发布尚未接入。目标目录不要求提前建立空模块；实际状态见 [PROGRESS.md](PROGRESS.md)。
 
 ### 3.1 Package 依赖规则
 
@@ -405,214 +354,81 @@ export interface NatureSnapshot {
 
 ---
 
-## 6. Generation：Stage DAG、产物与增量生成
+## 6. 生成与世界发布
 
-### 6.1 目标模型
+当前 `GenerationStage` 通过 dependencies/configKeys/contentKeys 声明输入；执行、随机流、缓存和 Buffer 所有权以 [生成管线](GENERATION_PIPELINE.md) 为准。Stage 的可写工作副本不与缓存共享；显示和月份变化不参与生成签名。
 
-当前 `feat-society` 的 `PipelineScheduler` 串行执行 18 个 Stage，这对批量生成有效。新架构需要显式声明依赖，但第一版**仍允许串行执行**，不因为 DAG 就立即上多个 Worker。
+完整自然结果须先组装候选快照，经过完整领域校验后原子发布。当前 Pipeline 仅交付阶段产物，不得把缺失气候/水文/生态的数据补零后当作完整世界。失败、取消、校验或传输错误须保留上一个有效结果。
 
-```text
-Mesh
- └── Plate Topology
-       ├── Candidate Land / Crust
-       └── Plate Dynamics
-                ↓
-         Tectonic Fields
-                ↓
-           Terrain Base
-                ↓
-         Terrain Finalization
-                ↓
-        Climate Circulation
-                ↓
-          Monthly Climate
-                ↓
-       Climate Output Projection
-         ├── Köppen / Climate Classification
-         ├── Hydrology (Drainage + Rivers + Basic Lakes)
-         └── Ecology / Potential Biome
-                  ↓
-           Resources / Habitability
-                  ↓
-          Population + Settlements
-                  ↓
-               Transport
-                  ↓
-              Ethnicity
-                  ↓
-               Polities
-                  ↓
-              Religions
-```
+## 7. 自然世界：当前实现与演进
 
-上图为逻辑依赖，**并非强制完全顺序**：Köppen、流域、生态的真实依赖应由 Stage 的声明和测试决定。已确认的部分如水文需要最终地形和月度气候，并不必等待所有生物群系分类完成。
+迁移基线为 `42arch/another-earth-generator` 的 `feat-society` 分支，本地 `docs/old-src` 只读参考，不属于新架构运行代码。新网格、随机流和后续曲线修订不保证旧项目同 Seed 逐字节一致。
 
-### 6.2 Stage / Artifact 协议
+### 7.1 球面网格与空间查询（已实现）
 
-以下展示目标 Artifact 契约，不是当前 `GenerationStage` 的逐字声明。M0 已实现的 Stage 使用 `dependencies` 指向上游 Stage ID、`configKeys`/`contentKeys` 声明签名输入，通过 `StageExecutionContext.getDependency()` 读取只读输出；`PipelineResult.getOutput()` 返回借用产物。独立的 `StageArtifact<T>` 包装及跨 Stage 字段来源元数据仍待 M1 按实际消费者引入。
+- Icosphere 支持 L0–L8：区域数 `10×4^L+2`、三角面 `20×4^L`、边 `30×4^L`；L8 为 655,362 区域。配置明确给细分等级，不从任意目标区域数暗中推断。
+- `irregularity=0` 复用规则中点细分连接；大于零则固定原始 12 站点，其余按切平面方向扰动后归一化，用 Delaunator 重建球面 Delaunay。扰动是网格形态参数，不是地形噪声。
+- 沿用参考站点顺序和 Alea 取数；扰动幅度尺度为 `sqrt(4π/N)×0.75×irregularity`。投影极点移出有限平面，用稳定分母 `|q-p|²/2` 做立体投影，平面凸包边与极点补面后校正朝向。
+- Voronoi 对偶使用外向单位外心，边界在局部切平面排序；面积使用球面三角形立体角公式，乘物理半径平方。扰动网格的邻居度数可变，不能假设恒为六。
+- 校验包括闭合、两面共边、Euler 特征、CSR 对称、有效索引、外向非退化面、外心等距、局部空球冠、正面积和全球面积和。精确 dtype/长度见数据契约。
+- `MeshQueries` 与 `SphericalSpatialIndex` 借用稳定存储，查询不暴露数组或 Buffer。KD-tree 按单位球弦距查询，同距选较小索引。换 Mesh 后索引和跨网格映射必须重建。
+- 右手坐标：北极 +Y、零经度 +Z、东经 90° 为 +X；数学 API 使用弧度。显示半径与物理半径独立。
+- 距离场传播统一以 Float32 舍入后的代价比较、存储、入队，避免等长路径重复松弛。历史 L8 证据只代表相应版本，不是当前整条自然链的性能承诺。
 
-```ts
-export type StageId = string;
-export type ArtifactId = string;
+### 7.2 地质、板块与地壳（已实现）
 
-export interface GenerationStage<TOutput> {
-  readonly id: StageId;
-  readonly version: string;
-  readonly inputs: readonly ArtifactId[];
-  readonly configKeys: readonly string[];        // 仅列与输出相关的生成参数
-  readonly contentKeys?: readonly string[];      // 使用了哪些内容域/包
-  execute(ctx: StageExecutionContext): TOutput | Promise<TOutput>;
-  validate?(output: TOutput, ctx: StageExecutionContext): void;
-}
+参考网格默认 L6，基础细分固定 100。板块种子生长、主/微板块拓扑、候选大陆与地壳分别生成；地质扰动映射和普通地理映射分开存储。运动板块 ID、基础细分索引和候选大陆 ID 含义不同。
 
-export interface StageArtifact<T> {
-  id: ArtifactId;
-  producer: StageId;
-  version: string;
-  signature: string;
-  payload: T;
-  metadata: {
-    meshId?: string;
-    fieldUnits?: Record<string, string>;
-    createdFrom: readonly string[];
-  };
-}
+候选覆盖率约束地壳生成，最终地形可以改变海岸；目标数、实际板块数、参考覆盖率、输出覆盖率必须分别报告。零候选陆地返回空大陆表；微板块目标可能受连通性限制。统计按物理面积加权，不静默修形凑比例。
 
-export interface StageExecutionContext {
-  config: Readonly<WorldGenerationConfig>;
-  content: ResolvedContentCatalog;
-  inputs: ReadonlyMap<ArtifactId, StageArtifact<unknown>>;
-  rng: DeterministicRandom;
-  cancellation: { throwIfCancelled(): void };
-  progress: (fraction: number, message?: string) => void;
-}
-```
+地壳驱动板块运动、地幔和构造边界，继续生成山脊、岛弧和热点。速度、应力、地幔强度为相对模型量，不是绝对物理速率；不进行跨地质年代的板块积分。
 
-关键点：**输出产物具有独立身份**，跨 Stage 读取产物而不是在一个全部可选属性的共享黑板上推断状态。允许内部写入，但跨产物副作用必须成为显式的数据依赖。
+**代码组织**：地质领域逻辑位于 `world-core/src/generation/nature/geology/`。
+- `plates/`：板块种子、微/主板块拓扑（`plate-generator`、`super-plate-generator`）、板块物理动力学与边界分析（`plate-physics`、`plate-boundary-analyzer`、`plate-properties-generator`）。
+- `tectonics/`：候选陆地（`candidate-land-generator`）、地幔对流（`mantle-dynamic-topography`）、构造空间场、山脊、火山与骨架高程（`tectonic-elevation-generator`）。
+- 算法网格适配（`algorithm-mesh`）与球面距离场（`distance-field`）沉淀在 `generation/nature/common/`，由地质与地理共享消费，消除跨域反向依赖。
 
-初版可以分阶段引入该契约：先包装现有 Stage，再将内部领域生成器逐步转换，避免一次性重写成熟算法。
+### 7.3 基础地形 T0（已实现，最终验收待完成）
 
-### 6.3 缓存签名与失效传播
-
-建议定义：
+当前骨架为 `terrain-skeleton-v9`，后处理为 `terrain-v20`，分别固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。实际配置与依赖见生成管线。
 
 ```text
-artifactSignature = hash(
-  stageId,
-  stageVersion,
-  relevantConfigSubset,
-  relevantContentSignature,
-  dependencyArtifactSignatures,
-  gridOrMeshIdentity
-)
+地质与动力学 → 构造骨架、Phasor 山脊、火山体
+→ 纹理与地幔贡献 → 峰值/均衡与全局高程排名整形、封闭低地修复
+→ Warp、海岸稳定、可选平滑、两层后期噪声
+→ 山脊锐化、土壤蠕动 → 输出边界转换为 km
+→ 海平面基准、最终海陆、坡度、连通分量与统计
 ```
 
-- `Style`、`Camera`、可视化月份不影响生成缓存键。
-- Stage 读取哪些配置和内容需要声明；不能“声明只依赖人口倍数”，代码却偷偷读取地形粗糙度。
-- 依赖变化后按 DAG 传播失效，尚无局部算法时**先整 Stage 重算**。
-- 矩阵、拓扑、网格等静态数据优先缓存；高成本中间结果按预算 LRU 保留。
-- 对同一 Stage、相同输入，缓存命中结果必须与全量生成结果等价。
+内部高程、噪声和成因诊断使用塑形坐标。最后一次性转换为物理 km，再减 `seaLevelDatumKm`；最终 landMask 必须由写入 Float32 的物理高程符号派生。海岸中间 mask 只约束后续塑形，不成为公开海陆事实。
 
-| 用户操作 | 初版应当重算 | 理论可复用 |
-| --- | --- | --- |
-| 更换地图样式 | 仅制图资源 | 所有世界事实 |
-| `populationScale` | 人口及其下游文明 | 全部自然系统 |
-| `roadConnectivity` | 交通及依赖交通的人文分布 | 自然、人口与聚落 |
-| `temperatureOffsetC` | 月度气候及其下游 | 网格、地质、地形、部分环流 |
-| `hydraulicErosion` | 地形终处理及下游 | 网格、板块和初始构造场 |
-| `core.detail` | 输出网格及下游产物 | 与输出网格无关的参考级产物 |
-| 更换 `names` 内容包 | 使用该命名域的相关实体与派生文本 | 无关自然字段；具体由内容依赖决定 |
+低段 `x≤0.5` 使用 `6x²(3−2x)` km；中高段用单调三次 Hermite 锚点 `(0.5,3)/(0.72,4)/(0.82,5)/(1,6)`（坐标、km），连接梯度连续。海底为 `8x`，超过 1 从 6 km 按每坐标单位 6 km 延伸。高程重映射有意偏离参考曲线，不代表经地球统计校准的物理模型。
 
-### 6.4 确定性和 PRNG
+粗糙度范围 0–0.5、默认 0.4，可调纹理相对默认强度为 `(roughness/0.4)³`，后期细节和峰值尖峰也参与。两层后期噪声的基准坐标幅度为 `0.1/6`、`0.05/6`，沿用旧四次幂映射 `6x⁴(5−4x)` 导数的局部补偿（最多 4 倍）。这条补偿是固定的塑形幅度参考，不随当前输出曲线改动；粗糙度 0 时构造骨架和岛屿仍可有起伏。
 
-- 每 Stage 派生独立 RNG：`deriveSeed(seed, stageId, stageVersion)`。
-- 对实体相关的随机选择使用 `deriveSeed(seed, stageId, entityStableId, contentSignature)`，避免“多生成一座城市导致所有后续名称改变”。
-- 对排序并列、随机抽样、CSR 组装、地图边界必须定义稳定 Tie-break。
-- 各浏览器浮点实现与并行顺序可能使结果不具备逐位相等的保证；明确数值容差与可复现范围。
-- 如果必须精确回看历史，不能只依赖 Seed 重新执行可能升级的旧算法；应保存检查点和已计算差量。
+**侵蚀后移的已定决策**：M1.1 不执行冰川/水力侵蚀及附带排水重建。平滑、锐化和土壤蠕动仍属于基础塑形。旧侵蚀算法保留供后续适配，不视为当前执行能力。后续按 `T0 → 初步气候 C0/径流排水 H0/冰雪 I0 → 侵蚀地形 T1 → 重算 C1/H1` 接入，使用独立产物身份避免循环；这些后续 Stage 尚未实现。
 
-### 6.5 取消与错误边界
+既有侵蚀算法按汇水格数与角格距调参，重接时需处理面积、长度及时间尺度的一致性。当前不承诺严格侵蚀质量守恒或与地球高程直方图一致。
 
-- 每次任务有 `requestId`；只接收最新有效任务结果。
-- CPU 大循环中定期检查取消标志；同步计算不一定能实时处理同一 Worker 收到的取消消息，首版使用终止 Worker 兜底。
-- 发布世界应为原子操作，失败不能安装半成品 `WorldSnapshot`。
-- 错误记录 `stageId`、配置摘要、内容签名、输入形状和运行版本；UI 提供重试及错误摘要。
+**代码组织**：地形塑形算法位于 `world-core/src/generation/nature/geography/`。
+- `terrain/`：地形表面纹理（`terrain-texture-generator`）、水力侵蚀处理器（`terrain-erosion-processor`，当前保留备用）、表面后处理编排（`terrain-post-processor`）与拓扑修复/整形（`terrain-finalizer`）。
+- 单位与契约：模型塑形坐标与物理高程换算收敛于 `generation/nature/geography/elevation-units.ts`；产物契约与校验由 `types.ts`、`validation.ts` 和 `queries.ts` 维护。
 
----
-
-## 7. 自然世界生成：算法继承与升级方案
-
-> 本节用于确定“保留哪些自然算法、改进什么、何时改”，不是承诺首版实施完整物理模拟。
-
-### 7.1 球面网格与参考尺度
-
-**沿用**：Icosphere/Voronoi、邻接 CSR、区域面积与球面距离、固定参考网格及输出网格映射。
-
-当前源实现的参考网格采用细分等级 6，约 **40,962** 个 Region；默认输出网格 **163,842** 个 Region。可持续使用两级结构进行宏观地质和气候计算。
-
-**优化**：
-
-- `meshId`、`referenceMeshId` 与投影映射独立缓存；并区分地质扰动映射与地理气候映射，禁止混淆。
-- 几何拓扑、边长、面积、区域法向等稳定计算只构建一次；换配色不重建网格。
-- 对 `Icosphere` 的合法区域数建立明确枚举/转换；当前配置字段 `core.detail` 的注释与实际“目标区域数”语义需统一。
-- 检查网格闭合、Euler 特征、面积总和、邻接对称与映射合法性。
-
-**暂不实施**：任意分辨率持续可变网格重拓扑或动态局部细分；首先解决多精度引用与事实身份保持。
-
-### 7.2 板块、地壳、大陆与构造
-
-**沿用**：板块种子/方向性区域生长、主/微板块拓扑、Euler 角速度、构造边界、候选大陆控制、地壳密度/厚度、火山岛弧与热点。
-
-**优化**：
-
-1. 区分 `candidateLandCoverage`、`actualLandCoverage`、`targetLandCoverage`。当前陆地占比配置主要控制候选分布，地形与侵蚀会影响最终比例；报告偏差而非静默假装精确满足目标。
-2. 对最终可见大陆数量、岛屿数量、面积分布、板块边界山脉关联度建立世界质量指标。
-3. 宏观构造参数与微观噪声参数分别分组；山脉的地质成因应可以被解释面板追溯。
-4. 将“板块拓扑”和“候选大陆归属”分开缓存；参数变动只重算必要下游。
-5. 将地质贡献（褶皱、拉张、岛弧、热点、地幔抬升等）留作可查询的诊断字段。
-
-**暂不实施**：跨数亿年的真实板块动力学积分；世界文明年与地质年代是不同时间尺度。
-
-### 7.3 构造高程与地形后处理
-
-**沿用**：TectonicElevationGenerator 的构造高程与分类、Phasor 山脊、Edifice 贡献；TerrainPostProcessor 的 Warp、细节 Noise、海岸稳定、平滑、冰川/水力侵蚀等思路。
-
-**改进重点**：现有单个 TerrainPostProcessor 同时在一份可变高程数组上运行大量处理，难以隔离中间状态和实现局部再生成。建议拆成可独立产出的概念步骤：
-
-```text
-Tectonic Skeleton
-  → Relief Texture
-  → Terrain Warp
-  → Coastline / Sea-Level Policy
-  → Smoothing / Local Detail
-  → Erosion & Deposition
-  → Final Elevation (km)
-  → Slope / Aspect / LandMask / Terrain Classification
-```
-
-**具体规则**：
-
-- 明确 `terrainWorkingElevation`（用于塑形的无量纲量）与 `elevationKm`（公开物理高程）的转换边界；不要把数值类型相同的字段当作单位相同。
-- 海陆掩码由明确的阶段权威生成。当前流程会在侵蚀前固定 `oceanMask`，最后又从更新后的高程构建 `landMask`；需验证海岸线跨零后的差异，并选择“冻结海岸”或“允许海岸更新”策略。
-- 冰川侵蚀目前主要根据纬度/高度近似；V1 保留。**V2 高级模式**可采用“初始地形 → 初步气候 → 气候驱动侵蚀 → 最终气候”的有限迭代，不建议首版加入无限反馈循环。
-- 将侵蚀与最终排水分开：侵蚀可使用代理排水，最后由统一 `DrainageNetwork` 生成真正的河网，避免两个消费者对水流方向的解释不一致。
-- 地形编辑需要支持 `elevationPatch` 与 `invalidatedDomain`；首次支持整 Stage 重算，之后才增加局部侵蚀/流域重算。
-
-**V1 验收**：无 NaN、海陆掩码一致、地形范围可控、形态有解释、同 Seed 在版本内稳定；且不同地形参数的效果可测。
+> 以下 §7.4–§9 为尚未落地的目标设计；算法现状描述特指 docs/old-src 参考实现。当前源码没有这些生成器或正式地图，迁移契约以世界数据契约及 M1 实施计划为准。
 
 ### 7.4 季节环流与月度气候
 
 **沿用**：四个季节锚点、ITCZ 迁移、季风/纬度气压带、风/洋流代理场、12 个月温度与降水、海陆性、雨影/地形抬升、降水总量约束。
 
-**必须明确模型定位**：这是一套可解释、可调校的 **EarthlikeClimateModel**，不是通用行星大气数值求解器。当前存在针对类地球的温度基线、海陆经验系数、季风增益和降水上限。若扩展星球自转周期、大气密度或不同恒星辐射，应建立独立 Planetary Forcing 层，而不是仅叠加 `temperatureOffsetC`。
+**必须明确模型定位**：这是一套可解释、可调校的 **EarthlikeClimateModel**，不是通用行星大气数值求解器。参考模型包含针对类地球的温度基线、海陆经验系数、季风增益和降水上限。若扩展星球自转周期、大气密度或不同恒星辐射，应建立独立 Planetary Forcing 层，而不是仅叠加 `temperatureOffsetC`。
 
 **优化**：
 
 - 将 `planetary forcing`（倾角、辐射/季节）与 `surface response`（海陆、地形、风和降水）逻辑隔离。
-- 月度模型当前每月约调用温度求解三轮、降水求解两轮；先分析每轮的质量收益，缓存重复的风、空间梯度和传播权重，禁止未经对照测试直接删迭代。
+- 参考月度模型每月约调用温度求解三轮、降水求解两轮；先分析每轮的质量收益，缓存重复的风、空间梯度和传播权重，禁止未经对照测试直接删迭代。
 - 高分辨率气候继续在参考网格计算、向输出网格插值，并以物理面积加权和降水守恒系数验证总量。
-- 当前气候投影使用 3 个邻近气候网格点，源索引为 `Uint16Array`（因此源区数上限为 65,535）；未来若改参考网格精度，必须同步修改索引类型与序列化格式。
-- 当前输出网格超过 250,000 Region 时不常驻物化全部输出月份字段，应保留这种内存策略，并支持按月采样/缓存。
+- 参考气候投影使用 3 个邻近气候网格点，源索引为 `Uint16Array`（因此源区数上限为 65,535）；未来若改参考网格精度，必须同步修改索引类型与序列化格式。
+- 参考实现在输出超过 250,000 Region 时使用按月采样/缓存；当前快照契约要求完整 12N 字段，迁移时须明确这种差异及内存边界，不静默省略必填月份，也不提前建立惰性快照框架。
 - 建立纬度-温度曲线、季风、干旱带、雨影、海岸湿润度、南北半球季节反转的统计与视觉回归。
 
 **V1 验收**：12 个月温度/降水有限且合法；聚合年值一致；降水不会因分辨率变化出现显著无因变化；高精度模式不强制常驻全年巨型数组。
@@ -629,7 +445,7 @@ Tectonic Skeleton
 | `River` | 稳定 ID、上游/下游、河道区域路径、年平均流量、级序 | 可选中、可查询的河流 |
 | `Lake` | 稳定 ID、盆地、面积、最大/当前水位、出入口 | 基础静态湖泊，不做完整动态水库 |
 
-**关键问题**：当前对于完全无海洋出口的陆地分量可以建立内部汇点，但未把它表达为可见湖泊；“优先队列填洼生成可排水表面”与“真实盆地蓄水/蒸发”应区分。**计算路由辅助面不等于改变最终地表高程。**
+**关键问题**：旧参考实现对于完全无海洋出口的陆地分量可以建立内部汇点，但未把它表达为可见湖泊；“优先队列填洼生成可排水表面”与“真实盆地蓄水/蒸发”应区分。**计算路由辅助面不等于改变最终地表高程。**
 
 未来如加入人工改道、水坝和灌溉，必须把河网从简单 `riverMask` 扩展为稳定实体和图连接。水文更新可利用下游依赖传播，而非只依赖笔刷覆盖区。
 
@@ -789,141 +605,29 @@ export interface PickResult {
 
 ---
 
-## 10. 编辑器：Command、Patch 与影响分析（未来功能，基础契约先定）
+## 10. 编辑与局部更新（未来边界）
 
-### 10.1 世界事实与地图装饰分离
+世界事实编辑与地图装饰分离。未来 Command/Patch 必须携带目标快照身份与影响域，产生新候选快照并校验，禁止 UI 原地改权威数组。首版按整 Stage 失效；局部流域/地形再生成只有在有实际需求和验收方法后实施。
 
-- **Fact Editing**：高程、河流、资源、聚落、国界、文化等，改变世界事实并触发依赖更新。
-- **Cartographic Annotation**：标签、纹章、注释、出版符号，只改变视图，不触发模拟。
+## 11. 文明演化与历史（M5+）
 
-### 10.2 最小命令协议
+静态初始文明不等于动态模拟。未来按固定时间步定义人口、经济、交通、政治与文化因果，事件须可解释。历史使用检查点和差量，不能仅靠 Seed 重新执行新版本算法来恢复旧世界。当前不建立模拟器、编辑器或分支空框架。
 
-```ts
-export interface WorldCommand {
-  id: string;
-  kind: string;
-  expectedRevision: number;
-  preview(world: WorldReadModel): ChangeImpact;
-  apply(world: MutableWorldDraft): WorldPatch;
-}
+## 12. Worker、调试器与发布边界
 
-export interface ChangeImpact {
-  changedDomains: readonly string[];
-  affectedRegionIds?: Uint32Array;
-  invalidatedStages: readonly string[];
-  affectedEntityIds?: readonly string[];
-  requiresConfirmation: boolean;
-}
-```
+当前 `/mesh-debug` 使用 Web 的 Controller/Runtime，支持 Mesh、Geology、Terrain 三种任务及 requestId。Worker 内三条 Pipeline 共用 128 MiB LRU；只转移结构化克隆出的独立产物副本，缓存原件不 detach。主线程校验身份、dtype、长度和字段后准备显示。权威数组不直接交给渲染层修改。
 
-- 先 Preview（直接影响与潜在间接影响明确区分）→ 用户确认 → 执行 Command → 校验 → 原子发布 Snapshot → Source 失效。
-- Undo/Redo 保存反向 Patch，不依赖重新跑随机生成器来“撤销”。
-- 编辑与算法自动生成共存：每个可编辑事实存在 `generated`、`user-override`、`locked` 等来源信息。
-- 自动重算必须尊重锁定规则；产生不可解决的约束冲突时必须报告，而不能静默删除锁定的城市或改名。
+latest request wins：陈旧完成和查询响应被忽略。硬取消终止并重建 Worker，丢失其缓存；旧显示仍可保留，成功重建前禁用区域查询。同步网格构建不能在一轮 CPU 计算中实时处理中断消息，不能把硬取消称为无损协作取消。
 
-### 10.3 空间影响范围
+调试页等级为 L4–L8，核心为 L0–L8；支持 Voronoi/Icosphere、线框、旋转、五邻域中心标记、专题与区域查询。高程和坡度图例属于显示状态，切换不触发生成。坡度采用固定对数角度色阶，45°以上显示最高档。
 
-| 修改行为 | 初版失效策略 | 未来局部优化 |
-| --- | --- | --- |
-| 高程画笔 | 地形相关派生及下游整阶段重算 | 局部坡度，按流域延展水文范围 |
-| 河道改线 | 水文及下游生态/人口依赖 | 上游/下游水系子图失效 |
-| 更改城市名称 | 指定实体及搜索/标注缓存 | 局部文本更新 |
-| 国界重划 | 国家统计/专题图/相关模拟 | 局部国家实体和区域更新 |
-| 更改地图样式 | Style/Render 层 | GPU Paint 参数更新 |
+当前用单位球和顶点颜色显示地形，没有参考项目的显示高度位移，也不是正式 Cartography。生成内容失败、取消或传输错误时保留最后有效显示；安装新几何前释放旧 GPU 对象。L6+ 限制像素比、关闭默认线框和旋转以控制显示负载。高等级显示数组仍在主线程准备，峰值内存和长期 GPU 压力未测。
 
-气候传播、河流下游、交通连通和人口迁移都可能跨越笔刷半径；**不能以被画笔覆盖的 Cell 数直接推断全部因果影响域。**
-
----
-
-## 11. Civilization Simulation 与历史（架构预留）
-
-### 11.1 静态生成 ≠ 动态模拟
-
-`Generation` 负责创世时生成合理的初始世界；`Simulation` 负责在已存在世界上推进时间。两者共享领域模型、验证器、内容定义，但不能将“每年重新生成整个国家/宗教”作为历史演化。
-
-### 11.2 时间步与执行顺序
-
-- 采用固定的模拟时间 Tick，权威时间不等于 UI 的 `requestAnimationFrame`。
-- V2 首先做年度 Tick；农业生产/市场后续可增加季度或月度子步。
-- 建议执行顺序：自然事件 → 资源/粮食 → 人口 → 城市/交通 → 文化/技术 → 政治/外交 → 事件和校验。
-- 对每个模拟系统声明读取、写入、频率和依赖；反馈可跨 Tick 或在显式的局部迭代中解决，不让顺序意外决定结果。
-- 战争采用军队、战线、战役层级；人口按聚合 Pop 管理，不模拟全球每个人。
-
-### 11.3 可解释事件
-
-```ts
-export interface WorldEvent {
-  id: string;
-  year: number;
-  kind: string;
-  actorIds: readonly string[];
-  location?: { regionId?: number; entityId?: string };
-  causeIds: readonly string[];
-  effectIds: readonly string[];
-  metadata: Record<string, unknown>;
-}
-```
-
-事件记录因果叙事索引，但不是所有数值变化的唯一存储形式；历史准确回放需要状态检查点与差量。
-
-### 11.4 历史存档
-
-- **Checkpoint**：周期性的完整可恢复世界状态。
-- **Delta**：年度或阶段变更集；需要版本、校验和顺序保证。
-- **Event Log**：重要事件、实体沿革、因果与叙事检索。
-- **Branch**：共享分支点以前的不可变历史，之后独立推进。
-
-历史回放不能简单通过旧 Seed 调用当前版本生成算法来替代存档，否则升级算法可能使历史失真。
-
----
-
-## 12. Worker 与浏览器运行时
-
-### 12.1 职责拆分
-
-| 执行环境 | 职责 |
-| --- | --- |
-| 主线程 | Svelte、Three.js、地图控制、详情面板、轻量查询 |
-| Generation Worker | Stage DAG、自然/文明创世、阶段耗时和可取消任务 |
-| Simulation Worker（后续） | 时间 Tick、事件和动态更新 |
-| Storage Worker（可选） | 大型快照压缩/解压及数据校验；按需要加入 |
-
-### 12.2 消息协议
-
-以下消息联合类型是完整创世的目标草图。当前 `apps/web/src/lib/generation/protocol.ts` 仅传递 Mesh 生成、取消、清缓存与拾取请求，以及相应进度和结果；`COMPLETED` 携带 Mesh DTO，不携带 `WorldSnapshot`。M1 扩展协议时应沿用 `requestId`、旧请求结果丢弃、失败保留最后有效结果及 Buffer 所有权约束。
-
-```ts
-export type GenerationRequest =
-  | { type: 'GENERATE'; requestId: string; config: WorldGenerationConfig; contentSignature: string }
-  | { type: 'CANCEL'; requestId: string };
-
-export type GenerationResponse =
-  | { type: 'STAGE_STARTED'; requestId: string; stageId: string }
-  | { type: 'STAGE_PROGRESS'; requestId: string; stageId: string; fraction: number }
-  | { type: 'STAGE_COMPLETED'; requestId: string; stageId: string; durationMs: number }
-  | { type: 'GENERATION_COMPLETED'; requestId: string; snapshot: WorldSnapshot }
-  | { type: 'GENERATION_FAILED'; requestId: string; stageId?: string; error: string }
-  | { type: 'GENERATION_CANCELLED'; requestId: string };
-```
-
-消息只携带可结构化克隆对象与 TypedArray；类实例恢复必须显式处理。`contentSignature` 必须能在 Worker 内解析成同一已校验内容集合，不能只发送摘要却不保证加载内容一致。
-
-### 12.3 Buffer 所有权与缓存
-
-当前 M0 网格链路由 Worker 缓存持有原始 Mesh Buffer，发送前制作传输副本并 Transfer 给主线程；主线程显式恢复 Mesh。Buffer 一经转移，源 Worker 中的同一 ArrayBuffer 就不能继续用于缓存。硬取消使用 `terminate()` 并重建 Worker，因此会丢失其内存缓存。
-
-V1 可采用：
-
-1. 持久化不需要复用的最终 Buffer 直接 Transfer 给主线程。
-2. 有价值的中间产物由 Worker 持有，不转移其原 Buffer；必要时复制用于发布，明确内存成本。
-3. 按任务结束时释放不可复用临时数组；缓存设置最大字节预算和 LRU。
-4. `SharedArrayBuffer`、多 Worker 与共享缓存仅在实际性能需要、部署隔离策略允许时引入。
-
-在 Worker 内运行同步大循环时，单独发送 `CANCEL` 消息可能直到当前计算结束才被处理；必须设计阶段/循环内取消或主线程 `terminate()` 强制回收机制，避免虚假“即时取消”。
-
----
+未来完整世界发布需在核心定义快照所有者与原子替换，Worker 协议区分中间产物、完整世界和显示副本，不能用当前调试产物替代正式发布。
 
 ## 13. 世界存档、版本与内容一致性
+
+> 下列为 M4 目标设计。当前只有经校验的 M0 JSON 编解码，尚无浏览器项目持久化、完整自然世界保存或 .aearth 二进制档案。
 
 当前 M0 仅实现 `encodeWorldArchive` / `decodeWorldArchive` 的版本化 JSON 往返：保存 TypedArray 类型，校验快照、内容包版本/签名和校验和。它不是 `.aearth`，也没有 IndexedDB、OPFS、浏览器保存/导入流程。以下 §13.1–13.3 是 M4 的目标设计，不应将逻辑目录图视为当前文件格式。
 
@@ -1031,7 +735,7 @@ world.aearth
 | Package boundary | 无 UI/Three.js 反向依赖，所有包可独立 Build/Typecheck/Test |
 | World-data | ID、权重、外键、Schema、内容签名、名称确定性、按需加载 |
 | Mesh/Geology | 闭合、面积、邻接、板块归属、陆地覆盖误差、构造边界 |
-| Terrain | 海陆掩码/高程一致、无 NaN、诊断值、侵蚀范围、分辨率对比 |
+| Terrain | 海陆掩码/高程一致、无 NaN、诊断值、分辨率对比；侵蚀范围在后续接入时验证 |
 | Climate | 月/年一致、极值、雨影、季风、半球季节、输出投影守恒 |
 | Hydrology | 排水无环、流量守恒、流域面积、内流汇点、湖泊稳定性 |
 | Ecology/Resources | 生物群系分类、土壤/植被范围、资源和地质关联 |
@@ -1046,191 +750,25 @@ world.aearth
 
 ---
 
-## 16. 实施里程碑（面向 AI Agent 分任务）
+## 16. 里程碑与验收入口
 
-### M0 — Monorepo 与世界契约
-
-**目标**：工程可运行，包边界正确，世界事实模型/序列化骨架可验证。
-
-**当前状态（2026-11-04）**：本地最小前置条件已验证，可启动 M1；当前实现与命令结果见 §0.3 和 [`PROGRESS.md`](PROGRESS.md)。CI 尚未远端验证，工作区改动尚未提交。M0 档案是经完整校验的 JSON 测试往返，不是已生成世界的产品级保存流程。
-
-**交付**：
-
-- `apps/web`、`packages/world-data`、`packages/world-core`、`packages/cartography`。
-- 包导出、TS 类型、脚本、CI、依赖边界检查。
-- WorldGenerationConfig、WorldSnapshot、WorldViewState、字段单位和实体 ID 规范。
-- `world-data` 的 ContentPack Manifest、名称/政体/宗教原型及基础校验。
-- Worker 请求协议与任务取消；最小存档往返。
-
-**验收**：各包独立测试；`world-core` 不依赖 DOM/Three；内容加载确定；空世界/最小世界档案可往返。
-
-### M1 — 自然世界 Genesis
-
-**目标**：稳定生成拥有真实地理因果的行星。
-
-**当前状态**：尚未开始生产自然 Stage；第一步接入 Mesh 之后的板块/地形并完成真实快照发布，随后按依赖进入气候、水文与生态。旧版 `feat-society` 是算法参考，不是当前包内已实现能力。
-
-**交付**：
-
-- Mesh + 板块 + 大陆 + 地形；现有核心算法迁移并建立黄金样例。
-- 归一化高程与物理单位/海陆掩码统一。
-- 季节环流、12 月气候、Köppen、生物群系。
-- Priority Flood、水文基本流域与河流；基础静态湖泊可分子里程碑。
-- Stage DAG 及部分 ConfigKey 缓存；进度、取消和错误。
-
-**验收**：固定 Seed 在至少 3 个分辨率/原型组合稳定通过；基础自然专题字段合法；地形和水文关键不变量成立。
-
-### M2 — 初始文明与内置内容库
-
-**目标**：自然环境约束人口和文明分布，并能解释生成结果。
-
-**交付**：
-
-- 资源初始目录与基础空间分布。
-- 人口、聚落、道路/航线、民族/语言、国家/行政、宗教/圣地。
-- `world-data` 命名规则、文化/宗教/政体模板接入。
-- 世界统计、实体查询、人口/引用一致性检查。
-
-**验收**：同版本同 Seed/ContentCatalog 确定；人口与各群体账本一致；没有无效外键或无故跨海传播。
-
-### M3 — Cartography / Atlas
-
-**目标**：具备用户可直接探索的 3D/2D 世界地图工作台。
-
-**交付**：
-
-- GlobeView + AtlasView、投影、地图交互与统一 Picking。
-- SourceRegistry/StyleDocument/LayerFactory，局部失效机制。
-- 六套首发风格、自然/人文主要专题图、图层开关和图例。
-- 城市、国家、区域、河流详情查询；图片导出。
-
-**验收**：2D/3D 选择同一事实对象；修改样式不触发重新生成；图层资源释放与平移后标签布局正确。
-
-### M4 — Snapshot、项目管理、V1 验收
-
-**目标**：能持续保存、载入、导出并验证完整世界。
-
-**交付**：
-
-- IndexedDB 项目索引、OPFS 二进制存档、独立导入导出。
-- 配置/算法/内容包版本与校验和。
-- 错误恢复、性能面板/基准、Playwright 端到端用例。
-
-**验收**：创建世界→生成→查询→换图→保存→关闭→重开，世界事实与内容版本一致；失败不会破坏最后一份有效世界。
-
-### M5 — Living World（第二产品阶段）
-
-**目标**：固定年度推进、人口/城市/国家演化、事件与基础历史。
-
-**交付**：Simulation Worker、Tick Scheduler、聚合人口、基础资源/粮食、政治事件、历史检查点和回看。
-
-**验收**：固定条件下多样本推进 300–500 年；人口/身份/边界等关键不变量稳定；地图可独立浏览和暂停模拟。
-
-### M6 — Creator / Chronicle（后续）
-
-**目标**：用户可编辑世界事实、锁定设定，并从不同历史点探索分支。
-
-**交付**：Command/Patch、编辑影响预览、局部重算、对象锁定、Undo/Redo、历史分支和对比。
-
-**验收**：编辑后数据一致、可撤销、可保存，重新打开仍保留用户设定；历史分支可各自推进且不会相互污染。
-
----
-
-## 17. 任务拆分规范与实现约束
-
-每个 AI Agent 任务包含：`Goal`、`Package`、`Inputs`、`Outputs`、`Invariants`、`Allowed Changes`、`Tests`、`Acceptance`、`Non-goals`。
-
-硬性规则：
-
-1. 不允许把世界事实嵌入地图 Style、GeoJSON 或 Svelte Store 中维护。
-2. 不允许 `world-core` 依赖 Three.js/Svelte/DOM；所有算法必须在无 UI 的环境测试。
-3. 不允许 `world-data` 依赖 `world-core`；内容定义必须具有稳定 ID、Schema 与版本。
-4. 不允许更换词库后默默覆盖旧世界名称；内容签名及作者覆盖必须保留。
-5. 不允许新 Stage 偷读未声明的 Config/Artifact/Content 字段。
-6. 不允许在没有版本更新与测试的情况下改变已发布的算法行为。
-7. 每个新增的 Dense Field 都要定义 `dtype`、`meshId`、单位、缺省值、序列化和失效条件。
-8. 导出或重建前必须验证实体引用、统计守恒和关键物理量边界。
-9. 地图层只消费只读世界数据；样式切换不触发自然或文明生成。
-10. 引入“局部重算”之前，必须证明其与全量重算的相关输出等价，尤其是水文下游、气候传播和交通连通域。
-11. 优化必须同时报告运行时间、内存、质量指标；不是单看 FPS 或单个 Seed。
-12. 每个里程碑必须交付可交互、可测试的纵向功能切片，避免只创建大量空接口和目录。
-
----
-
-## 18. 风险、待决策与 ADR
-
-| 风险 | 默认决策 | 触发重新评估的条件 |
-| --- | --- | --- |
-| 自然算法结果变化 | 版本化保留旧黄金样例，逐域替换 | 新算法显著提升质量或修复错误 |
-| 大量经验气候系数 | 初版定位 EarthlikeClimateModel | 开发非类地球物理世界 |
-| 湖泊系统复杂度 | V1 基础静态盆地/湖泊，后续逐月水量 | 进入可编辑水系/长期干旱模拟 |
-| 内容包膨胀 | 内置 core + earthlike，按需加载 | 用户 Mod/社区内容上线 |
-| Stage 过细导致维护重负 | 优先少量强契约 Stage | 存在明确缓存收益与独立重用 |
-| TypedArray 缓存与转移冲突 | 明确独占所有权、必要时复制 | 多个世界并行或高精度大规模生成 |
-| 样式层与自然字段耦合 | Source Schema + 查询边界 | 扩展专业制图和自定义图层 |
-| 历史存储过大 | Checkpoint + Delta + Event Index | 多分支千年存档规模过大 |
-| 浏览器兼容与离线存储 | IndexedDB + OPFS 兼容层与导出 | Safari/移动端存储配额限制 |
-| 更换 GPU/计算技术 | 先实测 WebGL2 与 TS | GPU/CPU 热点证明必要 |
-
-建议维护的 ADR：
-
-- `ADR-001-monorepo-and-package-boundaries.md`
-- `ADR-002-world-snapshot-and-field-ownership.md`
-- `ADR-003-content-packs-and-deterministic-naming.md`
-- `ADR-004-generation-stage-dag-and-caching.md`
-- `ADR-005-earthlike-climate-model.md`
-- `ADR-006-hydrology-and-lake-model.md`
-- `ADR-007-cartography-rendering-backend.md`
-- `ADR-008-snapshot-storage-and-history.md`
-
----
-
-## 19. 核心决策清单（开工前冻结）
-
-| 决策 | 结果 |
+| 阶段 | 当前边界 |
 | --- | --- |
-| 包边界 | `web / world-data / world-core / cartography` |
-| 世界权威来源 | `WorldSnapshot`，不可由 UI/地图直接修改 |
-| 初版物理模型 | Earthlike，单位与渲染尺度分离 |
-| 网格 | Icosphere/Voronoi + 固定参考网格 + 输出网格 |
-| 自然算法 | 保留成熟机制；优化地形后处理、气候复用和水文对象 |
-| 文明初始生成 | 静态人口/城市/交通/民族/国家/宗教 + 内置内容模板 |
-| 创世调度 | 显式 DAG，先串行，按依赖缓存 |
-| 渲染 | Three.js WebGL2，共享 Renderer、懒视图资源 |
-| 地图样式 | `cartography` 负责内置 16 套风格与 Style DSL |
-| 编辑 | Command/Patch/Locks；首版仅预留 |
-| 历史 | 固定 Tick + Checkpoint/Delta/Event；第二阶段以后开发 |
-| 本地存档 | IndexedDB 索引 + OPFS 大文件 + 可导出世界档案 |
-| 验收 | 多 Seed、多分辨率、领域守恒、性能基准和 E2E |
+| M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
+| M1 | M1.1 地质和 T0 已实现；v20 待最终回归；气候、水文、侵蚀、生态、发布与集成尚未完成 |
+| M2 | 初始文明、资源与内容库，尚未实现 |
+| M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
+| M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |
+| M5+ | 动态文明、完整编辑器、历史与分支，仅保留设计边界 |
 
-**实施建议**：M0 最小工程前置条件已在本地验证；从现有 Mesh Stage 按 `Geology → Terrain → Climate → Hydrology → Ecology` 的实际依赖逐步推进 M1，并尽早闭合“生成 → 校验 → 原子发布快照”的垂直切片。不要把经济、战争、编辑和历史与首版自然创世并行铺开；但必须让基础模型可容纳它们后续发生的变化。
+M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，真实验证与历史基准索引见 [进度](PROGRESS.md)。不以历史通过记录证明当前改动通过；不以几张截图替代确定性、海陆一致性、缓存、所有权和失败恢复验收。
 
----
+## 17. 已定决策与仍有限制
 
-## 附录 A. 源码与文档参考
+- 2026-11-06：恢复 feat-society 的主要构造/纹理逻辑，停止额外区域隆起、区域起伏和平缓区保护。兼容诊断字段保留零/一值，含义见数据契约。
+- 2026-11-06：地形处理统一塑形坐标，公开边界转物理 km；输出曲线与粗糙度响应按视觉反馈调整，均由版本标识，不声称与旧版或地球逐值一致。
+- 2026-11-06：冰川/水力侵蚀移到气候与水文接入之后，当前 T0 不生成侵蚀和排水事实。
+- 快照 Schema、阶段算法版本、内容包版本与档案格式版本分别管理；算法变更不自动意味着修改快照 Schema。
+- 所有后续实现遵循根目录 AGENTS.md；默认不运行检查命令，授权后执行并报告实际结果。
 
-- 产品总纲：`Another_Earth_PRD_v1.0.md`（2026-11-02）
-- 既有技术设计：`Another_Earth_Technical_Design_v0.1.md`（2026-11-02）
-- 项目分支：<https://github.com/42arch/another-earth-generator/tree/feat-society>
-- 生成流水线：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/worker/simulation.worker.ts>
-- Pipeline Scheduler：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/pipeline/scheduler.ts>
-- 地形后处理：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/geography/terrain-post-processor.ts>
-- 地形侵蚀：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/geography/terrain-erosion-processor.ts>
-- 月度气候：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/climate/monthly-climate-generator.ts>
-- 气候输出投影：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/climate/climate-output-projector.ts>
-- 水文：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/hydrology/surface-hydrology-generator.ts>
-- 生物群系：<https://github.com/42arch/another-earth-generator/blob/feat-society/src/core/simulation/ecology/biome-classifier.ts>
-
-## 附录 B. 需求与里程碑对应
-
-| PRD 域 | 技术章节 | 首个目标阶段 |
-| --- | --- | --- |
-| NAT-01～NAT-04 行星、地质、地形、气候 | §5–7 | M1 |
-| NAT-05～NAT-09 水文、生态、资源、灾害 | §7 | M1–M2；动态灾害后续 |
-| SOC-01～SOC-09 初始文明 | §4、§8 | M2 |
-| SOC-10～SOC-15 外交、战争、科技、政治与自主演化 | §11 | M5 及后续 |
-| MAP-01～MAP-09 视图、专题、样式 | §9 | M3；高级样式后续 |
-| EDT-01～EDT-09 编辑器与局部生成 | §10 | M6 |
-| HIS-01～HIS-09 历史、事件、分支 | §11、§13 | M5–M6 |
-| ATL 世界百科与信息查询 | §8–9 | M2–M3 |
-| PRD 存储、导出、内容版本 | §4、§13 | M0、M4 |
+早期各轮地形方案和已失效 ADR 已合并成以上当前决策，试验常数与逐轮调参流水不再作为独立文档维护。

@@ -18,8 +18,8 @@ export interface IcosphereGeometry {
   readonly triangles: Uint32Array
 }
 export function icosphereRegionCount(subdivisionLevel: number): number {
-  if (!Number.isInteger(subdivisionLevel) || subdivisionLevel < 0 || subdivisionLevel > 7)
-    throw new RangeError('subdivisionLevel must be an integer in [0, 7]')
+  if (!Number.isInteger(subdivisionLevel) || subdivisionLevel < 0 || subdivisionLevel > 8)
+    throw new RangeError('subdivisionLevel must be an integer in [0, 8]')
   return 10 * 4 ** subdivisionLevel + 2
 }
 /** Stable legacy subdivision order; optional seeded jitter uses instance-local PRNG state. */

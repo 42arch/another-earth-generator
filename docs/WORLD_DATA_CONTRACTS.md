@@ -1,11 +1,13 @@
-# M0.2 世界数据契约
+# 世界数据与生成产物契约
 
-公开入口为 `@another-earth/world-data` 与 `@another-earth/world-core`。本文件记录快照 schema 2 的实际实现；不定义生成算法。
+> 更新：2026-11-06。本文件定义字段、单位、身份和所有权；生成调度见 [生成管线](GENERATION_PIPELINE.md)，算法设计见 [技术设计](TECHNICAL_DESIGN.md)。公开入口为 `@another-earth/world-data` 与 `@another-earth/world-core`。当前快照 Schema 为 2，GenerationArtifact 不等于已发布快照。
 
 ## 快照与身份
 
 `WorldSnapshot` 包含 `schemaVersion / snapshotId / revision / time / metadata / planet / mesh / nature / civilization`。
 `nature` 下五个状态始终齐备：`geology / geography / climate / hydrology / ecology`。生成过程中的不完整产物不能作为快照。
+
+当前只生成 Mesh、GeologyArtifact 与基础 TerrainArtifact，均为阶段产物。快照中的气候、水文、生态类型已定义，但没有真实生成器和完整发布流程；不得补零伪装完整世界。完整自然结果必须通过完整校验后原子发布。
 
 `metadata` 保存 worldId、实际名称、调用者提供的 UTC 创建时间、字符串 seed、生成器版本、内容签名、内容包版本/哈希、Mesh 参数以及生成来源。当前来源包含 Mesh Stage 版本、输入签名和配置签名；M1 接入新 Stage 时必须一并扩展。创建时间和名称不参与随机身份；seed 是不透明字符串。snapshotId/worldId/实体 ID 由调用者提供，不能根据数组顺序、显示名称、当前时间隐式推导。revision 是非负安全整数，同一世界的新版本必须分配新 snapshotId 并增加 revision；校验单个快照无法证明跨快照的单调性。
 
@@ -46,7 +48,7 @@ WorldSnapshot 是 world-core 数据所有者使用的完整存储契约，readon
 3. 消费者通过 `createFieldView` 读取字段。该函数零拷贝，返回冻结的小型包装对象，仅暴露 meshId、length 和带边界检查的 get，不暴露数组/Buffer。网格的原始数组也只能留在核心所有者中；未来 Query 按需提供坐标读取。
 4. 已发布数组不可原地修改、detach 或 transfer。变更必须构建下一份候选状态，重新校验并整体切换。可共享且承诺不修改的数组可跨 revision 复用。不通过冻结 TypedArray 或无条件深拷贝实现不可变性。
 
-本阶段不实现状态事务、Worker 或 Copy-on-Write。FieldView 保证正常 API 不暴露写入口，不能阻止持有原始快照的所有者违规修改。
+FieldView 本身不实现状态事务、Worker 或 Copy-on-Write。FieldView 保证正常 API 不暴露写入口，不能阻止持有原始快照的所有者违规修改。
 
 ## 内容与验证
 
@@ -65,3 +67,78 @@ WorldSnapshot 是 world-core 数据所有者使用的完整存储契约，readon
 - 采用 MeshTopology、PlanetParameters、NatureState 命名，分别明确拓扑、物理输入与已确认自然状态。
 - 当前 generationConfig 包含行星参数、Mesh 细分/扰动/可选 Seed 覆盖、区域数和文明开关；provenance 包含 Mesh 阶段版本及签名。M1 新阶段必须将实际使用的参数和来源加入契约。
 - 本阶段水文仅定义排水接收者与年径流；河流/湖泊实体、水量收支及生成算法须在专门水文任务中一起定义和验证。
+
+
+## 球面网格契约
+
+`SphericalMesh` 扩展 `MeshTopology`，公开生成器为 `createSphericalMesh`，读取用 `MeshQueries`/`SphericalSpatialIndex`。L0–L8 区域数 `N=10×4^L+2`、`F=20×4^L`、`E=30×4^L`。半径必须给出有限正面积；irregularity 为 [0,1]，Seed 为非空字符串或安全整数。
+
+| 字段 | 类型/长度 | 含义 |
+| --- | --- | --- |
+| centers | Float64 / 3N | 区域中心 XYZ，单位球面 |
+| areaKm2 | Float64 / N | Voronoi 区域实际面积，km²；除以 R² 得球面立体角 |
+| neighborOffsets | Uint32 / N+1 | CSR 半开范围；同时作为 boundaryCorners 的区域范围 |
+| neighbors | Uint32 / 2E | 区域邻居，稳定的首次边遍历顺序 |
+| triangles | Uint32 / 3F | 每面三个区域 ID，外向逆时针 |
+| dualVertices | Float64 / 3F | 每面一个球面外心；对偶顶点 ID 等于面 ID |
+| boundaryCorners | Uint32 / 3F | 每区域外向逆时针的对偶顶点序列，不重复首点 |
+| edgeRegions | Uint32 / 2E | 边连接的两个区域中心 ID |
+| edgeTriangles | Uint32 / 2E | 共享该边的两个面 ID，同时是对偶边的两个端点 ID |
+| triangleEdges | Uint32 / 3F | 面内第 j 条边连接顶点 j 与 (j+1)%3 |
+| neighborEdges | Uint32 / 2E | 与 neighbors 同槽的边 ID |
+| edgeAngularDistances | Float64 / E | 两个区域中心的大圆角距，弧度；乘 R 得 km |
+
+所有索引只在所属 meshId 内有效。右手坐标：北极 +Y，零经度 +Z，东经 90° +X；数学角度为弧度，显示角度另行换算。距离 API 显式区分单位球角距和物理 km，面积为 km²。规则网格有 12 个五邻域；扰动网格允许其他度数。
+
+meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则网格不因 Seed 改变几何，输出 Seed 规范为 '0'，但 Pipeline 可保守地按 World Seed 失效。换 Mesh 后旧索引、最近站点树和参考映射必须重建。核心所有者不得修改或转移查询所借用的数组。
+
+## 地质阶段产物
+
+`GeologyArtifact` 带 meshId、referenceMeshId、referenceRegionCount、算法版本，以及稳定板块/大陆 ID 表。参考网格默认 L6（40,962 区域），内部基础细分 100。数组长度为输出区域 N，运动板块数为 P。
+
+| 字段 | 类型/单位 | 含义 |
+| --- | --- | --- |
+| geographicReference / geologicalReference | Uint32 / 参考区域索引 | 普通最近点映射、独立扰动地质映射 |
+| plateIndex | Uint32 / plates 表索引 | 主/微运动板块，区别于基础细分 |
+| subdivisionIndex | Uint32 / 0..99 | 内部基础细分归属 |
+| candidateLandMask | Uint8 / 0 或 1 | 候选陆地，不是最终地形海陆 |
+| continentIndex / nearestContinentIndex | Int32 / continents 表索引或 -1 | 候选大陆及其最近归属 |
+| crustType | Uint8 / 0 海洋、1 大陆 | 当前由候选陆地确定 |
+| densityGcm3 | Float32 / g/cm³ | 地壳密度 |
+| thicknessKm | Float32 / km | 地壳厚度 |
+| baseElevationCoordinate | Float32 / 无量纲 | 旧算法塑形坐标，不能作为物理高程 |
+| plateAngularVelocity | Float32 / 相对模型量，3P | 初始 Euler 向量，不是 rad/year，未做 M1.1B 动力学校正 |
+
+微板块目标和实际数量分开报告。候选大陆用于地壳约束，不是最终海陆，也不能把大陆表数量解释为最终连通分量数量。覆盖率按物理面积统计。零候选陆地没有占位大陆。`queryGeologyRegion` 返回冻结标量/身份查询结果，不向 UI 暴露权威数组。
+
+## 基础地形产物 T0
+
+当前为 `terrain-skeleton-v9` / `terrain-v20`。`TerrainArtifact` 仍是独立阶段产物，带 meshId、算法版本、物理半径与海平面基准；没有自然世界发布或水文事实。
+
+| 字段 | 类型/单位 | 含义 |
+| --- | --- | --- |
+| elevationKm | Float32 / km | 相对海平面的最终高程 |
+| landMask | Uint8 / 0 或 1 | elevationKm > 0 为陆地，否则海洋 |
+| slopeRadians | Float32 / rad | 最大邻域高差除以物理中心距离后取 atan |
+| boundaryType | Uint8 / 0..3 | 无、汇聚、张裂、走滑 |
+| stress | Float32 / 相对模型量 | 地幔调整后的构造应力诊断 |
+| mantleFlow | Float32 / 约 [-1,1] | 正为上涌，负为下沉 |
+| plateAngularVelocity | Float32 / 相对 Euler 模型量，3P | 按 M1.1A plates 表索引的校正运动 |
+| volcanicCoordinate / ridgeCoordinate | Float32 / 无量纲塑形坐标 | 火山体及山脊贡献，不与最终 km 高程直接相加 |
+| regionalUpliftCoordinate | Float32 / 非负塑形坐标 | 兼容字段，当前全零，未施加额外区域隆起 |
+| roughnessWeight | Float32 / 0–1 | 兼容字段，当前全一，不再施加平缓区保护 |
+| regionalReliefKm | Float32 / 有符号 km | 兼容字段，当前全零，未施加额外区域起伏 |
+| erosionCoordinate / depositionCoordinate | Float32 / 非负塑形坐标 | 全零兼容诊断，表示本阶段未执行侵蚀/沉积 |
+| foldBelt | Float32 / 相对分类量 | 褶皱带诊断 |
+
+统计包含面积加权的陆地覆盖率和最大连通分量面积、海陆变化数、连通分量数、最低/最高高程，以及按区域排序而非面积加权的五个高程分位数。坡度为相邻中心最大物理高差/物理距离的 atan。
+
+`landMask[r] === (elevationKm[r] > 0 ? 1 : 0)`，以写入 Float32 后的值为准；非零 seaLevelDatumKm 可以改变最终海陆。物理径向位置必须始终为正。最终数组无 NaN/Infinity，引用和长度经核心与主线程校验。
+
+内部塑形坐标不会因类型同为 Float32 就自动具有 km 单位。负坐标输出 `8x` km；0–0.5 使用 `6x²(3−2x)`；0.5–1 使用单调 Hermite 锚点 `(0.5,3)/(0.72,4)/(0.82,5)/(1,6)`（坐标、km）；超过 1 则从 6 km 按每单位 6 km 延伸，最后减海平面基准。诊断贡献不能非线性换算后冒充可精确相加的物理分量。
+
+M1.1 不执行冰川/水力侵蚀。`erosionCoordinate`/`depositionCoordinate` 仍为 N 长 Float32 零数组，表示未执行，保留 Worker/查询兼容性；它们不证明生成过侵蚀或沉积事实。`regionalUpliftCoordinate`、`regionalReliefKm` 全零，`roughnessWeight` 全一，为旧诊断兼容值。
+
+`TerrainParameters` 仅有 roughness、terrainWarp、smoothing、ridgeSharpening。显式旧键 continentalUpliftKm/glacialErosion/hydraulicErosion（包括取值 0）会在规划/执行、全缓存命中前拒绝；不是静默忽略。算法变更没有修改 WorldSnapshot Schema 2。
+
+`queryTerrainRegion` 只返回冻结标量对象。Pipeline getOutput 是共享借用，不能修改或 Transfer；Web 只接收独立副本。完整自然快照生成后，正式视图应使用只读世界查询，不能直接持有权威 Buffer。

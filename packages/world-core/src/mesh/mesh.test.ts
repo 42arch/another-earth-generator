@@ -20,7 +20,7 @@ function brute(mesh: MeshTopology, p: Vector3Like): number {
 }
 const make = (level: number, radius = 6371) => createSphericalMesh({ subdivisionLevel: level, physicalRadiusKm: radius })
 describe('standard Icosphere and spherical Voronoi', () => {
-  it.each([0, 1, 2, 3, 4, 5, 6, 7])('generates exact vertex and face counts for L%i', (level) => {
+  it.each([0, 1, 2, 3, 4, 5, 6, 7, 8])('generates exact vertex and face counts for L%i', (level) => {
     const geometry = generateIcosphere(level)
     expect(geometry.centers.length / 3).toBe(10 * 4 ** level + 2)
     expect(geometry.triangles.length / 3).toBe(20 * 4 ** level)
@@ -69,7 +69,7 @@ describe('standard Icosphere and spherical Voronoi', () => {
     expect(first.centers[0]).not.toBe(42)
   })
   it('rejects unsafe subdivision levels and radii', () => {
-    for (const level of [-1, 0.5, 8, Infinity, Number.NaN])
+    for (const level of [-1, 0.5, 9, Infinity, Number.NaN])
       expect(() => icosphereRegionCount(level)).toThrow(RangeError)
     for (const radius of [0, -1, Infinity, Number.NaN])
       expect(() => make(0, radius)).toThrow(RangeError)

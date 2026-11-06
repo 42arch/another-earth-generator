@@ -1,11 +1,13 @@
-import type { SphericalMesh } from '@another-earth/world-core'
+import type { GeologyArtifact, SphericalMesh, TerrainArtifact, TerrainGenerationConfig } from '@another-earth/world-core'
 import type { WorkerRequest, WorkerResponse } from '../lib/generation/protocol'
-import { createMeshPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
+import { createGeologyPipeline, createMeshPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
 import { serializeError } from '../lib/generation/protocol'
 import { transferSnapshot } from '../lib/generation/transfer'
 
 export class GenerationWorkerRuntime {
   readonly pipeline = createMeshPipeline()
+  readonly geologyPipeline = createGeologyPipeline(this.pipeline.cache)
+  readonly terrainPipeline = createTerrainPipeline(this.pipeline.cache)
   #active?: { id: string, abort: AbortController }
   #mesh?: SphericalMesh
   #index?: SphericalSpatialIndex
@@ -64,23 +66,29 @@ export class GenerationWorkerRuntime {
     this.#send({ type: 'STARTED', requestId: task.id })
     try {
       const started = performance.now()
-      const result = await this.pipeline.execute({ seed: request.input.seed, config: request.input.config }, {
+      const terrainRequested = request.input.config.terrain !== undefined
+      if (terrainRequested && (!request.input.config.geology || !request.input.config.landforms))
+        throw new Error('Terrain generation requires geology and landform parameters')
+      const pipeline = terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
+      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as TerrainGenerationConfig }, {
         runId: task.id,
         signal: task.abort.signal,
         force: request.input.force,
-        onEvent: event => this.#send({ type: 'PROGRESS', requestId: task.id, stageId: event.stageId, stageProgress: event.stageProgress, pipelineProgress: event.pipelineProgress, durationMs: event.durationMs, status: event.type }),
+        onEvent: event => this.#send({ type: 'PROGRESS', requestId: task.id, stageId: event.stageId, stageProgress: event.stageProgress, pipelineProgress: event.pipelineProgress, durationMs: event.durationMs, status: event.type, message: event.message }),
       })
       const pipelineMs = performance.now() - started
       if (task.abort.signal.aborted)
         throw new PipelineCancelledError('mesh')
       const mesh = result.getOutput<SphericalMesh>('mesh')
-      this.#mesh = mesh
-      this.#index = undefined
       const copying = performance.now()
-      const snapshot = transferSnapshot(mesh)
+      const geology = request.input.config.geology ? result.getOutput<GeologyArtifact>('geology') : undefined
+      const terrain = terrainRequested ? result.getOutput<TerrainArtifact>('terrain') : undefined
+      const snapshot = transferSnapshot(mesh, geology, terrain)
       const copyMs = performance.now() - copying
       const posting = performance.now()
-      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, cacheHit: result.plan[0]?.action === 'cache-hit', cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
+      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
+      this.#mesh = mesh
+      this.#index = undefined
       this.#send({ type: 'TRANSFERRED', requestId: task.id, postMessageMs: performance.now() - posting })
     }
     catch (error) {

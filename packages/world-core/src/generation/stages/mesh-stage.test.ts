@@ -1,7 +1,10 @@
-import type { SphericalMesh } from '../mesh/spherical-mesh'
+import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { WorldGenerationConfig } from './mesh-stage'
 import { describe, expect, it } from 'vitest'
-import { AleaRandom, createSphericalMesh, MeshQueries, validateSphericalMesh } from '../index'
+import { AleaRandom } from '#math/random'
+import { MeshQueries } from '#mesh/queries'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
+import { validateSphericalMesh } from '#mesh/validation'
 import { createMeshGenerationRecord, createMeshPipeline } from './mesh-stage'
 
 function config(subdivisionLevel = 2, irregularity = 0): WorldGenerationConfig {
@@ -59,7 +62,7 @@ describe('real MeshStage integration', () => {
     const result = await mesh(pipeline, 'world-a', withOverride)
     expect(result.seed).toBe('stable-mesh')
     expect(result.centers).toEqual(createSphericalMesh({ subdivisionLevel: 2, physicalRadiusKm: 6371, irregularity: 1, seed: 'stable-mesh' }).centers)
-    await expect(mesh(pipeline, '42', config(8, 0))).rejects.toMatchObject({ name: 'InvalidStageInputError', stageId: 'mesh' })
+    await expect(mesh(pipeline, '42', config(9, 0))).rejects.toMatchObject({ name: 'InvalidStageInputError', stageId: 'mesh' })
     await expect(mesh(pipeline, '42', { ...config(), mesh: { subdivisionLevel: 2, irregularity: 1, seed: '' } })).rejects.toMatchObject({ name: 'InvalidStageInputError', stageId: 'mesh' })
     await expect(mesh(pipeline, '', config())).rejects.toMatchObject({ name: 'InvalidStageInputError', stageId: 'pipeline' })
   })

@@ -135,7 +135,7 @@ describe('worldSnapshot public contract', () => {
   })
   it('requires reproducible mesh input and provenance', () => {
     const s = snapshot()
-    expect(validate({ ...s, metadata: { ...s.metadata, generationConfig: { ...s.metadata.generationConfig, mesh: { subdivisionLevel: 8, irregularity: 0 } } } }).valid).toBe(false)
+    expect(validate({ ...s, metadata: { ...s.metadata, generationConfig: { ...s.metadata.generationConfig, mesh: { subdivisionLevel: 9, irregularity: 0 } } } }).valid).toBe(false)
     expect(validate({ ...s, metadata: { ...s.metadata, provenance: { ...s.metadata.provenance, stageVersions: {} } } }).valid).toBe(false)
     expect(validate({ ...s, metadata: { ...s.metadata, generationConfig: { ...s.metadata.generationConfig, planet: { ...s.planet, physicalRadiusKm: 2 } } } }).valid).toBe(false)
   })

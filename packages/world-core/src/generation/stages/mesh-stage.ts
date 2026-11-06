@@ -1,11 +1,11 @@
-import type { SphericalMesh } from '../mesh/spherical-mesh'
-import type { PlanetParameters } from '../world/planet-parameters'
-import type { WorldMetadata } from '../world/world-metadata'
-import type { GenerationInput, GenerationStage, PipelineResult } from './pipeline'
-import { createSphericalMesh } from '../mesh/spherical-mesh'
-import { validateSphericalMesh } from '../mesh/validation'
-import { InvalidStageInputError } from './errors'
-import { GenerationPipeline, StageCache, StageRegistry } from './pipeline'
+import type { SphericalMesh } from '#mesh/spherical-mesh'
+import type { PlanetParameters } from '#world/planet-parameters'
+import type { WorldMetadata } from '#world/world-metadata'
+import type { GenerationInput, GenerationStage, PipelineResult } from '#generation/pipeline'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
+import { validateSphericalMesh } from '#mesh/validation'
+import { InvalidStageInputError } from '#generation/pipeline/errors'
+import { GenerationPipeline, StageCache, StageRegistry } from '#generation/pipeline'
 
 /** Pipeline input only. M0.2 snapshot metadata is assembled later, after all generation stages exist. */
 export interface WorldGenerationConfig {
@@ -30,8 +30,8 @@ export const meshStage: GenerationStage<SphericalMesh> = {
     const irregularity = context.getConfig('mesh.irregularity')
     const radius = context.getConfig('planet.physicalRadiusKm')
     const override = context.getConfig('mesh.seed')
-    if (typeof level !== 'number' || !Number.isInteger(level) || level < 0 || level > 7)
-      throw new InvalidStageInputError('mesh', 'subdivisionLevel must be an integer in [0, 7]')
+    if (typeof level !== 'number' || !Number.isInteger(level) || level < 0 || level > 8)
+      throw new InvalidStageInputError('mesh', 'subdivisionLevel must be an integer in [0, 8]')
     if (typeof irregularity !== 'number' || !Number.isFinite(irregularity) || irregularity < 0 || irregularity > 1)
       throw new InvalidStageInputError('mesh', 'irregularity must be in [0, 1]')
     if (typeof radius !== 'number' || !(radius > 0) || !Number.isFinite(4 * Math.PI * radius ** 2))

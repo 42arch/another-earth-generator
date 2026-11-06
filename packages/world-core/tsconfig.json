@@ -3,13 +3,20 @@
   "compilerOptions": {
     "lib": [
       "ES2023"
-    ]
+    ],
+    "paths": {
+      "#*": [
+        "./src/*"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts",
     "benchmarks/**/*.ts",
     "vitest.mesh-perf.config.ts",
-    "vitest.generation-perf.config.ts"
+    "vitest.generation-perf.config.ts",
+    "vitest.geology-perf.config.ts",
+    "vitest.terrain-perf.config.ts"
   ],
   "exclude": [
     "../../docs/old-src",

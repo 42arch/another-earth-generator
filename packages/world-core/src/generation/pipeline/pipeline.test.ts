@@ -1,7 +1,8 @@
-import type { GenerationStage, PipelineEvent } from './pipeline'
+import type { GenerationStage, PipelineEvent } from './index'
 import { describe, expect, it } from 'vitest'
+import { copyDependency } from './copy-dependency'
 import { CircularDependencyError, DuplicateStageError, InvalidStageInputError, MissingDependencyError, PipelineCancelledError, StageExecutionError } from './errors'
-import { GenerationPipeline, StageCache, StageRegistry } from './pipeline'
+import { GenerationPipeline, StageCache, StageRegistry } from './index'
 
 interface MockConfig {
   mesh: { level: number }
@@ -157,7 +158,7 @@ describe('stage cache and lifecycle', () => {
     expect(() => valid.plan(input({ ...config(), mesh: { level: Number.POSITIVE_INFINITY } }))).toThrow(InvalidStageInputError)
   })
 
-  it('guards dependency buffers against mutation and direct transfer without copying', async () => {
+  it('guards dependency buffers while allowing isolated native working copies', async () => {
     const source: GenerationStage<{ values: Uint8Array }> = { id: 'a', version: '1', dependencies: [], configKeys: [], execute: () => ({ values: new Uint8Array([1, 2, 3]) }) }
     const reader: GenerationStage<number> = { id: 'b', version: '1', dependencies: ['a'], configKeys: [], execute: (context) => {
       const values = context.getDependency<{ values: Uint8Array }>('a').values
@@ -170,6 +171,21 @@ describe('stage cache and lifecycle', () => {
       expect(() => {
         values.subarray(0, 1)[0] = 8
       }).toThrow(TypeError)
+      const owned = copyDependency<{ values: Uint8Array }>(context, 'a')
+      expect(ArrayBuffer.isView(owned.values)).toBe(true)
+      owned.values.subarray(0, 1).fill(9)
+      structuredClone(owned, { transfer: [owned.values.buffer as ArrayBuffer] })
+      expect(owned.values.byteLength).toBe(0)
+      expect(values[0]).toBe(1)
+      expect(copyDependency<{ values: Uint8Array }>(context, 'a').values).toEqual(new Uint8Array([1, 2, 3]))
+      const selected = copyDependency<{ values: Uint8Array }, { first: Uint8Array, alias: Uint8Array }>(context, 'a', source => ({ first: source.values, alias: source.values }))
+      expect(selected.first).toBe(selected.alias)
+      selected.first[0] = 99
+      expect(values[0]).toBe(1)
+      structuredClone(selected, { transfer: [selected.first.buffer as ArrayBuffer] })
+      expect(values[0]).toBe(1)
+      expect(() => copyDependency(context, 'undeclared')).toThrow(InvalidStageInputError)
+      expect(() => copyDependency<unknown, number>(context, 'undeclared', () => 1)).toThrow(InvalidStageInputError)
       return values[0]
     } }
     const pipeline = new GenerationPipeline<MockConfig>(new StageRegistry().register(source).register(reader))

@@ -36,7 +36,7 @@ export interface DebugSelection {
   centers: Float32Array
 }
 /** Display-only conversion. Never changes the core-owned topology or transfers its buffers. */
-export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode): DebugGeometry {
+export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode, regionColor?: (region: number) => readonly [number, number, number]): DebugGeometry {
   const corners = mesh.boundaryCorners
   const vertexCount = mode === 'icosphere' ? mesh.triangles.length : corners.length * 3
   const positions = new Float32Array(vertexCount * 3)
@@ -55,6 +55,10 @@ export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode): Debu
     }
   }
   const color = (r: number, offset: number) => {
+    if (regionColor) {
+      colors.set(regionColor(r), offset)
+      return
+    }
     const five = mesh.neighborOffsets[r + 1] - mesh.neighborOffsets[r] === 5
     const shade = 0.8 + (r * 137 % 31) / 155
     colors[offset] = (five ? 0.88 : 0.18) * shade
@@ -73,9 +77,14 @@ export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode): Debu
         const region = mesh.triangles[face + corner]
         const offset = (face + corner) * 3
         for (let axis = 0; axis < 3; axis++) positions[offset + axis] = mesh.centers[region * 3 + axis]
-        colors[offset] = touchesFiveNeighbor ? 0.88 : 0.18
-        colors[offset + 1] = touchesFiveNeighbor ? 0.48 : 0.53
-        colors[offset + 2] = touchesFiveNeighbor ? 0.2 : 0.68
+        if (regionColor) {
+          color(region, offset)
+        }
+        else {
+          colors[offset] = touchesFiveNeighbor ? 0.88 : 0.18
+          colors[offset + 1] = touchesFiveNeighbor ? 0.48 : 0.53
+          colors[offset + 2] = touchesFiveNeighbor ? 0.2 : 0.68
+        }
       }
     }
   }

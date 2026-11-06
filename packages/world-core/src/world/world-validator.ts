@@ -1,5 +1,5 @@
 import type { ContentPack, ValidationIssue, ValidationResult } from '@another-earth/world-data'
-import type { WorldEntity } from '../civilization/civilization-types'
+import type { WorldEntity } from '#generation/civilization/civilization-types'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
 import { calculateContentHash, calculateContentSignature, validateContentPack } from '@another-earth/world-data'
@@ -46,7 +46,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
   const config = m.generationConfig
   if (!integer(config.regionCount) || config.regionCount !== count)
     add('range', 'metadata.generationConfig.regionCount', 'Mesh configuration mismatch')
-  if (!config.mesh || !Number.isInteger(config.mesh.subdivisionLevel) || config.mesh.subdivisionLevel < 0 || config.mesh.subdivisionLevel > 7 || !finite(config.mesh.irregularity) || config.mesh.irregularity < 0 || config.mesh.irregularity > 1)
+  if (!config.mesh || !Number.isInteger(config.mesh.subdivisionLevel) || config.mesh.subdivisionLevel < 0 || config.mesh.subdivisionLevel > 8 || !finite(config.mesh.irregularity) || config.mesh.irregularity < 0 || config.mesh.irregularity > 1)
     add('range', 'metadata.generationConfig.mesh', 'Invalid mesh generation parameters')
   if (config.mesh && config.mesh.seed !== undefined && !((typeof config.mesh.seed === 'string' && nonempty(config.mesh.seed)) || (typeof config.mesh.seed === 'number' && Number.isSafeInteger(config.mesh.seed))))
     add('range', 'metadata.generationConfig.mesh.seed', 'Invalid mesh seed override')

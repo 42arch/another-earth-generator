@@ -9,6 +9,9 @@
       "default": "./src/index.ts"
     }
   },
+  "imports": {
+    "#*": "./src/*"
+  },
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",

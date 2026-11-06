@@ -42,6 +42,7 @@ export function createDebugScene(host: HTMLElement, pick: (position: THREE.Vecto
   scene.add(base, selection)
   let lines: THREE.LineSegments | undefined
   let surface: THREE.Mesh | undefined
+  let fiveNeighborPoints: THREE.Points | undefined
   let frame = 0
   let disposed = false
   let visible = true
@@ -112,10 +113,11 @@ export function createDebugScene(host: HTMLElement, pick: (position: THREE.Vecto
       geometry.setAttribute('color', new THREE.BufferAttribute(data.colors, 3))
       surface = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }))
       lines = new THREE.LineSegments(positionGeometry(data.lines), new THREE.LineBasicMaterial({ color: '#25445b' }))
-      const points = new THREE.Points(positionGeometry(data.fiveNeighborCenters), new THREE.PointsMaterial({ color: '#e08b3d', size: 6, sizeAttenuation: false }))
+      fiveNeighborPoints = new THREE.Points(positionGeometry(data.fiveNeighborCenters), new THREE.PointsMaterial({ color: '#e08b3d', size: 6, sizeAttenuation: false }))
+      fiveNeighborPoints.visible = false
       surface.visible = showSurface
       lines.visible = wireframe
-      base.add(surface, lines, points)
+      base.add(surface, lines, fiveNeighborPoints)
       schedule()
     },
     showSelection(data: DebugSelection) {
@@ -135,11 +137,13 @@ export function createDebugScene(host: HTMLElement, pick: (position: THREE.Vecto
       selection.add(new THREE.Points(geometry, new THREE.PointsMaterial({ vertexColors: true, size: 9, sizeAttenuation: false })))
       schedule()
     },
-    setOptions(wireframe: boolean, showSurface: boolean, rotate: boolean) {
+    setOptions(wireframe: boolean, showSurface: boolean, rotate: boolean, showFiveNeighborPoints: boolean) {
       if (lines)
         lines.visible = wireframe
       if (surface)
         surface.visible = showSurface
+      if (fiveNeighborPoints)
+        fiveNeighborPoints.visible = showFiveNeighborPoints
       controls.autoRotate = rotate
       schedule()
     },

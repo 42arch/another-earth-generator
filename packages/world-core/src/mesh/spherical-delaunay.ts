@@ -7,7 +7,7 @@ import Delaunator from 'delaunator'
  */
 export function triangulateSphericalDelaunay(centers: Float64Array, projectionPole = 0): Uint32Array {
   const count = centers.length / 3
-  if (!Number.isInteger(count) || count < 4 || count > 163842 || !Number.isInteger(projectionPole) || projectionPole < 0 || projectionPole >= count)
+  if (!Number.isInteger(count) || count < 4 || count > 655362 || !Number.isInteger(projectionPole) || projectionPole < 0 || projectionPole >= count)
     throw new RangeError('Invalid spherical sites or projection pole')
   for (let r = 0; r < count; r++) {
     const norm = Math.hypot(centers[3 * r], centers[3 * r + 1], centers[3 * r + 2])

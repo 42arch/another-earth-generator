@@ -1,0 +1,466 @@
+{
+  "date": "2026-11-05",
+  "machine": "Apple M3 Pro",
+  "node": "v24.17.0",
+  "input": {
+    "seed": "42",
+    "config": {
+      "planet": {
+        "physicalRadiusKm": 6371,
+        "seaLevelDatumKm": 0
+      },
+      "mesh": {
+        "subdivisionLevel": 7,
+        "irregularity": 0.5
+      },
+      "geology": {
+        "primaryPlateCount": 10,
+        "microPlateCount": 14,
+        "plateSizeVariety": 0.8,
+        "continentCount": 7,
+        "continentSizeVariety": 0.35,
+        "candidateLandCoverage": 0.3
+      },
+      "landforms": {
+        "islandArcCount": 6,
+        "islandDensity": 0.65,
+        "hotspotCount": 5
+      },
+      "terrain": {
+        "roughness": 0.4,
+        "terrainWarp": 0.75,
+        "smoothing": 0.1,
+        "glacialErosion": 0.5,
+        "hydraulicErosion": 0.5,
+        "ridgeSharpening": 0.5
+      }
+    }
+  },
+  "scope": "Node terrain pipeline only; includes original validation and cache writes; excludes Worker copy/transfer and rendering",
+  "baseline": [
+    {
+      "guarded": true,
+      "totalMs": 25233.226292000003,
+      "stages": {
+        "mesh": 359.2689999999998,
+        "reference-mesh": 68.0113339999998,
+        "geological-mapping": 3869.256375,
+        "reference-subdivisions": 2155.7439589999994,
+        "plate-topology": 223.7452919999996,
+        "continental-crust": 488.9548329999998,
+        "geology": 318.03579199999876,
+        "plate-dynamics": 314.0579999999991,
+        "tectonics": 713.9608340000013,
+        "tectonic-elevation": 8649.307583000002,
+        "terrain": 8072.301750000002
+      },
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      },
+      "statistics": {
+        "landCoverage": 0.30951648606657634,
+        "candidateLandCoverage": 0.301778706130712,
+        "changedCoastRegions": 7463,
+        "landComponentCount": 81,
+        "largestLandAreaKm2": 24317255.806908324,
+        "minimumElevationKm": -4.129329204559326,
+        "maximumElevationKm": 5.9752936363220215,
+        "elevationQuantilesKm": [
+          -4.129329204559326,
+          -1.8013991117477417,
+          -0.8753922581672668,
+          0.009704326279461384,
+          5.9752936363220215
+        ]
+      }
+    }
+  ],
+  "rows": [
+    {
+      "trial": 0,
+      "mode": "cold",
+      "totalMs": 2849.726791,
+      "stageMs": {
+        "mesh": 406.60633299999995,
+        "reference-mesh": 92.84362499999997,
+        "geological-mapping": 216.08454200000006,
+        "reference-subdivisions": 83.6708749999998,
+        "plate-topology": 26.41554199999996,
+        "continental-crust": 77.82754099999988,
+        "geology": 9.594542000000047,
+        "plate-dynamics": 42.28891599999997,
+        "tectonics": 172.36812499999996,
+        "tectonic-elevation": 983.222,
+        "terrain": 737.7290000000003
+      },
+      "changedStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain"
+      ],
+      "cacheBytes": 112450632,
+      "matchesBaseline": true,
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 0,
+      "mode": "cache-hit",
+      "totalMs": 0.7437919999997575,
+      "stageMs": {},
+      "changedStages": [],
+      "cacheBytes": 112450632,
+      "matchesBaseline": true,
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 0,
+      "mode": "roughness-change",
+      "totalMs": 774.8352500000001,
+      "stageMs": {
+        "terrain": 774.3447919999999
+      },
+      "changedStages": [
+        "terrain"
+      ],
+      "cacheBytes": 118677122,
+      "matchesBaseline": false,
+      "hashes": {
+        "elevationKm": "024669324b06f370737485855d82927ed2c19673de1cfb711fa46a8eabcac6ff",
+        "landMask": "1a5a24dcfb576f55e9ce26e224c4205bba8cf39d4b88923c25acd275dab68a7c",
+        "slopeRadians": "4c5437f2f5b39e78860a2bf41a4b2dafddc4ad3f9d490bdd024f17af4c5242b0",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "c6b9121883fbf4c8df7ed1c3548f89474dda626f471513f89f4977f3ddd645c6",
+        "depositionCoordinate": "11c0d590dded01d424c108741a2fa9ab8fedb230c76ea37d2991c0c80b1703c7",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 0,
+      "mode": "force",
+      "totalMs": 2783.9147089999997,
+      "stageMs": {
+        "mesh": 395.19283300000006,
+        "reference-mesh": 79.19904099999985,
+        "geological-mapping": 213.92408400000022,
+        "reference-subdivisions": 82.29066700000021,
+        "plate-topology": 23.18104200000016,
+        "continental-crust": 66.4692500000001,
+        "geology": 13.735499999999774,
+        "plate-dynamics": 37.37870899999962,
+        "tectonics": 155.26487499999985,
+        "tectonic-elevation": 978.461292,
+        "terrain": 738.5585000000001
+      },
+      "changedStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain"
+      ],
+      "cacheBytes": 118677122,
+      "matchesBaseline": true,
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 1,
+      "mode": "cold",
+      "totalMs": 2983.4325,
+      "stageMs": {
+        "mesh": 387.0839590000005,
+        "reference-mesh": 77.63512499999979,
+        "geological-mapping": 219.6329999999998,
+        "reference-subdivisions": 79.66537499999959,
+        "plate-topology": 25.930833000000348,
+        "continental-crust": 68.92270799999915,
+        "geology": 21.28741700000046,
+        "plate-dynamics": 38.73658299999988,
+        "tectonics": 153.50283299999955,
+        "tectonic-elevation": 977.6562499999991,
+        "terrain": 933.132791
+      },
+      "changedStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain"
+      ],
+      "cacheBytes": 112450632,
+      "matchesBaseline": true,
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 1,
+      "mode": "cache-hit",
+      "totalMs": 0.22949999999946158,
+      "stageMs": {},
+      "changedStages": [],
+      "cacheBytes": 112450632,
+      "matchesBaseline": true,
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 1,
+      "mode": "roughness-change",
+      "totalMs": 680.4292089999999,
+      "stageMs": {
+        "terrain": 680.2862079999995
+      },
+      "changedStages": [
+        "terrain"
+      ],
+      "cacheBytes": 118677122,
+      "matchesBaseline": false,
+      "hashes": {
+        "elevationKm": "024669324b06f370737485855d82927ed2c19673de1cfb711fa46a8eabcac6ff",
+        "landMask": "1a5a24dcfb576f55e9ce26e224c4205bba8cf39d4b88923c25acd275dab68a7c",
+        "slopeRadians": "4c5437f2f5b39e78860a2bf41a4b2dafddc4ad3f9d490bdd024f17af4c5242b0",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "c6b9121883fbf4c8df7ed1c3548f89474dda626f471513f89f4977f3ddd645c6",
+        "depositionCoordinate": "11c0d590dded01d424c108741a2fa9ab8fedb230c76ea37d2991c0c80b1703c7",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    },
+    {
+      "trial": 1,
+      "mode": "force",
+      "totalMs": 2802.779125000001,
+      "stageMs": {
+        "mesh": 413.5136249999996,
+        "reference-mesh": 66.82995800000026,
+        "geological-mapping": 216.7212500000005,
+        "reference-subdivisions": 82.8690000000006,
+        "plate-topology": 22.772542000000612,
+        "continental-crust": 65.52754100000129,
+        "geology": 12.667999999999665,
+        "plate-dynamics": 29.66783299999952,
+        "tectonics": 157.3683340000007,
+        "tectonic-elevation": 1022.5668330000008,
+        "terrain": 712.0574159999996
+      },
+      "changedStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain"
+      ],
+      "cacheBytes": 118677122,
+      "matchesBaseline": true,
+      "hashes": {
+        "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+        "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+        "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+        "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+        "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+        "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+        "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+        "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+        "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+        "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+        "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+        "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+      }
+    }
+  ],
+  "reproduceCommand": "TERRAIN_BENCH_LEVELS=7 pnpm --filter @another-earth/world-core bench:terrain",
+  "vitestBenchmark": {
+    "date": "2026-11-04T16:31:35.400Z",
+    "algorithmVersion": "terrain-v1",
+    "seed": "42",
+    "config": {
+      "referenceSubdivisionLevel": 6,
+      "irregularity": 0.5,
+      "physicalRadiusKm": 6371,
+      "seaLevelDatumKm": 0,
+      "geology": {
+        "primaryPlateCount": 10,
+        "microPlateCount": 14,
+        "plateSizeVariety": 0.8,
+        "continentCount": 7,
+        "continentSizeVariety": 0.35,
+        "candidateLandCoverage": 0.3
+      },
+      "landforms": {
+        "islandArcCount": 6,
+        "islandDensity": 0.65,
+        "hotspotCount": 5
+      },
+      "terrain": {
+        "roughness": 0.4,
+        "terrainWarp": 0.75,
+        "smoothing": 0.1,
+        "glacialErosion": 0.5,
+        "hydraulicErosion": 0.5,
+        "ridgeSharpening": 0.5
+      }
+    },
+    "machine": {
+      "cpu": "Apple M3 Pro",
+      "platform": "darwin",
+      "node": "v24.17.0"
+    },
+    "rows": [
+      {
+        "level": 7,
+        "coldMs": 3445.3977910000003,
+        "hitMs": 0.5660410000000411,
+        "changedMs": 667.8857090000001,
+        "changedStages": [
+          "terrain"
+        ],
+        "stageMs": {
+          "mesh": 775.9044159999999,
+          "reference-mesh": 177.433542,
+          "geological-mapping": 237.02937500000007,
+          "reference-subdivisions": 102.44420800000012,
+          "plate-topology": 32.82208300000002,
+          "continental-crust": 88.14916700000003,
+          "geology": 13.579916999999796,
+          "plate-dynamics": 48.90237500000012,
+          "tectonics": 180.96908299999996,
+          "tectonic-elevation": 1075.9175,
+          "terrain": 711.1746670000002
+        },
+        "cacheBytes": 118677122,
+        "artifactBytes": 6226284,
+        "statistics": {
+          "landCoverage": 0.30951648606657634,
+          "candidateLandCoverage": 0.301778706130712,
+          "changedCoastRegions": 7463,
+          "landComponentCount": 81,
+          "largestLandAreaKm2": 24317255.806908324,
+          "minimumElevationKm": -4.129329204559326,
+          "maximumElevationKm": 5.9752936363220215,
+          "elevationQuantilesKm": [
+            -4.129329204559326,
+            -1.8013991117477417,
+            -0.8753922581672668,
+            0.009704326279461384,
+            5.9752936363220215
+          ]
+        },
+        "elevationHash": "a6be4eec637f5e46",
+        "landMaskHash": "607ce0f9ff2c49b1"
+      }
+    ]
+  },
+  "limitations": [
+    "Single-machine samples, not a performance guarantee",
+    "Node only; Worker transfer, rendering and peak memory are not measured",
+    "roughness-change intentionally changes terrain hashes"
+  ]
+}

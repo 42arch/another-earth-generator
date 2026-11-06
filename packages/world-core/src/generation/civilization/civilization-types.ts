@@ -1,5 +1,5 @@
 import type { ContentId } from '@another-earth/world-data'
-import type { DenseField } from '../world/fields'
+import type { DenseField } from '#world/fields'
 
 export interface WorldEntity {
   readonly id: string

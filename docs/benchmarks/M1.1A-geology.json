@@ -1,0 +1,124 @@
+{
+  "date": "2026-11-04",
+  "algorithmVersion": "geology-v1",
+  "seed": "42",
+  "config": {
+    "referenceSubdivisionLevel": 6,
+    "irregularity": 0.5,
+    "physicalRadiusKm": 6371,
+    "geology": {
+      "primaryPlateCount": 10,
+      "microPlateCount": 14,
+      "plateSizeVariety": 0.8,
+      "continentCount": 7,
+      "continentSizeVariety": 0.35,
+      "candidateLandCoverage": 0.3
+    }
+  },
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "rows": [
+    {
+      "level": 4,
+      "coldMs": 4001.89025,
+      "hitMs": 0.39220900000054826,
+      "changedMs": 487.70179199999984,
+      "changedStages": [
+        "continental-crust",
+        "geology"
+      ],
+      "stageMs": {
+        "mesh": 26.428624999999982,
+        "reference-mesh": 96.15091700000002,
+        "geological-mapping": 1040.0459580000002,
+        "reference-subdivisions": 2130.883916,
+        "plate-topology": 212.64129200000025,
+        "continental-crust": 474.8697500000003,
+        "geology": 20.08574999999928
+      },
+      "cacheBytes": 13959704,
+      "artifactBytes": 97644,
+      "plates": 24,
+      "continents": 7,
+      "statistics": {
+        "targetCandidateLandCoverage": 0.3,
+        "referenceCandidateLandCoverage": 0.3000087099632999,
+        "outputCandidateLandCoverage": 0.29995463514849763,
+        "candidateLandAreaKm2": 152996202.5739118,
+        "requestedMicroPlateCount": 14,
+        "actualMicroPlateCount": 14
+      },
+      "plateIndexHash": "e31a371e8d372eb1",
+      "candidateMaskHash": "45e4c7bac54d5cf1"
+    },
+    {
+      "level": 5,
+      "coldMs": 4210.63175,
+      "hitMs": 0.11716599999999744,
+      "changedMs": 500.5572080000002,
+      "changedStages": [
+        "continental-crust",
+        "geology"
+      ],
+      "stageMs": {
+        "mesh": 70.38450000000012,
+        "reference-mesh": 88.84054100000048,
+        "geological-mapping": 1153.629,
+        "reference-subdivisions": 2175.217791,
+        "plate-topology": 209.85120800000004,
+        "continental-crust": 477.83200000000033,
+        "geology": 34.77295799999956
+      },
+      "cacheBytes": 16724504,
+      "artifactBytes": 389484,
+      "plates": 24,
+      "continents": 7,
+      "statistics": {
+        "targetCandidateLandCoverage": 0.3,
+        "referenceCandidateLandCoverage": 0.3000087099632999,
+        "outputCandidateLandCoverage": 0.30141845910453635,
+        "candidateLandAreaKm2": 153742847.1670178,
+        "requestedMicroPlateCount": 14,
+        "actualMicroPlateCount": 14
+      },
+      "plateIndexHash": "27e0ef02b9b310df",
+      "candidateMaskHash": "da94fdbb4037bf68"
+    },
+    {
+      "level": 6,
+      "coldMs": 4590.076916,
+      "hitMs": 0.11262499999975262,
+      "changedMs": 557.6079170000012,
+      "changedStages": [
+        "continental-crust",
+        "geology"
+      ],
+      "stageMs": {
+        "mesh": 70.6869999999999,
+        "reference-mesh": 65.12774999999965,
+        "geological-mapping": 1598.551374999999,
+        "reference-subdivisions": 2085.729666000001,
+        "plate-topology": 207.9244579999995,
+        "continental-crust": 468.5124999999989,
+        "geology": 93.44675000000097
+      },
+      "cacheBytes": 27783704,
+      "artifactBytes": 1556844,
+      "plates": 24,
+      "continents": 7,
+      "statistics": {
+        "targetCandidateLandCoverage": 0.3,
+        "referenceCandidateLandCoverage": 0.3000087099632999,
+        "outputCandidateLandCoverage": 0.3020449826849626,
+        "candidateLandAreaKm2": 154062414.58620661,
+        "requestedMicroPlateCount": 14,
+        "actualMicroPlateCount": 14
+      },
+      "plateIndexHash": "ec7aa47b2176057e",
+      "candidateMaskHash": "63cbbdf35d23dee8"
+    }
+  ]
+}

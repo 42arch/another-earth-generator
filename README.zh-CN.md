@@ -1,36 +1,35 @@
-# 另一个地球生成器 (Another Earth Generator)
+# Another Earth
 
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-![Demo](./demo.png)
+浏览器中的过程化星球生成与地图探索项目，采用 TypeScript、Svelte 5、Vite 和 pnpm Workspace。
 
-一个在浏览器中生成过程化虚拟星球的实验性项目。相同的种子和参数决定了球面网格、构造板块、大陆、地形、季节气候、河网、生物群系与人文系统；同一份球面结果可以同时在 3D 地球和 2D 地图上查看。
+## 当前能力
 
-## 当前功能
+- 生成 L0–L8 规则或扰动球面网格、参考地质、板块、候选大陆、地壳及基础地形。
+- 在 `/mesh-debug` 选择网格、地质或地形任务，查看专题、区域属性、生成进度与缓存。
+- 提供世界/内容契约、阶段 Pipeline、Worker 副本传输和最小 JSON 档案编解码。
 
-- 调整种子、网格细节、构造板块与大陆参数、地形强度、地轴倾角以及温带/降水参数来重新生成世界。
-- 在地球和地图视图之间切换，以查看卫星图像、地形、高程、构造板块、几何流向、逐月气温与降水、风场、洋流、柯本气候分类和生物群系。
-- 查看人口、市场可达性、民族、语言、国家与宗教分布，叠加聚落、道路、航线、河流等要素，并点击区域查看详情。
-
-生成结果是一个用于可视化和过程生成的近似模型，而非地球系统的定量预测。洋流强度是一个相对值；当前水文阶段尚未生成可见湖泊，人文系统是静态世界快照。
+当前 M1.1 输出为阶段产物，最新版本为 `terrain-v20`，不执行冰川/水力侵蚀。月度气候、水文、生态、完整世界发布、文明、正式 3D/2D 地图和浏览器项目保存尚未实现。最新验收状态见[当前进度](docs/PROGRESS.md)。
 
 ## 本地运行
 
-需要 Node.js 和 pnpm。在项目根目录下运行：
-
-```bash
+```sh
 pnpm install
 pnpm dev
 ```
 
-打开终端中提供的本地地址。使用 `pnpm test` 运行现有测试，使用 `pnpm build` 创建生产构建。
+打开终端给出的地址并进入 `/mesh-debug`。UI 提供 L4–L8，L8 需要较多内存；它是调试入口，尚非完整产品工作台。
 
-## 从何读起
+## 文档
 
-从[文档入口](docs/README.md)开始，再读[系统架构](docs/architecture.md)与[数据契约](docs/data-contracts.md)。文档先解释生成过程和字段含义，再链接到实现源码。
+| 文档 | 内容 |
+| --- | --- |
+| [PRD](docs/PRD.md) | 产品目标、用户旅程和交付范围 |
+| [技术设计](docs/TECHNICAL_DESIGN.md) | 包边界、算法、制图/存档目标和当前决策 |
+| [世界数据契约](docs/WORLD_DATA_CONTRACTS.md) | 字段、单位、身份、快照与产物所有权 |
+| [生成管线](docs/GENERATION_PIPELINE.md) | Stage、签名、随机流、缓存和 Worker |
+| [当前进度](docs/PROGRESS.md) | 已实现、待办、验证状态与历史实测索引 |
+| [M1 实施计划](docs/M1_IMPLEMENTATION_PLAN.md) | 气候、水文、侵蚀、生态与世界发布任务 |
 
-核心代码按职责分为 [`simulation`](src/core/simulation/)（生成流水线及自然、人文领域模型）、[`data-source`](src/core/data-source/README.md)（raster／GeoJSON 数据源）、[`styles`](src/core/styles/README.md)（声明式制图样式）、[`rendering`](src/core/rendering/)（2D／3D 渲染器）。共用的球面网格保留在 [`mesh`](src/core/mesh/)。
-
-人文生成已接入人口与聚落、交通与市场、民族与语言、国家与行政、宗教与信仰阶段；实际执行顺序见 [Worker 流水线](src/core/simulation/worker/simulation.worker.ts)。
-
-技术栈：TypeScript、Vite、Svelte 5、Three.js、Tailwind CSS、Vitest。项目使用 pnpm 进行依赖管理。
+`packages/world-core` 拥有生成与领域规则，`packages/world-data` 拥有内容，`packages/cartography` 负责制图边界，`apps/web` 负责 UI 和 Worker。`docs/old-src` 是 feat-society 参考源码，不参与新项目运行。

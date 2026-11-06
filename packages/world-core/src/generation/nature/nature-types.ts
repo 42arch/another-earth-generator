@@ -1,4 +1,4 @@
-import type { DenseField } from '../world/fields'
+import type { DenseField } from '#world/fields'
 
 export interface GeologyState {
   readonly plates: readonly { readonly id: string }[]

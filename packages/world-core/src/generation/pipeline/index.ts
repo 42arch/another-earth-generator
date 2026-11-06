@@ -1,5 +1,5 @@
-import type { RandomSource } from '../math/random'
-import { ALEA_VERSION, AleaRandom, MULBERRY32_VERSION, normalizeWorldSeed, RANDOM_SEED_DERIVATION_VERSION, stableHash, stageRandom } from '../math/random'
+import type { RandomSource } from '#math/random'
+import { ALEA_VERSION, AleaRandom, MULBERRY32_VERSION, normalizeWorldSeed, RANDOM_SEED_DERIVATION_VERSION, stableHash, stageRandom } from '#math/random'
 import { CircularDependencyError, DuplicateStageError, InvalidStageInputError, MissingDependencyError, PipelineCancelledError, StageExecutionError } from './errors'
 
 export type ConfigValue = null | boolean | number | string | readonly ConfigValue[] | { readonly [key: string]: ConfigValue }

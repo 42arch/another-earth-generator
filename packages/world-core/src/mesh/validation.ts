@@ -14,7 +14,7 @@ export function validateSphericalMesh(m: SphericalMesh): ValidationResult {
     count = icosphereRegionCount(m.subdivisionLevel)
   }
   catch {
-    return { valid: false, issues: [{ code: 'range', path: 'subdivisionLevel', message: 'Expected L0–L7' }] }
+    return { valid: false, issues: [{ code: 'range', path: 'subdivisionLevel', message: 'Expected L0–L8' }] }
   }
   if (!Number.isFinite(m.irregularity) || m.irregularity < 0 || m.irregularity > 1 || typeof m.seed !== 'string' || !m.seed.trim())
     add('irregularity/seed', 'Invalid mesh generation parameters')

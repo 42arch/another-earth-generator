@@ -3,8 +3,8 @@ import { cpus, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { expect, it } from 'vitest'
-import { createMeshPipeline } from '../src/generation/mesh-stage'
-import { GenerationPipeline, StageRegistry } from '../src/generation/pipeline'
+import { createMeshPipeline } from '#generation/stages/mesh-stage'
+import { GenerationPipeline, StageRegistry } from '#generation/pipeline'
 
 it('records pipeline overhead, MeshStage rebuilds and cache hits without machine-specific thresholds', async () => {
   const empty = new GenerationPipeline(new StageRegistry())

@@ -10,7 +10,7 @@ export class SphericalSpatialIndex {
   #root: number
   constructor(mesh: MeshTopology) {
     const count = mesh.regionCount
-    if (!Number.isSafeInteger(count) || count < 1 || count > 163842 || mesh.centers.length !== 3 * count)
+    if (!Number.isSafeInteger(count) || count < 1 || count > 655362 || mesh.centers.length !== 3 * count)
       throw new RangeError('Invalid spatial index mesh')
     for (let r = 0; r < count; r++) {
       if (Math.abs(Math.hypot(mesh.centers[3 * r], mesh.centers[3 * r + 1], mesh.centers[3 * r + 2]) - 1) > 1e-10 || !Number.isFinite(mesh.centers[3 * r] + mesh.centers[3 * r + 1] + mesh.centers[3 * r + 2]))

@@ -1,5 +1,6 @@
-import type { SphericalMesh } from '@another-earth/world-core'
+import type { GeologyArtifact, SphericalMesh, StagePlan, TerrainArtifact } from '@another-earth/world-core'
 import type { GenerationConfig, SerializedError, WorkerRequest, WorkerResponse } from './protocol'
+import { validateGeologyArtifact, validateTerrainArtifact } from '@another-earth/world-core'
 import { hydrateMesh } from './transfer'
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'completed' | 'failed' | 'cancelled'
@@ -14,6 +15,9 @@ export interface GenerationState {
 }
 export interface GenerationResult {
   readonly mesh: SphericalMesh
+  readonly geology?: GeologyArtifact
+  readonly terrain?: TerrainArtifact
+  readonly stages?: readonly StagePlan[]
   readonly cacheHit: boolean
   readonly cacheBytes: number
   readonly pipelineMs: number
@@ -49,7 +53,7 @@ export class GenerationController {
   #factory: () => Worker
   #worker?: Worker
   #sequence = 0
-  #active?: { id: string, resolve: (value: GenerationResult) => void, reject: (reason: Error) => void, started: number }
+  #active?: { id: string, kind: 'mesh' | 'geology' | 'terrain', resolve: (value: GenerationResult) => void, reject: (reason: Error) => void, started: number }
   #pending = new Map<string, { resolve: (value: number) => void, reject: (reason: Error) => void }>()
   #disposed = false
   #state: GenerationState = { status: 'idle', pipelineProgress: 0 }
@@ -143,17 +147,26 @@ export class GenerationController {
       this.#setState({ status: 'running', requestId: active.id, pipelineProgress: 0 })
     }
     else if (message.type === 'PROGRESS') {
-      this.#setState({ status: 'running', requestId: active.id, stageId: message.stageId, stageProgress: message.stageProgress, pipelineProgress: message.pipelineProgress, detail: message.status })
+      this.#setState({ status: 'running', requestId: active.id, stageId: message.stageId, stageProgress: message.stageProgress, pipelineProgress: message.pipelineProgress, detail: message.message ?? message.status })
     }
     else if (message.type === 'COMPLETED') {
       try {
         const hydrating = performance.now()
+        if ((active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
+          throw new TypeError('Worker response is missing requested generation data')
         const mesh = hydrateMesh(message.mesh)
+        if (message.geology)
+          validateGeologyArtifact(message.geology, mesh.meshId, mesh.regionCount)
+        if (message.terrain) {
+          if (!message.geology)
+            throw new TypeError('Terrain response is missing geology')
+          validateTerrainArtifact(message.terrain, mesh.meshId, mesh.regionCount, message.geology.plates.length)
+        }
         const hydrateMs = performance.now() - hydrating
         this.#active = undefined
         this.#lastCompletedId = active.id
         this.#setState({ status: 'completed', requestId: active.id, pipelineProgress: 1 })
-        active.resolve({ mesh, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
+        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
       }
       catch (cause) {
         const error = cause instanceof Error ? cause : new Error('Mesh recovery failed')
@@ -183,7 +196,7 @@ export class GenerationController {
     const id = `request-${++this.#sequence}`
     this.#setState({ status: 'starting', requestId: id, pipelineProgress: 0 })
     return new Promise((resolve, reject) => {
-      this.#active = { id, resolve, reject, started: performance.now() }
+      this.#active = { id, kind: input.config.terrain ? 'terrain' : input.config.geology ? 'geology' : 'mesh', resolve, reject, started: performance.now() }
       try {
         this.#worker!.postMessage({ type: 'GENERATE', requestId: id, input } satisfies WorkerRequest)
       }
