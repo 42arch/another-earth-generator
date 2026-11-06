@@ -16,7 +16,8 @@
     "vitest.mesh-perf.config.ts",
     "vitest.generation-perf.config.ts",
     "vitest.geology-perf.config.ts",
-    "vitest.terrain-perf.config.ts"
+    "vitest.terrain-perf.config.ts",
+    "vitest.climate-perf.config.ts"
   ],
   "exclude": [
     "../../docs/old-src",

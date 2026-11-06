@@ -7,7 +7,9 @@
 `WorldSnapshot` 包含 `schemaVersion / snapshotId / revision / time / metadata / planet / mesh / nature / civilization`。
 `nature` 下五个状态始终齐备：`geology / geography / climate / hydrology / ecology`。生成过程中的不完整产物不能作为快照。
 
-当前只生成 Mesh、GeologyArtifact 与基础 TerrainArtifact，均为阶段产物。快照中的气候、水文、生态类型已定义，但没有真实生成器和完整发布流程；不得补零伪装完整世界。完整自然结果必须通过完整校验后原子发布。
+当前生成 Mesh、GeologyArtifact、基础 TerrainArtifact，并有待验证的初步 ClimateArtifact C0；均为阶段产物。快照中的气候、水文、生态类型已定义，但没有最终自然状态生成器和完整发布流程；不得补零伪装完整世界。完整自然结果必须通过完整校验后原子发布。
+
+工作区新增待验证的 `ClimateArtifact` C0，来自 T0，仍是阶段产物而非已确认 `ClimateState`。它存储同一输出 Mesh 上的 `temperatureC` 与 `precipitationMm`（各 12N、month-major）、年均温与年降水（各 N）、Köppen 亚型索引（N，0–31；0 为海洋）；另保存参考 Mesh ID、输出到参考映射及四季风、季风、洋流与暖度模型场，供调试查询。这些是 C0 阶段产物，未发布为世界事实。每箱占公转年的 1/12，月降水总量随公转周期缩放；区域年值从同一月序列聚合。C1 必须使用独立产物身份并重算分类。本次校验命令尚未运行。
 
 `metadata` 保存 worldId、实际名称、调用者提供的 UTC 创建时间、字符串 seed、生成器版本、内容签名、内容包版本/哈希、Mesh 参数以及生成来源。当前来源包含 Mesh Stage 版本、输入签名和配置签名；M1 接入新 Stage 时必须一并扩展。创建时间和名称不参与随机身份；seed 是不透明字符串。snapshotId/worldId/实体 ID 由调用者提供，不能根据数组顺序、显示名称、当前时间隐式推导。revision 是非负安全整数，同一世界的新版本必须分配新 snapshotId 并增加 revision；校验单个快照无法证明跨快照的单调性。
 

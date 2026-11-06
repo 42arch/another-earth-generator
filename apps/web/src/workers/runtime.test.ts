@@ -1,6 +1,6 @@
 import type { SphericalMesh } from '@another-earth/world-core'
 import type { WorkerResponse } from '../lib/generation/protocol'
-import { createMeshPipeline, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateGeologyArtifact, validateSphericalMesh, validateTerrainArtifact } from '@another-earth/world-core'
+import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateGeologyArtifact, validateSphericalMesh, validateTerrainArtifact } from '@another-earth/world-core'
 import { describe, expect, it } from 'vitest'
 import { hydrateMesh } from '../lib/generation/transfer'
 import { GenerationWorkerRuntime } from './runtime'
@@ -28,7 +28,7 @@ describe('generationWorkerRuntime', () => {
     const second = messages.filter((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')[1]
     expect(second.cacheHit).toBe(true)
     expect(second.mesh.centers).toEqual(first.mesh.centers)
-    await runtime.handle({ ...request, requestId: 'three', input: { ...request.input, config: { ...request.input.config, climate: { precipitationFactor: 2 } } } })
+    await runtime.handle({ ...request, requestId: 'three', input: { ...request.input, config: { ...request.input.config, unused: { precipitationFactor: 2 } } } })
     expect(messages.filter(m => m.type === 'COMPLETED')[2]).toMatchObject({ cacheHit: true })
     await runtime.handle({ ...request, requestId: 'four', input: input(3, irregularity) })
     expect(messages.filter(m => m.type === 'COMPLETED')[3]).toMatchObject({ cacheHit: false })
@@ -57,6 +57,26 @@ describe('generationWorkerRuntime', () => {
     await running
     expect(messages.some(m => m.type === 'CANCELLED' && m.requestId === 'cancel')).toBe(true)
   })
+})
+
+it('transfers C0 without detaching cached climate and invalidates only climate on climate parameter changes', async () => {
+  const messages: WorkerResponse[] = []
+  const runtime = new GenerationWorkerRuntime((message, transfer = []) => messages.push(structuredClone(message, { transfer })))
+  const base = input(2, 0)
+  const request = { type: 'GENERATE', requestId: 'climate-first', input: { ...base, config: { ...base.config, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS } } }
+  await runtime.handle(request)
+  const first = messages.find((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')!
+  expect(first.climate).toBeDefined()
+  validateClimateArtifact(first.climate!, first.mesh.meshId, first.mesh.regionCount)
+  const original = first.climate!.temperatureC[0]
+  first.climate!.temperatureC[0] = 999
+  await runtime.handle({ ...request, requestId: 'climate-second' })
+  const second = messages.filter((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')[1]
+  expect(second.climate!.temperatureC[0]).toBe(original)
+  expect(second.stages?.every(stage => stage.action === 'cache-hit')).toBe(true)
+  await runtime.handle({ ...request, requestId: 'climate-changed', input: { ...request.input, config: { ...request.input.config, climate: { ...DEFAULT_CLIMATE_PARAMETERS, temperatureOffsetC: 2 } } } })
+  const third = messages.filter((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')[2]
+  expect(third.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['climate-c0'])
 })
 
 it('transfers geology copies without detaching cache and recovers after invalid geology', async () => {

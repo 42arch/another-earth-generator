@@ -1,6 +1,7 @@
-import type { GeologyArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, GeologyArtifact, TerrainArtifact } from '@another-earth/world-core'
+import { sampleClimateCirculation } from '@another-earth/world-core'
 
-export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope'
+export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current'
 const ocean = [0.06, 0.19, 0.29] as const
 const land = [0.65, 0.74, 0.42] as const
 function categorical(index: number): readonly [number, number, number] {
@@ -13,10 +14,29 @@ function categorical(index: number): readonly [number, number, number] {
 }
 
 /** Display palette consumes independent worker copies; it never changes geology facts. */
-export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null): ((region: number) => readonly [number, number, number]) | undefined {
+export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0): ((region: number) => readonly [number, number, number]) | undefined {
   if (!geology || theme === 'topology')
     return undefined
   return (region) => {
+    if (climate && theme === 'temperature') {
+      const t = Math.max(0, Math.min(1, (climate.temperatureC[month * climate.regionCount + region] + 30) / 70))
+      return [0.1 + 0.8 * t, 0.25 + 0.45 * (1 - Math.abs(t - 0.5) * 2), 0.85 - 0.75 * t]
+    }
+    if (climate && theme === 'precipitation') {
+      const p = Math.max(0, Math.min(1, climate.precipitationMm[month * climate.regionCount + region] / 400))
+      return [0.72 - 0.64 * p, 0.62 - 0.2 * p, 0.38 + 0.54 * p]
+    }
+    if (climate && theme === 'wind') {
+      const east = Math.tanh(sampleClimateCirculation(climate, region, month, 'windEast') / 10)
+      const north = Math.tanh(sampleClimateCirculation(climate, region, month, 'windNorth') / 10)
+      return [0.5 + 0.4 * east, 0.5 + 0.4 * north, 0.5 - 0.4 * east]
+    }
+    if (climate && theme === 'ocean-current') {
+      if (terrain?.landMask[region])
+        return land
+      const warmth = sampleClimateCirculation(climate, region, month, 'oceanWarmth')
+      return [0.4 + 0.4 * warmth, 0.25 + 0.2 * Math.abs(warmth), 0.55 - 0.35 * warmth]
+    }
     if (terrain) {
       if (theme === 'elevation')
         return elevationColor(terrain.elevationKm[region], terrain.landMask[region] !== 0)

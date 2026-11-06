@@ -1,9 +1,9 @@
-import type { GeologyArtifact, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, GeologyArtifact, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
 
 const fields = ['centers', 'areaKm2', 'neighborOffsets', 'neighbors', 'triangles', 'dualVertices', 'boundaryCorners', 'edgeRegions', 'edgeTriangles', 'triangleEdges', 'neighborEdges', 'edgeAngularDistances'] as const
 
 /** Clone once without detaching the worker/cache owner, then transfer only cloned buffers. */
-export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact): { mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, buffers: ArrayBuffer[], bytes: number } {
+export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, climate?: ClimateArtifact): { mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, climate?: ClimateArtifact, buffers: ArrayBuffer[], bytes: number } {
   const snapshot = structuredClone(mesh)
   const buffers = new Set<ArrayBuffer>()
   for (const field of fields) {
@@ -13,13 +13,23 @@ export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact,
   }
   const geologyCopy = geology ? structuredClone(geology) : undefined
   const terrainCopy = terrain ? structuredClone(terrain) : undefined
-  for (const artifact of [geologyCopy, terrainCopy]) {
-    for (const value of Object.values(artifact ?? {})) {
-      if (ArrayBuffer.isView(value) && value.buffer instanceof ArrayBuffer)
+  const climateCopy = climate ? structuredClone(climate) : undefined
+  const seen = new Set<object>()
+  const collect = (value: unknown): void => {
+    if (!value || typeof value !== 'object' || seen.has(value))
+      return
+    seen.add(value)
+    if (ArrayBuffer.isView(value)) {
+      if (value.buffer instanceof ArrayBuffer)
         buffers.add(value.buffer)
+      return
     }
+    for (const child of Object.values(value)) collect(child)
   }
-  return { mesh: snapshot, geology: geologyCopy, terrain: terrainCopy, buffers: [...buffers], bytes: [...buffers].reduce((total, buffer) => total + buffer.byteLength, 0) }
+  for (const artifact of [geologyCopy, terrainCopy, climateCopy]) {
+    collect(artifact)
+  }
+  return { mesh: snapshot, geology: geologyCopy, terrain: terrainCopy, climate: climateCopy, buffers: [...buffers], bytes: [...buffers].reduce((total, buffer) => total + buffer.byteLength, 0) }
 }
 
 /** Structured clone returns plain data; assert its required shape before consumers use it. */

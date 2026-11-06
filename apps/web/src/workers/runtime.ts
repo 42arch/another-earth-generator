@@ -1,6 +1,6 @@
-import type { GeologyArtifact, SphericalMesh, TerrainArtifact, TerrainGenerationConfig } from '@another-earth/world-core'
+import type { ClimateArtifact, ClimateGenerationConfig, GeologyArtifact, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
 import type { WorkerRequest, WorkerResponse } from '../lib/generation/protocol'
-import { createGeologyPipeline, createMeshPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
+import { createClimatePipeline, createGeologyPipeline, createMeshPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
 import { serializeError } from '../lib/generation/protocol'
 import { transferSnapshot } from '../lib/generation/transfer'
 
@@ -8,6 +8,7 @@ export class GenerationWorkerRuntime {
   readonly pipeline = createMeshPipeline()
   readonly geologyPipeline = createGeologyPipeline(this.pipeline.cache)
   readonly terrainPipeline = createTerrainPipeline(this.pipeline.cache)
+  readonly climatePipeline = createClimatePipeline(this.pipeline.cache)
   #active?: { id: string, abort: AbortController }
   #mesh?: SphericalMesh
   #index?: SphericalSpatialIndex
@@ -67,10 +68,13 @@ export class GenerationWorkerRuntime {
     try {
       const started = performance.now()
       const terrainRequested = request.input.config.terrain !== undefined
+      const climateRequested = request.input.config.climate !== undefined
+      if (climateRequested && !terrainRequested)
+        throw new Error('Climate generation requires terrain parameters')
       if (terrainRequested && (!request.input.config.geology || !request.input.config.landforms))
         throw new Error('Terrain generation requires geology and landform parameters')
-      const pipeline = terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
-      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as TerrainGenerationConfig }, {
+      const pipeline = climateRequested ? this.climatePipeline : terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
+      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as ClimateGenerationConfig }, {
         runId: task.id,
         signal: task.abort.signal,
         force: request.input.force,
@@ -83,10 +87,11 @@ export class GenerationWorkerRuntime {
       const copying = performance.now()
       const geology = request.input.config.geology ? result.getOutput<GeologyArtifact>('geology') : undefined
       const terrain = terrainRequested ? result.getOutput<TerrainArtifact>('terrain') : undefined
-      const snapshot = transferSnapshot(mesh, geology, terrain)
+      const climate = climateRequested ? result.getOutput<ClimateArtifact>('climate-c0') : undefined
+      const snapshot = transferSnapshot(mesh, geology, terrain, climate)
       const copyMs = performance.now() - copying
       const posting = performance.now()
-      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
+      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, climate: snapshot.climate, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
       this.#mesh = mesh
       this.#index = undefined
       this.#send({ type: 'TRANSFERRED', requestId: task.id, postMessageMs: performance.now() - posting })

@@ -277,13 +277,7 @@ export function createTerrainPipeline(cache = new StageCache()): GenerationPipel
 // Keep this task-specific validation out of the generic Stage pipeline.
 class TerrainPipeline extends GenerationPipeline<TerrainGenerationConfig> {
   private validateOptions(input: GenerationInput<TerrainGenerationConfig>): void {
-    const terrain = input.config.terrain
-    if (terrain && typeof terrain === 'object') {
-      for (const key of ['continentalUpliftKm', 'glacialErosion', 'hydraulicErosion']) {
-        if (Object.hasOwn(terrain, key))
-          throw new InvalidStageInputError('terrain', `terrain.${key} is no longer supported in M1.1`)
-      }
-    }
+    assertNoObsoleteTerrainOptions(input)
   }
 
   override plan(input: GenerationInput<TerrainGenerationConfig>, options: Pick<PipelineOptions, 'force'> = {}) {
@@ -294,5 +288,15 @@ class TerrainPipeline extends GenerationPipeline<TerrainGenerationConfig> {
   override async execute(input: GenerationInput<TerrainGenerationConfig>, options: PipelineOptions = {}) {
     this.validateOptions(input)
     return super.execute(input, options)
+  }
+}
+
+export function assertNoObsoleteTerrainOptions(input: GenerationInput<TerrainGenerationConfig>): void {
+  const terrain = input.config.terrain
+  if (terrain && typeof terrain === 'object') {
+    for (const key of ['continentalUpliftKm', 'glacialErosion', 'hydraulicErosion']) {
+      if (Object.hasOwn(terrain, key))
+        throw new InvalidStageInputError('terrain', `terrain.${key} is no longer supported in M1.1`)
+    }
   }
 }

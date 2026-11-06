@@ -4,7 +4,7 @@
 
 ## 公开入口
 
-`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、`createMeshPipeline`、`createGeologyPipeline` 和 `createTerrainPipeline`。三条 Pipeline 分别生成网格、地质与基础地形 T0，没有完整自然快照发布。
+`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、`createMeshPipeline`、`createGeologyPipeline`、`createTerrainPipeline` 和工作区新增的 `createClimatePipeline`。后者生成 T0 上的初步月气候 C0；本次未运行检查，未验收。没有完整自然快照发布。
 
 ```ts
 import { createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS,
@@ -40,8 +40,9 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | tectonics | terrain-v2 | mesh、geology、plate-topology、continental-crust、plate-dynamics |
 | tectonic-elevation | terrain-skeleton-v9 | mesh、geology、tectonics |
 | terrain | terrain-v20 | mesh、geology、tectonics、tectonic-elevation |
+| climate-c0 | climate-c0-v2 | mesh、reference-mesh、geology、terrain |
 
-前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。气候、水文、生态和发布 Stage 尚未注册。
+前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。Climate Pipeline 再追加 C0；水文、生态和发布 Stage 尚未注册。
 
 配置按源码 configKeys 声明：Mesh 读等级、扰动、可选 Mesh Seed、物理半径；参考 Mesh 另读参考等级（默认 L6，显式 L2–L6）；板块读主/微板块数和板块面积差异；大陆读大陆数、面积差异与候选覆盖率；骨架读三项 landforms；terrain 读四项地形参数、islandDensity 和海平面基准。其余信息由声明的上游获得。
 
@@ -86,7 +87,7 @@ Registry 拒绝重复 ID、空声明、缺失依赖和循环。Kahn 排序的 re
 
 ## Web Worker 与显示
 
-Web Controller/Runtime 支持三种生成任务、逐阶段事件和区域拾取。Worker 原数组归缓存，每次发送前结构化克隆独立产物并去重转移 Buffer；主线程核对请求种类、Mesh 身份、dtype、长度、诊断和海陆一致性。不能在只收到 Mesh 时完成请求过的 Terrain 任务。
+Web Controller/Runtime 原有三种生成任务；C0 第四种已接入但未运行验证。Worker 原数组归缓存，每次发送前结构化克隆独立产物并去重转移 Buffer；主线程核对请求种类、Mesh 身份、dtype、长度、诊断和海陆一致性。不能在只收到 Mesh 时完成请求过的 Terrain 或 C0 任务。
 
 只接收最新 requestId 的生成/拾取响应。硬取消终止重建 Worker，旧显示保留但缓存丢失；重新成功生成前禁用区域查询，防止旧画面和新 Worker 事实身份错配。失败、取消和传输错误不覆盖最后有效显示。页面销毁终止 Worker 并释放场景资源。
 
@@ -94,7 +95,9 @@ Web Controller/Runtime 支持三种生成任务、逐阶段事件和区域拾取
 
 ## 未来的气候、水文与侵蚀
 
-采用有限顺序 `T0 → C0/H0/I0 → T1 → C1/H1 → 河流湖泊最终事实 → 生态 → 快照发布`。基础气候、径流和冰雪是侵蚀输入，侵蚀后重新计算最终气候水文；T0/T1 和前后轮状态使用不同产物身份，不能在同一个 Stage ID 上构造依赖循环。
+采用有限顺序 `T0 → C0/H0/I0 → T1 → C1/H1 → 河流湖泊最终事实 → 生态 → 快照发布`。C0 已有待验证的代码切片；径流、冰雪及 C1 尚未实现。基础气候、径流和冰雪是侵蚀输入，侵蚀后重新计算最终气候水文；T0/T1 和前后轮状态使用不同产物身份，不能在同一个 Stage ID 上构造依赖循环。
+
+当前 C0 使用输出面积聚合到参考 Mesh，空参考格退回最近输出格；在参考格计算四季风／洋流代理、月温和月降水，以三个邻近参考格优先同海陆插值回输出，并按物理面积修正全球月降水体积。`climate-c0-v2` 直接读取 climate 的自转、倾角、公转周期、温度偏移、降水倍率；物理半径来自 Mesh 上游签名。月份选择属于显示状态。旧算法的随机输入已改用 Stage fork，日历改为 12 个等时长分箱，距离使用实际物理半径；结果与性能尚待对照验收。
 
 参考侵蚀算法现保留在源码，但没有被 M1.1 调用，也没有预建未来 Stage/空接口。后续接入应重新确定面积、距离、时间和流量单位，统一路由辅助面与地形事实的边界。
 
