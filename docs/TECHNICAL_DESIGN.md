@@ -6,7 +6,7 @@
 
 采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-当前具备 M0 工程基础与 M1.1 地质/基础地形产物；`terrain-v20` 不执行冰川或水力侵蚀。尚未生成月气候、水文、生态、完整自然快照或初始文明，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
+当前具备已验收的 M0 工程基础与 M1.1 地质/基础地形产物；`terrain-v20` 不执行冰川或水力侵蚀。尚未生成月气候、水文、生态、完整自然快照或初始文明，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -615,7 +615,7 @@ export interface PickResult {
 
 ## 12. Worker、调试器与发布边界
 
-当前 `/mesh-debug` 使用 Web 的 Controller/Runtime，支持 Mesh、Geology、Terrain 三种任务及 requestId。Worker 内三条 Pipeline 共用 128 MiB LRU；只转移结构化克隆出的独立产物副本，缓存原件不 detach。主线程校验身份、dtype、长度和字段后准备显示。权威数组不直接交给渲染层修改。
+当前 `/mesh-debug` 使用 Web 的 Controller/Runtime，支持 Mesh、Geology、Terrain 三种任务及 requestId。Worker 内三条 Pipeline 共用 512 MiB LRU，以容纳 L8 地形完整阶段链；只转移结构化克隆出的独立产物副本，缓存原件不 detach。主线程校验身份、dtype、长度和字段后准备显示。权威数组不直接交给渲染层修改。
 
 latest request wins：陈旧完成和查询响应被忽略。硬取消终止并重建 Worker，丢失其缓存；旧显示仍可保留，成功重建前禁用区域查询。同步网格构建不能在一轮 CPU 计算中实时处理中断消息，不能把硬取消称为无损协作取消。
 
@@ -755,7 +755,7 @@ world.aearth
 | 阶段 | 当前边界 |
 | --- | --- |
 | M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
-| M1 | M1.1 地质和 T0 已实现；v20 待最终回归；气候、水文、侵蚀、生态、发布与集成尚未完成 |
+| M1 | M1.1 地质和 T0（terrain-v20）已验收；气候、水文、侵蚀、生态、发布与集成尚未完成 |
 | M2 | 初始文明、资源与内容库，尚未实现 |
 | M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
 | M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |

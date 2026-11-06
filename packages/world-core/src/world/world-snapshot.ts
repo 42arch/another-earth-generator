@@ -1,6 +1,6 @@
 import type { CivilizationState } from '#generation/civilization/civilization-types'
-import type { MeshTopology } from '#mesh/mesh-types'
 import type { NatureState } from '#generation/nature/nature-types'
+import type { MeshTopology } from '#mesh/mesh-types'
 import type { PlanetParameters } from './planet-parameters'
 import type { WorldMetadata } from './world-metadata'
 

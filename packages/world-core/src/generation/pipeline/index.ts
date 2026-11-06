@@ -269,7 +269,7 @@ export class StageCache {
   #entries = new Map<string, CacheEntry>()
   #usedBytes = 0
 
-  constructor(maxBytes = 128 * 2 ** 20) {
+  constructor(maxBytes = 512 * 2 ** 20) {
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 0)
       throw new RangeError('Cache budget must be a nonnegative safe integer')
     this.maxBytes = maxBytes

@@ -1,10 +1,10 @@
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { WorldGenerationConfig } from './mesh-stage'
-import { describe, expect, it } from 'vitest'
 import { AleaRandom } from '#math/random'
 import { MeshQueries } from '#mesh/queries'
 import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { validateSphericalMesh } from '#mesh/validation'
+import { describe, expect, it } from 'vitest'
 import { createMeshGenerationRecord, createMeshPipeline } from './mesh-stage'
 
 function config(subdivisionLevel = 2, irregularity = 0): WorldGenerationConfig {

@@ -15,4 +15,3 @@ export function gaussian(distance: number, width: number): number {
   const normalized = distance / Math.max(width, Number.EPSILON)
   return Math.exp(-0.5 * normalized * normalized)
 }
-

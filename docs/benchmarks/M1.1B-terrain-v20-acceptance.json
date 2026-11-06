@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-06",
+  "algorithmVersion": "terrain-v20",
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "defaultMatrix": {
+    "config": {
+      "referenceSubdivisionLevel": 6,
+      "irregularity": 0.5,
+      "physicalRadiusKm": 6371,
+      "seaLevelDatumKm": 0,
+      "cacheBudgetMiB": 128,
+      "roughness": 0.4,
+      "terrainWarp": 0.75,
+      "smoothing": 0.1,
+      "ridgeSharpening": 0.5
+    },
+    "forcedRecomputeHashesMatch": true,
+    "rows": [
+      { "seed": "42", "level": 4, "landCoverage": 0.3115063818, "landComponents": 14, "largestLandAreaKm2": 27482909.06, "minElevationKm": -4.751717, "maxElevationKm": 6.69838, "coldSeconds": 0.44, "forcedSeconds": 0.41, "cachedStages": 11, "changedStages": 1, "terrainArtifactMiB": 0.12, "elevationHash": "92d2cc907703306b", "landMaskHash": "678424e3583f8211" },
+      { "seed": "42", "level": 6, "landCoverage": 0.3055007448, "landComponents": 52, "largestLandAreaKm2": 25061240.68, "minElevationKm": -4.623963, "maxElevationKm": 6.465017, "coldSeconds": 0.85, "forcedSeconds": 0.78, "cachedStages": 11, "changedStages": 1, "terrainArtifactMiB": 1.95, "elevationHash": "be48fcd09f8ed37f", "landMaskHash": "1495c7361143a588" },
+      { "seed": "42", "level": 8, "landCoverage": 0.3163813947, "landComponents": 243, "largestLandAreaKm2": 24978905.61, "minElevationKm": -4.0876975, "maxElevationKm": 6.505304, "coldSeconds": 8.29, "forcedSeconds": 8.38, "cachedStages": 0, "changedStages": 11, "terrainArtifactMiB": 31.25, "elevationHash": "b0fd39c9f496172f", "landMaskHash": "05c1e0174488e7d1" },
+      { "seed": "314159", "level": 4, "landCoverage": 0.3161920594, "landComponents": 9, "largestLandAreaKm2": 34500142.73, "minElevationKm": -4.5515819, "maxElevationKm": 6.540635, "coldSeconds": 0.43, "forcedSeconds": 0.37, "cachedStages": 11, "changedStages": 1, "terrainArtifactMiB": 0.12, "elevationHash": "609f59711524661c", "landMaskHash": "32ebe74d32d47b31" },
+      { "seed": "314159", "level": 6, "landCoverage": 0.3084762175, "landComponents": 57, "largestLandAreaKm2": 31918890.77, "minElevationKm": -4.4969978, "maxElevationKm": 6.692229, "coldSeconds": 0.82, "forcedSeconds": 0.8, "cachedStages": 11, "changedStages": 1, "terrainArtifactMiB": 1.95, "elevationHash": "3b69399e1256b14a", "landMaskHash": "c147e2492a3547f1" },
+      { "seed": "314159", "level": 8, "landCoverage": 0.3238408047, "landComponents": 263, "largestLandAreaKm2": 32466324.26, "minElevationKm": -4.5524197, "maxElevationKm": 6.477195, "coldSeconds": 8.53, "forcedSeconds": 8.68, "cachedStages": 0, "changedStages": 11, "terrainArtifactMiB": 31.25, "elevationHash": "8b39998e13a762f9", "landMaskHash": "bd5fdae41395de51" },
+      { "seed": "8675309", "level": 4, "landCoverage": 0.3172235028, "landComponents": 16, "largestLandAreaKm2": 50479360.50, "minElevationKm": -4.7809229, "maxElevationKm": 6.899394, "coldSeconds": 0.37, "forcedSeconds": 0.36, "cachedStages": 11, "changedStages": 1, "terrainArtifactMiB": 0.12, "elevationHash": "9a841f4413dca6b3", "landMaskHash": "4f4b2f15772737c8" },
+      { "seed": "8675309", "level": 6, "landCoverage": 0.3112159987, "landComponents": 42, "largestLandAreaKm2": 47911445.44, "minElevationKm": -4.4462414, "maxElevationKm": 6.396067, "coldSeconds": 0.81, "forcedSeconds": 0.8, "cachedStages": 11, "changedStages": 1, "terrainArtifactMiB": 1.95, "elevationHash": "636135f2c752d4ae", "landMaskHash": "453de18754379788" },
+      { "seed": "8675309", "level": 8, "landCoverage": 0.3254334851, "landComponents": 197, "largestLandAreaKm2": 50774156.65, "minElevationKm": -4.4104834, "maxElevationKm": 6.40877, "coldSeconds": 8.42, "forcedSeconds": 8.59, "cachedStages": 0, "changedStages": 11, "terrainArtifactMiB": 31.25, "elevationHash": "101cb92233663ac4", "landMaskHash": "a7e93018681c6228" }
+    ]
+  },
+  "parameterSamples": [
+    { "seed": "42", "level": 6, "roughness": 0.1, "landCoverage": 0.3008186791, "minElevationKm": -4.59654, "maxElevationKm": 6.257885, "elevationHash": "a5fb278b4db54d45", "landMaskHash": "589bded71edf6cf1", "changedRoughness": 0.5, "changedStages": ["terrain"] },
+    { "seed": "42", "level": 6, "roughness": 0.5, "landCoverage": 0.3073252536, "minElevationKm": -4.651024, "maxElevationKm": 6.726854, "elevationHash": "200834320c51bd37", "landMaskHash": "c6af4fb71275c868", "changedRoughness": 0.1, "changedStages": ["terrain"] },
+    { "seed": "42", "level": 6, "roughness": 0.4, "seaLevelDatumKm": 0.5, "landCoverage": 0.1741986047, "minElevationKm": -5.123963, "maxElevationKm": 5.965017, "elevationHash": "256744e539728672", "landMaskHash": "435192c39349d888" },
+    { "seed": "42", "level": 6, "roughness": 0.4, "seaLevelDatumKm": -0.5, "landCoverage": 0.3903036192, "minElevationKm": -4.123963, "maxElevationKm": 6.965017, "elevationHash": "4428789673ec0ba5", "landMaskHash": "d6392cca06bc59f1" }
+  ],
+  "l8CacheBudgetTrial": {
+    "seed": "42",
+    "level": 8,
+    "terrainArtifactMiB": 31.25,
+    "cacheBudgetsMiB": [
+      { "budgetMiB": 128, "retainedMiB": 116.9, "cacheHitStages": 0 },
+      { "budgetMiB": 256, "retainedMiB": 226.8, "cacheHitStages": 0 },
+      { "budgetMiB": 384, "retainedMiB": 226.8, "cacheHitStages": 0 },
+      { "budgetMiB": 512, "retainedMiB": 430.5, "cacheHitStages": 11, "secondRunMs": 0.588, "changedRoughnessStages": ["terrain"] }
+    ],
+    "elevationHash": "b0fd39c9f496172f",
+    "landMaskHash": "05c1e0174488e7d1"
+  },
+  "l8WorkerCheck": {
+    "browser": "Google Chrome",
+    "workerCacheMiB": 399.3,
+    "secondRequest": "Cache Hit",
+    "result": "passed"
+  },
+  "notes": [
+    "Every row was recomputed with force=true; elevation and land-mask hashes matched the initial run.",
+    "A 512 MiB cache retained all L8 stage outputs (430.5 MiB); the second identical request hit all 11 stages. Budgets up to 384 MiB did not retain the full chain.",
+    "Artifact bytes and cache bytes are not process peak memory. Peak RSS was not measured.",
+    "Sea-level offsets move the land fraction in the expected direction; this is a sample response, not a claim of Earth DEM calibration."
+  ]
+}

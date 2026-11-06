@@ -1,12 +1,12 @@
-import type { RandomSource } from '#math/random'
 // Migrated from feat-society; terrain-v1 preserves shaping order and uses stage-owned random streams.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
-import type { TectonicSpatialFields } from './tectonic-spatial-fields'
+import type { RandomSource } from '#math/random'
 import type { SphericalTectonicData } from '../tectonic-types'
+import type { TectonicSpatialFields } from './tectonic-spatial-fields'
 import type { TerrainClassificationFields } from './terrain-classifier'
-import { createNoise3D } from 'simplex-noise'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { smoothstep } from '#math/math'
+import { createNoise3D } from 'simplex-noise'
 
 const EARTH_RADIUS_KM = 6371
 const NUM_KERNELS = 4000

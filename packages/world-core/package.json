@@ -10,7 +10,11 @@
     }
   },
   "imports": {
-    "#*": "./src/*"
+    "#generation/nature/common": "./src/generation/nature/common/index.ts",
+    "#generation/nature/geography": "./src/generation/nature/geography/index.ts",
+    "#generation/nature/geology": "./src/generation/nature/geology/index.ts",
+    "#generation/pipeline": "./src/generation/pipeline/index.ts",
+    "#*": "./src/*.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

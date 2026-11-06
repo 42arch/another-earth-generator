@@ -1,10 +1,10 @@
-import type { RandomSource } from '#math/random'
 // Migrated from feat-society; algorithm profile: geology-v1. See docs/TECHNICAL_DESIGN.md §7.2.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
-import { createNoise3D } from 'simplex-noise'
+import type { RandomSource } from '#math/random'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { computeSphericalDistanceField, computeSphericalNearestLabels, referenceCellsToAngle } from '#generation/nature/common/distance-field'
 import { clamp } from '#math/math'
+import { createNoise3D } from 'simplex-noise'
 
 export interface CandidateLandData {
   candidateLandMask: Uint8Array

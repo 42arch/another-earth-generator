@@ -1,12 +1,12 @@
-import type { PipelineEvent } from '#generation/pipeline'
 import type { GeologyArtifact } from '#generation/nature/geology'
+import type { PipelineEvent } from '#generation/pipeline'
 import { writeFileSync } from 'node:fs'
 import { cpus, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
-import { expect, it } from 'vitest'
 import { createGeologyPipeline, DEFAULT_GEOLOGY_PARAMETERS } from '#generation/stages/geology-stage'
 import { stableHash } from '#math/random'
+import { expect, it } from 'vitest'
 
 it('records fixed-seed reference/output geology costs and quality summaries', async () => {
   const rows = []

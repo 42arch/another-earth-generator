@@ -1,12 +1,12 @@
-import type { RandomSource } from '#math/random'
 // Migrated from feat-society; terrain-v1 preserves shaping order and uses stage-owned random streams.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
-import type { TectonicSpatialFields } from './tectonic-spatial-fields'
+import type { RandomSource } from '#math/random'
 import type { SphericalTectonicData } from '../tectonic-types'
-import { createNoise3D } from 'simplex-noise'
+import type { TectonicSpatialFields } from './tectonic-spatial-fields'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { referenceCellsToAngle } from '#generation/nature/common/distance-field'
 import { clamp, smoothstep } from '#math/math'
+import { createNoise3D } from 'simplex-noise'
 
 export interface TerrainClassificationFields {
   basinFactor: Float32Array
@@ -41,7 +41,8 @@ const BASIN_AMPLITUDE_SUPPRESSION = 0.25
 const CRATON_AMPLITUDE_SUPPRESSION = 0.12
 const OROGENIC_FREQUENCY = 1.5
 
-/** Static Earthlike transfer, not a target plain-area quota. Basin/craton and
+/**
+ * Static Earthlike transfer, not a target plain-area quota. Basin/craton and
  * the existing low-frequency orogenic field define coherent quiet patches.
  * The 0.2..0.4 transition allows exact zero-noise cores with smooth borders;
  * activity >=0.25 (the existing noise-activity scale) prevents protection.

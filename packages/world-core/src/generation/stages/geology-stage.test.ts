@@ -1,7 +1,7 @@
-import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { GeologyArtifact } from '#generation/nature/geology'
-import { describe, expect, it } from 'vitest'
+import type { SphericalMesh } from '#mesh/spherical-mesh'
 import { queryGeologyRegion, validateGeologyArtifact } from '#generation/nature/geology'
+import { describe, expect, it } from 'vitest'
 import { createGeologyPipeline, DEFAULT_GEOLOGY_PARAMETERS } from './geology-stage'
 
 const input = () => ({ seed: 'M1.1A-fixed', config: { planet: { physicalRadiusKm: 6371 }, mesh: { subdivisionLevel: 2, irregularity: 0.5 }, reference: { subdivisionLevel: 2 }, geology: { ...DEFAULT_GEOLOGY_PARAMETERS } } })

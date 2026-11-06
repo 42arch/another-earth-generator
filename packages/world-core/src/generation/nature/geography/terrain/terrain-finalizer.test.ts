@@ -8,7 +8,7 @@ it('restores reference hypsometry and fills land-enclosed negative cells', () =>
     forEachNeighborOfRegion(region: number) {
       return region === 0 ? [1] : region === 1 ? [0, 2] : region === 2 ? [1, 3] : region === 3 ? [2, 4] : [3]
     },
-  } as AlgorithmMesh
+  } as unknown as AlgorithmMesh
   const input = new Float32Array([-0.4, 0.1, -0.1, 0.8, 0.4])
   const original = input.slice()
   const result = new TerrainFinalizer().generate(mesh, input, new Uint8Array([0, 1, 1, 1, 1]))

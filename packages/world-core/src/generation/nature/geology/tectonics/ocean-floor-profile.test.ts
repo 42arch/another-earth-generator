@@ -1,6 +1,6 @@
 import type { AlgorithmMesh } from '#generation/nature/common/algorithm-mesh'
-import { expect, it } from 'vitest'
 import { referenceCellsToAngle } from '#generation/nature/common/distance-field'
+import { expect, it } from 'vitest'
 import { blendOceanFloorBase, oceanBoundaryRelief, oceanFloorBase, oceanShelfWidth } from './tectonic-elevation-generator'
 
 it('changes shelf width continuously at the end of active-margin influence', () => {
@@ -46,7 +46,8 @@ it('retains deep-basin relief and rounds only the crossing of ocean backgrounds'
 
 it('softens only short oceanic plate contacts without blending land or remote plate interiors', () => {
   const mesh = {
-    numRegions: 2, physicalRadiusKm: 6371,
+    numRegions: 2,
+    physicalRadiusKm: 6371,
     neighborOffsets: new Uint32Array([0, 1, 2]),
     neighbors: new Uint32Array([1, 0]),
     neighborDistances: new Float64Array(2).fill(20 / 6371),

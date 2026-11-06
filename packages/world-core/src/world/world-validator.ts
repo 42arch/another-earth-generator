@@ -1,5 +1,5 @@
-import type { ContentPack, ValidationIssue, ValidationResult } from '@another-earth/world-data'
 import type { WorldEntity } from '#generation/civilization/civilization-types'
+import type { ContentPack, ValidationIssue, ValidationResult } from '@another-earth/world-data'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
 import { calculateContentHash, calculateContentSignature, validateContentPack } from '@another-earth/world-data'

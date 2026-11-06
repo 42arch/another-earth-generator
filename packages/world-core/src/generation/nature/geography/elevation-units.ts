@@ -63,4 +63,3 @@ export function normalizedElevationArrayToKm(source: Float32Array): Float32Array
     result[index] = normalizedElevationToKm(source[index])
   return result
 }
-

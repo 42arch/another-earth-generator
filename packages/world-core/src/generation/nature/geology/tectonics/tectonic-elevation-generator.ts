@@ -1,17 +1,17 @@
-import type { RandomSource } from '#math/random'
 // Migrated from feat-society; terrain-v1 preserves shaping order and uses stage-owned random streams.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
+import type { RandomSource } from '#math/random'
+import type { SphericalTectonicData } from '../tectonic-types'
 import type {
   IslandGenerationParams,
   TectonicEdificeFields,
 } from './tectonic-edifice-generator'
 import type { TectonicSpatialFields } from './tectonic-spatial-fields'
-import type { SphericalTectonicData } from '../tectonic-types'
 import type { TerrainClassificationFields } from './terrain-classifier'
-import { createNoise3D } from 'simplex-noise'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { referenceCellsToAngle } from '#generation/nature/common/distance-field'
 import { clamp, gaussian, smoothstep } from '#math/math'
+import { createNoise3D } from 'simplex-noise'
 import { PhasorRidgeGenerator } from './phasor-ridge-generator'
 import { TectonicEdificeGenerator } from './tectonic-edifice-generator'
 import { TectonicSpatialFieldGenerator } from './tectonic-spatial-fields'
@@ -74,7 +74,8 @@ export function oceanFloorBase(coastDistance: number, shelfWidth: number, abyssN
   return ABYSS_BASE + abyssNoise * 0.03 * abyssWeight
 }
 
-/** Preserve both existing ocean backgrounds, rounding only their intersection.
+/**
+ * Preserve both existing ocean backgrounds, rounding only their intersection.
  * Outside a 0.04-coordinate band this is exactly the old minimum; its maximum
  * additional depression is 0.01 coordinate (80 m before final shaping).
  */
@@ -84,7 +85,8 @@ export function blendOceanFloorBase(tectonicBase: number, coastalBase: number): 
   return Math.min(tectonicBase, coastalBase) - overlap * overlap * width * 0.25
 }
 
-/** Blend only the signed tectonic contribution at an oceanic plate contact.
+/**
+ * Blend only the signed tectonic contribution at an oceanic plate contact.
  * The basin background and noncontact interiors remain untouched. This local
  * bounded stencil softens a seam; it does not redefine the trench geometry.
  */

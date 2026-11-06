@@ -1,6 +1,6 @@
-import type { RandomSource } from '#math/random'
 // Migrated from feat-society; algorithm profile: geology-v1. See docs/TECHNICAL_DESIGN.md §7.2.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
+import type { RandomSource } from '#math/random'
 import type { SphericalCrustData } from '../crust-types'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { CRUST_TYPE } from '../crust-types'

@@ -1,6 +1,6 @@
-import type { RandomSource } from '#math/random'
 // Migrated from feat-society; terrain-v1 preserves shaping order and uses stage-owned random streams.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
+import type { RandomSource } from '#math/random'
 import type { SphericalTectonicData } from '../tectonic-types'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { PLATE_BOUNDARY } from '../tectonic-types'

@@ -2,9 +2,9 @@ import { writeFileSync } from 'node:fs'
 import { cpus, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
-import { expect, it } from 'vitest'
-import { createMeshPipeline } from '#generation/stages/mesh-stage'
 import { GenerationPipeline, StageRegistry } from '#generation/pipeline'
+import { createMeshPipeline } from '#generation/stages/mesh-stage'
+import { expect, it } from 'vitest'
 
 it('records pipeline overhead, MeshStage rebuilds and cache hits without machine-specific thresholds', async () => {
   const empty = new GenerationPipeline(new StageRegistry())

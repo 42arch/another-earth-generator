@@ -4,7 +4,7 @@
 
 ## 当前结论
 
-M0 工程基础和 M1.1 地质/基础地形已实现。当前算法为 geology-v2、terrain-skeleton-v9、terrain-v20。M1.1 可以进入收尾，但最新改动尚未完成最终回归，不能标为正式验收通过。
+M0 工程基础和 M1.1 地质/基础地形已实现并完成本轮验收。当前算法为 geology-v2、terrain-skeleton-v9、terrain-v20。core/Web 单测、全仓类型检查与构建、lint、真实 Worker 浏览器回归，以及 L4/L6/L8 多 Seed 和参数样本均已通过。StageCache 默认预算已调至 512 MiB；L8 core 基准留存约 430.5 MiB，浏览器 Worker 留存约 399.3 MiB，重复请求可命中全部 Stage；峰值 RSS 未测，继续跟踪。
 
 M1.1 只交付基础地形 T0，不执行冰川/水力侵蚀或代理排水重建。两个侵蚀配置、默认值、UI 和签名键已移除，显式旧键包括 0 都会拒绝。侵蚀/沉积兼容数组恒零表示未执行；现有参考算法保留供后续气候/水文接入，不代表已注册未来 Stage。
 
@@ -25,10 +25,10 @@ M1.1 只交付基础地形 T0，不执行冰川/水力侵蚀或代理排水重�
 
 ## M1.1 收尾与下一步
 
-1. 对当前 v20 执行受影响 core/Web 测试、类型检查、lint、构建和真实 Worker 浏览器回归；按 AGENTS.md 取得明确检查授权后运行。
-2. 固定多个 Seed，覆盖 L4/L6/L8、粗糙度低/默认/高值及极端海陆；核对有限高程、海陆一致、重算确定性、缓存失效和明显异常地貌。
-3. 保持当前视觉方向，先确认退出侵蚀后的分布；旧调参诊断来自 v14/v18，不能作为 v20 的面积或性能结论。
-4. 收尾后按 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)接入月气候，再建立初步径流/冰雪，实施侵蚀后重算最终气候水文，随后生态、完整快照发布。
+1. M1.1 验收完成。检查覆盖 core/Web 单元测试、全仓类型检查与构建、lint、真实 Worker 生成/缓存/取消/失败恢复。
+2. 固定 Seed 矩阵覆盖 3 Seed × L4/L6/L8；另在 L6 验证粗糙度 0.1/0.4/0.5 与海平面基准 ±0.5 km。每组强制重算并比较高程和海陆哈希，统计海陆比例、高程范围与连通分量见[验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)。
+3. 浏览器地形预览和查询通过，无明显孤立尖峰或海陆不一致。高程模型仍是程序生成基线，不代表全球 DEM 标定。
+4. 下一步按 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)进入月气候 C0，再建立初步径流/冰雪，实施侵蚀后重算最终气候水文，随后生态与完整快照发布。
 
 气候、水文/湖泊、生态、完整自然快照发布尚未实现；M2 初始文明、M3 Cartography、M4 浏览器存储/导入导出均未交付。
 
@@ -38,11 +38,12 @@ M1.1 只交付基础地形 T0，不执行冰川/水力侵蚀或代理排水重�
 - 水力侵蚀旧算法按汇水格数与角格距调参，未来接入前需统一面积、距离与时间尺度；气候/冰雪来源与质量守恒近似尚待设计。
 - 同步长计算需硬取消兜底，Worker 重建会丢缓存；重新成功生成前禁用拾取。显示数组准备仍可能阻塞主线程。
 - 部分区域诊断为兼容零/一数组，其含义不是世界事实。后续移除字段必须同步查询、Worker、校验与消费者。
-- CPU/GPU 真正峰值、长期浏览器资源压力和最新完整链路耗时未测；远端 CI 未核实。
+- L8 单次 terrain artifact 约 31.25 MiB；全链路缓存实测约 399–430.5 MiB，StageCache 默认预算为 512 MiB。core 基准与真实 Chrome Worker 第二次请求均确认全链路缓存命中。峰值 RSS 仍未测，设备端长期内存压力需后续验证；预算试验见[验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)。
+- CPU/GPU 峰值 RSS、长期浏览器资源压力和远端 CI 未核实；基准记录的缓存/数组字节不是进程峰值。
 
 ## 验证证据与历史基准
 
-2026-11-04/05 的历史记录曾包含全仓检查通过、core 89/Web 28 项及 Chrome 4/4 回归、L8 规则/扰动生成拾取等。此后参考算法恢复、单位域、映射、粗糙度和侵蚀后移均有改动，**这些历史结果不代表当前 v20 通过**。
+2026-11-04/05 的历史记录曾包含全仓检查通过、core 89/Web 28 项及 Chrome 4/4 回归、L8 规则/扰动生成拾取等。此后参考算法恢复、单位域、映射、粗糙度和侵蚀后移均有改动，**这些历史结果不代表当前 v20 通过**；当前检查结果单独记录于下文。
 
 2026-11-06 曾进行 Seed 42/L8/扰动 0.75 的逐步生成及单项对照：低地在骨架时已存在，Finalizer 在该样本中提高中位数，关闭侵蚀对目标区域视觉改善有限。这些诊断促成后续映射修订，不是物理正确性、当前性能或多 Seed 验收。
 
@@ -60,11 +61,19 @@ M1.1 只交付基础地形 T0，不执行冰川/水力侵蚀或代理排水重�
 
 数组字节与阶段后 RSS 采样都不是峰值内存；不将历史秒数外推为当前配置保证。
 
-## 本次代码整理与重构
+## 本次修复与验证
+
+2026-11-06：修正 `world-core` 的 package subpath imports，使跨包 TypeScript 解析指向明确的 `.ts` 文件及目录 `index.ts`；修正 terrain finalizer 测试桩的显式类型断言，更新 Worker 浏览器用例以检查当前实际提供的专题，并清理受影响源码、测试及基准脚本的 lint 问题。随后将 StageCache 默认值从 128 MiB 提高至 512 MiB，并加入 L8 Worker 缓存回归。未修改地形算法、公开世界契约或生成 Stage 版本。
+
+本轮实测：core 113/113、Web 28/28 单测通过；全仓 `pnpm typecheck`、`pnpm build`、`pnpm lint` 通过；真实 Chrome Worker 回归 5/5 通过，新增 L8 首次生成后第二次请求 `Cache Hit`（浏览器回归在受限环境外完成）；`git diff --check` 通过。Web 构建仍提示 `MeshDebug` chunk 大于 500 kB，尚无性能结论。
+
+terrain-v20 验收基准：L4/L6/L8 × Seed 42/314159/8675309 均通过强制重算哈希一致性；L6 在 roughness 0.1/0.4/0.5 与 seaLevelDatumKm -0.5/+0.5 样本也通过，粗糙度变化只重算 terrain。海平面提高时陆地比例下降，降低时上升。L8 在 3 个 Seed 中海陆覆盖为 31.6%–32.5%，高程范围约 -4.6–6.5 km。512 MiB StageCache 使 L8 11/11 Stage 全部命中，粗糙度变化仅重算 terrain。所有详情、哈希和耗时见[验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)。基准没有测峰值 RSS，设备端长期内存压力需后续验证。
+
+## 先前代码整理与重构
 
 2026-11-06：
 - 将标量数学工具函数（`clamp`、`smoothstep`、`gaussian`）由私有路径 `packages/world-core/src/nature/geology/math.ts` 迁移至通用数学模块 `packages/world-core/src/math/math.ts`，并在 `packages/world-core/src/index.ts` 统一重导出。
-- 为三个核心子包（`world-core`、`world-data`、`cartography`）配置 Node.js 官方标准 Subpath Imports 路径别名（`package.json` 的 `imports: { "#*": "./src/*" }` 及各包 `tsconfig.json` 的 `paths: { "#*": ["./src/*"] }`）。
+- 为三个核心子包（`world-core`、`world-data`、`cartography`）配置 Subpath Imports 路径别名。`world-core` 的初始 `"#*": "./src/*"` 映射在跨包类型检查中无法解析无扩展名目标，本轮已改为 `.ts` 目标及四个目录入口的显式映射；其余两包当前无 `#` 内部导入。
 - 按照方案二重构 `@nature` 目录代码结构，保持零业务逻辑与计算结果变更：
   - 新建 `nature/common/`，将共用的算法网格桥接（`algorithm-mesh.ts`）、球面距离场（`distance-field.ts`）与优先队列（`priority-queue.ts`）抽离至公共基建层，并提供 `common/index.ts` 聚合出口，彻底消除 `geography` 反向借用 `geology` 底层实现的架构异味。
   - `nature/geology/` 分层划分：板块模拟与动力学收敛至 `plates/`；地壳、构造动力与高程骨架收敛至 `tectonics/`；根目录保留产物契约与校验，建立 `geology/index.ts`。
@@ -73,10 +82,10 @@ M1.1 只交付基础地形 T0，不执行冰川/水力侵蚀或代理排水重�
   - `generation/pipeline/`：纯粹的流水线调度引擎与基础工具（核心调度引擎直接作为 `index.ts`，配合 `copy-dependency.ts`、`errors.ts` 及各测试，不设立无业务逻辑的重导出中间层）。
   - 新增 `generation/stages/`：具体生成阶段实现与集成封装（`mesh-stage.ts`、`geology-stage.ts`、`terrain-stage.ts` 及相应测试，各 Stage 按需直引，不设立冗余的重导出出口）。
   - 将 `src/nature/` 移动至 `src/generation/nature/`，将 `src/civilization/` 移动至 `src/generation/civilization/`。
-  - 规范 `package.json` 与 `tsconfig.json` 的别名配置，仅保留单一标准映射 `"#*": "./src/*"`，所有生成模块导入严格按源码结构写为 `#generation/pipeline`、`#generation/stages/*`、`#generation/nature/*` 与 `#generation/civilization/*`，路径 1:1 镜像物理目录。
+  - 规范 `package.json` 与 `tsconfig.json` 的别名配置；生成模块使用 `#generation/pipeline`、`#generation/stages/*`、`#generation/nature/*` 与 `#generation/civilization/*` 等内部导入。当前 `world-core` 的实际 `package.json` 映射以本轮修复为准。
   - 同步更新下游消费者导入、`src/index.ts` 导出以及 [技术设计](TECHNICAL_DESIGN.md) 目录树与章节说明。
 - 为通用数学工具补充针对性单元测试 `packages/world-core/src/math/math.test.ts`，覆盖区间截断、退化 Hermite 插值与高斯衰减边界。
-- 验证状态：已执行 `git status` 与 `git diff` 核对修改范围。按 AGENTS.md 规范，未经用户明确要求，本次未主动运行 `build`、`lint`、`test`、`typecheck` 或浏览器验证。
+- 当轮验证状态：只执行 `git status` 与 `git diff` 核对修改范围；当时未运行 `build`、`lint`、`test`、`typecheck` 或浏览器验证。本轮授权后的检查结果见上文。
 
 ## 本次文档整理
 

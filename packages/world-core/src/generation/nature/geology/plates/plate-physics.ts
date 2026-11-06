@@ -1,11 +1,11 @@
+import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
 // Migrated from feat-society; terrain-v1 preserves shaping order and uses stage-owned random streams.
 import type { RandomSource } from '#math/random'
-import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
 import type { SphericalCrustData } from '../tectonic-types'
-import { MantleDynamicTopographyGenerator } from '../tectonics/mantle-dynamic-topography'
 import { clamp } from '#math/math'
-import { SphericalPlateBoundaryAnalyzer } from './plate-boundary-analyzer'
 import { CRUST_TYPE, PLATE_BOUNDARY } from '../tectonic-types'
+import { MantleDynamicTopographyGenerator } from '../tectonics/mantle-dynamic-topography'
+import { SphericalPlateBoundaryAnalyzer } from './plate-boundary-analyzer'
 
 const CONTINENTAL_DRAG_FACTOR = 0.35
 const OCEAN_DRAG_FACTOR = 1

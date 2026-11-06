@@ -3,7 +3,12 @@ import { expect, it } from 'vitest'
 import { copyDependency } from './copy-dependency'
 
 it('does not visit or clone unselected payloads', () => {
-  const source = { values: new Uint8Array([1, 2, 3]), get renderOnly(): never { throw new Error('unselected data was read') } }
+  const source = {
+    values: new Uint8Array([1, 2, 3]),
+    get renderOnly(): never {
+      throw new Error('unselected data was read')
+    },
+  }
   const context = { getDependency: () => source } as unknown as StageExecutionContext
   const selected = copyDependency<typeof source, { values: Uint8Array }>(context, 'mesh', value => ({ values: value.values }))
   expect(selected.values).toEqual(source.values)

@@ -102,6 +102,10 @@ describe('stage graph and execution', () => {
 })
 
 describe('stage cache and lifecycle', () => {
+  it('defaults to a 512 MiB cache budget for L8 terrain artifacts', () => {
+    expect(new StageCache().maxBytes).toBe(512 * 2 ** 20)
+  })
+
   it('invalidates versions and content domains, but ignores unrelated content', async () => {
     const make = (version: string) => ({ id: 'content', version, dependencies: [], configKeys: [], contentKeys: ['names'], execute: () => 1 }) satisfies GenerationStage<number>
     const cache = new StageCache()

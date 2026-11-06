@@ -79,7 +79,7 @@ Registry 拒绝重复 ID、空声明、缺失依赖和循环。Kahn 排序的 re
 1. Stage 拥有新建工作数组，返回后经 validate 才进入 Pipeline/Cache；校验失败或取消不提交该阶段产物。
 2. getDependency 返回零拷贝只读 Proxy，禁止属性写入、原地方法与 .buffer 访问。热循环由内部 copyDependency 按消费字段生成原生 TypedArray 工作副本；不能绕过输入声明或改写上游。
 3. getOutput 返回共享借用，不是不可变深副本。调用者不得修改、detach、Transfer 或保留构建时可写别名；普通元素篡改不能无成本侦测。
-4. StageCache 默认 128 MiB LRU。预算统计包含 Buffer 去重后的主要产物字节，不等于进程/GPU峰值；过大条目不缓存。查到 Buffer 已 detach 时丢弃条目，clear 可手动清空。
+4. StageCache 默认 512 MiB LRU，以容纳 L8 地形完整阶段链（core 实测约 430.5 MiB，Worker 实测约 399.3 MiB）。预算统计包含 Buffer 去重后的主要产物字节，不等于进程/GPU峰值；过大条目不缓存。查到 Buffer 已 detach 时丢弃条目，clear 可手动清空。
 5. Stage 顺序执行；AbortSignal 在阶段前后和主动检查点生效。同步长循环不能接收同线程新消息来即时中断，强制终止由 Worker 负责。
 
 事件含 runId、stageId、进度、适用时耗时和错误；订阅者异常不改变结果。失败保留 cause 并停止下游，不自动重试；有效的已完成缓存仍可保留。Pipeline 成功不等于完整 WorldSnapshot 发布。

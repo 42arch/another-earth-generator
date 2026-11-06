@@ -1,8 +1,8 @@
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { GeologyArtifact } from '#generation/nature/geology'
 import type { PipelineEvent } from '#generation/pipeline'
-import { describe, expect, it } from 'vitest'
 import { normalizedElevationArrayToKm, normalizedElevationToKm, queryTerrainRegion, validateTerrainArtifact } from '#generation/nature/geography'
+import { describe, expect, it } from 'vitest'
 import { DEFAULT_GEOLOGY_PARAMETERS } from './geology-stage'
 import { createTerrainPipeline, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from './terrain-stage'
 
@@ -63,7 +63,7 @@ describe('terrain stage', () => {
     expect(() => validateTerrainArtifact(badWeight)).toThrow('region 0')
     expect(terrain.regionalReliefKm.length).toBe(terrain.elevationKm.length)
     const broken = structuredClone(terrain)
-    broken.regionalReliefKm[0] = NaN
+    broken.regionalReliefKm[0] = Number.NaN
     expect(() => validateTerrainArtifact(broken)).toThrow('regionalReliefKm')
     expect(queryTerrainRegion(terrain, 0).regionalUpliftCoordinate).toBe(terrain.regionalUpliftCoordinate[0])
   })

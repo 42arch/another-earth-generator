@@ -1,11 +1,11 @@
+import type { GenerationInput, GenerationStage, PipelineResult } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { PlanetParameters } from '#world/planet-parameters'
 import type { WorldMetadata } from '#world/world-metadata'
-import type { GenerationInput, GenerationStage, PipelineResult } from '#generation/pipeline'
+import { GenerationPipeline, StageCache, StageRegistry } from '#generation/pipeline'
+import { InvalidStageInputError } from '#generation/pipeline/errors'
 import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { validateSphericalMesh } from '#mesh/validation'
-import { InvalidStageInputError } from '#generation/pipeline/errors'
-import { GenerationPipeline, StageCache, StageRegistry } from '#generation/pipeline'
 
 /** Pipeline input only. M0.2 snapshot metadata is assembled later, after all generation stages exist. */
 export interface WorldGenerationConfig {

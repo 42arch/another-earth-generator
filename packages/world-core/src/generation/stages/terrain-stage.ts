@@ -1,17 +1,17 @@
-import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { AlgorithmMeshInput } from '#generation/nature/common'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { ElevationFields, GeologyArtifact, SphericalCrustData, SphericalTectonicData } from '#generation/nature/geology'
-import type { CrustArtifact, GeologyGenerationConfig, PlateTopologyArtifact } from './geology-stage'
 import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
-import { stageRandom } from '#math/random'
-import { normalizedElevationArrayToKm, TerrainPostProcessor, validateTerrainArtifact } from '#generation/nature/geography'
+import type { SphericalMesh } from '#mesh/spherical-mesh'
+import type { CrustArtifact, GeologyGenerationConfig, PlateTopologyArtifact } from './geology-stage'
 import { algorithmMesh, selectAlgorithmMeshInput } from '#generation/nature/common'
+import { normalizedElevationArrayToKm, TerrainPostProcessor, validateTerrainArtifact } from '#generation/nature/geography'
 import { PlatePhysicsProcessor, SphericalPlateBoundaryAnalyzer, SuperPlateGenerator, TectonicElevationGenerator } from '#generation/nature/geology'
+import { GenerationPipeline, StageCache } from '#generation/pipeline'
 import { copyDependency } from '#generation/pipeline/copy-dependency'
 import { InvalidStageInputError } from '#generation/pipeline/errors'
+import { stageRandom } from '#math/random'
 import { createGeologyPipeline } from './geology-stage'
-import { GenerationPipeline, StageCache } from '#generation/pipeline'
 
 export interface LandformParameters {
   readonly islandArcCount: number
@@ -54,15 +54,11 @@ interface SkeletonArtifact { readonly meshId: string, readonly fields: Elevation
 
 function selectTerrainTectonics(source: Readonly<TectonicArtifact>) {
   const { meshId, movingVelocity, mantleFlow, mantleElevationCoordinate, tectonics } = source
-  return { meshId, movingVelocity, mantleFlow, mantleElevationCoordinate,
-    tectonics: { regionBoundaryType: tectonics.regionBoundaryType, regionStress: tectonics.regionStress } }
+  return { meshId, movingVelocity, mantleFlow, mantleElevationCoordinate, tectonics: { regionBoundaryType: tectonics.regionBoundaryType, regionStress: tectonics.regionStress } }
 }
 function selectTerrainSkeleton(source: Readonly<SkeletonArtifact>) {
   const { elevation, phasorRidge, regionalUpliftCoordinate, spatialFields: s, classification: c, edifices } = source.fields
-  return { meshId: source.meshId, fields: { elevation, phasorRidge, regionalUpliftCoordinate,
-    spatialFields: s,
-    classification: c,
-    edifices: { hotspot: edifices.hotspot, total: edifices.total } } }
+  return { meshId: source.meshId, fields: { elevation, phasorRidge, regionalUpliftCoordinate, spatialFields: s, classification: c, edifices: { hotspot: edifices.hotspot, total: edifices.total } } }
 }
 
 function parameter(context: StageExecutionContext, key: string, min: number, max: number, integer = false): number {

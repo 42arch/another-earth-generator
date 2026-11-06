@@ -33,7 +33,8 @@ export function summarizeRoughnessProtection(mesh: SphericalMesh, elevationKm: F
   return { fullyProtectedLandAreaKm2, largestProtectedLandAreaKm2, protectedComponents }
 }
 
-/** Offline only. Fixed diagnostic windows, not biome/landform thresholds.
+/**
+ * Offline only. Fixed diagnostic windows, not biome/landform thresholds.
  * Histograms/flood: O(N+E); weighted quantiles: O(N log N).
  * At most 32 deterministic land samples scan the grid: O(32N), no NxN table.
  * Samples with fewer than 4 land cells are reported as under-resolved.
@@ -47,8 +48,8 @@ export function summarizeTerrain(mesh: SphericalMesh, elevationKm: Float32Array,
   // Diagnostic bins only; the adjacent-relief axis depends on mesh resolution.
   const elevationUpperBoundsKm = [0.05, 0.2, 0.5, 1, 2, 4]
   const adjacentReliefUpperBoundsKm = [0.025, 0.1, 0.3, 1]
-  const elevationAreaKm2 = Array.from({ length: elevationUpperBoundsKm.length + 1 }, () => 0)
-  const elevationByAdjacentReliefAreaKm2 = elevationAreaKm2.map(() => Array.from({ length: adjacentReliefUpperBoundsKm.length + 1 }, () => 0))
+  const elevationAreaKm2 = Array.from<number>({ length: elevationUpperBoundsKm.length + 1 }).fill(0)
+  const elevationByAdjacentReliefAreaKm2 = elevationAreaKm2.map(() => Array.from<number>({ length: adjacentReliefUpperBoundsKm.length + 1 }).fill(0))
   const bin = (value: number, bounds: number[]) => {
     const index = bounds.findIndex(bound => value < bound)
     return index < 0 ? bounds.length : index

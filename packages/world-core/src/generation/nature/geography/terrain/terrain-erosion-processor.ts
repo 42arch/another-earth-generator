@@ -1,7 +1,7 @@
 // Migrated from feat-society; terrain-v1 preserves shaping order and uses stage-owned random streams.
 import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/algorithm-mesh'
-import { clamp, smoothstep } from '#math/math'
 import { IndexPriorityQueue } from '#generation/nature/common/priority-queue'
+import { clamp, smoothstep } from '#math/math'
 
 export interface TerrainErosionFields {
   flowReceiver: Int32Array
