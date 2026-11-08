@@ -4,7 +4,7 @@
 
 ## 公开入口
 
-`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、`createMeshPipeline`、`createGeologyPipeline`、`createTerrainPipeline`、`createClimatePipeline` 和 M1.3A/B 新增的 `createHydrologyPipeline`。该 Pipeline 在 T0/C0 上生成 I0 雪水当量、H0 年径流/排水与 L1 静态湖泊阶段产物；不发布完整自然快照。M1.3A/B Core/Web 检查、基准和可见 Chrome Worker/专题链路已验证；Playwright headless E2E 因本机 Chrome SIGABRT 未能执行。
+`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、Mesh/Geology/Terrain/C0/Hydrology Pipeline，以及 `createEcologyPipeline`。Hydrology Pipeline 在 T0/C0 上生成 I0、H0、L1；Ecology Pipeline 从独立的 T0/C0 分支生成 E0 `ecology-e0-v2`。E0 不依赖 I0/H0/L1，也不发布完整自然快照。此次只运行了旧分类器同输入专项回放；E0 Core/Web 自动化和浏览器链路仍未运行。
 
 ```ts
 import { createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS,
@@ -44,8 +44,9 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | cryosphere-i0 | cryosphere-i0-v1 | mesh、terrain、climate-c0 |
 | hydrology-h0 | hydrology-h0-v2 | mesh、terrain、climate-c0、cryosphere-i0 |
 | static-lakes-l1 | static-lakes-l1-v4 | mesh、terrain、hydrology-h0 |
+| ecology-e0 | ecology-e0-v2 | mesh、terrain、climate-c0 |
 
-前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用同一 Registry，并添加 I0/H0/L1 静态湖泊。生态和发布 Stage 尚未注册。
+前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加地形 Stage。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用该分支并添加 I0/H0/L1；Ecology Pipeline 另建 C0 Registry 并追加 E0。两条分支共享 StageCache 的可复用上游产物，但 E0 的计划不包含任何水文 Stage。
 
 配置按源码 configKeys 声明：Mesh 读等级、扰动、可选 Mesh Seed、物理半径；参考 Mesh 另读参考等级（默认 L6，显式 L2–L6）；板块读主/微板块数和板块面积差异；大陆读大陆数、面积差异与候选覆盖率；骨架读三项 landforms；terrain 读纹理/扭曲/平滑、山脊锐化、水力/冰川侵蚀强度、islandDensity 和海平面基准。侵蚀强度只使 terrain Stage 失效。
 
@@ -92,7 +93,7 @@ Registry 拒绝重复 ID、空声明、缺失依赖和循环。Kahn 排序的 re
 
 ## Web Worker 与显示
 
-Worker/Controller 现支持 Mesh、Geology、Terrain、C0 和 M1.3A/B 水文请求。请求 H0 时响应包含 Terrain、C0、I0、H0 和 L1 湖泊。Worker 原数组归缓存，每次发送前结构化克隆独立产物并去重转移 Buffer；主线程核对请求种类、Mesh 身份、dtype、长度、图引用、路由无环、河段连续性和湖泊归属/溢流引用。
+Worker/Controller 现支持 Mesh、Geology、Terrain、C0、M1.3A/B 水文和 E0 生态请求。请求 E0 时响应包含 Terrain、C0 和 E0；I0/H0/L1 需通过独立水文请求生成。Worker 原数组归缓存，每次发送前结构化克隆独立产物并去重转移 Buffer；主线程核对请求种类、Mesh 身份、dtype、长度、图引用、路由无环、河段连续性、湖泊归属/溢流引用和生态分类索引。M1.4 完整自动化和浏览器链路尚未运行。
 
 只接收最新 requestId 的生成/拾取响应。硬取消终止重建 Worker，旧显示保留但缓存丢失；重新成功生成前禁用区域查询，防止旧画面和新 Worker 事实身份错配。失败、取消和传输错误不覆盖最后有效显示。页面销毁终止 Worker 并释放场景资源。
 
@@ -101,6 +102,8 @@ Worker/Controller 现支持 Mesh、Geology、Terrain、C0 和 M1.3A/B 水文请�
 ## 未来的气候、水文与侵蚀
 
 当前顺序为 `T0（基础水力/冰川侵蚀） → C0 → I0 → H0 → L1`。I0 按月温度/降水计算线性雨雪分配、雪水当量储量与融雪；H0 用温度指数蒸散近似和 Priority Flood 生成径流、排水树、流域与阈值河段；L1 v4 将 `filledElevationKm > terrain.elevationKm` 的陆地区域分成连通洼地，只保留至少覆盖两个 Mesh 区域的静态湖泊。水位取成员区域的最大 Priority Flood 高程；溢流口取湖内指向外部路由区域的边界区。该水位只表示静态溢流几何，不等于水量平衡结果，也不改地形。湖泊 ID 由 Mesh ID 与成员最小区域索引构成。无海洋网格时，H0 内流根语义传至湖泊；它不表示存在海洋的行星已具备完整内流湖判定。v4 Core/Web 检查、3 Seed × L4/L5/L6 基准见 [M1.3B 基准](benchmarks/M1.3B-static-lakes.json)。Priority Flood 长条洼地可能对应河谷或泛滥平原型潜在积水区，尚不能保证全部是气候意义上的湖泊。Playwright headless E2E 受 Chrome 进程启动失败限制。
+
+E0 从与水文平行的 DAG 分支运行：读取 C0 的 12 个等时长气候箱和 T0 海陆/高程，对全部陆地区域（包括 L1 标记的湖泊成员及 H0 河道区域）依气候与地形分类；不读取 I0/H0/L1，不按水文成员跳过或覆盖分类结果。C0 年均温/年降水作为唯一年度统计来源。分类词表由 `world-data` 拥有；E0 不生成湿地/农业字段，也不修改地形、湖泊或海陆。雪冰分类是温度/降水启发式代理。C0 变化会使 E0 及水文分支分别失效；水文参数变化不应使 E0 失效。E0 不代表最终 C1 驱动结果。
 
 T0 v24 小水体连通性已通过 3 Seed × L4/L5/L6 基准：未发现低于四个 L5 网格等效面积的封闭水体残留，海洋连通分量为 1–3。terrain-v20 历史数据仍只代表旧版基线。后续 `hydrology-h0-v2` 河网密度校准将动态汇水面积底线由 8×提高到 16×；L6 固定 Seed 样本河道区域数减少约 39–44%，详见 [河网密度校准基准](benchmarks/M1.3A-river-density-calibration.json)。L1 v4 过滤单网格组件后，3 Seed × L4/L5/L6 的湖泊数量为 L4 0–2、L5 3–7、L6 33–39；统计见 [M1.3B 静态湖泊基准](benchmarks/M1.3B-static-lakes.json)。
 

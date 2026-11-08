@@ -1,11 +1,12 @@
 <script lang='ts'>
-  import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+  import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
   import type { GeologyTheme } from './geology-debug-data'
   import type { DebugMode, DebugSelection, DebugStats } from './mesh-debug-data'
-  import { DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, queryClimateRegion, queryGeologyRegion, queryHydrologyRegion, queryStaticLakeRegion, queryTerrainRegion } from '@another-earth/world-core'
+  import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
+  import { DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, queryClimateRegion, queryEcologyRegion, queryGeologyRegion, queryHydrologyRegion, queryStaticLakeRegion, queryTerrainRegion } from '@another-earth/world-core'
   import { onMount } from 'svelte'
   import { GenerationCancelledError, GenerationController } from '../lib/generation/controller'
-  import { geologyRegionColor, SLOPE_LEGEND_TICKS, slopeDisplayPosition, slopeLegendGradient } from './geology-debug-data'
+  import { ecologyLegendColor, geologyRegionColor, SLOPE_LEGEND_TICKS, slopeDisplayPosition, slopeLegendGradient } from './geology-debug-data'
   import { prepareDebugGeometry, prepareDebugSelection } from './mesh-debug-data'
   import { createDebugScene } from './mesh-debug-scene'
 
@@ -17,13 +18,15 @@
     { key: 'glacialErosion', label: '冰川侵蚀', max: 1 },
     { key: 'ridgeSharpening', label: '山脊锐化', max: 1 },
   ] as const
+  const visibleBiomeLegend = NATURAL_BIOME_DEFINITIONS
+  const visibleLandCoverLegend = NATURAL_LAND_COVER_DEFINITIONS
 
   let viewport: HTMLDivElement
   let level = $state(4)
   let irregularity = $state(0)
   let seed = $state('42')
   let mode = $state<DebugMode>('voronoi')
-  let generationKind = $state<'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology'>('mesh')
+  let generationKind = $state<'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology' | 'ecology'>('mesh')
   const geologyParameters = $state({ ...DEFAULT_GEOLOGY_PARAMETERS })
   const terrainParameters = $state({ ...DEFAULT_TERRAIN_PARAMETERS })
   const landformParameters = $state({ ...DEFAULT_LANDFORM_PARAMETERS })
@@ -34,9 +37,11 @@
   let loadedCryosphere = $state.raw<CryosphereArtifact | null>(null)
   let loadedHydrology = $state.raw<HydrologyArtifact | null>(null)
   let loadedLakes = $state.raw<StaticLakeArtifact | null>(null)
+  let loadedEcology = $state.raw<EcologyArtifact | null>(null)
   let selectedClimate = $state<ReturnType<typeof queryClimateRegion> | null>(null)
   let selectedHydrology = $state<ReturnType<typeof queryHydrologyRegion> | null>(null)
   let selectedLake = $state<ReturnType<typeof queryStaticLakeRegion> | null>(null)
+  let selectedEcology = $state<ReturnType<typeof queryEcologyRegion> | null>(null)
   let seaLevelDatumKm = $state(0)
   let loadedTerrain = $state.raw<TerrainArtifact | null>(null)
   let selectedTerrain = $state<ReturnType<typeof queryTerrainRegion> | null>(null)
@@ -80,7 +85,7 @@
     error = ''
     message = `正在生成 L${level} · 扰动 ${irregularity.toFixed(2)}…`
     try {
-      const result = await controller.generate({ seed, config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm }, mesh: { subdivisionLevel: level, irregularity }, ...(generationKind !== 'mesh' ? { geology: { ...geologyParameters } } : {}), ...(['terrain', 'climate', 'hydrology'].includes(generationKind) ? { terrain: { ...terrainParameters }, landforms: { ...landformParameters } } : {}), ...(['climate', 'hydrology'].includes(generationKind) ? { climate: { ...climateParameters } } : {}), ...(generationKind === 'hydrology' ? { hydrology: { ...hydrologyParameters } } : {}) }, force })
+      const result = await controller.generate({ seed, config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm }, mesh: { subdivisionLevel: level, irregularity }, ...(generationKind !== 'mesh' ? { geology: { ...geologyParameters } } : {}), ...(['terrain', 'climate', 'hydrology', 'ecology'].includes(generationKind) ? { terrain: { ...terrainParameters }, landforms: { ...landformParameters } } : {}), ...(['climate', 'hydrology', 'ecology'].includes(generationKind) ? { climate: { ...climateParameters } } : {}), ...(generationKind === 'hydrology' ? { hydrology: { ...hydrologyParameters } } : {}), ...(generationKind === 'ecology' ? { ecology: true as const } : {}) }, force })
       if (id !== requestId)
         return
       const preparing = performance.now()
@@ -88,13 +93,17 @@
         geologyTheme = 'plates'
       if (!result.climate && !result.hydrology && ['temperature', 'precipitation', 'wind', 'ocean-current', 'snow', 'runoff', 'rivers', 'basins', 'lakes'].includes(geologyTheme))
         geologyTheme = 'plates'
+      if (!result.ecology && ['biomes', 'land-cover'].includes(geologyTheme))
+        geologyTheme = 'plates'
       if (result.terrain && !loadedTerrain)
         geologyTheme = 'elevation'
       if (result.climate && !loadedClimate)
         geologyTheme = 'temperature'
       if (result.hydrology && !loadedHydrology)
         geologyTheme = 'rivers'
-      const geometry = prepareDebugGeometry(result.mesh, mode, geologyRegionColor(result.geology, geologyTheme, result.terrain, result.climate, climateMonth, result.cryosphere, result.hydrology, result.lakes))
+      if (result.ecology && !['biomes', 'land-cover'].includes(geologyTheme))
+        geologyTheme = 'biomes'
+      const geometry = prepareDebugGeometry(result.mesh, mode, geologyRegionColor(result.geology, geologyTheme, result.terrain, result.climate, climateMonth, result.cryosphere, result.hydrology, result.lakes, result.ecology))
       const preparationMs = performance.now() - preparing
       scene.install(geometry, result.mesh.subdivisionLevel, wireframe, showSurface)
       options()
@@ -105,6 +114,7 @@
       loadedCryosphere = result.cryosphere ?? null
       loadedHydrology = result.hydrology ?? null
       loadedLakes = result.lakes ?? null
+      loadedEcology = result.ecology ?? null
       stages = result.stages ?? []
       selected = null
       selectedGeology = null
@@ -112,10 +122,11 @@
       selectedClimate = null
       selectedHydrology = null
       selectedLake = null
+      selectedEcology = null
       stats = { level: result.mesh.subdivisionLevel, irregularity: result.mesh.irregularity, seed: result.mesh.seed, fiveNeighborRegions: geometry.fiveNeighborCenters.length / 3, regions: result.mesh.regionCount, edges: result.mesh.edgeRegions.length / 2, faces: result.mesh.triangles.length / 3, generationMs: result.pipelineMs, cacheHit: result.cacheHit, cacheBytes: result.cacheBytes, preparationMs, renderBytes: Object.values(geometry).reduce((sum, array) => sum + array.byteLength, 0), copyMs: result.copyMs, meshBytes: result.meshBytes, receiveMs: result.receiveMs, workerInitMs: controller.workerInitMs, hydrateMs: result.hydrateMs, postMessageMs: 0 }
       busy = false
       pickReady = true
-      message = `L${stats.level} · 扰动 ${stats.irregularity.toFixed(2)} ${loadedHydrology ? '初步水文 H0 / 冰雪 I0' : loadedClimate ? '初步气候 C0' : loadedTerrain ? '基础地形 T0' : loadedGeology ? '板块与地壳' : '网格'}已就绪`
+      message = `L${stats.level} · 扰动 ${stats.irregularity.toFixed(2)} ${loadedEcology ? '实验生态 E0' : loadedHydrology ? '初步水文 H0 / 冰雪 I0' : loadedClimate ? '初步气候 C0' : loadedTerrain ? '基础地形 T0' : loadedGeology ? '板块与地壳' : '网格'}已就绪`
     }
     catch (cause) {
       if (id !== requestId)
@@ -152,7 +163,7 @@
     ++pickId
     picking = false
     const preparing = performance.now()
-    const geometry = prepareDebugGeometry(loadedMesh, mode, geologyRegionColor(loadedGeology, geologyTheme, loadedTerrain, loadedClimate, climateMonth, loadedCryosphere, loadedHydrology, loadedLakes))
+    const geometry = prepareDebugGeometry(loadedMesh, mode, geologyRegionColor(loadedGeology, geologyTheme, loadedTerrain, loadedClimate, climateMonth, loadedCryosphere, loadedHydrology, loadedLakes, loadedEcology))
     scene.install(geometry, loadedMesh.subdivisionLevel, wireframe, showSurface)
     stats = { ...stats, preparationMs: performance.now() - preparing, renderBytes: Object.values(geometry).reduce((sum, array) => sum + array.byteLength, 0) }
     selected = null
@@ -161,23 +172,27 @@
     selectedClimate = null
     selectedHydrology = null
     selectedLake = null
+    selectedEcology = null
   }
   function chooseClimateMonth() {
-    const prior = { selected, selectedGeology, selectedTerrain }
+    const prior = { selected, selectedGeology, selectedTerrain, selectedEcology }
     chooseMode()
     selected = prior.selected
     selectedGeology = prior.selectedGeology
     selectedTerrain = prior.selectedTerrain
+    selectedEcology = prior.selectedEcology
     if (selected && loadedClimate) {
       selectedClimate = queryClimateRegion(loadedClimate, selected.region, climateMonth)
       selectedHydrology = loadedHydrology ? queryHydrologyRegion(loadedHydrology, selected.region, loadedClimate, loadedCryosphere ?? undefined) : null
       selectedLake = loadedLakes ? queryStaticLakeRegion(loadedLakes, selected.region) : null
+      selectedEcology = loadedEcology ? queryEcologyRegion(loadedEcology, selected.region) : null
       scene?.showSelection(selected)
     }
     else {
       selectedClimate = null
       selectedHydrology = null
       selectedLake = null
+      selectedEcology = null
     }
   }
   onMount(() => {
@@ -197,6 +212,7 @@
           selectedClimate = loadedClimate ? queryClimateRegion(loadedClimate, region, climateMonth) : null
           selectedHydrology = loadedHydrology ? queryHydrologyRegion(loadedHydrology, region, loadedClimate ?? undefined, loadedCryosphere ?? undefined) : null
           selectedLake = loadedLakes ? queryStaticLakeRegion(loadedLakes, region) : null
+          selectedEcology = loadedEcology ? queryEcologyRegion(loadedEcology, region) : null
           scene?.showSelection(selected)
           picking = false
         }).catch((cause) => {
@@ -231,7 +247,7 @@
 <div class='min-h-screen bg-slate-50 text-slate-900'>
   <header class='flex h-16 items-center justify-between border-b border-slate-200 bg-white px-5'>
     <div class='flex items-baseline gap-4'><a href='/' class='font-semibold'>Another Earth</a><h1 class='text-sm text-slate-500'>Mesh Debug</h1></div>
-    <span class='text-xs text-slate-500'>Mesh / M1.3 · 初步水文</span>
+    <span class='text-xs text-slate-500'>Mesh / M1.4 · E0 实验</span>
   </header>
   <div class='grid lg:h-[calc(100dvh-4rem)] lg:grid-cols-[19rem_1fr]'>
     <aside class='space-y-6 overflow-auto border-r border-slate-200 bg-white p-5'>
@@ -239,7 +255,7 @@
         <h2 class='text-sm font-semibold'>球面网格</h2>
         <label class='block text-sm'>生成内容
           <select class='mt-1 w-full rounded border border-slate-300 bg-white p-2' bind:value={generationKind}>
-            <option value='mesh'>仅网格</option><option value='geology'>板块与地壳（M1.1A）</option><option value='terrain'>基础地形 T0（M1.1B）</option><option value='climate'>初步气候 C0（M1.2）</option><option value='hydrology'>冰雪 I0 / 水文 H0（M1.3A）</option>
+            <option value='mesh'>仅网格</option><option value='geology'>板块与地壳（M1.1A）</option><option value='terrain'>基础地形 T0（M1.1B）</option><option value='climate'>初步气候 C0（M1.2）</option><option value='hydrology'>冰雪 I0 / 水文 H0（M1.3A）</option><option value='ecology'>生态与自然覆盖 E0（实验）</option>
           </select>
         </label>
         <label class='block text-sm'>细分等级
@@ -302,7 +318,7 @@
           <p class='text-xs leading-relaxed text-slate-500'>参考网格固定 L6。候选大陆用于约束地壳，最终地形可能改变海岸；微板块数量为生成目标。微板块实际数量受边界连通性约束。</p>
         </section>
       {/if}
-      {#if generationKind === 'terrain' || generationKind === 'climate' || generationKind === 'hydrology'}
+      {#if generationKind === 'terrain' || generationKind === 'climate' || generationKind === 'hydrology' || generationKind === 'ecology'}
         <section class='space-y-3 border-t border-slate-200 pt-4' aria-label='地形参数'>
           <h2 class='text-sm font-semibold'>构造与基础地形 T0</h2>
           <p class='text-xs leading-relaxed text-slate-500'>侵蚀在高程转为 km 前参与 T0 地形塑形；水力参数控制下游汇流刻槽，冰川参数控制高纬/高海拔地形塑形。当前不读取降雨和气候。</p>
@@ -326,7 +342,7 @@
           <p class='text-xs leading-relaxed text-slate-500'>高程使用 km；本阶段侵蚀不使用气候或降雨数据，也不生成正式河网。</p>
         </section>
       {/if}
-      {#if generationKind === 'climate' || generationKind === 'hydrology'}
+      {#if generationKind === 'climate' || generationKind === 'hydrology' || generationKind === 'ecology'}
         <section class='space-y-3 border-t border-slate-200 pt-4' aria-label='气候参数'>
           <h2 class='text-sm font-semibold'>类地气候参数</h2>
           <p class='text-xs text-slate-500'>当前模型限定半径 6,371 km、自转 24 小时。</p>
@@ -360,6 +376,7 @@
               {#if loadedCryosphere}<option value='snow'>月末积雪水当量（mm）</option>{/if}
               {#if loadedHydrology}<option value='runoff'>年径流深（mm）</option><option value='rivers'>河网</option><option value='basins'>流域</option>{/if}
               {#if loadedLakes}<option value='lakes'>静态湖泊</option>{/if}
+              {#if loadedEcology}<option value='biomes'>潜在生物群系（实验）</option><option value='land-cover'>自然覆盖（实验）</option>{/if}
             </select>
           </label>
           {#if loadedClimate}
@@ -380,6 +397,9 @@
           <p class='text-slate-500'>板块与大陆以不同颜色区分。候选海陆：绿为陆地、蓝为海洋；地壳：棕为大陆地壳、蓝为海洋地壳。</p>
           {#if loadedLakes}
             <p class='border-t border-slate-200 pt-2 text-slate-500'>静态湖泊：{loadedLakes.lakes.length} 个，按 T0 地形洼地与 H0 溢流面识别；不包含季节水位变化。</p>
+          {/if}
+          {#if loadedEcology}
+            <p class='border-t border-slate-200 pt-2 text-slate-500'>E0 使用初步 C0 气候与 T0 地形；河网和湖泊属于独立水文产物，不参与群系或自然覆盖分类。雪冰是气候代理，不代表多年冰川模拟。</p>
           {/if}
           {#if loadedTerrain}
             <div class='space-y-2 border-t border-slate-200 pt-3' aria-label='最终地形统计'>
@@ -452,6 +472,14 @@
               <dt>洋流暖度代理</dt><dd>{selectedClimate.oceanWarmth.toFixed(2)}</dd>
             </dl>
           {/if}
+          {#if selectedEcology}
+            <dl class='space-y-2' aria-label='区域生态'>
+              <dt>潜在生物群系</dt><dd>{selectedEcology.potentialBiomeLabel} · {selectedEcology.potentialBiomeCode}</dd>
+              <dt>当前自然覆盖</dt><dd>{selectedEcology.landCoverLabel} · {selectedEcology.landCoverCode}</dd>
+              <dt>干旱指数（无量纲）</dt><dd>{selectedEcology.aridityIndex.toFixed(3)}</dd>
+              <dt>生长季</dt><dd>{selectedEcology.growingSeasonMonths} / 12 个等时长月箱</dd>
+            </dl>
+          {/if}
           {#if selectedHydrology}
             <dl class='space-y-2' aria-label='区域水文'>
               <dt>年径流深 / 局地产流</dt><dd>{selectedHydrology.annualRunoffMm.toFixed(1)} mm / {selectedHydrology.annualRunoffVolumeM3.toExponential(2)} m³/年</dd>
@@ -505,6 +533,28 @@
             {/each}
           </div>
           <p class='mt-1 text-[10px] text-slate-500'>绿色为缓坡，黄橙为中坡，红紫为陡坡；45°以上按最高档显示。</p>
+        </section>
+      {/if}
+      {#if loadedEcology && geologyTheme === 'biomes'}
+        <section class='pointer-events-none absolute bottom-14 right-4 w-72 rounded border border-slate-200 bg-white/95 p-3 text-xs text-slate-700 shadow-sm' aria-label='潜在生物群系图例'>
+          <h2 class='mb-2 font-semibold'>潜在生物群系（实验）</h2>
+          <ul class='grid grid-cols-2 gap-x-3 gap-y-1.5'>
+            {#each visibleBiomeLegend as definition (definition.id)}
+              <li class='flex min-w-0 items-center gap-1.5'><span class='h-3 w-3 shrink-0 rounded-sm ring-1 ring-black/10' style={`background-color: ${ecologyLegendColor('biomes', definition.id)}`}></span><span class='truncate'>{definition.nameZh}</span></li>
+            {/each}
+          </ul>
+          <p class='mt-2 border-t border-slate-200 pt-2 text-[10px] text-slate-500'>E0 仅按气候与地形分类；河网和湖泊不参与群系分类。</p>
+        </section>
+      {/if}
+      {#if loadedEcology && geologyTheme === 'land-cover'}
+        <section class='pointer-events-none absolute bottom-14 right-4 w-72 rounded border border-slate-200 bg-white/95 p-3 text-xs text-slate-700 shadow-sm' aria-label='自然覆盖图例'>
+          <h2 class='mb-2 font-semibold'>自然覆盖（实验）</h2>
+          <ul class='grid grid-cols-2 gap-x-3 gap-y-1.5'>
+            {#each visibleLandCoverLegend as definition (definition.id)}
+              <li class='flex min-w-0 items-center gap-1.5'><span class='h-3 w-3 shrink-0 rounded-sm ring-1 ring-black/10' style={`background-color: ${ecologyLegendColor('land-cover', definition.id)}`}></span><span class='truncate'>{definition.nameZh}</span></li>
+            {/each}
+          </ul>
+          <p class='mt-2 border-t border-slate-200 pt-2 text-[10px] text-slate-500'>E0 仅按气候与地形分类；河网和湖泊不参与自然覆盖分类。</p>
         </section>
       {/if}
       <div class='pointer-events-none absolute left-4 top-4 rounded border border-slate-200 bg-white/95 px-3 py-2 text-xs text-slate-600' role='status' aria-live='polite'>

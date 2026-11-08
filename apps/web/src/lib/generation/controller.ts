@@ -1,6 +1,6 @@
-import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import type { GenerationConfig, SerializedError, WorkerRequest, WorkerResponse } from './protocol'
-import { validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact } from '@another-earth/world-core'
+import { validateClimateArtifact, validateCryosphereArtifact, validateEcologyArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact } from '@another-earth/world-core'
 import { hydrateMesh } from './transfer'
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'completed' | 'failed' | 'cancelled'
@@ -21,6 +21,7 @@ export interface GenerationResult {
   readonly cryosphere?: CryosphereArtifact
   readonly hydrology?: HydrologyArtifact
   readonly lakes?: StaticLakeArtifact
+  readonly ecology?: EcologyArtifact
   readonly stages?: readonly StagePlan[]
   readonly cacheHit: boolean
   readonly cacheBytes: number
@@ -57,7 +58,7 @@ export class GenerationController {
   #factory: () => Worker
   #worker?: Worker
   #sequence = 0
-  #active?: { id: string, kind: 'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology', resolve: (value: GenerationResult) => void, reject: (reason: Error) => void, started: number }
+  #active?: { id: string, kind: 'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology' | 'ecology', resolve: (value: GenerationResult) => void, reject: (reason: Error) => void, started: number }
   #pending = new Map<string, { resolve: (value: number) => void, reject: (reason: Error) => void }>()
   #disposed = false
   #state: GenerationState = { status: 'idle', pipelineProgress: 0 }
@@ -156,7 +157,7 @@ export class GenerationController {
     else if (message.type === 'COMPLETED') {
       try {
         const hydrating = performance.now()
-        if ((active.kind === 'hydrology' && (!message.hydrology || !message.lakes || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'climate' && (!message.climate || !message.terrain || !message.geology)) || (active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
+        if ((active.kind === 'ecology' && (!message.ecology || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'hydrology' && (!message.hydrology || !message.lakes || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'climate' && (!message.climate || !message.terrain || !message.geology)) || (active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
           throw new TypeError('Worker response is missing requested generation data')
         const mesh = hydrateMesh(message.mesh)
         if (message.geology)
@@ -186,11 +187,16 @@ export class GenerationController {
             throw new TypeError('Static lake response is missing terrain or hydrology')
           validateStaticLakeArtifact(message.lakes, mesh, message.terrain, message.hydrology)
         }
+        if (message.ecology) {
+          if (!message.terrain || !message.climate)
+            throw new TypeError('Ecology response is missing terrain or climate')
+          validateEcologyArtifact(message.ecology, mesh.meshId, mesh.regionCount)
+        }
         const hydrateMs = performance.now() - hydrating
         this.#active = undefined
         this.#lastCompletedId = active.id
         this.#setState({ status: 'completed', requestId: active.id, pipelineProgress: 1 })
-        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, climate: message.climate, cryosphere: message.cryosphere, hydrology: message.hydrology, lakes: message.lakes, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
+        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, climate: message.climate, cryosphere: message.cryosphere, hydrology: message.hydrology, lakes: message.lakes, ecology: message.ecology, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
       }
       catch (cause) {
         const error = cause instanceof Error ? cause : new Error('Mesh recovery failed')
@@ -220,7 +226,7 @@ export class GenerationController {
     const id = `request-${++this.#sequence}`
     this.#setState({ status: 'starting', requestId: id, pipelineProgress: 0 })
     return new Promise((resolve, reject) => {
-      this.#active = { id, kind: input.config.hydrology ? 'hydrology' : input.config.climate ? 'climate' : input.config.terrain ? 'terrain' : input.config.geology ? 'geology' : 'mesh', resolve, reject, started: performance.now() }
+      this.#active = { id, kind: input.config.ecology ? 'ecology' : input.config.hydrology ? 'hydrology' : input.config.climate ? 'climate' : input.config.terrain ? 'terrain' : input.config.geology ? 'geology' : 'mesh', resolve, reject, started: performance.now() }
       try {
         this.#worker!.postMessage({ type: 'GENERATE', requestId: id, input } satisfies WorkerRequest)
       }

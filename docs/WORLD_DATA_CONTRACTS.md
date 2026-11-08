@@ -7,7 +7,7 @@
 `WorldSnapshot` 包含 `schemaVersion / snapshotId / revision / time / metadata / planet / mesh / nature / civilization`。
 `nature` 下五个状态始终齐备：`geology / geography / climate / hydrology / ecology`。生成过程中的不完整产物不能作为快照。
 
-当前生成 Mesh、GeologyArtifact、基础 TerrainArtifact，并有待验证的初步 ClimateArtifact C0；均为阶段产物。快照中的气候、水文、生态类型已定义，但没有最终自然状态生成器和完整发布流程；不得补零伪装完整世界。完整自然结果必须通过完整校验后原子发布。
+当前生成 Mesh、GeologyArtifact、基础 TerrainArtifact、初步 ClimateArtifact C0、I0/H0/L1 及本轮新增但尚未验证的 E0；均为阶段产物。完整自然状态组装与发布尚未实现；不得补零伪装完整世界。完整自然结果必须通过完整校验后原子发布。
 
 工作区新增待验证的 `ClimateArtifact` C0，来自 T0，仍是阶段产物而非已确认 `ClimateState`。它存储同一输出 Mesh 上的 `temperatureC` 与 `precipitationMm`（各 12N、month-major）、年均温与年降水（各 N）、Köppen 亚型索引（N，0–31；0 为海洋）；另保存参考 Mesh ID、输出到参考映射及四季风、季风、洋流与暖度模型场，供调试查询。这些是 C0 阶段产物，未发布为世界事实。每箱占公转年的 1/12，月降水总量随公转周期缩放；区域年值从同一月序列聚合。C1 必须使用独立产物身份并重算分类。本次校验命令尚未运行。
 
@@ -182,3 +182,11 @@ L1 v4 只保留至少包含两个 Mesh 区域的连通洼地组件（`minimumLak
 Priority Flood 使用输出 Mesh 邻接。所有海洋区为外流根；没有海洋区时，最低高程区域是唯一内流根。河流 ID 由 Mesh ID 和源区域组成，在相同 Mesh 与算法版本中确定；不承诺跨 Mesh/版本身份稳定。当前河道最低阈值为配置值与十六个平均 Mesh 区域面积的较大者，且要求有正流量。v2 相比 v1 将网格尺度底线从 8×提高到 16×；多分辨率校准记录见 `M1.3A-river-density-calibration.json`。
 
 `HydrologyState` 快照契约仍只列当前已定义的下游区和年径流深；M1.3A/B 阶段产物不因此自动成为已发布水文事实。L1 静态湖泊只在生成产物、Worker 查询和调试视图中可用；湖泊尚未加入 WorldSnapshot、Schema 2 校验或存档。
+
+## 生态产物 E0
+
+`ecology-e0-v2` 是 M1.4 中间 `GenerationArtifact`，使用 C0 的月温/降水、已有年均温/年降水与 T0 高程/海陆掩码。DAG 直接依赖 Mesh、T0、C0；不依赖 I0/H0/L1。所有陆地区域均按气候和地形分类，包括另由 L1 标记为湖泊成员、或另由 H0 标记为河道的区域；这些水文掩码不改写 E0 类别。由于 C0/T0 仍是初步输入，E0 不等同于最终气候驱动生态事实，且不会组装或发布 WorldSnapshot。
+
+`@another-earth/world-data` 导出 `NATURAL_BIOME_DEFINITIONS` 与 `NATURAL_LAND_COVER_DEFINITIONS`，数组索引仅是当前产物字典索引，稳定身份使用定义 ID。E0 保存同一 Mesh 上的 `potentialBiomeIndex` 与 `landCoverIndex`（Uint16/N）、无量纲 `aridityIndex`（Float32/N）、`growingSeasonMonths`（Uint8/N，0..12）以及字典 ID 和 Mesh/T0/C0 上游身份。年均温与年降水复用 C0，不在 E0 再保存一份。
+
+海洋由 T0 海陆掩码单独编码；陆地潜在生物群系与较粗的自然覆盖分类分开。湖泊/河流不属于这两套 E0 词表，水文实体由 I0/H0/L1 独立表达。`SnowIce` 是年度气候分类代理，不表示多年冰川或永久冰盖。PET 使用迁移自 feat-society 只读参考的温度指数近似（`0.015 × 等分箱日数 × max(T + 5, 0)^1.45`），干旱和群系边界继承旧版启发式并适配 12 个等时长月份；尚无气候学标定。无文明阶段不生成农田/城市。该产物尚未加入 Schema 2、存档和快照校验；整体验收仍待完成。

@@ -26,7 +26,8 @@
     "bench:geology": "vitest run --config vitest.geology-perf.config.ts",
     "bench:terrain": "vitest run --config vitest.terrain-perf.config.ts",
     "bench:climate": "vitest run --config vitest.climate-perf.config.ts",
-    "bench:hydrology": "vitest run --config vitest.hydrology-perf.config.ts"
+    "bench:hydrology": "vitest run --config vitest.hydrology-perf.config.ts",
+    "bench:ecology-legacy": "vitest run --config vitest.ecology-legacy.config.ts"
   },
   "dependencies": {
     "@another-earth/world-data": "workspace:*",

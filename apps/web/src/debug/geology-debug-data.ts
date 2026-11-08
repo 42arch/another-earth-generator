@@ -1,10 +1,13 @@
-import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeologyArtifact, HydrologyArtifact, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
 import { sampleClimateCirculation } from '@another-earth/world-core'
 
-export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current' | 'snow' | 'runoff' | 'rivers' | 'basins' | 'lakes'
+export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current' | 'snow' | 'runoff' | 'rivers' | 'basins' | 'lakes' | 'biomes' | 'land-cover'
 const ocean = [0.06, 0.19, 0.29] as const
 const land = [0.65, 0.74, 0.42] as const
-function categorical(index: number): readonly [number, number, number] {
+type LinearRgb = readonly [number, number, number]
+
+function categorical(index: number): LinearRgb {
   const hue = (index * 0.618033988749895) % 1
   const component = (offset: number) => {
     const k = (offset + hue * 12) % 12
@@ -13,8 +16,59 @@ function categorical(index: number): readonly [number, number, number] {
   return [component(0), component(8), component(4)]
 }
 
+// Migrated from docs/old-src/core/simulation/ecology/biome-data.ts BIOME_COLORS.
+// Values are linear RGB, matching the legacy Three.js vertex-color palette.
+const LEGACY_BIOME_COLORS: Readonly<Record<string, LinearRgb>> = {
+  Ocean: [0.035, 0.12, 0.28],
+  TropicalRainforest: [0.05, 0.42, 0.18],
+  TropicalSeasonalForest: [0.12, 0.58, 0.22],
+  Savanna: [0.68, 0.66, 0.22],
+  HotDesert: [0.83, 0.48, 0.22],
+  ColdDesert: [0.65, 0.48, 0.42],
+  Steppe: [0.72, 0.68, 0.4],
+  MediterraneanShrubland: [0.68, 0.58, 0.28],
+  TemperateGrassland: [0.48, 0.62, 0.32],
+  TemperateSeasonalForest: [0.18, 0.48, 0.28],
+  TemperateRainforest: [0.16, 0.6, 0.48],
+  BorealForest: [0.2, 0.42, 0.5],
+  Tundra: [0.56, 0.68, 0.72],
+  IceSheet: [0.9, 0.94, 0.96],
+  AlpineTundra: [0.73, 0.82, 0.78],
+}
+
+// Coarse land-cover classes reuse the corresponding legacy biome hues.
+const LEGACY_LAND_COVER_COLORS: Readonly<Record<string, LinearRgb>> = {
+  Ocean: LEGACY_BIOME_COLORS.Ocean,
+  SnowIce: LEGACY_BIOME_COLORS.IceSheet,
+  Forest: [0.142, 0.5, 0.332],
+  Savanna: LEGACY_BIOME_COLORS.Savanna,
+  Desert: [0.74, 0.48, 0.32],
+  Grassland: [0.6, 0.65, 0.36],
+  Shrubland: LEGACY_BIOME_COLORS.MediterraneanShrubland,
+  Tundra: [0.645, 0.75, 0.75],
+}
+
+const BIOME_CODE_BY_ID = new Map(NATURAL_BIOME_DEFINITIONS.map(definition => [definition.id, definition.code] as const))
+const LAND_COVER_CODE_BY_ID = new Map(NATURAL_LAND_COVER_DEFINITIONS.map(definition => [definition.id, definition.code] as const))
+
+function ecologyClassColor(theme: 'biomes' | 'land-cover', id: string): LinearRgb {
+  const code = (theme === 'biomes' ? BIOME_CODE_BY_ID : LAND_COVER_CODE_BY_ID).get(id)
+  const palette = theme === 'biomes' ? LEGACY_BIOME_COLORS : LEGACY_LAND_COVER_COLORS
+  return code ? palette[code] ?? [1, 0, 1] : [1, 0, 1]
+}
+
+/** Convert a legacy linear RGB category color to its matching CSS swatch. */
+export function ecologyLegendColor(theme: 'biomes' | 'land-cover', id: string): string {
+  const toSrgbByte = (linear: number) => {
+    const value = Math.max(0, Math.min(1, linear))
+    const srgb = value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055
+    return Math.round(srgb * 255)
+  }
+  return `rgb(${ecologyClassColor(theme, id).map(toSrgbByte).join(', ')})`
+}
+
 /** Display palette consumes independent worker copies; it never changes geology facts. */
-export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0, cryosphere?: CryosphereArtifact | null, hydrology?: HydrologyArtifact | null, lakes?: StaticLakeArtifact | null): ((region: number) => readonly [number, number, number]) | undefined {
+export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0, cryosphere?: CryosphereArtifact | null, hydrology?: HydrologyArtifact | null, lakes?: StaticLakeArtifact | null, ecology?: EcologyArtifact | null): ((region: number) => readonly [number, number, number]) | undefined {
   if (!geology || theme === 'topology')
     return undefined
   return (region) => {
@@ -35,6 +89,14 @@ export function geologyRegionColor(geology: GeologyArtifact | null | undefined, 
       if (index < 0)
         return terrain?.landMask[region] ? land : ocean
       return lakes.lakes[index].endorheic ? [0.04, 0.35, 0.62] : [0.03, 0.58, 0.88]
+    }
+    if (theme === 'biomes' && ecology) {
+      const index = ecology.potentialBiomeIndex[region]
+      return ecologyClassColor(theme, ecology.potentialBiomeIds[index] ?? '')
+    }
+    if (theme === 'land-cover' && ecology) {
+      const index = ecology.landCoverIndex[region]
+      return ecologyClassColor(theme, ecology.landCoverIds[index] ?? '')
     }
     if (theme === 'runoff' && hydrology) {
       const intensity = Math.max(0, Math.min(1, Math.log1p(hydrology.annualRunoffMm[region]) / Math.log1p(2000)))

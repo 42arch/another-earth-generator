@@ -1,6 +1,6 @@
-import type { ClimateArtifact, ClimateGenerationConfig, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, HydrologyGenerationConfig, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, ClimateGenerationConfig, CryosphereArtifact, EcologyArtifact, EcologyGenerationConfig, GeologyArtifact, HydrologyArtifact, HydrologyGenerationConfig, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import type { WorkerRequest, WorkerResponse } from '../lib/generation/protocol'
-import { createClimatePipeline, createGeologyPipeline, createHydrologyPipeline, createMeshPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
+import { createClimatePipeline, createEcologyPipeline, createGeologyPipeline, createHydrologyPipeline, createMeshPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
 import { serializeError } from '../lib/generation/protocol'
 import { transferSnapshot } from '../lib/generation/transfer'
 
@@ -10,6 +10,7 @@ export class GenerationWorkerRuntime {
   readonly terrainPipeline = createTerrainPipeline(this.pipeline.cache)
   readonly climatePipeline = createClimatePipeline(this.pipeline.cache)
   readonly hydrologyPipeline = createHydrologyPipeline(this.pipeline.cache)
+  readonly ecologyPipeline = createEcologyPipeline(this.pipeline.cache)
   #active?: { id: string, abort: AbortController }
   #mesh?: SphericalMesh
   #index?: SphericalSpatialIndex
@@ -71,14 +72,19 @@ export class GenerationWorkerRuntime {
       const terrainRequested = request.input.config.terrain !== undefined
       const climateRequested = request.input.config.climate !== undefined
       const hydrologyRequested = request.input.config.hydrology !== undefined
+      const ecologyRequested = request.input.config.ecology === true
+      if (ecologyRequested && hydrologyRequested)
+        throw new Error('Ecology generation is independent of hydrology; request E0 and hydrology separately')
       if (hydrologyRequested && (!climateRequested || !terrainRequested))
         throw new Error('Hydrology generation requires terrain and climate parameters')
+      if (ecologyRequested && (!climateRequested || !terrainRequested))
+        throw new Error('Ecology generation requires terrain and climate parameters')
       if (climateRequested && !terrainRequested)
         throw new Error('Climate generation requires terrain parameters')
       if (terrainRequested && (!request.input.config.geology || !request.input.config.landforms))
         throw new Error('Terrain generation requires geology and landform parameters')
-      const pipeline = hydrologyRequested ? this.hydrologyPipeline : climateRequested ? this.climatePipeline : terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
-      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as HydrologyGenerationConfig & ClimateGenerationConfig }, {
+      const pipeline = ecologyRequested ? this.ecologyPipeline : hydrologyRequested ? this.hydrologyPipeline : climateRequested ? this.climatePipeline : terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
+      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as EcologyGenerationConfig & HydrologyGenerationConfig & ClimateGenerationConfig }, {
         runId: task.id,
         signal: task.abort.signal,
         force: request.input.force,
@@ -95,10 +101,11 @@ export class GenerationWorkerRuntime {
       const cryosphere = hydrologyRequested ? result.getOutput<CryosphereArtifact>('cryosphere-i0') : undefined
       const hydrology = hydrologyRequested ? result.getOutput<HydrologyArtifact>('hydrology-h0') : undefined
       const lakes = hydrologyRequested ? result.getOutput<StaticLakeArtifact>('static-lakes-l1') : undefined
-      const snapshot = transferSnapshot(mesh, geology, terrain, climate, cryosphere, hydrology, lakes)
+      const ecology = ecologyRequested ? result.getOutput<EcologyArtifact>('ecology-e0') : undefined
+      const snapshot = transferSnapshot(mesh, geology, terrain, climate, cryosphere, hydrology, lakes, ecology)
       const copyMs = performance.now() - copying
       const posting = performance.now()
-      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, climate: snapshot.climate, cryosphere: snapshot.cryosphere, hydrology: snapshot.hydrology, lakes: snapshot.lakes, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
+      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, climate: snapshot.climate, cryosphere: snapshot.cryosphere, hydrology: snapshot.hydrology, lakes: snapshot.lakes, ecology: snapshot.ecology, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
       this.#mesh = mesh
       this.#index = undefined
       this.#send({ type: 'TRANSFERRED', requestId: task.id, postMessageMs: performance.now() - posting })
