@@ -53,7 +53,7 @@ describe('terrain stage', () => {
 
   it('publishes T0 after configured water and glacial erosion', async () => {
     const terrain = (await createTerrainPipeline().execute(input())).getOutput<TerrainArtifact>('terrain')
-    expect(terrain.algorithmVersion).toBe('terrain-v22')
+    expect(terrain.algorithmVersion).toBe('terrain-v24')
     expect(terrain.erosionCoordinate.some(v => v > 0)).toBe(true)
     expect(terrain.depositionCoordinate.every(Number.isFinite)).toBe(true)
     expect(terrain.roughnessWeight.every(v => v === 1)).toBe(true)

@@ -164,6 +164,12 @@ export class TerrainPostProcessor {
     }
 
     this.applySoilCreep(mesh, elevation, oceanMask, 3, 0.1125)
+    this.finalizer.repairSeaConnectivity(
+      mesh,
+      elevation,
+      finalized.fields.topologyDelta,
+      finalized.fields.topologyChanged,
+    )
     this.erosionProcessor.rebuildDrainage(mesh, elevation, oceanMask, erosion)
 
     const landMask = new Uint8Array(mesh.numRegions)

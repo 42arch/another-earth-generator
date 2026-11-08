@@ -27,6 +27,8 @@ const HYPS_LOW_ELEV_FRAC = 0.25
 const HYPS_MID_ELEV_FRAC = 0.35
 const HYPS_HIGH_POWER = 0.7
 const FILL_LEVEL = 0.005
+// Suppress detached sub-sea fragments smaller than four L5 display regions.
+const MIN_WATER_COMPONENT_AREA = 4 * (4 * Math.PI / (10 * 4 ** 5 + 2))
 
 interface RankedLandRegion {
   region: number
@@ -51,10 +53,9 @@ export class TerrainFinalizer {
     for (let region = 0; region < mesh.numRegions; region++)
       shapingDelta[region] = elevation[region] - inputElevation[region]
 
-    this.fillDisconnectedInteriorSeas(
+    this.fillSmallWaterComponents(
       mesh,
       elevation,
-      candidateLandMask,
       topologyDelta,
       topologyChanged,
     )
@@ -68,6 +69,18 @@ export class TerrainFinalizer {
       landMask,
       fields: { shapingDelta, topologyDelta, topologyChanged, postProcessDelta },
     }
+  }
+
+  /** Reapply candidate-ocean connectivity after later terrain shaping passes. */
+  repairSeaConnectivity(
+    mesh: SphericalMesh,
+    elevation: Float32Array,
+    topologyDelta: Float32Array,
+    topologyChanged: Uint8Array,
+  ): void {
+    if (elevation.length !== mesh.numRegions || topologyDelta.length !== mesh.numRegions || topologyChanged.length !== mesh.numRegions)
+      throw new Error('Sea connectivity repair mesh mismatch')
+    this.fillSmallWaterComponents(mesh, elevation, topologyDelta, topologyChanged)
   }
 
   private applyPeakAndIsostaticShaping(elevation: Float32Array): void {
@@ -123,47 +136,41 @@ export class TerrainFinalizer {
       + (1 - HYPS_LOW_ELEV_FRAC - HYPS_MID_ELEV_FRAC) * t ** HYPS_HIGH_POWER
   }
 
-  private fillDisconnectedInteriorSeas(
+  private fillSmallWaterComponents(
     mesh: SphericalMesh,
     elevation: Float32Array,
-    candidateLandMask: Uint8Array,
     topologyDelta: Float32Array,
     topologyChanged: Uint8Array,
   ): void {
-    const oceanConnected = new Uint8Array(mesh.numRegions)
+    const visited = new Uint8Array(mesh.numRegions)
     const queue = new Uint32Array(mesh.numRegions)
-    let head = 0
-    let tail = 0
-
     for (let region = 0; region < mesh.numRegions; region++) {
-      if (candidateLandMask[region] !== 0)
+      if (elevation[region] > SEA_LEVEL || visited[region] !== 0)
         continue
-      oceanConnected[region] = 1
+      let head = 0
+      let tail = 0
+      let componentArea = 0
       queue[tail++] = region
-    }
-
-    while (head < tail) {
-      const region = queue[head++]
-      for (const neighbor of mesh.forEachNeighborOfRegion(region)) {
-        if (oceanConnected[neighbor] !== 0 || elevation[neighbor] > SEA_LEVEL)
-          continue
-        oceanConnected[neighbor] = 1
-        queue[tail++] = neighbor
+      visited[region] = 1
+      while (head < tail) {
+        const current = queue[head++]
+        componentArea += mesh.regionArea[current]
+        for (const neighbor of mesh.forEachNeighborOfRegion(current)) {
+          if (visited[neighbor] !== 0 || elevation[neighbor] > SEA_LEVEL)
+            continue
+          visited[neighbor] = 1
+          queue[tail++] = neighbor
+        }
       }
-    }
-
-    for (let region = 0; region < mesh.numRegions; region++) {
-      if (
-        candidateLandMask[region] === 0
-        || oceanConnected[region] !== 0
-        || elevation[region] > SEA_LEVEL
-      ) {
+      if (componentArea >= MIN_WATER_COMPONENT_AREA)
         continue
+      for (let i = 0; i < tail; i++) {
+        const member = queue[i]
+        const previous = elevation[member]
+        elevation[member] = FILL_LEVEL
+        topologyDelta[member] += FILL_LEVEL - previous
+        topologyChanged[member] = 1
       }
-      const previous = elevation[region]
-      elevation[region] = FILL_LEVEL
-      topologyDelta[region] = FILL_LEVEL - previous
-      topologyChanged[region] = 1
     }
   }
 }

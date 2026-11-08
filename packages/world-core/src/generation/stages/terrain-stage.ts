@@ -36,7 +36,7 @@ export const DEFAULT_TERRAIN_PARAMETERS: Readonly<Required<TerrainParameters>> =
 const VERSION = 'terrain-v2'
 const SKELETON_VERSION = 'terrain-skeleton-v9'
 const SKELETON_RANDOM_VERSION = 'terrain-skeleton-v5'
-const TERRAIN_VERSION = 'terrain-v22'
+const TERRAIN_VERSION = 'terrain-v24'
 export const TERRAIN_RANDOM_VERSION = 'terrain-v7'
 interface DynamicsArtifact {
   readonly meshId: string

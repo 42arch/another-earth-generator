@@ -39,7 +39,7 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | plate-dynamics | terrain-v2 | reference-mesh、plate-topology、continental-crust |
 | tectonics | terrain-v2 | mesh、geology、plate-topology、continental-crust、plate-dynamics |
 | tectonic-elevation | terrain-skeleton-v9 | mesh、geology、tectonics |
-| terrain | terrain-v22 | mesh、geology、tectonics、tectonic-elevation |
+| terrain | terrain-v24 | mesh、geology、tectonics、tectonic-elevation |
 | climate-c0 | climate-c0-v2 | mesh、reference-mesh、geology、terrain |
 
 前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。Climate Pipeline 再追加 C0；水文、生态和发布 Stage 尚未注册。
