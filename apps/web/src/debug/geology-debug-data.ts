@@ -1,7 +1,7 @@
-import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import { sampleClimateCirculation } from '@another-earth/world-core'
 
-export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current' | 'snow' | 'runoff' | 'rivers' | 'basins'
+export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current' | 'snow' | 'runoff' | 'rivers' | 'basins' | 'lakes'
 const ocean = [0.06, 0.19, 0.29] as const
 const land = [0.65, 0.74, 0.42] as const
 function categorical(index: number): readonly [number, number, number] {
@@ -14,7 +14,7 @@ function categorical(index: number): readonly [number, number, number] {
 }
 
 /** Display palette consumes independent worker copies; it never changes geology facts. */
-export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0, cryosphere?: CryosphereArtifact | null, hydrology?: HydrologyArtifact | null): ((region: number) => readonly [number, number, number]) | undefined {
+export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0, cryosphere?: CryosphereArtifact | null, hydrology?: HydrologyArtifact | null, lakes?: StaticLakeArtifact | null): ((region: number) => readonly [number, number, number]) | undefined {
   if (!geology || theme === 'topology')
     return undefined
   return (region) => {
@@ -30,6 +30,12 @@ export function geologyRegionColor(geology: GeologyArtifact | null | undefined, 
     }
     if (theme === 'basins' && hydrology)
       return hydrology.basinIndex[region] < 0 ? ocean : categorical(hydrology.basinIndex[region])
+    if (theme === 'lakes' && lakes) {
+      const index = lakes.lakeIndex[region]
+      if (index < 0)
+        return terrain?.landMask[region] ? land : ocean
+      return lakes.lakes[index].endorheic ? [0.04, 0.35, 0.62] : [0.03, 0.58, 0.88]
+    }
     if (theme === 'runoff' && hydrology) {
       const intensity = Math.max(0, Math.min(1, Math.log1p(hydrology.annualRunoffMm[region]) / Math.log1p(2000)))
       return [0.84 - 0.72 * intensity, 0.25 + 0.5 * intensity, 0.18 + 0.75 * intensity]

@@ -1,0 +1,1687 @@
+{
+  "date": "2026-11-08T10:43:39.602Z",
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "config": {
+    "seeds": [
+      "42",
+      "314159",
+      "8675309"
+    ],
+    "levels": [
+      4,
+      5,
+      6
+    ],
+    "physicalRadiusKm": 6371,
+    "irregularity": 0.5,
+    "referenceLevel": 6,
+    "climate": {
+      "rotationPeriodHours": 24,
+      "axialTiltDegrees": 23.44,
+      "orbitalPeriodDays": 365.25,
+      "temperatureOffsetC": 0,
+      "precipitationScale": 1
+    },
+    "hydrology": {
+      "snowTemperatureMinC": -2,
+      "snowTemperatureMaxC": 2,
+      "degreeDayMeltFactorMmPerCMonth": 3,
+      "evapotranspirationFactorMmPerCMonth": 2,
+      "minimumRiverDrainageAreaKm2": 5000
+    }
+  },
+  "rows": [
+    {
+      "seed": "42",
+      "level": 4,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 1825.9381250000001,
+      "hitMs": 0.37779200000022684,
+      "changedMs": 5.211667000000034,
+      "forceMs": 1644.2149999999997,
+      "hashes": {
+        "runoff": "ed1bcd3fe5508e0140a98ec71ef4ed0a44eb9dbcf97414d396dd2ffe4a3e368b",
+        "downstream": "42d6e15515b43c41d0868634ff811942b3be71abfc8c5a39535ada3af402508f",
+        "rivers": "659726d48085ca130cd96d895c8bba02325ada50fed56d2e62345059ecb8c303",
+        "contributingArea": "79ad558302c4c1f2f7d21397ecad330f264270650eb170e29d6d55bef6c32102",
+        "lakes": "471052bf7fde995d24b70a533a8eb3b5c3e62e873526197bcda2a93a7eb4978e"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "9c854f7e3bde031befecd97597bcb08a4adfeb1771a7e7c52cc65d52f0d93439",
+        "landMaskHash": "7e59b080b0b2729a20152546ebe8e5be763bebc59acbf6874646da6e961d9aa9",
+        "landCoverage": 0.3115063818021929,
+        "candidateLandCoverage": 0.3035263233757174,
+        "changedCoastRegions": 121,
+        "landComponentCount": 14,
+        "largestLandAreaKm2": 27482909.059955686,
+        "minimumElevationKm": -4.7517170906066895,
+        "maximumElevationKm": 5.921029090881348,
+        "elevationQuantilesKm": [
+          -4.7517170906066895,
+          -2.6726067066192627,
+          -1.3812329769134521,
+          0.14257507026195526,
+          5.921029090881348
+        ],
+        "waterComponents": {
+          "oceanComponents": 2,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 20650546,
+      "artifactBytes": 361310,
+      "lakeArtifactBytes": 10256,
+      "totalLandAreaKm2": 158888338.13046455,
+      "totalLocalRunoffM3": 14068189421730.799,
+      "riverRegions": 17,
+      "riverRegionsByStrahlerOrder": {
+        "1": 17
+      },
+      "riverSegments": 7,
+      "effectiveRiverThresholdKm2": 3185414.344479555,
+      "lakes": {
+        "count": 1,
+        "lakeRegions": 2,
+        "totalAreaKm2": 503295.96300534275,
+        "endorheic": 0,
+        "open": 1,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 2,
+            "areaKm2": 503295.96300534275,
+            "perimeterKm": 3012.8248168218443,
+            "compactness": 0.6967637548695537,
+            "riverRegionFraction": 0
+          }
+        ]
+      }
+    },
+    {
+      "seed": "42",
+      "level": 5,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 1866.3681669999996,
+      "hitMs": 0.29266699999971024,
+      "changedMs": 10.838666000000558,
+      "forceMs": 1764.365167,
+      "hashes": {
+        "runoff": "4c0f8b621b125162c84ad24869cee802c6816465110e71fd12194625a5102939",
+        "downstream": "6cc3afe4fbbe1d95d1b467440679a81cf284ac0ef5a023e7f5491c43c1946fbd",
+        "rivers": "f0b737326c18e921c265a16aaa9d5939bb36fc2c44ab26894d93c0a25982eda8",
+        "contributingArea": "99843432a868cad203ea18291de5c42f9b7284490ab9a3060496fbc38f6627c8",
+        "lakes": "1e80d4c271c70134dfbcf032fa4a7fc8119e1399b7909cc126ca57a5a37f5b0c"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "69473f3eb7d3bce177096238f01bc3cfd4d6fdd038d3015ceea63c6c1cd81ac2",
+        "landMaskHash": "f1cf4cdfb0ffdcca0e4f878f254a9ecce46afa32af89d78a49308fd4fed1d123",
+        "landCoverage": 0.3070997479807018,
+        "candidateLandCoverage": 0.3013385011933375,
+        "changedCoastRegions": 498,
+        "landComponentCount": 22,
+        "largestLandAreaKm2": 25736668.86316216,
+        "minimumElevationKm": -4.8186187744140625,
+        "maximumElevationKm": 5.88078498840332,
+        "elevationQuantilesKm": [
+          -4.8186187744140625,
+          -2.329639196395874,
+          -1.0518124103546143,
+          0.10163417458534241,
+          5.88078498840332
+        ],
+        "waterComponents": {
+          "oceanComponents": 3,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 29719562,
+      "artifactBytes": 1444574,
+      "lakeArtifactBytes": 41044,
+      "totalLandAreaKm2": 156640670.77740607,
+      "totalLocalRunoffM3": 14811365330512.195,
+      "riverRegions": 113,
+      "riverRegionsByStrahlerOrder": {
+        "1": 110,
+        "2": 3
+      },
+      "riverSegments": 33,
+      "effectiveRiverThresholdKm2": 796820.108431618,
+      "lakes": {
+        "count": 7,
+        "lakeRegions": 19,
+        "totalAreaKm2": 981479.5645688913,
+        "endorheic": 0,
+        "open": 7,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 3,
+            "areaKm2": 189857.99569267037,
+            "perimeterKm": 1921.130408507742,
+            "compactness": 0.646435298896186,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 94202.17250320342,
+            "perimeterKm": 1309.5711809174588,
+            "compactness": 0.6902597729840906,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 3,
+            "areaKm2": 142259.9840942371,
+            "perimeterKm": 1836.3483982029643,
+            "compactness": 0.5301300942818991,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 143678.76254336216,
+            "perimeterKm": 1546.1786317656615,
+            "compactness": 0.7552367399587316,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 4,
+            "areaKm2": 209868.33847371003,
+            "perimeterKm": 1997.6528653640498,
+            "compactness": 0.6608710735653065,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 110323.85691404177,
+            "perimeterKm": 1340.2774860485986,
+            "compactness": 0.7717734880125648,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 91288.45434766647,
+            "perimeterKm": 1287.994694100357,
+            "compactness": 0.6915085751313965,
+            "riverRegionFraction": 0
+          }
+        ]
+      }
+    },
+    {
+      "seed": "42",
+      "level": 6,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 2124.9802919999993,
+      "hitMs": 0.3111250000001746,
+      "changedMs": 34.698583000001236,
+      "forceMs": 2106.937667,
+      "hashes": {
+        "runoff": "dab91717aa442e5e3e8351ea9af5c06a32c13102b8b55b204b29538820277aa3",
+        "downstream": "663296562c31b9b0cbfcd95fa9606ce5adc83552efc464d31ca123cec49f5603",
+        "rivers": "b7b95c4eeeef8338b9223017103696d2b66dcb0d52031778dd4708f8934b0989",
+        "contributingArea": "545285dc247e15c6312617ebf153f2b036003f1c4997d20b700d973de1c8ce9b",
+        "lakes": "a51d1d0c5525378420f90442018e882712bd7e725c5ade2e4da5ea7f07b0e187"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "09556b8a5f91ac238db432b4e89ee528c24d00533659e1199bf1b2b5d161e17a",
+        "landMaskHash": "ebd03d9cf65807ec0e500f7caed2ff6c437bcd83428a41beb35004b75d2994ff",
+        "landCoverage": 0.3070098136060804,
+        "candidateLandCoverage": 0.3012167828733075,
+        "changedCoastRegions": 2101,
+        "landComponentCount": 52,
+        "largestLandAreaKm2": 25137353.541971996,
+        "minimumElevationKm": -4.623962879180908,
+        "maximumElevationKm": 6.148337364196777,
+        "elevationQuantilesKm": [
+          -4.623962879180908,
+          -2.02394962310791,
+          -0.8733873963356018,
+          0.08495211601257324,
+          6.148337364196777
+        ],
+        "waterComponents": {
+          "oceanComponents": 3,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 65869042,
+      "artifactBytes": 5779290,
+      "lakeArtifactBytes": 164244,
+      "totalLandAreaKm2": 156594798.44810793,
+      "totalLocalRunoffM3": 15805362173239.74,
+      "riverRegions": 912,
+      "riverRegionsByStrahlerOrder": {
+        "1": 698,
+        "2": 202,
+        "3": 12
+      },
+      "riverSegments": 221,
+      "effectiveRiverThresholdKm2": 199234.20610704098,
+      "lakes": {
+        "count": 33,
+        "lakeRegions": 99,
+        "totalAreaKm2": 1208194.6777055024,
+        "endorheic": 0,
+        "open": 33,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 2,
+            "areaKm2": 22039.296598090335,
+            "perimeterKm": 694.5093759739182,
+            "compactness": 0.5741843712830825,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 12,
+            "areaKm2": 156447.9981500759,
+            "perimeterKm": 2603.264553073697,
+            "compactness": 0.2900970180463703,
+            "riverRegionFraction": 0.5833333333333334
+          },
+          {
+            "regions": 3,
+            "areaKm2": 38855.69534141465,
+            "perimeterKm": 938.8841359897631,
+            "compactness": 0.5539117110724089,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 6,
+            "areaKm2": 74405.88742639177,
+            "perimeterKm": 1761.761584937279,
+            "compactness": 0.3012471125074493,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 4,
+            "areaKm2": 50123.26955762965,
+            "perimeterKm": 1264.7559658350276,
+            "compactness": 0.3937637960395545,
+            "riverRegionFraction": 0.25
+          },
+          {
+            "regions": 3,
+            "areaKm2": 30819.010789834014,
+            "perimeterKm": 726.3846662143162,
+            "compactness": 0.7339985861477318,
+            "riverRegionFraction": 0.3333333333333333
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24547.431479841514,
+            "perimeterKm": 742.8577054871411,
+            "compactness": 0.5589907937402225,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 30430.323592954563,
+            "perimeterKm": 736.449327188539,
+            "compactness": 0.7050674980198841,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 4,
+            "areaKm2": 45207.78629740967,
+            "perimeterKm": 1068.1395068624618,
+            "compactness": 0.49792868769336013,
+            "riverRegionFraction": 0.25
+          },
+          {
+            "regions": 3,
+            "areaKm2": 31013.73054261644,
+            "perimeterKm": 920.4305131771656,
+            "compactness": 0.46002544938303713,
+            "riverRegionFraction": 0.3333333333333333
+          },
+          {
+            "regions": 2,
+            "areaKm2": 26426.882964719043,
+            "perimeterKm": 722.7559324347618,
+            "compactness": 0.6357296619085363,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 3,
+            "areaKm2": 36518.13503247098,
+            "perimeterKm": 898.5320329970843,
+            "compactness": 0.5683964086677862,
+            "riverRegionFraction": 0.6666666666666666
+          },
+          {
+            "regions": 5,
+            "areaKm2": 57989.657141550095,
+            "perimeterKm": 1358.812385587858,
+            "compactness": 0.39467663014517357,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 19555.71073164834,
+            "perimeterKm": 629.7428556876389,
+            "compactness": 0.619665004546581,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 21409.364793585708,
+            "perimeterKm": 585.3004412215671,
+            "compactness": 0.785336790411568,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 22913.44377397715,
+            "perimeterKm": 770.998070769918,
+            "compactness": 0.484388303476471,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 4,
+            "areaKm2": 44402.99309562505,
+            "perimeterKm": 1057.4274960474322,
+            "compactness": 0.49902340094727826,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24144.961836611532,
+            "perimeterKm": 690.6497424739191,
+            "compactness": 0.6360930916349019,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 22523.091773602864,
+            "perimeterKm": 686.2518202395454,
+            "compactness": 0.6009949899904482,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 31508.774461511464,
+            "perimeterKm": 722.8432791820978,
+            "compactness": 0.7577973474279941,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23944.36338251269,
+            "perimeterKm": 674.7319882952468,
+            "compactness": 0.6609225330727613,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 40634.59100252236,
+            "perimeterKm": 1133.0482255516895,
+            "compactness": 0.3977488813378667,
+            "riverRegionFraction": 0.6666666666666666
+          },
+          {
+            "regions": 3,
+            "areaKm2": 39421.414188842355,
+            "perimeterKm": 869.3222597997025,
+            "compactness": 0.6555117237514622,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23450.294433198607,
+            "perimeterKm": 717.6466786673471,
+            "compactness": 0.5721854440118979,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 21446.458474490595,
+            "perimeterKm": 762.9327699242708,
+            "compactness": 0.4630127082860433,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 3,
+            "areaKm2": 34648.377888853116,
+            "perimeterKm": 837.7154271127979,
+            "compactness": 0.6204399363996606,
+            "riverRegionFraction": 0.6666666666666666
+          },
+          {
+            "regions": 2,
+            "areaKm2": 28419.19529987724,
+            "perimeterKm": 737.9340430049308,
+            "compactness": 0.6558228565042855,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24229.060150131678,
+            "perimeterKm": 676.9896883801956,
+            "compactness": 0.6643276439232851,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 29533.278757603897,
+            "perimeterKm": 806.1483504045901,
+            "compactness": 0.5710729499061621,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24392.465239202855,
+            "perimeterKm": 626.3454076494255,
+            "compactness": 0.7813358720177068,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 5,
+            "areaKm2": 61476.3367680983,
+            "perimeterKm": 1543.2061404144165,
+            "compactness": 0.3243918687787575,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 21451.523698360423,
+            "perimeterKm": 611.1371108623225,
+            "compactness": 0.7217564871735523,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23863.873040247145,
+            "perimeterKm": 626.7065622108922,
+            "compactness": 0.7635233259471604,
+            "riverRegionFraction": 0
+          }
+        ]
+      }
+    },
+    {
+      "seed": "314159",
+      "level": 4,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 1580.3775420000002,
+      "hitMs": 0.27375000000029104,
+      "changedMs": 2.5453749999996944,
+      "forceMs": 1589.2369580000013,
+      "hashes": {
+        "runoff": "fa9583bd80e9c4c32c9dd46c8884b1706ec29bb85599a8abd765a3caf5483d2b",
+        "downstream": "550f84d243b831a491c29e339d7d015d4fdd94058bba15bc5d9d732a596633a5",
+        "rivers": "215162fd4e9664dedb57f7bfddd9c5d192f4a1beb63033336d6c8991761d4839",
+        "contributingArea": "ba2cc69016db48303f05cb1e303fd36ee7f3e3ecf6a95aa0fc7de565c43b0ecd",
+        "lakes": "270b2ecbc2cf6427a7f77be4f24251ee67ad42d277198365726d36e4e86b9852"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "01105467d7f6852aa79d64944d934f45e5b294f2f41f5bd958fef2e0b6466588",
+        "landMaskHash": "10818871873b82c45f9b09c5b22b264941f18f5f528543ee5056085b338ac397",
+        "landCoverage": 0.3168925308934218,
+        "candidateLandCoverage": 0.3036581440322672,
+        "changedCoastRegions": 100,
+        "landComponentCount": 9,
+        "largestLandAreaKm2": 34684225.66280517,
+        "minimumElevationKm": -4.551581859588623,
+        "maximumElevationKm": 6.096744060516357,
+        "elevationQuantilesKm": [
+          -4.551581859588623,
+          -2.6446197032928467,
+          -1.3302580118179321,
+          0.22459650039672852,
+          6.096744060516357
+        ],
+        "waterComponents": {
+          "oceanComponents": 2,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 20649882,
+      "artifactBytes": 361250,
+      "lakeArtifactBytes": 10268,
+      "totalLandAreaKm2": 161635621.4223096,
+      "totalLocalRunoffM3": 18405605577041.54,
+      "riverRegions": 2,
+      "riverRegionsByStrahlerOrder": {
+        "1": 2
+      },
+      "riverSegments": 2,
+      "effectiveRiverThresholdKm2": 3185414.3444795553,
+      "lakes": {
+        "count": 2,
+        "lakeRegions": 5,
+        "totalAreaKm2": 1030041.4984194213,
+        "endorheic": 0,
+        "open": 2,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 3,
+            "areaKm2": 650680.5344928856,
+            "perimeterKm": 4053.5737622910815,
+            "compactness": 0.4976242297035574,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 379360.9639265356,
+            "perimeterKm": 2884.219482363953,
+            "compactness": 0.5730676486673416,
+            "riverRegionFraction": 0
+          }
+        ]
+      }
+    },
+    {
+      "seed": "314159",
+      "level": 5,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 1679.0686669999977,
+      "hitMs": 0.26762500000040745,
+      "changedMs": 8.22070800000074,
+      "forceMs": 1714.2632080000003,
+      "hashes": {
+        "runoff": "9e9de6947f9b1dc5e6a7fdb604629f4bc2469fcec6af792909c4ac43e3498ab6",
+        "downstream": "e4089b65b4eb904e94ee6c9534a4b630231ebc769b0426694455133b0f74396e",
+        "rivers": "e8ed9a6aa41ff7263af3cec3231d45efae37fdb97e8f72577f83898f967be8da",
+        "contributingArea": "a0cb44a23da826c0e94c61c8eda578c72933159a1204ee1e5338e9e00088fb6f",
+        "lakes": "402faeec4a8c93e84935c7e3796cb4a6fcc09ed40e23e92436035778669e8b97"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "dd370320c1aede55dfbe12b6d6424c1cfb46e1ebd0340eae2bd2fbddc74f2c7c",
+        "landMaskHash": "29328f6cc7d60f9a629b35480abb82db047aecc6a512288924204ad006d63ca7",
+        "landCoverage": 0.307347572293292,
+        "candidateLandCoverage": 0.2989009650974295,
+        "changedCoastRegions": 431,
+        "landComponentCount": 22,
+        "largestLandAreaKm2": 31437057.188478384,
+        "minimumElevationKm": -4.440900802612305,
+        "maximumElevationKm": 6.206022262573242,
+        "elevationQuantilesKm": [
+          -4.440900802612305,
+          -2.178021192550659,
+          -1.065666675567627,
+          0.14385858178138733,
+          6.206022262573242
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 29725586,
+      "artifactBytes": 1444562,
+      "lakeArtifactBytes": 41020,
+      "totalLandAreaKm2": 156767077.1545333,
+      "totalLocalRunoffM3": 19005768579052.125,
+      "riverRegions": 110,
+      "riverRegionsByStrahlerOrder": {
+        "1": 103,
+        "2": 7
+      },
+      "riverSegments": 31,
+      "effectiveRiverThresholdKm2": 796820.1084316153,
+      "lakes": {
+        "count": 4,
+        "lakeRegions": 13,
+        "totalAreaKm2": 622806.9032223184,
+        "endorheic": 0,
+        "open": 4,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 2,
+            "areaKm2": 95277.06706055328,
+            "perimeterKm": 1324.1281505321958,
+            "compactness": 0.6828702717765563,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 142234.4144083012,
+            "perimeterKm": 1689.5894136770412,
+            "compactness": 0.6261122394780564,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 4,
+            "areaKm2": 192006.66855483013,
+            "perimeterKm": 1899.9113973154404,
+            "compactness": 0.6684354592549195,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 4,
+            "areaKm2": 193288.75319863376,
+            "perimeterKm": 2007.7688797046276,
+            "compactness": 0.6025443408545397,
+            "riverRegionFraction": 0.25
+          }
+        ]
+      }
+    },
+    {
+      "seed": "314159",
+      "level": 6,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 2096.431124999999,
+      "hitMs": 0.33008300000074087,
+      "changedMs": 34.20970800000214,
+      "forceMs": 2131.643,
+      "hashes": {
+        "runoff": "0b8ace5f87e789156d60052894f31a23e6cb1d44bc1ef70fec7b92a9a681bf6a",
+        "downstream": "3f8af4aee8fb8dd2a70211a30fd9de4a2ff293134145bc8316245bb1c3597d4a",
+        "rivers": "72b0462f7c35be6c226104b3476d81e6fef8dd66d1a89625be9a3a20cd705c45",
+        "contributingArea": "17cefb589532f670396e1fbee78acaeecce50134d6bbcced586f6e074671a9cf",
+        "lakes": "ccddb945f6603e186e6db383ec6dbf65e16b9816cf255bab420d1a106c0eb12c"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "b3cd6495d88d59715b774ac418a5551be7f98544bbefa3f1b60affe0b8e9bb32",
+        "landMaskHash": "fd671a8db685f9b09c391062e564582ee7dbaee62de07c0d17439a25994da867",
+        "landCoverage": 0.30925173733778105,
+        "candidateLandCoverage": 0.3000519682334957,
+        "changedCoastRegions": 1831,
+        "landComponentCount": 55,
+        "largestLandAreaKm2": 31985005.396415513,
+        "minimumElevationKm": -4.496997833251953,
+        "maximumElevationKm": 6.195255279541016,
+        "elevationQuantilesKm": [
+          -4.496997833251953,
+          -1.7733101844787598,
+          -0.865671694278717,
+          0.11328024417161942,
+          6.195255279541016
+        ],
+        "waterComponents": {
+          "oceanComponents": 3,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 65912622,
+      "artifactBytes": 5779498,
+      "lakeArtifactBytes": 164308,
+      "totalLandAreaKm2": 157738324.0923784,
+      "totalLocalRunoffM3": 20859650337651.492,
+      "riverRegions": 964,
+      "riverRegionsByStrahlerOrder": {
+        "1": 715,
+        "2": 232,
+        "3": 17
+      },
+      "riverSegments": 245,
+      "effectiveRiverThresholdKm2": 199234.20610703915,
+      "lakes": {
+        "count": 36,
+        "lakeRegions": 115,
+        "totalAreaKm2": 1445865.6366518848,
+        "endorheic": 0,
+        "open": 36,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 8,
+            "areaKm2": 109285.62721294876,
+            "perimeterKm": 1893.6491118923423,
+            "compactness": 0.38297806108578636,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 21900.531284631277,
+            "perimeterKm": 596.3318070477252,
+            "compactness": 0.7739066276954039,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 6,
+            "areaKm2": 87689.90856223556,
+            "perimeterKm": 1955.82298904309,
+            "compactness": 0.288071562388252,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 6,
+            "areaKm2": 74259.9931658512,
+            "perimeterKm": 1412.5574925740018,
+            "compactness": 0.4676839895568149,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 5,
+            "areaKm2": 63055.30173606443,
+            "perimeterKm": 1501.6922859329734,
+            "compactness": 0.3513739595169083,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 3,
+            "areaKm2": 36581.39199695074,
+            "perimeterKm": 1059.8651175116,
+            "compactness": 0.40923134748988255,
+            "riverRegionFraction": 0.3333333333333333
+          },
+          {
+            "regions": 8,
+            "areaKm2": 100864.69756475951,
+            "perimeterKm": 1442.720122660023,
+            "compactness": 0.6089545449293012,
+            "riverRegionFraction": 0.375
+          },
+          {
+            "regions": 3,
+            "areaKm2": 40410.21482074435,
+            "perimeterKm": 893.4389904517121,
+            "compactness": 0.6361671215567386,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 40912.381746299456,
+            "perimeterKm": 1037.2556387428763,
+            "compactness": 0.4778515710574027,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 38813.32398170311,
+            "perimeterKm": 861.1714599018119,
+            "compactness": 0.6576751682506851,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 27298.54296242456,
+            "perimeterKm": 791.2657268420439,
+            "compactness": 0.5479041900280716,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 26016.80554953192,
+            "perimeterKm": 685.9304393261345,
+            "compactness": 0.6948701941187706,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 19329.325845809824,
+            "perimeterKm": 686.9939744417446,
+            "compactness": 0.5146603552750085,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 11,
+            "areaKm2": 132699.4434048852,
+            "perimeterKm": 2173.676591892263,
+            "compactness": 0.35293043241661276,
+            "riverRegionFraction": 0.2727272727272727
+          },
+          {
+            "regions": 2,
+            "areaKm2": 25906.71097775676,
+            "perimeterKm": 858.8565019099136,
+            "compactness": 0.4413477617624842,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23773.665886728137,
+            "perimeterKm": 713.5465962710908,
+            "compactness": 0.5867611366992583,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 20353.207884126557,
+            "perimeterKm": 680.2938503813941,
+            "compactness": 0.5526493228620104,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 30393.579293842726,
+            "perimeterKm": 752.4480580977745,
+            "compactness": 0.6745880759145529,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 20442.257775147955,
+            "perimeterKm": 732.7956988158965,
+            "compactness": 0.47837987535687504,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 3,
+            "areaKm2": 32357.827169020165,
+            "perimeterKm": 913.3946019350465,
+            "compactness": 0.4873851961071379,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 21862.21084721803,
+            "perimeterKm": 716.3602970851128,
+            "compactness": 0.5353538456413262,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24393.99104612333,
+            "perimeterKm": 735.8043875786577,
+            "compactness": 0.5661975394754882,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 35931.51274250179,
+            "perimeterKm": 900.6140324235749,
+            "compactness": 0.5566829844982479,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 4,
+            "areaKm2": 47164.50682799276,
+            "perimeterKm": 1084.9415090958007,
+            "compactness": 0.5035151136861639,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24056.85588853204,
+            "perimeterKm": 679.444195611355,
+            "compactness": 0.6548489640978117,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 3,
+            "areaKm2": 36092.58139982803,
+            "perimeterKm": 762.9671014439842,
+            "compactness": 0.779141226750276,
+            "riverRegionFraction": 0.3333333333333333
+          },
+          {
+            "regions": 3,
+            "areaKm2": 45163.448473077755,
+            "perimeterKm": 1060.3962426921578,
+            "compactness": 0.5047317198527158,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23458.331786237377,
+            "perimeterKm": 707.174168324377,
+            "compactness": 0.5894598262753048,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 41043.46940435282,
+            "perimeterKm": 1000.4539067396453,
+            "compactness": 0.5152995457928161,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 19967.09465146458,
+            "perimeterKm": 640.9210233119534,
+            "compactness": 0.6108234559284538,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 26162.124274713977,
+            "perimeterKm": 664.1631456969963,
+            "compactness": 0.7453037773424375,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 31100.456660793818,
+            "perimeterKm": 775.8923252359842,
+            "compactness": 0.6491928349258201,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24568.246244195478,
+            "perimeterKm": 663.8213837641661,
+            "compactness": 0.7006184080547767,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 22192.74971527024,
+            "perimeterKm": 623.4304273324178,
+            "compactness": 0.7175381388546244,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 28013.902734352756,
+            "perimeterKm": 867.4752894570129,
+            "compactness": 0.4678097353365334,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 22349.415133767645,
+            "perimeterKm": 589.0609513251137,
+            "compactness": 0.8093857568317873,
+            "riverRegionFraction": 0
+          }
+        ]
+      }
+    },
+    {
+      "seed": "8675309",
+      "level": 4,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 1565.975875,
+      "hitMs": 0.2538750000021537,
+      "changedMs": 2.4320000000006985,
+      "forceMs": 1599.830750000001,
+      "hashes": {
+        "runoff": "02e7282d5eb6916b46439a143019bfe26c0e46e4105f963b2f71a5ca7ecbd9c3",
+        "downstream": "2ee6263ac19dc0d353561c4d8f7f86b87ca69d12227a3c60b974e85a0dd31444",
+        "rivers": "69746f5a9f5fd918d68d88a374e517772710a8d5e2738f574f487bae64f35774",
+        "contributingArea": "1442f455637782c366f4bde5f7e626a0918b3368a18138ca825ccd2e06074076",
+        "lakes": "c518e9802f86fd4bd0e716888ad8a2f32bd89d844a6af4e6377f5fe8ae0e3d35"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "8b9f0ad4181fe45038484a7cf519c32023b038e8a6b208b6d77fb5f9737cb8df",
+        "landMaskHash": "42bf0a344e1b4cb786cf1c622292a2cf520de8a45ddc4adaf5f2b224b2bb6279",
+        "landCoverage": 0.31722350278173284,
+        "candidateLandCoverage": 0.2999575852519342,
+        "changedCoastRegions": 93,
+        "landComponentCount": 16,
+        "largestLandAreaKm2": 50479360.503774256,
+        "minimumElevationKm": -4.780922889709473,
+        "maximumElevationKm": 6.285356521606445,
+        "elevationQuantilesKm": [
+          -4.780922889709473,
+          -2.7342357635498047,
+          -1.6119906902313232,
+          0.3127349615097046,
+          6.285356521606445
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 20654600,
+      "artifactBytes": 361290,
+      "lakeArtifactBytes": 10248,
+      "totalLandAreaKm2": 161804438.42373785,
+      "totalLocalRunoffM3": 14919319155648.852,
+      "riverRegions": 12,
+      "riverRegionsByStrahlerOrder": {
+        "1": 12
+      },
+      "riverSegments": 6,
+      "effectiveRiverThresholdKm2": 3185414.3444795525,
+      "lakes": {
+        "count": 0,
+        "lakeRegions": 0,
+        "totalAreaKm2": 0,
+        "endorheic": 0,
+        "open": 0,
+        "minimumLakeRegionCount": 2,
+        "shapes": []
+      }
+    },
+    {
+      "seed": "8675309",
+      "level": 5,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 1704.5403330000008,
+      "hitMs": 0.29029200000150013,
+      "changedMs": 7.800417000002199,
+      "forceMs": 1732.6197089999987,
+      "hashes": {
+        "runoff": "0470f3b4520df489804626b711782e64f3a7bbd9f5b4f6bd3d342b7bca8b8d90",
+        "downstream": "c9cc56de8c8322e8b266fdd8abf717ff5de69fa488ff22305d6578c11a9eaa46",
+        "rivers": "123de25121b461890fee3be1e431fa8eaffb350369935bfeb012af7c8d7611b0",
+        "contributingArea": "57cb9387c9e003c32c726ca1da620001006fa8922350305479ed57ae8fb91e6d",
+        "lakes": "0b2ac4d0b625d14e493217a7bab6f75e778754b4689653d3f8ca19e13f7521ef"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "324203754a7fe318475d2c5a654cfc1e8afea388c7a7a33a618b52086ea2d13d",
+        "landMaskHash": "2b83a2d8ec5348169143584a5d18596dc0e7fe424f448166ac6b4775af8d2c21",
+        "landCoverage": 0.31099344008350444,
+        "candidateLandCoverage": 0.2999479062667781,
+        "changedCoastRegions": 373,
+        "landComponentCount": 30,
+        "largestLandAreaKm2": 29467531.153195016,
+        "minimumElevationKm": -4.555305004119873,
+        "maximumElevationKm": 6.037781238555908,
+        "elevationQuantilesKm": [
+          -4.555305004119873,
+          -2.4379494190216064,
+          -1.133806586265564,
+          0.26248908042907715,
+          6.037781238555908
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 29724020,
+      "artifactBytes": 1444762,
+      "lakeArtifactBytes": 40996,
+      "totalLandAreaKm2": 158626704.7836014,
+      "totalLocalRunoffM3": 15946301049603.252,
+      "riverRegions": 160,
+      "riverRegionsByStrahlerOrder": {
+        "1": 147,
+        "2": 13
+      },
+      "riverSegments": 42,
+      "effectiveRiverThresholdKm2": 796820.1084316177,
+      "lakes": {
+        "count": 3,
+        "lakeRegions": 7,
+        "totalAreaKm2": 335941.9858525223,
+        "endorheic": 0,
+        "open": 3,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 3,
+            "areaKm2": 155359.56713239138,
+            "perimeterKm": 2130.7303667556475,
+            "compactness": 0.43002219903252564,
+            "riverRegionFraction": 0.3333333333333333
+          },
+          {
+            "regions": 2,
+            "areaKm2": 87912.76843584457,
+            "perimeterKm": 1406.6187448064907,
+            "compactness": 0.558353212697977,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 92669.65028428634,
+            "perimeterKm": 1418.4716981806903,
+            "compactness": 0.5787700350046011,
+            "riverRegionFraction": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "seed": "8675309",
+      "level": 6,
+      "algorithmVersion": "hydrology-h0-v2",
+      "lakeAlgorithmVersion": "static-lakes-l1-v4",
+      "coldMs": 2117.198207999998,
+      "hitMs": 0.24666699999943376,
+      "changedMs": 28.69720900000175,
+      "forceMs": 2076.952500000003,
+      "hashes": {
+        "runoff": "83f0be9965c6d0d97cca4ac59fe39c29b2c4c6e95fe58a012df3e5117edc624f",
+        "downstream": "cbcaf1d848203f8ba34482a759321f6728845ecad0f207de4ed7f4c033f09fd8",
+        "rivers": "b9fb61695a75d0dbe85229d3a5eb89a3c9f5fc6be86620e7eeddfe025da0e019",
+        "contributingArea": "19ce0efd383ffb618005835102c84076e0624c47d93fbc606d6c92afbbf56995",
+        "lakes": "14c44775eadce1259354b93d0895caccafe2707203ca25c33de0e494ea1e86a7"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "2f6d48b8b066bc7aa75980bbeee5410a2209c2440bdcf4fc056fe8509f416ebb",
+        "landMaskHash": "c1ad5bbaff4eb26e9e56662c89c3b38e69e277e59463bb98208fe5bbbfce6a07",
+        "landCoverage": 0.3120663861788483,
+        "candidateLandCoverage": 0.299414628733662,
+        "changedCoastRegions": 1679,
+        "landComponentCount": 42,
+        "largestLandAreaKm2": 47934270.3543065,
+        "minimumElevationKm": -4.44624137878418,
+        "maximumElevationKm": 6.128293037414551,
+        "elevationQuantilesKm": [
+          -4.44624137878418,
+          -2.134012460708618,
+          -0.9398168325424194,
+          0.20311352610588074,
+          6.128293037414551
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "changedStages": [
+        "hydrology-h0",
+        "static-lakes-l1"
+      ],
+      "cacheBytes": 65877216,
+      "artifactBytes": 5780194,
+      "lakeArtifactBytes": 164372,
+      "totalLandAreaKm2": 159173976.4671118,
+      "totalLocalRunoffM3": 16392966526792.41,
+      "riverRegions": 1138,
+      "riverRegionsByStrahlerOrder": {
+        "1": 840,
+        "2": 259,
+        "3": 39
+      },
+      "riverSegments": 239,
+      "effectiveRiverThresholdKm2": 199234.20610704282,
+      "lakes": {
+        "count": 39,
+        "lakeRegions": 131,
+        "totalAreaKm2": 1567313.2730526065,
+        "endorheic": 0,
+        "open": 39,
+        "minimumLakeRegionCount": 2,
+        "shapes": [
+          {
+            "regions": 4,
+            "areaKm2": 50686.35574461621,
+            "perimeterKm": 899.2677010457406,
+            "compactness": 0.7876312540496391,
+            "riverRegionFraction": 0.75
+          },
+          {
+            "regions": 3,
+            "areaKm2": 39398.53163188135,
+            "perimeterKm": 938.5572021191622,
+            "compactness": 0.5620415293581802,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23695.967145875496,
+            "perimeterKm": 615.1805144990935,
+            "compactness": 0.7868268310940107,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 27648.880879339253,
+            "perimeterKm": 814.3609286751976,
+            "compactness": 0.5239062308016506,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 7,
+            "areaKm2": 76705.17705852399,
+            "perimeterKm": 1558.416715282239,
+            "compactness": 0.3968874308646311,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23720.59909678444,
+            "perimeterKm": 768.8367523720707,
+            "compactness": 0.5042747775403276,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 20625.74748110205,
+            "perimeterKm": 640.2325504745272,
+            "compactness": 0.6323303966557529,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 14,
+            "areaKm2": 161657.4337654851,
+            "perimeterKm": 2563.042938091296,
+            "compactness": 0.30923865846551957,
+            "riverRegionFraction": 0.42857142857142855
+          },
+          {
+            "regions": 4,
+            "areaKm2": 53082.56348825734,
+            "perimeterKm": 1281.8891013102125,
+            "compactness": 0.4059390598463733,
+            "riverRegionFraction": 0.25
+          },
+          {
+            "regions": 2,
+            "areaKm2": 30876.06153768937,
+            "perimeterKm": 727.2094520536311,
+            "compactness": 0.7336902228182511,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 20034.44422783926,
+            "perimeterKm": 662.0714964937808,
+            "compactness": 0.5743509995307393,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 5,
+            "areaKm2": 59594.28259014652,
+            "perimeterKm": 1397.9020609009415,
+            "compactness": 0.3832312976405097,
+            "riverRegionFraction": 0.8
+          },
+          {
+            "regions": 3,
+            "areaKm2": 35464.82556756493,
+            "perimeterKm": 781.0869552797033,
+            "compactness": 0.7304809969392476,
+            "riverRegionFraction": 0.3333333333333333
+          },
+          {
+            "regions": 2,
+            "areaKm2": 27164.746258703755,
+            "perimeterKm": 720.0909941777484,
+            "compactness": 0.6583256215489648,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23309.21449811638,
+            "perimeterKm": 680.1558664970966,
+            "compactness": 0.6331704028086295,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23917.354085457417,
+            "perimeterKm": 677.8731954639883,
+            "compactness": 0.654072777941832,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 3,
+            "areaKm2": 37069.79683899397,
+            "perimeterKm": 949.4127203064198,
+            "compactness": 0.5167969925282306,
+            "riverRegionFraction": 0.6666666666666666
+          },
+          {
+            "regions": 3,
+            "areaKm2": 32194.94562481976,
+            "perimeterKm": 840.7589045494339,
+            "compactness": 0.5723406714014332,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 29468.978291630636,
+            "perimeterKm": 757.2982788906559,
+            "compactness": 0.6457151903741523,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 9,
+            "areaKm2": 101648.44128121417,
+            "perimeterKm": 1717.2947599298202,
+            "compactness": 0.43313262544347775,
+            "riverRegionFraction": 0.6666666666666666
+          },
+          {
+            "regions": 2,
+            "areaKm2": 19886.453653045843,
+            "perimeterKm": 621.5251909777907,
+            "compactness": 0.6469187445314123,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 38460.159752278865,
+            "perimeterKm": 786.085464540217,
+            "compactness": 0.7821344515940318,
+            "riverRegionFraction": 0.6666666666666666
+          },
+          {
+            "regions": 2,
+            "areaKm2": 24580.533063837887,
+            "perimeterKm": 817.8050861964917,
+            "compactness": 0.4618506364939815,
+            "riverRegionFraction": 0.5
+          },
+          {
+            "regions": 11,
+            "areaKm2": 130657.39215404566,
+            "perimeterKm": 2627.2076653503646,
+            "compactness": 0.23787841962603223,
+            "riverRegionFraction": 0.7272727272727273
+          },
+          {
+            "regions": 3,
+            "areaKm2": 37112.53727715371,
+            "perimeterKm": 1149.783684422591,
+            "compactness": 0.3527753468455728,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 5,
+            "areaKm2": 58819.602026699155,
+            "perimeterKm": 1070.5557649255325,
+            "compactness": 0.644931154517853,
+            "riverRegionFraction": 0.4
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23839.636605816366,
+            "perimeterKm": 740.2995733536045,
+            "compactness": 0.5466313015130037,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 4,
+            "areaKm2": 43838.127968728455,
+            "perimeterKm": 983.99247989725,
+            "compactness": 0.5689555069681902,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23383.930600492906,
+            "perimeterKm": 664.9954598251488,
+            "compactness": 0.6644923982702907,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 27158.139079863235,
+            "perimeterKm": 703.8493032117701,
+            "compactness": 0.6888909858870156,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 22691.121301890955,
+            "perimeterKm": 645.0324520044105,
+            "compactness": 0.6853346529412693,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 22833.952547917594,
+            "perimeterKm": 669.490504054227,
+            "compactness": 0.6401800194983422,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 23434.851028931247,
+            "perimeterKm": 759.7714045671619,
+            "compactness": 0.5101597287789309,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 26668.023853262497,
+            "perimeterKm": 697.373858851186,
+            "compactness": 0.68907956583324,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 37678.663967386376,
+            "perimeterKm": 888.5335770692898,
+            "compactness": 0.5997326193277599,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 26005.89960284172,
+            "perimeterKm": 696.3804643272437,
+            "compactness": 0.6738893408801283,
+            "riverRegionFraction": 1
+          },
+          {
+            "regions": 2,
+            "areaKm2": 26494.943146527607,
+            "perimeterKm": 742.8032474334872,
+            "compactness": 0.6034277362994162,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 2,
+            "areaKm2": 19007.677974189268,
+            "perimeterKm": 651.2988553580157,
+            "compactness": 0.5630906289452308,
+            "riverRegionFraction": 0
+          },
+          {
+            "regions": 3,
+            "areaKm2": 36797.2803536555,
+            "perimeterKm": 899.2545308853889,
+            "compactness": 0.5718212838774825,
+            "riverRegionFraction": 0
+          }
+        ]
+      }
+    }
+  ]
+}

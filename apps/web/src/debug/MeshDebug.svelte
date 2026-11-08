@@ -1,8 +1,8 @@
 <script lang='ts'>
-  import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, TerrainArtifact } from '@another-earth/world-core'
+  import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
   import type { GeologyTheme } from './geology-debug-data'
   import type { DebugMode, DebugSelection, DebugStats } from './mesh-debug-data'
-  import { DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, queryClimateRegion, queryGeologyRegion, queryHydrologyRegion, queryTerrainRegion } from '@another-earth/world-core'
+  import { DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, queryClimateRegion, queryGeologyRegion, queryHydrologyRegion, queryStaticLakeRegion, queryTerrainRegion } from '@another-earth/world-core'
   import { onMount } from 'svelte'
   import { GenerationCancelledError, GenerationController } from '../lib/generation/controller'
   import { geologyRegionColor, SLOPE_LEGEND_TICKS, slopeDisplayPosition, slopeLegendGradient } from './geology-debug-data'
@@ -33,8 +33,10 @@
   let loadedClimate = $state.raw<ClimateArtifact | null>(null)
   let loadedCryosphere = $state.raw<CryosphereArtifact | null>(null)
   let loadedHydrology = $state.raw<HydrologyArtifact | null>(null)
+  let loadedLakes = $state.raw<StaticLakeArtifact | null>(null)
   let selectedClimate = $state<ReturnType<typeof queryClimateRegion> | null>(null)
   let selectedHydrology = $state<ReturnType<typeof queryHydrologyRegion> | null>(null)
+  let selectedLake = $state<ReturnType<typeof queryStaticLakeRegion> | null>(null)
   let seaLevelDatumKm = $state(0)
   let loadedTerrain = $state.raw<TerrainArtifact | null>(null)
   let selectedTerrain = $state<ReturnType<typeof queryTerrainRegion> | null>(null)
@@ -84,7 +86,7 @@
       const preparing = performance.now()
       if (!result.terrain && ['elevation', 'land', 'boundaries', 'mantle', 'volcanism', 'uplift', 'relief', 'plains', 'slope'].includes(geologyTheme))
         geologyTheme = 'plates'
-      if (!result.climate && !result.hydrology && ['temperature', 'precipitation', 'wind', 'ocean-current', 'snow', 'runoff', 'rivers', 'basins'].includes(geologyTheme))
+      if (!result.climate && !result.hydrology && ['temperature', 'precipitation', 'wind', 'ocean-current', 'snow', 'runoff', 'rivers', 'basins', 'lakes'].includes(geologyTheme))
         geologyTheme = 'plates'
       if (result.terrain && !loadedTerrain)
         geologyTheme = 'elevation'
@@ -92,7 +94,7 @@
         geologyTheme = 'temperature'
       if (result.hydrology && !loadedHydrology)
         geologyTheme = 'rivers'
-      const geometry = prepareDebugGeometry(result.mesh, mode, geologyRegionColor(result.geology, geologyTheme, result.terrain, result.climate, climateMonth, result.cryosphere, result.hydrology))
+      const geometry = prepareDebugGeometry(result.mesh, mode, geologyRegionColor(result.geology, geologyTheme, result.terrain, result.climate, climateMonth, result.cryosphere, result.hydrology, result.lakes))
       const preparationMs = performance.now() - preparing
       scene.install(geometry, result.mesh.subdivisionLevel, wireframe, showSurface)
       options()
@@ -102,12 +104,14 @@
       loadedClimate = result.climate ?? null
       loadedCryosphere = result.cryosphere ?? null
       loadedHydrology = result.hydrology ?? null
+      loadedLakes = result.lakes ?? null
       stages = result.stages ?? []
       selected = null
       selectedGeology = null
       selectedTerrain = null
       selectedClimate = null
       selectedHydrology = null
+      selectedLake = null
       stats = { level: result.mesh.subdivisionLevel, irregularity: result.mesh.irregularity, seed: result.mesh.seed, fiveNeighborRegions: geometry.fiveNeighborCenters.length / 3, regions: result.mesh.regionCount, edges: result.mesh.edgeRegions.length / 2, faces: result.mesh.triangles.length / 3, generationMs: result.pipelineMs, cacheHit: result.cacheHit, cacheBytes: result.cacheBytes, preparationMs, renderBytes: Object.values(geometry).reduce((sum, array) => sum + array.byteLength, 0), copyMs: result.copyMs, meshBytes: result.meshBytes, receiveMs: result.receiveMs, workerInitMs: controller.workerInitMs, hydrateMs: result.hydrateMs, postMessageMs: 0 }
       busy = false
       pickReady = true
@@ -148,7 +152,7 @@
     ++pickId
     picking = false
     const preparing = performance.now()
-    const geometry = prepareDebugGeometry(loadedMesh, mode, geologyRegionColor(loadedGeology, geologyTheme, loadedTerrain, loadedClimate, climateMonth, loadedCryosphere, loadedHydrology))
+    const geometry = prepareDebugGeometry(loadedMesh, mode, geologyRegionColor(loadedGeology, geologyTheme, loadedTerrain, loadedClimate, climateMonth, loadedCryosphere, loadedHydrology, loadedLakes))
     scene.install(geometry, loadedMesh.subdivisionLevel, wireframe, showSurface)
     stats = { ...stats, preparationMs: performance.now() - preparing, renderBytes: Object.values(geometry).reduce((sum, array) => sum + array.byteLength, 0) }
     selected = null
@@ -156,6 +160,7 @@
     selectedTerrain = null
     selectedClimate = null
     selectedHydrology = null
+    selectedLake = null
   }
   function chooseClimateMonth() {
     const prior = { selected, selectedGeology, selectedTerrain }
@@ -166,11 +171,13 @@
     if (selected && loadedClimate) {
       selectedClimate = queryClimateRegion(loadedClimate, selected.region, climateMonth)
       selectedHydrology = loadedHydrology ? queryHydrologyRegion(loadedHydrology, selected.region, loadedClimate, loadedCryosphere ?? undefined) : null
+      selectedLake = loadedLakes ? queryStaticLakeRegion(loadedLakes, selected.region) : null
       scene?.showSelection(selected)
     }
     else {
       selectedClimate = null
       selectedHydrology = null
+      selectedLake = null
     }
   }
   onMount(() => {
@@ -189,6 +196,7 @@
           selectedTerrain = loadedTerrain ? queryTerrainRegion(loadedTerrain, region) : null
           selectedClimate = loadedClimate ? queryClimateRegion(loadedClimate, region, climateMonth) : null
           selectedHydrology = loadedHydrology ? queryHydrologyRegion(loadedHydrology, region, loadedClimate ?? undefined, loadedCryosphere ?? undefined) : null
+          selectedLake = loadedLakes ? queryStaticLakeRegion(loadedLakes, region) : null
           scene?.showSelection(selected)
           picking = false
         }).catch((cause) => {
@@ -351,6 +359,7 @@
               {/if}
               {#if loadedCryosphere}<option value='snow'>月末积雪水当量（mm）</option>{/if}
               {#if loadedHydrology}<option value='runoff'>年径流深（mm）</option><option value='rivers'>河网</option><option value='basins'>流域</option>{/if}
+              {#if loadedLakes}<option value='lakes'>静态湖泊</option>{/if}
             </select>
           </label>
           {#if loadedClimate}
@@ -369,6 +378,9 @@
             <dt>输出网格候选陆地</dt><dd>{(loadedGeology.statistics.outputCandidateLandCoverage * 100).toFixed(1)}%</dd>
           </dl>
           <p class='text-slate-500'>板块与大陆以不同颜色区分。候选海陆：绿为陆地、蓝为海洋；地壳：棕为大陆地壳、蓝为海洋地壳。</p>
+          {#if loadedLakes}
+            <p class='border-t border-slate-200 pt-2 text-slate-500'>静态湖泊：{loadedLakes.lakes.length} 个，按 T0 地形洼地与 H0 溢流面识别；不包含季节水位变化。</p>
+          {/if}
           {#if loadedTerrain}
             <div class='space-y-2 border-t border-slate-200 pt-3' aria-label='最终地形统计'>
               <h3 class='font-semibold'>最终地形</h3>
@@ -453,6 +465,17 @@
               <dt>河道段</dt><dd>{selectedHydrology.riverSegments.map(river => `${river.id} · ${river.strahlerOrder}级`).join('；') || '非河道区域'}</dd>
               {#if loadedCryosphere}<dt>月末积雪水当量</dt><dd>{loadedCryosphere.monthlySnowWaterEquivalentMm[climateMonth * loadedCryosphere.regionCount + selected.region].toFixed(1)} mm</dd>{/if}
             </dl>
+          {/if}
+          {#if geologyTheme === 'lakes'}
+            {#if selectedLake}
+              <dl class='space-y-2' aria-label='区域湖泊'>
+                <dt>静态湖泊</dt><dd class='break-all'>{selectedLake.id}</dd>
+                <dt>湖泊类型</dt><dd>{selectedLake.endorheic ? '内流湖（H0 终止盆地）' : '有溢流路径'}</dd>
+                <dt>湖面水位 / 面积</dt><dd>{selectedLake.waterLevelKm.toFixed(3)} km / {selectedLake.areaKm2.toLocaleString(undefined, { maximumFractionDigits: 0 })} km²</dd>
+                <dt>H0 流域</dt><dd class='break-all'>{selectedLake.basinId}</dd>
+                <dt>溢流区域 / 下游区域</dt><dd>{selectedLake.spillRegion === null ? '内流终点' : `Region #${selectedLake.spillRegion} → Region #${selectedLake.downstreamRegion}`}</dd>
+              </dl>
+            {:else}<p class='text-slate-500'>该区域不属于静态湖泊。</p>{/if}
           {/if}
         {:else}<p class='text-slate-500'>点击球面查看最近区域及邻接关系。</p>{/if}
         <p><span class='text-amber-600'>●</span> 五邻域中心 <span class='text-yellow-600'>●</span> 选中区域</p>

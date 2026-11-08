@@ -1,4 +1,4 @@
-import type { ClimateArtifact, ClimateGenerationConfig, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, HydrologyGenerationConfig, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, ClimateGenerationConfig, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, HydrologyGenerationConfig, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import type { WorkerRequest, WorkerResponse } from '../lib/generation/protocol'
 import { createClimatePipeline, createGeologyPipeline, createHydrologyPipeline, createMeshPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
 import { serializeError } from '../lib/generation/protocol'
@@ -94,10 +94,11 @@ export class GenerationWorkerRuntime {
       const climate = climateRequested ? result.getOutput<ClimateArtifact>('climate-c0') : undefined
       const cryosphere = hydrologyRequested ? result.getOutput<CryosphereArtifact>('cryosphere-i0') : undefined
       const hydrology = hydrologyRequested ? result.getOutput<HydrologyArtifact>('hydrology-h0') : undefined
-      const snapshot = transferSnapshot(mesh, geology, terrain, climate, cryosphere, hydrology)
+      const lakes = hydrologyRequested ? result.getOutput<StaticLakeArtifact>('static-lakes-l1') : undefined
+      const snapshot = transferSnapshot(mesh, geology, terrain, climate, cryosphere, hydrology, lakes)
       const copyMs = performance.now() - copying
       const posting = performance.now()
-      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, climate: snapshot.climate, cryosphere: snapshot.cryosphere, hydrology: snapshot.hydrology, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
+      this.#send({ type: 'COMPLETED', requestId: task.id, mesh: snapshot.mesh, geology: snapshot.geology, terrain: snapshot.terrain, climate: snapshot.climate, cryosphere: snapshot.cryosphere, hydrology: snapshot.hydrology, lakes: snapshot.lakes, stages: result.plan, cacheHit: result.plan.every(stage => stage.action === 'cache-hit'), cacheBytes: this.pipeline.cache.usedBytes, pipelineMs, copyMs, meshBytes: snapshot.bytes }, snapshot.buffers)
       this.#mesh = mesh
       this.#index = undefined
       this.#send({ type: 'TRANSFERRED', requestId: task.id, postMessageMs: performance.now() - posting })

@@ -1,6 +1,6 @@
 import type { SphericalMesh } from '@another-earth/world-core'
 import type { WorkerResponse } from '../lib/generation/protocol'
-import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateTerrainArtifact } from '@another-earth/world-core'
+import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateStaticLakeArtifact, validateTerrainArtifact } from '@another-earth/world-core'
 import { describe, expect, it } from 'vitest'
 import { hydrateMesh } from '../lib/generation/transfer'
 import { GenerationWorkerRuntime } from './runtime'
@@ -103,8 +103,10 @@ it('transfers I0/H0 without detaching cached water artifacts and invalidates H0 
   const first = messages.find((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')!
   expect(first.cryosphere).toBeDefined()
   expect(first.hydrology).toBeDefined()
+  expect(first.lakes).toBeDefined()
   validateCryosphereArtifact(first.cryosphere!, first.mesh.meshId, first.mesh.regionCount)
   validateHydrologyArtifact(first.hydrology!, first.mesh, first.terrain!, first.climate!, first.cryosphere!)
+  validateStaticLakeArtifact(first.lakes!, first.mesh, first.terrain!, first.hydrology!)
   const snow = first.cryosphere!.monthlySnowWaterEquivalentMm[0]
   first.cryosphere!.monthlySnowWaterEquivalentMm[0] = 999
   await runtime.handle({ ...request, requestId: 'hydrology-second' })
@@ -113,7 +115,7 @@ it('transfers I0/H0 without detaching cached water artifacts and invalidates H0 
   expect(second.stages?.every(stage => stage.action === 'cache-hit')).toBe(true)
   await runtime.handle({ ...request, requestId: 'hydrology-threshold-change', input: { ...request.input, config: { ...request.input.config, hydrology: { ...DEFAULT_HYDROLOGY_PARAMETERS, minimumRiverDrainageAreaKm2: 9000 } } } })
   const changed = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[2]
-  expect(changed.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['hydrology-h0'])
+  expect(changed.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['hydrology-h0', 'static-lakes-l1'])
 })
 
 it('transfers geology copies without detaching cache and recovers after invalid geology', async () => {

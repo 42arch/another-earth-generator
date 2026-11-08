@@ -204,6 +204,29 @@ test('M1.3A exposes I0/H0 river and runoff queries in the real Worker', async ({
   expect(errors).toEqual([])
 })
 
+test('M1.3B transfers static lakes and exposes the lake display theme', async ({ page }) => {
+  test.setTimeout(300_000)
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('/mesh-debug')
+  await page.getByLabel('生成内容').selectOption('hydrology')
+  await page.getByRole('button', { name: 'Generate' }).click()
+  await expect(page.getByRole('status')).toContainText('初步水文 H0 / 冰雪 I0已就绪', { timeout: 240_000 })
+  await expect(page.getByLabel('阶段缓存')).toContainText('static-lakes-l1: Rebuilt')
+  await expect(page.getByText(/静态湖泊：[1-9]\d* 个/)).toBeVisible()
+  const theme = page.getByLabel('地质专题')
+  await expect(theme.locator('option[value="lakes"]')).toHaveCount(1)
+  await theme.selectOption('lakes')
+  await expect(theme).toHaveValue('lakes')
+  const canvas = page.locator('canvas')
+  const bounds = (await canvas.boundingBox())!
+  await canvas.click({ position: { x: bounds.width / 2, y: bounds.height / 2 } })
+  await expect(page.getByLabel('选中区域')).toContainText(/静态湖泊|不属于静态湖泊/, { timeout: 30_000 })
+  await page.getByRole('button', { name: 'Generate' }).click()
+  await expect(page.getByLabel('阶段缓存')).toContainText('static-lakes-l1: Cache Hit', { timeout: 240_000 })
+  expect(errors).toEqual([])
+})
+
 test('L8 terrain retains its full Worker stage chain in the expanded cache', async ({ page }) => {
   test.setTimeout(120_000)
   await page.goto('/mesh-debug')

@@ -6,7 +6,7 @@
 
 采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-当前具备已验收的 M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路和 M1.3A I0/H0 初步冰雪/水文实现。T0 `terrain-v24` 小型负高程水体清理已通过多 Seed/分辨率基准；Core/Web 检查及可见 Chrome Worker/查询链路通过，Playwright headless 自动化因本机 Chrome 进程 SIGABRT 未完成。降雨驱动追加侵蚀、湖泊、生态、完整自然快照或初始文明仍未交付，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
+当前具备已验收的 M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路、M1.3A I0/H0 初步冰雪/水文及 M1.3B L1 静态湖泊。T0 `terrain-v24` 小型负高程水体清理已通过多 Seed/分辨率基准；M1.3A/B Core/Web 检查、湖泊多分辨率基准及调试链路通过。Playwright headless 自动化曾因本机 Chrome 进程 SIGABRT 未完成，是否完成当前浏览器验收以 `docs/PROGRESS.md` 本轮记录为准。降雨驱动追加侵蚀、生态、完整自然快照或初始文明仍未交付，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -453,7 +453,9 @@ export interface NatureSnapshot {
 
 Priority Flood 从所有海洋区起路由；没有海洋区时，以最低高程区作内流根。下游平坦破同高由 (填洼高程, 区域索引) 稳定排序，结果须单调且无环。H0 流域摘要以终止区为根，河段 ID 由 Mesh ID 与源区索引组成，只承诺相同 Mesh/算法版本内确定。`hydrology-h0-v2` 河网阈值为配置最小汇水面积与十六个平均区域面积的较大值，并要求正累计流量；Strahler 级序同时控制调试图的显示对比度。3 Seed × L4/L5/L6 密度校准见 `M1.3A-river-density-calibration.json`。
 
-I0/H0 是中间 `GenerationArtifact`，不写进 WorldSnapshot Schema 2，不代表最终水文事实。当前不实现湖泊水位/储量、湿地、地下水、季节河流或基于气候的追加侵蚀。M1.3A Core/Web 自动化及 3 Seed × L4/L5/L6 基准已通过；真实 Chrome 可见页面完成功能检查。Playwright headless E2E 因 Chrome 进程启动 SIGABRT 未能执行，不以旧的 terrain-v20 验收代替当前数据。
+**M1.3B 当前实现**：`static-lakes-l1-v4` 依赖 Mesh、T0、H0，把 `filledElevationKm > terrain.elevationKm` 的陆地区域按 Mesh 邻接提取连通洼地，并过滤仅含一个 Mesh 区域的组件。该规则直接依据当前网格的成员数，不依赖固定面积，也适用于用户选择的任意网格等级。湖面水位是组件成员中的最大 Priority Flood 高程，溢流区是指向组件外 H0 路由的边界区域。ID 为 Mesh ID 加最小成员索引；产物保存湖泊区域索引、面积、水位、H0 流域引用和出口。湖泊显示不修改 T0 高程或海陆掩码。v4 基准 `M1.3B-static-lakes.json` 记录 3 Seed × L4/L5/L6 各组湖泊数分别为 L4 0–2、L5 3–7、L6 33–39；L8 Seed 42 可见 Worker 生成 1,063 个。当前算法仍不能区分真实湖盆与河谷/泛滥平原型狭长洼地。
+
+I0/H0/L1 是中间 `GenerationArtifact`，不写进 WorldSnapshot Schema 2，不代表最终水文事实。L1 的 `endorheic` 继承 H0 终止流域语义，因此现有含海洋样本均被分类为开口湖；对有海洋行星的气候性内流湖，仍需湖面水量平衡/洼地溢流层级模型。当前不实现湖泊动态水位/储量、湿地、地下水、季节河流或基于气候的追加侵蚀。Core/Web 自动化与 3 Seed × L4/L5/L6 基准通过；真实浏览器链路状态以 `docs/PROGRESS.md` 中本轮验收记录为准。
 
 未来如加入人工改道、水坝和灌溉，必须把河网从简单 `riverMask` 扩展为稳定实体和图连接。水文更新可利用下游依赖传播，而非只依赖笔刷覆盖区。
 
@@ -763,7 +765,7 @@ world.aearth
 | 阶段 | 当前边界 |
 | --- | --- |
 | M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
-| M1 | M1.1 地质和 T0 terrain-v20 历史验收；terrain-v24 与 I0/H0 M1.3A 核心验收通过，Playwright headless E2E 环境阻塞；湖泊、降雨追加侵蚀、生态、发布尚未完成 |
+| M1 | M1.1 地质和 T0 terrain-v20 历史验收；terrain-v24、I0/H0 与 L1 静态湖泊 Core/Web 核心验收通过；气候性内流湖、降雨追加侵蚀、生态和自然快照发布尚未完成 |
 | M2 | 初始文明、资源与内容库，尚未实现 |
 | M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
 | M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |
@@ -778,6 +780,7 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 - 2026-11-06：曾将冰川/水力侵蚀移到气候与水文接入之后；2026-11-08 按用户调整已被取代，基础侵蚀恢复至 T0，见下条决策。
 - 2026-11-08：T0 `terrain-v24` 运行基础水力/冰川侵蚀（默认强度 0.5/0.5，水力处理器入口缩半），不读取气候；末端清理小于四个 L5 区域等效面积的负高程连通水体。M1.3A 新增 I0 雪水储量/融雪与 H0 年水量、Priority Flood、流域/阈值河段。3 Seed × L4/L5/L6 未见低于清理门槛的封闭水体残留；Core/Web 自动化、类型/lint/build、基准及可见 Chrome Worker/查询检查通过，Playwright headless E2E 因 Chrome SIGABRT 未能执行。不实现降雨追加侵蚀或湖泊。
 - 2026-11-08：按河网形态反馈把 H0 算法升级到 `hydrology-h0-v2`，汇水面积支持底线由 8×提升到 16×平均网格面积，调试图按 Strahler 级序淡化低级河段。L6 样本河道区域数减少 39–44%；L4 某 Seed 降至 2 区域，须视主要显示尺度继续校准。基准见 `M1.3A-river-density-calibration.json`。
+- 2026-11-08：新增 `static-lakes-l1-v1` 生成产物，从 T0/H0 溢流地形识别连通洼地；面积门槛初版采用固定 L5 等效面积，视觉校准尝试过固定 L6 等效面积（v2）和当前 Mesh 平均面积（v3）。根据“过滤单格湖泊”的要求，当前版本 v4 改为仅保留至少两个区域的组件；Core/Web、Worker 可见页面及 3 Seed × L4/L5/L6 基准已通过。L8 Seed 42 生成 1,063 个组件；狭长组件的地貌分类仍是模型限制。静态水位取溢流面，不修改 T0/海陆掩码或 WorldSnapshot。`endorheic` 继承 H0 终止流域语义，对有海洋行星的气候性内流湖仍有限制。
 - 快照 Schema、阶段算法版本、内容包版本与档案格式版本分别管理；算法变更不自动意味着修改快照 Schema。
 - 所有后续实现遵循根目录 AGENTS.md；默认不运行检查命令，授权后执行并报告实际结果。
 

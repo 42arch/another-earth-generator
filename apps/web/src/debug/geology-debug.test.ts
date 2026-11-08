@@ -1,4 +1,4 @@
-import type { GeologyArtifact, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
+import type { GeologyArtifact, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import { createGeologyPipeline, createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
 import { Color } from 'three'
 import { describe, expect, it } from 'vitest'
@@ -22,6 +22,29 @@ describe('geology display ownership', () => {
     for (const theme of ['plates', 'continents', 'crust', 'topology'] as const)
       prepareDebugGeometry(mesh, 'icosphere', geologyRegionColor(geology, theme))
     expect(geology).toEqual(original)
+  })
+
+  it('renders lake membership as a display-only theme', async () => {
+    const result = await createGeologyPipeline().execute({ seed: 'lake-display', config: { planet: { physicalRadiusKm: 6371 }, mesh: { subdivisionLevel: 1, irregularity: 0 }, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS } })
+    const geology = result.getOutput<GeologyArtifact>('geology')
+    const mesh = result.getOutput<SphericalMesh>('mesh')
+    const landMask = new Uint8Array(mesh.regionCount).fill(1)
+    landMask[0] = 0
+    const terrain = { meshId: mesh.meshId, landMask } as Pick<TerrainArtifact, 'meshId' | 'landMask'>
+    const lakes: StaticLakeArtifact = {
+      meshId: mesh.meshId,
+      terrainMeshId: mesh.meshId,
+      hydrologyMeshId: mesh.meshId,
+      algorithmVersion: 'static-lakes-l1-v4',
+      regionCount: mesh.regionCount,
+      lakeIndex: new Int32Array(mesh.regionCount).fill(-1),
+      lakes: [{ id: `${mesh.meshId}:lake:1`, basinId: `${mesh.meshId}:basin:1`, endorheic: false, areaKm2: 1, waterLevelKm: 1, spillRegion: 1, downstreamRegion: 2, regions: new Uint32Array([1]) }],
+      minimumLakeRegionCount: 2,
+    }
+    lakes.lakeIndex[1] = 0
+    const palette = geologyRegionColor(geology, 'lakes', terrain as TerrainArtifact, null, 0, null, null, lakes)!
+    expect(palette(1)).toEqual([0.03, 0.58, 0.88])
+    expect(palette(2)).toEqual([0.65, 0.74, 0.42])
   })
 })
 

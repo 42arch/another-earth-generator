@@ -1,4 +1,4 @@
-import type { GeologyArtifact, HydrologyArtifact, SphericalMesh, TerrainArtifact } from '../src/index'
+import type { GeologyArtifact, HydrologyArtifact, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '../src/index'
 import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -8,8 +8,37 @@ import process from 'node:process'
 import { expect, it } from 'vitest'
 import { createHydrologyPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, StageCache } from '../src/index'
 
-function digest(array: Float32Array | Float64Array | Int32Array | Uint8Array): string {
+function digest(array: Float32Array | Float64Array | Int32Array | Uint8Array | Uint32Array): string {
   return createHash('sha256').update(Buffer.from(array.buffer, array.byteOffset, array.byteLength)).digest('hex')
+}
+
+function digestLakes(value: StaticLakeArtifact): string {
+  const summaries = value.lakes.map(lake => ({ ...lake, regions: digest(lake.regions) }))
+  return createHash('sha256').update(digest(value.lakeIndex)).update(JSON.stringify(summaries)).digest('hex')
+}
+
+function lakeShapeSummaries(mesh: SphericalMesh, value: StaticLakeArtifact, hydrology: HydrologyArtifact) {
+  return value.lakes.map((lake) => {
+    const members = new Set(lake.regions)
+    let perimeterKm = 0
+    let riverRegions = 0
+    for (const region of lake.regions) {
+      if (hydrology.riverMask[region])
+        riverRegions++
+      for (let slot = mesh.neighborOffsets[region]; slot < mesh.neighborOffsets[region + 1]; slot++) {
+        if (members.has(mesh.neighbors[slot]))
+          continue
+        const edge = mesh.neighborEdges[slot]
+        const leftTriangle = mesh.edgeTriangles[2 * edge]
+        const rightTriangle = mesh.edgeTriangles[2 * edge + 1]
+        const a = 3 * leftTriangle
+        const b = 3 * rightTriangle
+        const dot = mesh.dualVertices[a] * mesh.dualVertices[b] + mesh.dualVertices[a + 1] * mesh.dualVertices[b + 1] + mesh.dualVertices[a + 2] * mesh.dualVertices[b + 2]
+        perimeterKm += Math.acos(Math.max(-1, Math.min(1, dot))) * mesh.physicalRadiusKm
+      }
+    }
+    return { regions: lake.regions.length, areaKm2: lake.areaKm2, perimeterKm, compactness: 4 * Math.PI * lake.areaKm2 / (perimeterKm ** 2), riverRegionFraction: riverRegions / lake.regions.length }
+  })
 }
 
 function typedArrayBytes(value: unknown, buffers = new Set<ArrayBuffer>()): number {
@@ -77,10 +106,11 @@ it('records I0/H0 fixed-seed output, cache invalidation and array resource bytes
       const cold = await pipeline.execute(input)
       const coldMs = performance.now() - coldStarted
       const hydrology = cold.getOutput<HydrologyArtifact>('hydrology-h0')
+      const lakes = cold.getOutput<StaticLakeArtifact>('static-lakes-l1')
       const mesh = cold.getOutput<SphericalMesh>('mesh')
       const terrain = cold.getOutput<TerrainArtifact>('terrain')
       const geology = cold.getOutput<GeologyArtifact>('geology')
-      const hashes = { runoff: digest(hydrology.annualRunoffMm), downstream: digest(hydrology.downstreamRegion), rivers: digest(hydrology.riverMask), contributingArea: digest(hydrology.contributingAreaKm2) }
+      const hashes = { runoff: digest(hydrology.annualRunoffMm), downstream: digest(hydrology.downstreamRegion), rivers: digest(hydrology.riverMask), contributingArea: digest(hydrology.contributingAreaKm2), lakes: digestLakes(lakes) }
       const hitStarted = performance.now()
       const hit = await pipeline.execute(input)
       const hitMs = performance.now() - hitStarted
@@ -91,8 +121,9 @@ it('records I0/H0 fixed-seed output, cache invalidation and array resource bytes
       const forced = await pipeline.execute(input, { force: true })
       const forceMs = performance.now() - forceStarted
       const recomputed = forced.getOutput<HydrologyArtifact>('hydrology-h0')
-      expect({ runoff: digest(recomputed.annualRunoffMm), downstream: digest(recomputed.downstreamRegion), rivers: digest(recomputed.riverMask), contributingArea: digest(recomputed.contributingAreaKm2) }).toEqual(hashes)
-      expect(changed.plan.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['hydrology-h0'])
+      const recomputedLakes = forced.getOutput<StaticLakeArtifact>('static-lakes-l1')
+      expect({ runoff: digest(recomputed.annualRunoffMm), downstream: digest(recomputed.downstreamRegion), rivers: digest(recomputed.riverMask), contributingArea: digest(recomputed.contributingAreaKm2), lakes: digestLakes(recomputedLakes) }).toEqual(hashes)
+      expect(changed.plan.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['hydrology-h0', 'static-lakes-l1'])
       let totalLandAreaKm2 = 0
       let totalLocalRunoffM3 = 0
       let riverRegions = 0
@@ -109,7 +140,11 @@ it('records I0/H0 fixed-seed output, cache invalidation and array resource bytes
       }
       const riverSegments = hydrology.rivers.length
       const artifactBytes = typedArrayBytes(hydrology)
-      rows.push({ seed, level, algorithmVersion: hydrology.algorithmVersion, coldMs, hitMs, changedMs, forceMs, hashes, terrain: { algorithmVersion: terrain.algorithmVersion, elevationHash: digest(terrain.elevationKm), landMaskHash: digest(terrain.landMask), ...terrain.statistics, waterComponents: waterComponentStats(mesh, terrain, geology) }, cacheHitStages: hit.plan.filter(stage => stage.action === 'cache-hit').map(stage => stage.stageId), changedStages: changed.plan.filter(stage => stage.action === 'execute').map(stage => stage.stageId), cacheBytes: pipeline.cache.usedBytes, artifactBytes, totalLandAreaKm2, totalLocalRunoffM3, riverRegions, riverRegionsByStrahlerOrder, riverSegments, effectiveRiverThresholdKm2: hydrology.effectiveRiverThresholdKm2 })
+      const lakeArtifactBytes = typedArrayBytes(lakes)
+      const lakeRegions = lakes.lakes.reduce((sum, lake) => sum + lake.regions.length, 0)
+      const lakeAreaKm2 = lakes.lakes.reduce((sum, lake) => sum + lake.areaKm2, 0)
+      const endorheicLakes = lakes.lakes.filter(lake => lake.endorheic).length
+      rows.push({ seed, level, algorithmVersion: hydrology.algorithmVersion, lakeAlgorithmVersion: lakes.algorithmVersion, coldMs, hitMs, changedMs, forceMs, hashes, terrain: { algorithmVersion: terrain.algorithmVersion, elevationHash: digest(terrain.elevationKm), landMaskHash: digest(terrain.landMask), ...terrain.statistics, waterComponents: waterComponentStats(mesh, terrain, geology) }, cacheHitStages: hit.plan.filter(stage => stage.action === 'cache-hit').map(stage => stage.stageId), changedStages: changed.plan.filter(stage => stage.action === 'execute').map(stage => stage.stageId), cacheBytes: pipeline.cache.usedBytes, artifactBytes, lakeArtifactBytes, totalLandAreaKm2, totalLocalRunoffM3, riverRegions, riverRegionsByStrahlerOrder, riverSegments, effectiveRiverThresholdKm2: hydrology.effectiveRiverThresholdKm2, lakes: { count: lakes.lakes.length, lakeRegions, totalAreaKm2: lakeAreaKm2, endorheic: endorheicLakes, open: lakes.lakes.length - endorheicLakes, minimumLakeRegionCount: lakes.minimumLakeRegionCount, shapes: lakeShapeSummaries(mesh, lakes, hydrology) } })
     }
   }
   const report = { date: new Date().toISOString(), machine: { cpu: cpus()[0]?.model, platform: platform(), node: process.version }, config: { seeds, levels, physicalRadiusKm: 6371, irregularity: 0.5, referenceLevel: 6, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS }, rows }

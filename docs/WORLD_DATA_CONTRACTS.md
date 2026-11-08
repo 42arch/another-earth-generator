@@ -68,7 +68,7 @@ FieldView 本身不实现状态事务、Worker 或 Copy-on-Write。FieldView 保
 - seed 使用字符串保存调用者的原始输入，避免隐式数字转换和安全整数损失。
 - 采用 MeshTopology、PlanetParameters、NatureState 命名，分别明确拓扑、物理输入与已确认自然状态。
 - 当前 generationConfig 包含行星参数、Mesh 细分/扰动/可选 Seed 覆盖、区域数和文明开关；provenance 包含 Mesh 阶段版本及签名。M1 新阶段必须将实际使用的参数和来源加入契约。
-- 本阶段水文仅定义排水接收者与年径流；河流/湖泊实体、水量收支及生成算法须在专门水文任务中一起定义和验证。
+- `HydrologyState` 快照契约目前仍只定义排水接收者与年径流；M1.3A/B 的河流与湖泊只存在于阶段产物，不会自动写入快照。完整水量收支及可发布实体契约需在最终自然快照阶段统一设计和验证。
 
 
 ## 球面网格契约
@@ -147,7 +147,7 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 ## 初步冰雪与水文产物 I0/H0
 
-M1.3A 新增 `CryosphereArtifact`（`cryosphere-i0-v1`）与 `HydrologyArtifact`（当前 `hydrology-h0-v2`；历史初版为 v1），仍是阶段产物，不是 Schema 2 快照中的 `HydrologyState`。I0/H0 要求 `meshId === terrainMeshId === climateMeshId`，月数据均为 month-major 的 `12N`；不写入、不修改最终地形，也不生成湖泊对象。
+M1.3A/B 新增 `CryosphereArtifact`（`cryosphere-i0-v1`）、`HydrologyArtifact`（当前 `hydrology-h0-v2`；历史初版为 v1）和 `StaticLakeArtifact`（当前 `static-lakes-l1-v4`；早期版本按面积过滤），仍是阶段产物，不是 Schema 2 快照中的 `HydrologyState`。I0/H0 要求各自输入 Mesh 身份一致，月数据为 month-major 的 `12N`；L1 要求 `meshId === terrainMeshId === hydrologyMeshId`。这些 Stage 不写入、不修改最终地形或海陆掩码。
 
 | 产物字段 | 类型/单位 | 语义 |
 | --- | --- | --- |
@@ -163,8 +163,22 @@ M1.3A 新增 `CryosphereArtifact`（`cryosphere-i0-v1`）与 `HydrologyArtifact`
 | `basinIndex` / `riverIndex` | Int32 / 表索引 | 同产物表引用；海洋/非河道为 -1 |
 | `riverMask` | Uint8 / 0 或 1 | 满足汇水面积阈值且累计流量为正的陆地区域 |
 
+L1 静态湖泊字段：
+
+| 产物字段 | 类型/单位 | 语义 |
+| --- | --- | --- |
+| `lakeIndex` | Int32 / 表索引，-1 为非湖泊 | 区域到湖泊摘要的归属；独立于海陆掩码和 H0 `basinIndex` |
+| `lakes[].regions` | Uint32 / 区域索引 | 湖泊成员，按索引升序且在 Mesh 上连通 |
+| `lakes[].areaKm2` | number / km² | 成员 `mesh.areaKm2` 之和 |
+| `lakes[].waterLevelKm` | number / km | 静态溢流水位代理；成员地形必须低于水位 |
+| `lakes[].basinId` | 稳定 ID | 指向 H0 汇水终止盆地 |
+| `lakes[].spillRegion` / `downstreamRegion` | 区域索引或 null | 湖内溢流边界区及其 H0 即时下游；终止内流无出口时为 null |
+| `lakes[].endorheic` | boolean | 当前继承 H0 内流终止盆地语义，不代表气候性内流平衡 |
+
+L1 v4 只保留至少包含两个 Mesh 区域的连通洼地组件（`minimumLakeRegionCount = 2`），因此剔除单格湖泊且不依赖固定物理面积。水位来自 H0 Priority Flood 填洼面，不是湖泊水量平衡或逐月状态。
+
 当前雨雪线性转化在 `snowTemperatureMinC` 与 `snowTemperatureMaxC` 之间插值；融雪、蒸散均为显式温度指数系数。年初积雪假定为零，只模拟单个公转周期的月序列；不称为冰川稳态或地球尺度水文标定。产流守恒以降水输入 = 蒸散 + 径流 + 年末积雪储量为目标，受 Float32 月数组量化误差影响。
 
 Priority Flood 使用输出 Mesh 邻接。所有海洋区为外流根；没有海洋区时，最低高程区域是唯一内流根。河流 ID 由 Mesh ID 和源区域组成，在相同 Mesh 与算法版本中确定；不承诺跨 Mesh/版本身份稳定。当前河道最低阈值为配置值与十六个平均 Mesh 区域面积的较大者，且要求有正流量。v2 相比 v1 将网格尺度底线从 8×提高到 16×；多分辨率校准记录见 `M1.3A-river-density-calibration.json`。
 
-`HydrologyState` 快照契约仍只列当前已定义的下游区和年径流深；M1.3A 阶段产物不因此自动成为已发布水文事实。静态湖泊属于 M1.3B，快照 Schema 未修改。
+`HydrologyState` 快照契约仍只列当前已定义的下游区和年径流深；M1.3A/B 阶段产物不因此自动成为已发布水文事实。L1 静态湖泊只在生成产物、Worker 查询和调试视图中可用；湖泊尚未加入 WorldSnapshot、Schema 2 校验或存档。

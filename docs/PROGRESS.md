@@ -10,6 +10,8 @@ M1.2 初步气候 C0 的实现、代码和 Worker 链路验收通过：实现基
 
 M1.3A 已实现并完成 Core/Web 自动化与包级检查：I0 以显式温度阈值、融雪系数生成月末雪水当量/降雪/融雪；H0 以蒸散系数和液态降水/融雪生成月径流、年径流深/体积、Priority Flood 填洼路由、下游关系、汇水面积、流域摘要及河流段/Strahler 级序。当前 `hydrology-h0-v2` 把河道面积底线从 8×调整至 16×平均网格面积，调试河网按 Strahler 级序淡化低级支流。温度指数蒸散/融雪仅为近似，积雪只模拟一个周期，不计算多年冰川体积。真实 Chrome 可见页面通过 L4/L6 Worker 生成、区域查询和缓存失效检查；Playwright 自动回归因受管环境无法启动 headless Chrome（进程 SIGABRT）而未通过。Core/Web tests、typecheck、lint、build 均通过；Core 125/125，Web 32/32。
 
+M1.3B 静态湖泊已实现并按当前范围验收：`static-lakes-l1-v4` 从 T0 地形与 H0 Priority Flood 溢流面识别低于溢流面的连通洼地，过滤单网格组件（至少两个区域才计为湖）；保存成员区域、面积、静态溢流水位、H0 流域 ID 和溢流区。湖泊独立于海陆掩码和 H0 汇水分区，不修改地形或 WorldSnapshot Schema。3 Seed × L4/L5/L6 基准见[静态湖泊基准](benchmarks/M1.3B-static-lakes.json)：9/9 强制重算结果稳定，L4 每组 0–2 个、L5 为 3–7 个、L6 为 33–39 个。真实 Chrome Worker 在 L8 生成并显示 1,063 个湖泊组件。该算法按静态填洼洼地分类，无法区分真实湖盆与河谷/泛滥平原型狭长积水区；这是当前明确限制，不代表气候水量平衡。
+
 初版 `hydrology-h0-v1` Seed 42/314159/8675309 × L4/L5/L6 基准见[初始基准](benchmarks/M1.3A-hydrology-acceptance.json)。河网减密后 v2 的 9 组结果见[密度校准基准](benchmarks/M1.3A-river-density-calibration.json)：L6 从 1,627–1,874 个河道区域降至 912–1,138 个（减少 39–44%），河段从 534–541 降至 221–245。L5 减少约 46–59%。L4 更稀，Seed 314159 此样本只有 2 个河道区域；若 L4 是主要展示尺度，需单独校准粗网格阈值。
 
 M1.2 的历史记录：新增核心月值／边界、等时长 forcing、Köppen、Worker 缓存与 Transfer、Controller 缺失结果回归；历史 core 测试 121/121、Web 测试 30/30，core/Web lint、typecheck 和 build 均通过。真实 Chrome Worker 浏览器回归 6/6 通过，涵盖 Mesh、Geology、Terrain、L8 与 C0 气候。该记录仅属于 M1.2 基线，不覆盖本轮 M1.3A 改动。
@@ -28,12 +30,12 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 | 世界契约 | Schema 2、Dense Field/实体、只读 FieldView、完整校验、人口约束、版本化 JSON 档案编解码 |
 | Mesh | L0–L8 规则/扰动 Icosphere、Delaunay/Voronoi、CSR、物理面积、校验、最近站点查询 |
 | 生成 | Stage DAG、声明输入、命名随机流、LRU 缓存、阶段事件和取消/失败边界 |
-| Worker | Mesh/Geology/Terrain/C0/I0/H0 生成、传输、校验、缓存及查询链路已验收；Playwright 自动化受本机 headless Chrome 启动限制 |
+| Worker | Mesh/Geology/Terrain/C0/I0/H0/L1 静态湖泊生成、传输、校验、缓存及查询链路已验收；Playwright 自动化受本机 headless Chrome 启动限制 |
 | 地质 | L6 参考网格、100 基础细分、主/微板块、候选大陆、地壳与普通/地质投影 |
 | 地形 T0 | 动力学、构造骨架、山脊/火山、纹理/Warp/整形/平滑、基础水力/冰川侵蚀、锐化/土壤蠕动；物理 km 高程、海陆、坡度与统计 |
 | 调试 | /mesh-debug Mesh/Geology/Terrain/C0 专题、月份切换和查询已通过历史浏览器回归；I0/H0 专题、区域水量查询和缓存失效已手动可见验收 |
 | 初步气候 C0（M1.2 实现与链路已验收；雨影专项待验证） | climate-c0 Stage、四季风场／洋流代理、12 月耦合温度/降水、年统计与 Köppen 亚型、Worker 传输、调试月份／风／洋流与区域查询；非最终气候 C1 |
-| 初步冰雪与水文 I0/H0（M1.3A 已实现/验收） | 月度雪水当量/降雪/融雪，水量指数近似，Priority Flood、下游无环验证、面积汇流、流域与阈值河段、Stage 缓存、Worker 传输和水文调试查询；不含湖泊/追加侵蚀 |
+| 初步冰雪与水文 I0/H0/L1（M1.3A/B 已实现） | 月度雪水当量/降雪/融雪，水量指数近似，Priority Flood、下游无环验证、面积汇流、流域与阈值河段、静态洼地湖泊、Stage 缓存、Worker 传输和区域查询；不含动态水位/追加侵蚀 |
 
 关键规则：内部地形统一塑形坐标，末端一次转 km；粗糙度 0–0.5、默认 0.4，强度相对默认为 `(roughness/0.4)³`；低地与中高段映射、字段兼容性见 [数据契约](WORLD_DATA_CONTRACTS.md)和 [技术设计](TECHNICAL_DESIGN.md)。当前高程用颜色表达，没有正式地形位移、完整 3D/2D 地图或已发布自然世界。
 
@@ -44,7 +46,7 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 3. 浏览器地形预览和查询通过，无明显孤立尖峰或海陆不一致。高程模型仍是程序生成基线，不代表全球 DEM 标定。
 4. M1.2 C0 的实现与链路验收通过；若按 M1 通用气候形态条件收口，还需补地形雨影专项夹具或可复核证据。用户决定先在 T0 恢复基础水力/冰川侵蚀，不实现气候驱动追加侵蚀；后续 M1.3 可在 T0/C0 上建立初步径流/冰雪并另行设计最终气候水文。
 
-最终气候 C1、水文/湖泊、生态、完整自然快照发布尚未实现；M2 初始文明、M3 Cartography、M4 浏览器存储/导入导出均未交付。
+最终气候 C1、水文收支校准、生态、完整自然快照发布尚未实现；M2 初始文明、M3 Cartography、M4 浏览器存储/导入导出均未交付。
 
 ## 已知限制与待决事项
 
@@ -54,12 +56,18 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 - 参考 L6 与输出 L8 的两个 12N Float32 字段约 60 MiB，仅是数组容量估算；气候 L4/L5/L6 core 缓存字节已实测，但气候 L8 与浏览器端峰值内存/性能尚未测量。
 - 当前模型未按全球地球 DEM 标定。高程映射是视觉/程序生成模型，不保证固定全球比例或各 Seed 的空间连通形态。
 - T0 前置侵蚀复用参考项目按汇水格数与角格距调参的启发式算法；当前恢复的是基础形态塑造，不是地球侵蚀速率标定。T0 不读取气候/冰雪，降雨驱动的追加侵蚀尚未实现。
+- L1 湖面是 Priority Flood 洼地溢流高度的静态几何近似，不计算降水/蒸发/储水导致的水位平衡。`endorheic` 沿用 H0 内流终止盆地语义；在存在海洋的行星上识别具体气候内流湖仍需更完整的盆地水量规则。湖泊尚未进入 WorldSnapshot 或存档契约。
+- L1 v4 将所有至少两个区域的连通 Priority Flood 洼地作为静态湖泊；它不区分湖盆和河谷/泛滥平原型狭长低地，也没有经校准的形状判据。L8 Seed 42 实例得到 1,063 个组件，部分狭长形态可能像河网；作为静态地形洼地层可查询使用，不应解释为已验证的真实湖面分布。
 - 同步长计算需硬取消兜底，Worker 重建会丢缓存；重新成功生成前禁用拾取。显示数组准备仍可能阻塞主线程。
 - 部分区域诊断为兼容零/一数组，其含义不是世界事实。后续移除字段必须同步查询、Worker、校验与消费者。
 - L8 单次 terrain artifact 约 31.25 MiB；全链路缓存实测约 399–430.5 MiB，StageCache 默认预算为 512 MiB。core 基准与真实 Chrome Worker 第二次请求均确认全链路缓存命中。峰值 RSS 仍未测，设备端长期内存压力需后续验证；预算试验见[验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)。
 - CPU/GPU 峰值 RSS、长期浏览器资源压力和远端 CI 未核实；基准记录的缓存/数组字节不是进程峰值。
 
 ## 验证证据与历史基准
+
+2026-11-08 M1.3B v1：Core 129/129、Web 33/33；Core/Web typecheck、lint、Web build 与 `git diff --check` 通过。`bench:hydrology` 以 Seed 42/314159/8675309 × L4/L5/L6 完成 9/9，强制重算的 H0 与完整 L1 湖泊属性/成员哈希稳定，参数变化仅重算 H0 和其下游 L1；每组识别 2–10 个静态湖泊。手动真实 Chrome Worker 生成页面显示 4 个湖泊，专题选项可见并可切换。Playwright 定向 E2E 已加入，但本机 headless Chrome 启动时 SIGABRT，未能执行页面自动化；区域归属查询由 Core 测试覆盖，浏览器点选回归仍待自动化环境补跑。Web build 仍提示 MeshDebug chunk 超过 500 kB。
+
+2026-11-08 M1.3 收尾：Core 130/130、Web 33/33；Core/Web typecheck 与 lint 通过，Web build 通过（MeshDebug chunk 594.78 kB 的既有警告）。Hydrology benchmark 3 Seed × L4/L5/L6 完成 9/9，强制重算和湖泊稳定哈希通过；数量见基准文件。可见 Chrome Worker 页面已在 L8 生成并展示 1,063 个静态湖泊，专题和区域查询可用。Playwright 定向 E2E 因本机 headless Chrome SIGABRT 未能启动。形态检查发现静态 Priority Flood 洼地里存在狭长组件，现无领域依据校准的形状阈值，按阶段边界记录为限制；不宣称全部组件都是气候意义上的湖泊。`git diff --check` 通过。
 
 2026-11-08 M1.3A 代码、Core/Web 自动化和包级验证已完成；固定 Seed 多分辨率水文/T0 指标已归档。随后按视觉反馈将 H0 升为 v2 并把 L6 河道区域数减少 39–44%，Chrome 可见页面确认减密结果。Playwright headless E2E 因 Chrome 进程 SIGABRT 未能执行。基准仅证明算法确定性和约束检查，非全球水文气候学标定。
 

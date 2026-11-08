@@ -1,9 +1,9 @@
-import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 
 const fields = ['centers', 'areaKm2', 'neighborOffsets', 'neighbors', 'triangles', 'dualVertices', 'boundaryCorners', 'edgeRegions', 'edgeTriangles', 'triangleEdges', 'neighborEdges', 'edgeAngularDistances'] as const
 
 /** Clone once without detaching the worker/cache owner, then transfer only cloned buffers. */
-export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, climate?: ClimateArtifact, cryosphere?: CryosphereArtifact, hydrology?: HydrologyArtifact): { mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, climate?: ClimateArtifact, cryosphere?: CryosphereArtifact, hydrology?: HydrologyArtifact, buffers: ArrayBuffer[], bytes: number } {
+export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, climate?: ClimateArtifact, cryosphere?: CryosphereArtifact, hydrology?: HydrologyArtifact, lakes?: StaticLakeArtifact): { mesh: SphericalMesh, geology?: GeologyArtifact, terrain?: TerrainArtifact, climate?: ClimateArtifact, cryosphere?: CryosphereArtifact, hydrology?: HydrologyArtifact, lakes?: StaticLakeArtifact, buffers: ArrayBuffer[], bytes: number } {
   const snapshot = structuredClone(mesh)
   const buffers = new Set<ArrayBuffer>()
   for (const field of fields) {
@@ -16,6 +16,7 @@ export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact,
   const climateCopy = climate ? structuredClone(climate) : undefined
   const cryosphereCopy = cryosphere ? structuredClone(cryosphere) : undefined
   const hydrologyCopy = hydrology ? structuredClone(hydrology) : undefined
+  const lakesCopy = lakes ? structuredClone(lakes) : undefined
   const seen = new Set<object>()
   const collect = (value: unknown): void => {
     if (!value || typeof value !== 'object' || seen.has(value))
@@ -28,10 +29,10 @@ export function transferSnapshot(mesh: SphericalMesh, geology?: GeologyArtifact,
     }
     for (const child of Object.values(value)) collect(child)
   }
-  for (const artifact of [geologyCopy, terrainCopy, climateCopy, cryosphereCopy, hydrologyCopy]) {
+  for (const artifact of [geologyCopy, terrainCopy, climateCopy, cryosphereCopy, hydrologyCopy, lakesCopy]) {
     collect(artifact)
   }
-  return { mesh: snapshot, geology: geologyCopy, terrain: terrainCopy, climate: climateCopy, cryosphere: cryosphereCopy, hydrology: hydrologyCopy, buffers: [...buffers], bytes: [...buffers].reduce((total, buffer) => total + buffer.byteLength, 0) }
+  return { mesh: snapshot, geology: geologyCopy, terrain: terrainCopy, climate: climateCopy, cryosphere: cryosphereCopy, hydrology: hydrologyCopy, lakes: lakesCopy, buffers: [...buffers], bytes: [...buffers].reduce((total, buffer) => total + buffer.byteLength, 0) }
 }
 
 /** Structured clone returns plain data; assert its required shape before consumers use it. */

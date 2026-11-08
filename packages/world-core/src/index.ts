@@ -10,6 +10,8 @@ export { queryGeologyRegion, validateGeologyArtifact } from './generation/nature
 export type { GeologyArtifact } from './generation/nature/geology'
 export { DEFAULT_HYDROLOGY_PARAMETERS, generateCryosphereI0, generateHydrologyH0, queryHydrologyRegion, validateCryosphereArtifact, validateHydrologyArtifact } from './generation/nature/hydrology/hydrology'
 export type { BasinSummary, CryosphereArtifact, HydrologyArtifact, HydrologyParameters, RiverSegment } from './generation/nature/hydrology/hydrology'
+export { generateStaticLakesL1, queryStaticLakeRegion, validateStaticLakeArtifact } from './generation/nature/hydrology/lakes'
+export type { StaticLake, StaticLakeArtifact } from './generation/nature/hydrology/lakes'
 export type * from './generation/nature/nature-types'
 export * from './generation/pipeline'
 export * from './generation/pipeline/errors'

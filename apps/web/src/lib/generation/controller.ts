@@ -1,6 +1,6 @@
-import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import type { GenerationConfig, SerializedError, WorkerRequest, WorkerResponse } from './protocol'
-import { validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateTerrainArtifact } from '@another-earth/world-core'
+import { validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact } from '@another-earth/world-core'
 import { hydrateMesh } from './transfer'
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'completed' | 'failed' | 'cancelled'
@@ -20,6 +20,7 @@ export interface GenerationResult {
   readonly climate?: ClimateArtifact
   readonly cryosphere?: CryosphereArtifact
   readonly hydrology?: HydrologyArtifact
+  readonly lakes?: StaticLakeArtifact
   readonly stages?: readonly StagePlan[]
   readonly cacheHit: boolean
   readonly cacheBytes: number
@@ -155,7 +156,7 @@ export class GenerationController {
     else if (message.type === 'COMPLETED') {
       try {
         const hydrating = performance.now()
-        if ((active.kind === 'hydrology' && (!message.hydrology || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'climate' && (!message.climate || !message.terrain || !message.geology)) || (active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
+        if ((active.kind === 'hydrology' && (!message.hydrology || !message.lakes || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'climate' && (!message.climate || !message.terrain || !message.geology)) || (active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
           throw new TypeError('Worker response is missing requested generation data')
         const mesh = hydrateMesh(message.mesh)
         if (message.geology)
@@ -180,11 +181,16 @@ export class GenerationController {
             throw new TypeError('Hydrology response is missing terrain, climate or cryosphere')
           validateHydrologyArtifact(message.hydrology, mesh, message.terrain, message.climate, message.cryosphere)
         }
+        if (message.lakes) {
+          if (!message.terrain || !message.hydrology)
+            throw new TypeError('Static lake response is missing terrain or hydrology')
+          validateStaticLakeArtifact(message.lakes, mesh, message.terrain, message.hydrology)
+        }
         const hydrateMs = performance.now() - hydrating
         this.#active = undefined
         this.#lastCompletedId = active.id
         this.#setState({ status: 'completed', requestId: active.id, pipelineProgress: 1 })
-        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, climate: message.climate, cryosphere: message.cryosphere, hydrology: message.hydrology, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
+        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, climate: message.climate, cryosphere: message.cryosphere, hydrology: message.hydrology, lakes: message.lakes, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
       }
       catch (cause) {
         const error = cause instanceof Error ? cause : new Error('Mesh recovery failed')

@@ -1,10 +1,12 @@
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { CryosphereArtifact, HydrologyArtifact, HydrologyParameters } from '#generation/nature/hydrology/hydrology'
+import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { ClimateGenerationConfig } from './climate-stage'
 import { generateCryosphereI0, generateHydrologyH0, validateCryosphereArtifact, validateHydrologyArtifact } from '#generation/nature/hydrology/hydrology'
+import { generateStaticLakesL1, validateStaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import { GenerationPipeline, StageCache } from '#generation/pipeline'
 import { copyDependency } from '#generation/pipeline/copy-dependency'
 import { InvalidStageInputError } from '#generation/pipeline/errors'
@@ -73,6 +75,26 @@ const hydrologyStage: GenerationStage<HydrologyArtifact> = {
   validate: validateHydrologyArtifact,
 }
 
+const staticLakesStage: GenerationStage<StaticLakeArtifact> = {
+  id: 'static-lakes-l1',
+  version: 'static-lakes-l1-v4',
+  dependencies: ['mesh', 'terrain', 'hydrology-h0'],
+  configKeys: [],
+  execute(context) {
+    const mesh = copyDependency<SphericalMesh>(context, 'mesh')
+    const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>>(context, 'terrain', ({ meshId, elevationKm, landMask }) => ({ meshId, elevationKm, landMask }))
+    const hydrology = copyDependency<HydrologyArtifact>(context, 'hydrology-h0')
+    const output = generateStaticLakesL1(mesh, terrain, hydrology, (fraction) => {
+      context.throwIfCancelled()
+      context.progress(fraction, '识别静态湖泊')
+    })
+    context.throwIfCancelled()
+    context.progress(1)
+    return output
+  },
+  validate: validateStaticLakeArtifact,
+}
+
 class HydrologyPipeline extends GenerationPipeline<HydrologyGenerationConfig> {
   readonly #climatePipeline: GenerationPipeline<ClimateGenerationConfig>
   constructor(registry: ReturnType<typeof createClimatePipeline>['registry'], cache: StageCache, climatePipeline: GenerationPipeline<ClimateGenerationConfig>) {
@@ -107,6 +129,6 @@ class HydrologyPipeline extends GenerationPipeline<HydrologyGenerationConfig> {
 export function createHydrologyPipeline(cache = new StageCache()): GenerationPipeline<HydrologyGenerationConfig> {
   const climatePipeline = createClimatePipeline(cache)
   const registry = climatePipeline.registry
-  registry.register(cryosphereStage).register(hydrologyStage)
+  registry.register(cryosphereStage).register(hydrologyStage).register(staticLakesStage)
   return new HydrologyPipeline(registry, cache, climatePipeline)
 }

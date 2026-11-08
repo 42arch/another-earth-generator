@@ -4,7 +4,7 @@
 
 ## 公开入口
 
-`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、`createMeshPipeline`、`createGeologyPipeline`、`createTerrainPipeline`、`createClimatePipeline` 和 M1.3A 新增的 `createHydrologyPipeline`。该 Pipeline 在 T0/C0 上生成 I0 雪水当量与 H0 年径流/排水阶段产物；不发布完整自然快照。M1.3A Core/Web 检查、基准和可见 Chrome Worker/查询链路已验证；Playwright headless E2E 未能在当前环境启动 Chrome。
+`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、`createMeshPipeline`、`createGeologyPipeline`、`createTerrainPipeline`、`createClimatePipeline` 和 M1.3A/B 新增的 `createHydrologyPipeline`。该 Pipeline 在 T0/C0 上生成 I0 雪水当量、H0 年径流/排水与 L1 静态湖泊阶段产物；不发布完整自然快照。M1.3A/B Core/Web 检查、基准和可见 Chrome Worker/专题链路已验证；Playwright headless E2E 因本机 Chrome SIGABRT 未能执行。
 
 ```ts
 import { createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS,
@@ -43,8 +43,9 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | climate-c0 | climate-c0-v2 | mesh、reference-mesh、geology、terrain |
 | cryosphere-i0 | cryosphere-i0-v1 | mesh、terrain、climate-c0 |
 | hydrology-h0 | hydrology-h0-v2 | mesh、terrain、climate-c0、cryosphere-i0 |
+| static-lakes-l1 | static-lakes-l1-v4 | mesh、terrain、hydrology-h0 |
 
-前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用同一 Registry，并添加 I0/H0。静态湖泊、生态和发布 Stage 尚未注册。
+前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用同一 Registry，并添加 I0/H0/L1 静态湖泊。生态和发布 Stage 尚未注册。
 
 配置按源码 configKeys 声明：Mesh 读等级、扰动、可选 Mesh Seed、物理半径；参考 Mesh 另读参考等级（默认 L6，显式 L2–L6）；板块读主/微板块数和板块面积差异；大陆读大陆数、面积差异与候选覆盖率；骨架读三项 landforms；terrain 读纹理/扭曲/平滑、山脊锐化、水力/冰川侵蚀强度、islandDensity 和海平面基准。侵蚀强度只使 terrain Stage 失效。
 
@@ -65,7 +66,7 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 
 roughness 可调纹理强度按 `(roughness/0.4)³` 响应。`terrain.glacialErosion` 与 `terrain.hydraulicErosion` 范围 [0,1]，默认 0.5，阶段内 km 转换前运行；水力参数进入处理器前统一乘以 0.5，冰川参数不缩放。当前不读取气候/降雨。旧 `continentalUpliftKm` 参数即便为零也在计划/执行前报错，包括全缓存命中。
 
-I0 配置通过 `hydrology.snowTemperatureMinC`、`snowTemperatureMaxC` 和 `degreeDayMeltFactorMmPerCMonth` 进入签名；H0 另读取 `evapotranspirationFactorMmPerCMonth`、`minimumRiverDrainageAreaKm2` 和 `climate.orbitalPeriodDays`。H0 的河网阈值取用户最小汇水面积与 8 个平均网格面积两者较大值，且要求累计流量大于零，以降低粗网格把整片陆地都识别成河道的风险。该阈值策略尚待视觉/多分辨率验收。
+I0 配置通过 `hydrology.snowTemperatureMinC`、`snowTemperatureMaxC` 和 `degreeDayMeltFactorMmPerCMonth` 进入签名；H0 另读取 `evapotranspirationFactorMmPerCMonth`、`minimumRiverDrainageAreaKm2` 和 `climate.orbitalPeriodDays`。H0 河网阈值为用户最小汇水面积与 16 个平均网格面积的较大值，且要求累计流量大于零。L1 不读取额外参数；它的成员洼地面积阈值为一个 L5 区域等效面积，由 Mesh 总面积计算，并依赖 T0/H0 失效。
 
 ## DAG、签名与随机流
 
@@ -91,7 +92,7 @@ Registry 拒绝重复 ID、空声明、缺失依赖和循环。Kahn 排序的 re
 
 ## Web Worker 与显示
 
-Worker/Controller 现支持 Mesh、Geology、Terrain、C0 和 M1.3A H0 请求。请求 H0 时响应必须包含 Terrain、C0、I0 和 H0。Worker 原数组归缓存，每次发送前结构化克隆独立产物并去重转移 Buffer；主线程核对请求种类、Mesh 身份、dtype、长度、图引用、路由无环和河段连续性。Core 自动化与可见 Chrome 页面已验证 M1.3A Worker 路径；Playwright 自动化启动失败。
+Worker/Controller 现支持 Mesh、Geology、Terrain、C0 和 M1.3A/B 水文请求。请求 H0 时响应包含 Terrain、C0、I0、H0 和 L1 湖泊。Worker 原数组归缓存，每次发送前结构化克隆独立产物并去重转移 Buffer；主线程核对请求种类、Mesh 身份、dtype、长度、图引用、路由无环、河段连续性和湖泊归属/溢流引用。
 
 只接收最新 requestId 的生成/拾取响应。硬取消终止重建 Worker，旧显示保留但缓存丢失；重新成功生成前禁用区域查询，防止旧画面和新 Worker 事实身份错配。失败、取消和传输错误不覆盖最后有效显示。页面销毁终止 Worker 并释放场景资源。
 
@@ -99,9 +100,9 @@ Worker/Controller 现支持 Mesh、Geology、Terrain、C0 和 M1.3A H0 请求。
 
 ## 未来的气候、水文与侵蚀
 
-当前顺序为 `T0（基础水力/冰川侵蚀） → C0 → I0 → H0`。I0 按月温度/降水计算线性雨雪分配、雪水当量储量与融雪；H0 用温度指数蒸散近似、融雪和液态降水计算月径流，再按 Priority Flood 构建单接收区排水树、流域与阈值河段。本次实现使用 mm/月、mm/年、km²、m³/年和 m³/s；蒸散/融雪系数是显式配置的温度指数代理，并未作地球尺度标定。I0 不表示多年积累冰川质量平衡。路由填洼面不修改 T0 高程。无海洋网格时最低高程区成为显式内流汇点。河道网格底线为 `max(configuredMinimumKm2, 16 × meanMeshAreaKm2)`；`hydrology-h0-v2` 将旧版八倍网格底线上调一倍。M1.3A 的 Core/Web 自动化、包级检查、多 Seed 基准和可见 Chrome Worker/查询链路已验证；Playwright headless E2E 受 Chrome 进程启动失败限制。M1.3A 未做水文侵蚀、静态湖泊、湿地或完整自然快照。
+当前顺序为 `T0（基础水力/冰川侵蚀） → C0 → I0 → H0 → L1`。I0 按月温度/降水计算线性雨雪分配、雪水当量储量与融雪；H0 用温度指数蒸散近似和 Priority Flood 生成径流、排水树、流域与阈值河段；L1 v4 将 `filledElevationKm > terrain.elevationKm` 的陆地区域分成连通洼地，只保留至少覆盖两个 Mesh 区域的静态湖泊。水位取成员区域的最大 Priority Flood 高程；溢流口取湖内指向外部路由区域的边界区。该水位只表示静态溢流几何，不等于水量平衡结果，也不改地形。湖泊 ID 由 Mesh ID 与成员最小区域索引构成。无海洋网格时，H0 内流根语义传至湖泊；它不表示存在海洋的行星已具备完整内流湖判定。v4 Core/Web 检查、3 Seed × L4/L5/L6 基准见 [M1.3B 基准](benchmarks/M1.3B-static-lakes.json)。Priority Flood 长条洼地可能对应河谷或泛滥平原型潜在积水区，尚不能保证全部是气候意义上的湖泊。Playwright headless E2E 受 Chrome 进程启动失败限制。
 
-T0 v24 小水体连通性已通过 3 Seed × L4/L5/L6 基准：未发现低于四个 L5 网格等效面积的封闭水体残留，海洋连通分量为 1–3。terrain-v20 历史数据仍只代表旧版基线。后续 `hydrology-h0-v2` 河网密度校准将动态汇水面积底线由 8×提高到 16×；L6 固定 Seed 样本河道区域数减少约 39–44%，详见 [河网密度校准基准](benchmarks/M1.3A-river-density-calibration.json)。
+T0 v24 小水体连通性已通过 3 Seed × L4/L5/L6 基准：未发现低于四个 L5 网格等效面积的封闭水体残留，海洋连通分量为 1–3。terrain-v20 历史数据仍只代表旧版基线。后续 `hydrology-h0-v2` 河网密度校准将动态汇水面积底线由 8×提高到 16×；L6 固定 Seed 样本河道区域数减少约 39–44%，详见 [河网密度校准基准](benchmarks/M1.3A-river-density-calibration.json)。L1 v4 过滤单网格组件后，3 Seed × L4/L5/L6 的湖泊数量为 L4 0–2、L5 3–7、L6 33–39；统计见 [M1.3B 静态湖泊基准](benchmarks/M1.3B-static-lakes.json)。
 
 当前 C0 使用输出面积聚合到参考 Mesh，空参考格退回最近输出格；在参考格计算四季风／洋流代理、月温和月降水，以三个邻近参考格优先同海陆插值回输出，并按物理面积修正全球月降水体积。`climate-c0-v2` 直接读取 climate 的自转、倾角、公转周期、温度偏移、降水倍率；物理半径来自 Mesh 上游签名。月份选择属于显示状态。旧算法的随机输入已改用 Stage fork，日历改为 12 个等时长分箱，距离使用实际物理半径。M1.2 代码/Worker 链路及 3 Seed × L4/L5/L6 历史记录已验收；地形雨影专项仍待证据，且不代表全球气候学标定。
 
@@ -109,4 +110,4 @@ T0 复用参考 `TerrainErosionProcessor`，按内部塑形坐标运行水力/�
 
 ## 证据与复跑
 
-历史实测文件、对应机器/版本和当前待验收项集中在 [PROGRESS](PROGRESS.md)。`bench:hydrology` 已归档 3 Seed × L4/L5/L6 的 I0/H0 冷生成、缓存命中、局部参数变化、强制重算哈希、资源和 T0 海岸统计，见 [M1.3A 基准](benchmarks/M1.3A-hydrology-acceptance.json)。缓存命中耗时、数组字节、RSS 阶段采样与真实峰值必须分开报告。
+历史实测文件、对应机器/版本和当前待验收项集中在 [PROGRESS](PROGRESS.md)。`bench:hydrology` 已归档 3 Seed × L4/L5/L6 的 I0/H0/L1 冷生成、缓存命中、局部参数变化、强制重算哈希、湖泊统计、资源和 T0 海岸统计；M1.3A 初始基准见 [M1.3A 基准](benchmarks/M1.3A-hydrology-acceptance.json)，加入湖泊后见 [M1.3B 基准](benchmarks/M1.3B-static-lakes.json)。缓存命中耗时、数组字节、RSS 阶段采样与真实峰值必须分开报告。
