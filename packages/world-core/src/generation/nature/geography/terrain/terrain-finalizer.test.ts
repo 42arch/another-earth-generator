@@ -2,17 +2,20 @@ import type { AlgorithmMesh } from '#generation/nature/common/algorithm-mesh'
 import { expect, it } from 'vitest'
 import { TerrainFinalizer } from './terrain-finalizer'
 
-it('restores reference hypsometry and fills land-enclosed negative cells', () => {
+it('restores reference hypsometry and fills sub-threshold negative water components', () => {
   const mesh = {
     numRegions: 5,
+    regionArea: new Float64Array(5).fill(0.000001),
     forEachNeighborOfRegion(region: number) {
       return region === 0 ? [1] : region === 1 ? [0, 2] : region === 2 ? [1, 3] : region === 3 ? [2, 4] : [3]
     },
   } as unknown as AlgorithmMesh
   const input = new Float32Array([-0.4, 0.1, -0.1, 0.8, 0.4])
   const original = input.slice()
-  const result = new TerrainFinalizer().generate(mesh, input, new Uint8Array([0, 1, 1, 1, 1]))
+  const result = new TerrainFinalizer().generate(mesh, input)
   expect(input).toEqual(original)
+  expect(result.elevation[0]).toBeCloseTo(0.005)
+  expect(result.fields.topologyChanged[0]).toBe(1)
   expect(result.elevation[2]).toBeCloseTo(0.005)
   expect(result.fields.topologyChanged[2]).toBe(1)
   expect(result.landMask[2]).toBe(1)

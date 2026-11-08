@@ -1,5 +1,5 @@
 import type { WorkerRequest, WorkerResponse } from './protocol'
-import { createSphericalMesh, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
+import { createSphericalMesh, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
 import { describe, expect, it, vi } from 'vitest'
 import { GenerationCancelledError, GenerationController } from './controller'
 
@@ -109,10 +109,10 @@ describe('generationController', () => {
   })
 })
 
-it.each(['geology', 'terrain', 'climate'] as const)('rejects an incomplete %s response instead of installing a mesh-only result', async (kind) => {
+it.each(['geology', 'terrain', 'climate', 'hydrology'] as const)('rejects an incomplete %s response instead of installing a mesh-only result', async (kind) => {
   const worker = new MockWorker()
   const controller = new GenerationController(undefined, () => worker as unknown as Worker)
-  const task = controller.generate({ ...input, config: { ...input.config, geology: DEFAULT_GEOLOGY_PARAMETERS, ...(kind !== 'geology' ? { terrain: DEFAULT_TERRAIN_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS } : {}), ...(kind === 'climate' ? { climate: DEFAULT_CLIMATE_PARAMETERS } : {}) } })
+  const task = controller.generate({ ...input, config: { ...input.config, geology: DEFAULT_GEOLOGY_PARAMETERS, ...(kind !== 'geology' ? { terrain: DEFAULT_TERRAIN_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS } : {}), ...(['climate', 'hydrology'].includes(kind) ? { climate: DEFAULT_CLIMATE_PARAMETERS } : {}), ...(kind === 'hydrology' ? { hydrology: DEFAULT_HYDROLOGY_PARAMETERS } : {}) } })
   worker.reply(complete(worker.sent[0].requestId))
   await expect(task).rejects.toThrow('missing requested generation data')
   expect(controller.state.status).toBe('failed')

@@ -1,12 +1,12 @@
 # Another Earth — 技术设计
 
-> 更新：2026-11-06。产品规则以 [PRD](PRD.md) 为准；实现与验收状态见 [PROGRESS](PROGRESS.md)。本文保留长期架构和当前算法决策，目标接口不等于已实现 API。精确字段和单位见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，执行与缓存见 [生成管线](GENERATION_PIPELINE.md)，后续自然阶段见 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
+> 更新：2026-11-08。产品规则以 [PRD](PRD.md) 为准；实现与验收状态见 [PROGRESS](PROGRESS.md)。本文保留长期架构和当前算法决策，目标接口不等于已实现 API。精确字段和单位见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，执行与缓存见 [生成管线](GENERATION_PIPELINE.md)，后续自然阶段见 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
 ## 0. 架构与当前边界
 
 采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-当前具备已验收的 M0 工程基础、M1.1 地质/基础地形和 M1.2 C0 实现与链路；工作区按用户要求把基础水力/冰川侵蚀恢复到 T0（`terrain-v24`），水力强度统一缩为一半，并在塑形末端清理小型负高程水体，该版本尚未验收。降雨驱动追加侵蚀、水文、生态、完整自然快照或初始文明均未生成，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
+当前具备已验收的 M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路和 M1.3A I0/H0 初步冰雪/水文实现。T0 `terrain-v24` 小型负高程水体清理已通过多 Seed/分辨率基准；Core/Web 检查及可见 Chrome Worker/查询链路通过，Playwright headless 自动化因本机 Chrome 进程 SIGABRT 未完成。降雨驱动追加侵蚀、湖泊、生态、完整自然快照或初始文明仍未交付，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -449,6 +449,12 @@ export interface NatureSnapshot {
 
 **关键问题**：旧参考实现对于完全无海洋出口的陆地分量可以建立内部汇点，但未把它表达为可见湖泊；“优先队列填洼生成可排水表面”与“真实盆地蓄水/蒸发”应区分。**计算路由辅助面不等于改变最终地表高程。**
 
+**M1.3A 当前实现（Core/Web 检查及基准通过；Playwright headless 自动化受环境限制）**：`cryosphere-i0-v1` 对 C0 月温/降水作可配置线性雨雪分配，保存月末雪水当量、降雪及融雪；只模拟单年且年初雪储量为零，不是多年冰川。当前 `hydrology-h0-v2` 采用显式温度指数蒸散系数，逐月记账液态降水/融雪、蒸散和径流；局地产流体积按 `mm × km² × 1000` 换为 m³/年，汇流后按行星公转周期换为 m³/s。
+
+Priority Flood 从所有海洋区起路由；没有海洋区时，以最低高程区作内流根。下游平坦破同高由 (填洼高程, 区域索引) 稳定排序，结果须单调且无环。H0 流域摘要以终止区为根，河段 ID 由 Mesh ID 与源区索引组成，只承诺相同 Mesh/算法版本内确定。`hydrology-h0-v2` 河网阈值为配置最小汇水面积与十六个平均区域面积的较大值，并要求正累计流量；Strahler 级序同时控制调试图的显示对比度。3 Seed × L4/L5/L6 密度校准见 `M1.3A-river-density-calibration.json`。
+
+I0/H0 是中间 `GenerationArtifact`，不写进 WorldSnapshot Schema 2，不代表最终水文事实。当前不实现湖泊水位/储量、湿地、地下水、季节河流或基于气候的追加侵蚀。M1.3A Core/Web 自动化及 3 Seed × L4/L5/L6 基准已通过；真实 Chrome 可见页面完成功能检查。Playwright headless E2E 因 Chrome 进程启动 SIGABRT 未能执行，不以旧的 terrain-v20 验收代替当前数据。
+
 未来如加入人工改道、水坝和灌溉，必须把河网从简单 `riverMask` 扩展为稳定实体和图连接。水文更新可利用下游依赖传播，而非只依赖笔刷覆盖区。
 
 ### 7.6 生态：Potential Biome 与实际 Land Cover
@@ -757,7 +763,7 @@ world.aearth
 | 阶段 | 当前边界 |
 | --- | --- |
 | M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
-| M1 | M1.1 地质和 T0 terrain-v20 历史验收；T0 基础侵蚀与小水体清理 terrain-v24 已接入待验证；C0 实现/链路已验收；降雨追加侵蚀、水文、生态、发布尚未完成 |
+| M1 | M1.1 地质和 T0 terrain-v20 历史验收；terrain-v24 与 I0/H0 M1.3A 核心验收通过，Playwright headless E2E 环境阻塞；湖泊、降雨追加侵蚀、生态、发布尚未完成 |
 | M2 | 初始文明、资源与内容库，尚未实现 |
 | M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
 | M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |
@@ -769,7 +775,9 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 
 - 2026-11-06：恢复 feat-society 的主要构造/纹理逻辑，停止额外区域隆起、区域起伏和平缓区保护。兼容诊断字段保留零/一值，含义见数据契约。
 - 2026-11-06：地形处理统一塑形坐标，公开边界转物理 km；输出曲线与粗糙度响应按视觉反馈调整，均由版本标识，不声称与旧版或地球逐值一致。
-- 2026-11-06：冰川/水力侵蚀移到气候与水文接入之后，当前 T0 不生成侵蚀和排水事实。
+- 2026-11-06：曾将冰川/水力侵蚀移到气候与水文接入之后；2026-11-08 按用户调整已被取代，基础侵蚀恢复至 T0，见下条决策。
+- 2026-11-08：T0 `terrain-v24` 运行基础水力/冰川侵蚀（默认强度 0.5/0.5，水力处理器入口缩半），不读取气候；末端清理小于四个 L5 区域等效面积的负高程连通水体。M1.3A 新增 I0 雪水储量/融雪与 H0 年水量、Priority Flood、流域/阈值河段。3 Seed × L4/L5/L6 未见低于清理门槛的封闭水体残留；Core/Web 自动化、类型/lint/build、基准及可见 Chrome Worker/查询检查通过，Playwright headless E2E 因 Chrome SIGABRT 未能执行。不实现降雨追加侵蚀或湖泊。
+- 2026-11-08：按河网形态反馈把 H0 算法升级到 `hydrology-h0-v2`，汇水面积支持底线由 8×提升到 16×平均网格面积，调试图按 Strahler 级序淡化低级河段。L6 样本河道区域数减少 39–44%；L4 某 Seed 降至 2 区域，须视主要显示尺度继续校准。基准见 `M1.3A-river-density-calibration.json`。
 - 快照 Schema、阶段算法版本、内容包版本与档案格式版本分别管理；算法变更不自动意味着修改快照 Schema。
 - 所有后续实现遵循根目录 AGENTS.md；默认不运行检查命令，授权后执行并报告实际结果。
 

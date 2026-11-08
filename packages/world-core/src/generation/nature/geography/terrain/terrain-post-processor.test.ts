@@ -61,6 +61,6 @@ it('applies configured shaping erosion before final ridge/soil adjustment withou
   for (const field of ['tectonicBand', 'detail', 'uniformLand', 'postDetail'] as const)
     expect(noTexture.texture![field].every(value => value === 0)).toBe(true)
   expect(fields.elevation).toEqual(originalElevation)
-  expect(erosion).toHaveBeenCalledTimes(3)
-  expect(drainage).toHaveBeenCalledTimes(3)
+  expect(erosion).toHaveBeenCalledTimes(4)
+  expect(drainage).toHaveBeenCalledTimes(4)
 })

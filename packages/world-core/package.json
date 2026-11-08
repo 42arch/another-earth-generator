@@ -19,13 +19,14 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src benchmarks vitest.mesh-perf.config.ts vitest.generation-perf.config.ts vitest.geology-perf.config.ts vitest.terrain-perf.config.ts vitest.climate-perf.config.ts",
+    "lint": "eslint src benchmarks vitest.mesh-perf.config.ts vitest.generation-perf.config.ts vitest.geology-perf.config.ts vitest.terrain-perf.config.ts vitest.climate-perf.config.ts vitest.hydrology-perf.config.ts",
     "test": "vitest run --config ../../vitest.config.ts --passWithNoTests",
     "bench:mesh": "vitest run --config vitest.mesh-perf.config.ts",
     "bench:generation": "vitest run --config vitest.generation-perf.config.ts",
     "bench:geology": "vitest run --config vitest.geology-perf.config.ts",
     "bench:terrain": "vitest run --config vitest.terrain-perf.config.ts",
-    "bench:climate": "vitest run --config vitest.climate-perf.config.ts"
+    "bench:climate": "vitest run --config vitest.climate-perf.config.ts",
+    "bench:hydrology": "vitest run --config vitest.hydrology-perf.config.ts"
   },
   "dependencies": {
     "@another-earth/world-data": "workspace:*",

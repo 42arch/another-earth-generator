@@ -179,6 +179,31 @@ test('M1.2 C0 exposes monthly climate, circulation and cache reuse in the real W
   expect(errors).toEqual([])
 })
 
+test('M1.3A exposes I0/H0 river and runoff queries in the real Worker', async ({ page }) => {
+  test.setTimeout(300_000)
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('/mesh-debug')
+  await page.getByLabel('生成内容').selectOption('hydrology')
+  await page.getByRole('button', { name: 'Generate' }).click()
+  await expect(page.getByRole('status')).toContainText('初步水文 H0 / 冰雪 I0已就绪', { timeout: 240_000 })
+  const cache = page.getByLabel('阶段缓存')
+  await expect(cache).toContainText('cryosphere-i0: Rebuilt')
+  await expect(cache).toContainText('hydrology-h0: Rebuilt')
+  await expect(page.getByLabel('地质专题')).toHaveValue('rivers')
+  const canvas = page.locator('canvas')
+  const bounds = (await canvas.boundingBox())!
+  await canvas.click({ position: { x: bounds.width / 2, y: bounds.height / 2 } })
+  await expect(page.getByLabel('区域水文')).toContainText('汇水面积', { timeout: 30_000 })
+  await expect(page.getByLabel('区域水文')).toContainText('年径流深')
+  await page.getByLabel('最小河道汇水面积（km²）').fill('9000')
+  await page.getByRole('button', { name: 'Generate' }).click()
+  await expect(cache).toContainText('hydrology-h0: Rebuilt', { timeout: 240_000 })
+  await expect(cache).toContainText('cryosphere-i0: Cache Hit')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
 test('L8 terrain retains its full Worker stage chain in the expanded cache', async ({ page }) => {
   test.setTimeout(120_000)
   await page.goto('/mesh-debug')

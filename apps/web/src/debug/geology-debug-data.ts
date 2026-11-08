@@ -1,7 +1,7 @@
-import type { ClimateArtifact, GeologyArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, TerrainArtifact } from '@another-earth/world-core'
 import { sampleClimateCirculation } from '@another-earth/world-core'
 
-export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current'
+export type GeologyTheme = 'topology' | 'plates' | 'continents' | 'candidate-land' | 'crust' | 'elevation' | 'land' | 'boundaries' | 'mantle' | 'volcanism' | 'uplift' | 'relief' | 'plains' | 'slope' | 'temperature' | 'precipitation' | 'wind' | 'ocean-current' | 'snow' | 'runoff' | 'rivers' | 'basins'
 const ocean = [0.06, 0.19, 0.29] as const
 const land = [0.65, 0.74, 0.42] as const
 function categorical(index: number): readonly [number, number, number] {
@@ -14,10 +14,31 @@ function categorical(index: number): readonly [number, number, number] {
 }
 
 /** Display palette consumes independent worker copies; it never changes geology facts. */
-export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0): ((region: number) => readonly [number, number, number]) | undefined {
+export function geologyRegionColor(geology: GeologyArtifact | null | undefined, theme: GeologyTheme, terrain?: TerrainArtifact | null, climate?: ClimateArtifact | null, month = 0, cryosphere?: CryosphereArtifact | null, hydrology?: HydrologyArtifact | null): ((region: number) => readonly [number, number, number]) | undefined {
   if (!geology || theme === 'topology')
     return undefined
   return (region) => {
+    if (theme === 'rivers' && hydrology) {
+      if (!hydrology.riverMask[region])
+        return terrain?.landMask[region] ? land : ocean
+      const segment = hydrology.rivers[hydrology.riverIndex[region]]
+      if (segment.strahlerOrder >= 3)
+        return [0.02, 0.36, 0.94]
+      if (segment.strahlerOrder === 2)
+        return [0.06, 0.48, 0.83]
+      return [0.24, 0.57, 0.75]
+    }
+    if (theme === 'basins' && hydrology)
+      return hydrology.basinIndex[region] < 0 ? ocean : categorical(hydrology.basinIndex[region])
+    if (theme === 'runoff' && hydrology) {
+      const intensity = Math.max(0, Math.min(1, Math.log1p(hydrology.annualRunoffMm[region]) / Math.log1p(2000)))
+      return [0.84 - 0.72 * intensity, 0.25 + 0.5 * intensity, 0.18 + 0.75 * intensity]
+    }
+    if (theme === 'snow' && cryosphere) {
+      const amount = cryosphere.monthlySnowWaterEquivalentMm[month * cryosphere.regionCount + region]
+      const intensity = Math.max(0, Math.min(1, Math.log1p(amount) / Math.log1p(500)))
+      return [0.35 + 0.58 * intensity, 0.48 + 0.48 * intensity, 0.62 + 0.38 * intensity]
+    }
     if (climate && theme === 'temperature') {
       const t = Math.max(0, Math.min(1, (climate.temperatureC[month * climate.regionCount + region] + 30) / 70))
       return [0.1 + 0.8 * t, 0.25 + 0.45 * (1 - Math.abs(t - 0.5) * 2), 0.85 - 0.75 * t]

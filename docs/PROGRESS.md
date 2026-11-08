@@ -6,13 +6,17 @@
 
 M1.2 初步气候 C0 的实现、代码和 Worker 链路验收通过：实现基于 feat-society 参考算法迁入四季风场、洋流代理、季风、月度三轮温度／两轮降水求解和 Köppen 亚型分类，并适配参考网格面积聚合、12 个等时长分箱、三源海陆感知投影及逐月全局降水体积修正。实际检查、Worker 浏览器回归和 3 Seed × L4/L5/L6 基准均通过，证据见下方及[气候验收基准](benchmarks/M1.2-climate-c0-acceptance.json)。按 M1 通用气候形态标准，地形雨影仍缺专门合成夹具验证，因此形态验收保留一项待补。
 
-按用户调整，当前工作区在 M1.2 基线上恢复 T0 塑形阶段的基础水力与冰川侵蚀：`terrain-v24` 在高程转物理 km 前调用迁移的 `TerrainErosionProcessor`，参数默认 0.5/0.5；水力参数在处理器入口统一乘以 0.5，冰川强度不变。完成侵蚀、山脊锐化和土壤蠕动后，按最终负高程连通分量过滤小于 4 个 L5 网格等效面积的封闭水体，将其抬至海平面以上并记入拓扑诊断；较大的湖盆或海域保留，之后重建排水和最终海陆掩码。T0 不读取气候/降雨，也没有后续追加侵蚀。该末端海岸修复尚未验证。
+按用户调整，当前工作区在 M1.2 基线上恢复 T0 塑形阶段的基础水力与冰川侵蚀：`terrain-v24` 在高程转物理 km 前调用迁移的 `TerrainErosionProcessor`，参数默认 0.5/0.5；水力参数在处理器入口统一乘以 0.5，冰川强度不变。完成侵蚀、山脊锐化和土壤蠕动后，按最终负高程连通分量清理小于 4 个 L5 网格等效面积的水体，将其抬至海平面以上并记入拓扑诊断；较大的湖盆或海域保留，之后重建排水和最终海陆掩码。T0 不读取气候/降雨，也没有后续追加侵蚀。Seed 42/314159/8675309 × L4/L5/L6 基准中，最终封闭水体均无小于门槛的残留，海洋连通分量为 1–3。
 
-本次新增核心月值／边界、等时长 forcing、Köppen、Worker 缓存与 Transfer、Controller 缺失结果回归；当前 core 测试 121/121、Web 测试 30/30，core/Web lint、typecheck 和 build 均通过。真实 Chrome Worker 浏览器回归 6/6 通过，涵盖 Mesh、Geology、Terrain、L8 与 C0 气候。`git diff --check` 通过。改动仍未提交。
+M1.3A 已实现并完成 Core/Web 自动化与包级检查：I0 以显式温度阈值、融雪系数生成月末雪水当量/降雪/融雪；H0 以蒸散系数和液态降水/融雪生成月径流、年径流深/体积、Priority Flood 填洼路由、下游关系、汇水面积、流域摘要及河流段/Strahler 级序。当前 `hydrology-h0-v2` 把河道面积底线从 8×调整至 16×平均网格面积，调试河网按 Strahler 级序淡化低级支流。温度指数蒸散/融雪仅为近似，积雪只模拟一个周期，不计算多年冰川体积。真实 Chrome 可见页面通过 L4/L6 Worker 生成、区域查询和缓存失效检查；Playwright 自动回归因受管环境无法启动 headless Chrome（进程 SIGABRT）而未通过。Core/Web tests、typecheck、lint、build 均通过；Core 125/125，Web 32/32。
+
+初版 `hydrology-h0-v1` Seed 42/314159/8675309 × L4/L5/L6 基准见[初始基准](benchmarks/M1.3A-hydrology-acceptance.json)。河网减密后 v2 的 9 组结果见[密度校准基准](benchmarks/M1.3A-river-density-calibration.json)：L6 从 1,627–1,874 个河道区域降至 912–1,138 个（减少 39–44%），河段从 534–541 降至 221–245。L5 减少约 46–59%。L4 更稀，Seed 314159 此样本只有 2 个河道区域；若 L4 是主要展示尺度，需单独校准粗网格阈值。
+
+M1.2 的历史记录：新增核心月值／边界、等时长 forcing、Köppen、Worker 缓存与 Transfer、Controller 缺失结果回归；历史 core 测试 121/121、Web 测试 30/30，core/Web lint、typecheck 和 build 均通过。真实 Chrome Worker 浏览器回归 6/6 通过，涵盖 Mesh、Geology、Terrain、L8 与 C0 气候。该记录仅属于 M1.2 基线，不覆盖本轮 M1.3A 改动。
 
 `pnpm --filter @another-earth/world-core bench:climate` 已完成 Seed 42/314159/8675309 × L4/L5/L6 的 9 组样本。每组强制重算的温度／降水哈希稳定；冷生成约 1.63–2.29 s、缓存命中约 0.15–0.52 ms、变更重算约 1.26–1.51 s，缓存占用约 24.3/30.7/56.5 MiB（L4/L5/L6）。机器、配置、完整哈希与数据见[基准记录](benchmarks/M1.2-climate-c0-acceptance.json)。
 
-M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。当前基础地形算法为 terrain-v24 并包含 T0 侵蚀与末端小水体清理，尚未重新验收。terrain-v20 的 core/Web 单测、全仓类型检查与构建、lint、真实 Worker 浏览器回归，以及 L4/L6/L8 多 Seed 和参数样本历史通过。StageCache 默认预算为 512 MiB；旧 L8 基准留存约 430.5 MiB，峰值 RSS 未测。
+M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。当前基础地形算法为 terrain-v24，T0 侵蚀与末端小水体清理已纳入 M1.3A 的 L4/L5/L6 多 Seed 基准。terrain-v20 的 core/Web 单测、全仓类型检查与构建、lint、真实 Worker 浏览器回归，以及 L4/L6/L8 多 Seed 和参数样本历史通过。StageCache 默认预算为 512 MiB；旧 L8 基准留存约 430.5 MiB，峰值 RSS 未测。
 
 当前 T0（terrain-v24）在地形塑形阶段执行基础冰川与水力侵蚀，默认参数 0.5/0.5；水力实际强度为参数的一半，冰川强度不变。参数进入 T0 缓存签名，UI 可分别调整。侵蚀在 km 映射前执行；侵蚀后的末端连通修复清理小于 4 个 L5 网格等效面积的负高程水体，不读取气候、降雨或冰雪阶段产物，也不执行气候驱动追加侵蚀。
 
@@ -24,11 +28,12 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 | 世界契约 | Schema 2、Dense Field/实体、只读 FieldView、完整校验、人口约束、版本化 JSON 档案编解码 |
 | Mesh | L0–L8 规则/扰动 Icosphere、Delaunay/Voronoi、CSR、物理面积、校验、最近站点查询 |
 | 生成 | Stage DAG、声明输入、命名随机流、LRU 缓存、阶段事件和取消/失败边界 |
-| Worker | Mesh/Geology/Terrain/C0 四类已验收；复制后 Transfer、latest request wins、硬取消重建、区域拾取、传输校验 |
+| Worker | Mesh/Geology/Terrain/C0/I0/H0 生成、传输、校验、缓存及查询链路已验收；Playwright 自动化受本机 headless Chrome 启动限制 |
 | 地质 | L6 参考网格、100 基础细分、主/微板块、候选大陆、地壳与普通/地质投影 |
 | 地形 T0 | 动力学、构造骨架、山脊/火山、纹理/Warp/整形/平滑、基础水力/冰川侵蚀、锐化/土壤蠕动；物理 km 高程、海陆、坡度与统计 |
-| 调试 | /mesh-debug Mesh/Geology/Terrain/C0 专题、月份切换和查询均已通过浏览器回归 |
+| 调试 | /mesh-debug Mesh/Geology/Terrain/C0 专题、月份切换和查询已通过历史浏览器回归；I0/H0 专题、区域水量查询和缓存失效已手动可见验收 |
 | 初步气候 C0（M1.2 实现与链路已验收；雨影专项待验证） | climate-c0 Stage、四季风场／洋流代理、12 月耦合温度/降水、年统计与 Köppen 亚型、Worker 传输、调试月份／风／洋流与区域查询；非最终气候 C1 |
+| 初步冰雪与水文 I0/H0（M1.3A 已实现/验收） | 月度雪水当量/降雪/融雪，水量指数近似，Priority Flood、下游无环验证、面积汇流、流域与阈值河段、Stage 缓存、Worker 传输和水文调试查询；不含湖泊/追加侵蚀 |
 
 关键规则：内部地形统一塑形坐标，末端一次转 km；粗糙度 0–0.5、默认 0.4，强度相对默认为 `(roughness/0.4)³`；低地与中高段映射、字段兼容性见 [数据契约](WORLD_DATA_CONTRACTS.md)和 [技术设计](TECHNICAL_DESIGN.md)。当前高程用颜色表达，没有正式地形位移、完整 3D/2D 地图或已发布自然世界。
 
@@ -56,7 +61,9 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 
 ## 验证证据与历史基准
 
-2026-11-04/05 的历史记录曾包含全仓检查通过、core 89/Web 28 项及 Chrome 4/4 回归、L8 规则/扰动生成拾取等。terrain-v20 的后续历史验收不覆盖当前 terrain-v21 侵蚀改动；本轮检查尚未运行。
+2026-11-08 M1.3A 代码、Core/Web 自动化和包级验证已完成；固定 Seed 多分辨率水文/T0 指标已归档。随后按视觉反馈将 H0 升为 v2 并把 L6 河道区域数减少 39–44%，Chrome 可见页面确认减密结果。Playwright headless E2E 因 Chrome 进程 SIGABRT 未能执行。基准仅证明算法确定性和约束检查，非全球水文气候学标定。
+
+2026-11-04/05 的历史记录曾包含全仓检查通过、core 89/Web 28 项及 Chrome 4/4 回归、L8 规则/扰动生成拾取等。terrain-v20 历史基线不代表 terrain-v24 逐值一致；当前 terrain-v24 检查证据见 M1.3A 基准文件。
 
 2026-11-06 曾进行 Seed 42/L8/扰动 0.75 的逐步生成及单项对照：低地在骨架时已存在，Finalizer 在该样本中提高中位数，关闭侵蚀对目标区域视觉改善有限。这些诊断促成后续映射修订，不是物理正确性、当前性能或多 Seed 验收。
 

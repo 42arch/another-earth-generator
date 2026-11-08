@@ -40,7 +40,6 @@ export class TerrainFinalizer {
   generate(
     mesh: SphericalMesh,
     inputElevation: Float32Array,
-    candidateLandMask: Uint8Array,
   ): FinalizedTerrain {
     const elevation = Float32Array.from(inputElevation)
     const shapingDelta = new Float32Array(mesh.numRegions)
@@ -71,7 +70,7 @@ export class TerrainFinalizer {
     }
   }
 
-  /** Reapply candidate-ocean connectivity after later terrain shaping passes. */
+  /** Reapply the small-water-component filter after later terrain shaping passes. */
   repairSeaConnectivity(
     mesh: SphericalMesh,
     elevation: Float32Array,

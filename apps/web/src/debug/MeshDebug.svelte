@@ -1,8 +1,8 @@
 <script lang='ts'>
-  import type { ClimateArtifact, GeologyArtifact, SphericalMesh, StagePlan, TerrainArtifact } from '@another-earth/world-core'
+  import type { ClimateArtifact, CryosphereArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, TerrainArtifact } from '@another-earth/world-core'
   import type { GeologyTheme } from './geology-debug-data'
   import type { DebugMode, DebugSelection, DebugStats } from './mesh-debug-data'
-  import { DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, queryClimateRegion, queryGeologyRegion, queryTerrainRegion } from '@another-earth/world-core'
+  import { DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, queryClimateRegion, queryGeologyRegion, queryHydrologyRegion, queryTerrainRegion } from '@another-earth/world-core'
   import { onMount } from 'svelte'
   import { GenerationCancelledError, GenerationController } from '../lib/generation/controller'
   import { geologyRegionColor, SLOPE_LEGEND_TICKS, slopeDisplayPosition, slopeLegendGradient } from './geology-debug-data'
@@ -23,14 +23,18 @@
   let irregularity = $state(0)
   let seed = $state('42')
   let mode = $state<DebugMode>('voronoi')
-  let generationKind = $state<'mesh' | 'geology' | 'terrain' | 'climate'>('mesh')
+  let generationKind = $state<'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology'>('mesh')
   const geologyParameters = $state({ ...DEFAULT_GEOLOGY_PARAMETERS })
   const terrainParameters = $state({ ...DEFAULT_TERRAIN_PARAMETERS })
   const landformParameters = $state({ ...DEFAULT_LANDFORM_PARAMETERS })
   const climateParameters = $state({ ...DEFAULT_CLIMATE_PARAMETERS })
+  const hydrologyParameters = $state({ ...DEFAULT_HYDROLOGY_PARAMETERS })
   let climateMonth = $state(0)
   let loadedClimate = $state.raw<ClimateArtifact | null>(null)
+  let loadedCryosphere = $state.raw<CryosphereArtifact | null>(null)
+  let loadedHydrology = $state.raw<HydrologyArtifact | null>(null)
   let selectedClimate = $state<ReturnType<typeof queryClimateRegion> | null>(null)
+  let selectedHydrology = $state<ReturnType<typeof queryHydrologyRegion> | null>(null)
   let seaLevelDatumKm = $state(0)
   let loadedTerrain = $state.raw<TerrainArtifact | null>(null)
   let selectedTerrain = $state<ReturnType<typeof queryTerrainRegion> | null>(null)
@@ -74,19 +78,21 @@
     error = ''
     message = `正在生成 L${level} · 扰动 ${irregularity.toFixed(2)}…`
     try {
-      const result = await controller.generate({ seed, config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm }, mesh: { subdivisionLevel: level, irregularity }, ...(generationKind !== 'mesh' ? { geology: { ...geologyParameters } } : {}), ...(['terrain', 'climate'].includes(generationKind) ? { terrain: { ...terrainParameters }, landforms: { ...landformParameters } } : {}), ...(generationKind === 'climate' ? { climate: { ...climateParameters } } : {}) }, force })
+      const result = await controller.generate({ seed, config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm }, mesh: { subdivisionLevel: level, irregularity }, ...(generationKind !== 'mesh' ? { geology: { ...geologyParameters } } : {}), ...(['terrain', 'climate', 'hydrology'].includes(generationKind) ? { terrain: { ...terrainParameters }, landforms: { ...landformParameters } } : {}), ...(['climate', 'hydrology'].includes(generationKind) ? { climate: { ...climateParameters } } : {}), ...(generationKind === 'hydrology' ? { hydrology: { ...hydrologyParameters } } : {}) }, force })
       if (id !== requestId)
         return
       const preparing = performance.now()
       if (!result.terrain && ['elevation', 'land', 'boundaries', 'mantle', 'volcanism', 'uplift', 'relief', 'plains', 'slope'].includes(geologyTheme))
         geologyTheme = 'plates'
-      if (!result.climate && ['temperature', 'precipitation', 'wind', 'ocean-current'].includes(geologyTheme))
+      if (!result.climate && !result.hydrology && ['temperature', 'precipitation', 'wind', 'ocean-current', 'snow', 'runoff', 'rivers', 'basins'].includes(geologyTheme))
         geologyTheme = 'plates'
       if (result.terrain && !loadedTerrain)
         geologyTheme = 'elevation'
       if (result.climate && !loadedClimate)
         geologyTheme = 'temperature'
-      const geometry = prepareDebugGeometry(result.mesh, mode, geologyRegionColor(result.geology, geologyTheme, result.terrain, result.climate, climateMonth))
+      if (result.hydrology && !loadedHydrology)
+        geologyTheme = 'rivers'
+      const geometry = prepareDebugGeometry(result.mesh, mode, geologyRegionColor(result.geology, geologyTheme, result.terrain, result.climate, climateMonth, result.cryosphere, result.hydrology))
       const preparationMs = performance.now() - preparing
       scene.install(geometry, result.mesh.subdivisionLevel, wireframe, showSurface)
       options()
@@ -94,15 +100,18 @@
       loadedGeology = result.geology ?? null
       loadedTerrain = result.terrain ?? null
       loadedClimate = result.climate ?? null
+      loadedCryosphere = result.cryosphere ?? null
+      loadedHydrology = result.hydrology ?? null
       stages = result.stages ?? []
       selected = null
       selectedGeology = null
       selectedTerrain = null
       selectedClimate = null
+      selectedHydrology = null
       stats = { level: result.mesh.subdivisionLevel, irregularity: result.mesh.irregularity, seed: result.mesh.seed, fiveNeighborRegions: geometry.fiveNeighborCenters.length / 3, regions: result.mesh.regionCount, edges: result.mesh.edgeRegions.length / 2, faces: result.mesh.triangles.length / 3, generationMs: result.pipelineMs, cacheHit: result.cacheHit, cacheBytes: result.cacheBytes, preparationMs, renderBytes: Object.values(geometry).reduce((sum, array) => sum + array.byteLength, 0), copyMs: result.copyMs, meshBytes: result.meshBytes, receiveMs: result.receiveMs, workerInitMs: controller.workerInitMs, hydrateMs: result.hydrateMs, postMessageMs: 0 }
       busy = false
       pickReady = true
-      message = `L${stats.level} · 扰动 ${stats.irregularity.toFixed(2)} ${loadedClimate ? '初步气候 C0' : loadedTerrain ? '基础地形 T0' : loadedGeology ? '板块与地壳' : '网格'}已就绪`
+      message = `L${stats.level} · 扰动 ${stats.irregularity.toFixed(2)} ${loadedHydrology ? '初步水文 H0 / 冰雪 I0' : loadedClimate ? '初步气候 C0' : loadedTerrain ? '基础地形 T0' : loadedGeology ? '板块与地壳' : '网格'}已就绪`
     }
     catch (cause) {
       if (id !== requestId)
@@ -139,13 +148,14 @@
     ++pickId
     picking = false
     const preparing = performance.now()
-    const geometry = prepareDebugGeometry(loadedMesh, mode, geologyRegionColor(loadedGeology, geologyTheme, loadedTerrain, loadedClimate, climateMonth))
+    const geometry = prepareDebugGeometry(loadedMesh, mode, geologyRegionColor(loadedGeology, geologyTheme, loadedTerrain, loadedClimate, climateMonth, loadedCryosphere, loadedHydrology))
     scene.install(geometry, loadedMesh.subdivisionLevel, wireframe, showSurface)
     stats = { ...stats, preparationMs: performance.now() - preparing, renderBytes: Object.values(geometry).reduce((sum, array) => sum + array.byteLength, 0) }
     selected = null
     selectedGeology = null
     selectedTerrain = null
     selectedClimate = null
+    selectedHydrology = null
   }
   function chooseClimateMonth() {
     const prior = { selected, selectedGeology, selectedTerrain }
@@ -155,7 +165,12 @@
     selectedTerrain = prior.selectedTerrain
     if (selected && loadedClimate) {
       selectedClimate = queryClimateRegion(loadedClimate, selected.region, climateMonth)
+      selectedHydrology = loadedHydrology ? queryHydrologyRegion(loadedHydrology, selected.region, loadedClimate, loadedCryosphere ?? undefined) : null
       scene?.showSelection(selected)
+    }
+    else {
+      selectedClimate = null
+      selectedHydrology = null
     }
   }
   onMount(() => {
@@ -173,6 +188,7 @@
           selectedGeology = loadedGeology ? queryGeologyRegion(loadedGeology, region) : null
           selectedTerrain = loadedTerrain ? queryTerrainRegion(loadedTerrain, region) : null
           selectedClimate = loadedClimate ? queryClimateRegion(loadedClimate, region, climateMonth) : null
+          selectedHydrology = loadedHydrology ? queryHydrologyRegion(loadedHydrology, region, loadedClimate ?? undefined, loadedCryosphere ?? undefined) : null
           scene?.showSelection(selected)
           picking = false
         }).catch((cause) => {
@@ -207,7 +223,7 @@
 <div class='min-h-screen bg-slate-50 text-slate-900'>
   <header class='flex h-16 items-center justify-between border-b border-slate-200 bg-white px-5'>
     <div class='flex items-baseline gap-4'><a href='/' class='font-semibold'>Another Earth</a><h1 class='text-sm text-slate-500'>Mesh Debug</h1></div>
-    <span class='text-xs text-slate-500'>Mesh / M1.2 · 初步气候</span>
+    <span class='text-xs text-slate-500'>Mesh / M1.3 · 初步水文</span>
   </header>
   <div class='grid lg:h-[calc(100dvh-4rem)] lg:grid-cols-[19rem_1fr]'>
     <aside class='space-y-6 overflow-auto border-r border-slate-200 bg-white p-5'>
@@ -215,7 +231,7 @@
         <h2 class='text-sm font-semibold'>球面网格</h2>
         <label class='block text-sm'>生成内容
           <select class='mt-1 w-full rounded border border-slate-300 bg-white p-2' bind:value={generationKind}>
-            <option value='mesh'>仅网格</option><option value='geology'>板块与地壳（M1.1A）</option><option value='terrain'>基础地形 T0（M1.1B）</option><option value='climate'>初步气候 C0（M1.2）</option>
+            <option value='mesh'>仅网格</option><option value='geology'>板块与地壳（M1.1A）</option><option value='terrain'>基础地形 T0（M1.1B）</option><option value='climate'>初步气候 C0（M1.2）</option><option value='hydrology'>冰雪 I0 / 水文 H0（M1.3A）</option>
           </select>
         </label>
         <label class='block text-sm'>细分等级
@@ -278,7 +294,7 @@
           <p class='text-xs leading-relaxed text-slate-500'>参考网格固定 L6。候选大陆用于约束地壳，最终地形可能改变海岸；微板块数量为生成目标。微板块实际数量受边界连通性约束。</p>
         </section>
       {/if}
-      {#if generationKind === 'terrain' || generationKind === 'climate'}
+      {#if generationKind === 'terrain' || generationKind === 'climate' || generationKind === 'hydrology'}
         <section class='space-y-3 border-t border-slate-200 pt-4' aria-label='地形参数'>
           <h2 class='text-sm font-semibold'>构造与基础地形 T0</h2>
           <p class='text-xs leading-relaxed text-slate-500'>侵蚀在高程转为 km 前参与 T0 地形塑形；水力参数控制下游汇流刻槽，冰川参数控制高纬/高海拔地形塑形。当前不读取降雨和气候。</p>
@@ -302,7 +318,7 @@
           <p class='text-xs leading-relaxed text-slate-500'>高程使用 km；本阶段侵蚀不使用气候或降雨数据，也不生成正式河网。</p>
         </section>
       {/if}
-      {#if generationKind === 'climate'}
+      {#if generationKind === 'climate' || generationKind === 'hydrology'}
         <section class='space-y-3 border-t border-slate-200 pt-4' aria-label='气候参数'>
           <h2 class='text-sm font-semibold'>类地气候参数</h2>
           <p class='text-xs text-slate-500'>当前模型限定半径 6,371 km、自转 24 小时。</p>
@@ -310,6 +326,15 @@
           <label class='block text-sm'>公转周期（地球日）<input class='mt-1 w-full rounded border p-2' type='number' min='300' max='430' step='0.25' bind:value={climateParameters.orbitalPeriodDays} /></label>
           <label class='block text-sm'>温度偏移（°C）<input class='mt-1 w-full rounded border p-2' type='number' min='-20' max='20' step='0.5' bind:value={climateParameters.temperatureOffsetC} /></label>
           <label class='block text-sm'>降水倍率<input class='mt-1 w-full rounded border p-2' type='number' min='0' max='3' step='0.1' bind:value={climateParameters.precipitationScale} /></label>
+        </section>
+      {/if}
+      {#if generationKind === 'hydrology'}
+        <section class='space-y-3 border-t border-slate-200 pt-4' aria-label='水文参数'>
+          <h2 class='text-sm font-semibold'>初步冰雪与径流</h2>
+          <p class='text-xs leading-relaxed text-slate-500'>温度指数近似，不代表全球蒸散或冰川质量平衡标定。河道至少汇集 16 个平均网格面积；低级支流在专题图中淡化显示。</p>
+          <label class='block text-sm'>融雪系数（mm / °C / 月）<input class='mt-1 w-full rounded border p-2' type='number' min='0' max='100' step='0.5' bind:value={hydrologyParameters.degreeDayMeltFactorMmPerCMonth} /></label>
+          <label class='block text-sm'>蒸散温度系数（mm / °C / 月）<input class='mt-1 w-full rounded border p-2' type='number' min='0' max='100' step='0.5' bind:value={hydrologyParameters.evapotranspirationFactorMmPerCMonth} /></label>
+          <label class='block text-sm'>最小河道汇水面积（km²）<input class='mt-1 w-full rounded border p-2' type='number' min='0' step='100' bind:value={hydrologyParameters.minimumRiverDrainageAreaKm2} /></label>
         </section>
       {/if}
       {#if loadedGeology}
@@ -324,6 +349,8 @@
               {#if loadedClimate}
                 <option value='temperature'>月平均气温（°C）</option><option value='precipitation'>月总降水（mm）</option><option value='wind'>月风场（东西／南北）</option><option value='ocean-current'>洋流暖度代理</option>
               {/if}
+              {#if loadedCryosphere}<option value='snow'>月末积雪水当量（mm）</option>{/if}
+              {#if loadedHydrology}<option value='runoff'>年径流深（mm）</option><option value='rivers'>河网</option><option value='basins'>流域</option>{/if}
             </select>
           </label>
           {#if loadedClimate}
@@ -411,6 +438,20 @@
               <dt>风向东 / 向北（相对量）</dt><dd>{selectedClimate.windEast.toFixed(2)} / {selectedClimate.windNorth.toFixed(2)}</dd>
               <dt>洋流向东 / 向北（相对量）</dt><dd>{selectedClimate.oceanEast.toFixed(2)} / {selectedClimate.oceanNorth.toFixed(2)}</dd>
               <dt>洋流暖度代理</dt><dd>{selectedClimate.oceanWarmth.toFixed(2)}</dd>
+            </dl>
+          {/if}
+          {#if selectedHydrology}
+            <dl class='space-y-2' aria-label='区域水文'>
+              <dt>年径流深 / 局地产流</dt><dd>{selectedHydrology.annualRunoffMm.toFixed(1)} mm / {selectedHydrology.annualRunoffVolumeM3.toExponential(2)} m³/年</dd>
+              <dt>汇流量</dt><dd>{selectedHydrology.accumulatedFlowM3s.toFixed(2)} m³/s</dd>
+              <dt>汇水面积</dt><dd>{selectedHydrology.contributingAreaKm2.toLocaleString(undefined, { maximumFractionDigits: 0 })} km²</dd>
+              <dt>下游区域</dt><dd>{selectedHydrology.downstreamRegion < 0 ? (selectedHydrology.basinId === null ? '海洋' : selectedHydrology.basinEndorheic ? '内流汇点' : '海洋出口') : `Region #${selectedHydrology.downstreamRegion}`}</dd>
+              <dt>流域</dt><dd>{selectedHydrology.basinId ?? '海洋'}</dd>
+              {#if selectedHydrology.basinId}<dt>流域面积</dt><dd>{selectedHydrology.basinAreaKm2.toLocaleString(undefined, { maximumFractionDigits: 0 })} km²</dd>{/if}
+              <dt>当前月融雪 / 径流</dt><dd>{selectedHydrology.monthlySnowmeltMm[climateMonth].toFixed(1)} / {selectedHydrology.monthlyRunoffMm[climateMonth].toFixed(1)} mm</dd>
+              <dt>当前月蒸散</dt><dd>{selectedHydrology.monthlyEvapotranspirationMm[climateMonth].toFixed(1)} mm</dd>
+              <dt>河道段</dt><dd>{selectedHydrology.riverSegments.map(river => `${river.id} · ${river.strahlerOrder}级`).join('；') || '非河道区域'}</dd>
+              {#if loadedCryosphere}<dt>月末积雪水当量</dt><dd>{loadedCryosphere.monthlySnowWaterEquivalentMm[climateMonth * loadedCryosphere.regionCount + selected.region].toFixed(1)} mm</dd>{/if}
             </dl>
           {/if}
         {:else}<p class='text-slate-500'>点击球面查看最近区域及邻接关系。</p>{/if}

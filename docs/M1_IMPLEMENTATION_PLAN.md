@@ -1,10 +1,10 @@
 # M1 — Natural World Genesis 实施计划
 
-> 更新：2026-11-08。本文件保留 M1 后续工作与验收标准，不自动执行实现或授权检查命令。实际状态见 [PROGRESS](PROGRESS.md)，字段见 [数据契约](WORLD_DATA_CONTRACTS.md)，当前 Stage 与 Buffer 边界见 [生成管线](GENERATION_PIPELINE.md)。不再维护小阶段独立记录。
+> 更新：2026-11-08。本文件保留 M1 后续工作与验收标准。实际状态见 [PROGRESS](PROGRESS.md)，字段见 [数据契约](WORLD_DATA_CONTRACTS.md)，当前 Stage 与 Buffer 边界见 [生成管线](GENERATION_PIPELINE.md)。不再维护小阶段独立记录。
 
 ## 1. 当前起点与范围
 
-M0 工程基础与 M1.1 地质/基础地形已实现并完成历史验收。当前工作区按用户要求在 T0 塑形阶段恢复基础水力/冰川侵蚀及末端小水体清理，TerrainArtifact 为 `terrain-v24`；水力作用统一为参数值的一半，该实现尚未验收。既有 terrain-v20 的固定 Seed、L4/L6/L8、粗糙度、海平面和 L8 缓存预算记录见 [M1.1 验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)，不代表 terrain-v24 验证通过。
+M0 工程基础与 M1.1 地质/基础地形已实现并完成历史验收。当前 T0 `terrain-v24` 在塑形阶段运行基础水力/冰川侵蚀及末端小水体清理，水力作用统一为参数值的一半；已完成本轮固定 Seed/多分辨率基准。既有 terrain-v20 的 L4/L6/L8 记录见 [M1.1 验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)，不代表当前地形的结果。
 
 当前 Mesh 支持 L0–L8，参考地质默认 L6；Worker/Controller、区域查询、缓存和调试入口可复用。WorldSnapshot Schema 2、完整校验与最小 JSON 编解码已存在，但没有生产自然快照组装/发布、水文或生态生成器。M1.2 C0 的实现/链路已通过 core/Web 测试、lint、类型检查、构建、真实 Worker 浏览器回归及 3 Seed × L4/L5/L6 基准验收，详见 [当前进度](PROGRESS.md) 和 [C0 验收基准](benchmarks/M1.2-climate-c0-acceptance.json)。按 M1 通用气候形态条件，地形雨影尚缺专项夹具验收；C0 也不代表气候学标定或最终 C1。cartography 尚未提供正式地图系统，最小内容包不等于 M2 内容库。
 
@@ -14,9 +14,10 @@ M0 工程基础与 M1.1 地质/基础地形已实现并完成历史验收。当�
 
 | 范围 | 输入与输出 | 进入后续前的条件 |
 | --- | --- | --- |
-| M1.1 历史验收 | 当前地质/T0 → 可复验基线 | terrain-v20 通过固定 Seed、字段单位/海陆、缓存、Worker 与基本形态检查；当前含基础侵蚀与小水体清理的 terrain-v24 待验收 |
+| M1.1 历史验收 | 当前地质/T0 → 可复验基线 | terrain-v20 历史验收通过；T0 `terrain-v24` 已在 M1.3A 的固定 Seed/L4–L6 基准中检查小水体连通性，自动化 Worker E2E 受本机 Chrome headless 启动失败限制 |
 | M1.2 实现/链路验收通过 | T0 → 初步月气候 C0、分类 | 12 月、月年聚合、季节响应、面积投影、Worker 链路与固定 Seed 多分辨率基准通过；地形雨影专项证据待补，不含全球气候学标定 |
-| M1.3 初步水文 | T0/C0 → 径流与排水 H0、冰雪 I0 | 水量账本、出口与辅助面含义明确 |
+| M1.3A 初步冰雪/水文（实现及核心验收完成） | T0/C0 → I0/H0 | 水量账本、出口、辅助面、河网、Stage 缓存、Worker 可见浏览器生成/查询和 3 Seed × L4/L5/L6 基准通过；Playwright headless E2E 启动受环境限制，未作为通过证据 |
+| M1.3B 静态湖泊（未实现） | H0 盆地 → 静态湖泊 | 湖盆/出入口规则和水位模型有依据，区分湖泊与路由填洼面 |
 | 后续气候驱动侵蚀（暂缓） | T0/C0/H0/I0 → 追加侵蚀地形 | 本轮明确不实现；未来需定义与 T0 基础侵蚀的分工 |
 | 最终气候水文 | T1 → C1/H1、河流/流域/基础湖泊 | 无环、总量与引用有效，不发布旧轮次状态 |
 | M1.4 | 最终自然输入 → 生态与自然覆盖 | 分类、水体和潜在/实际覆盖一致 |
@@ -52,7 +53,7 @@ M0 工程基础与 M1.1 地质/基础地形已实现并完成历史验收。当�
 
 ## 4. M1.3：径流、侵蚀、河流与静态湖泊
 
-当前 T0 已含不读取气候的基础水力/冰川侵蚀。M1.3 后续先从此 T0 和初步气候建立 H0 径流/排水及冰雪 I0；依据降雨的追加侵蚀暂不实现。最终气候水文与河湖事实仍需按后续阶段完成，不能将 H0 或代理路由当作最终河网。
+当前 T0 已含不读取气候的基础水力/冰川侵蚀。M1.3A 已实现 I0 雪水储量/融雪、H0 月水量代理、Priority Flood、流域与阈值河段，并贯通 Worker 和调试页面；Core/Web 自动化、类型/lint/build 与 3 Seed × L4/L5/L6 基准通过。可见 Chrome 页面完成 L4/L6 真实 Worker 生成、区域查询和 H0-only 缓存失效检查；Playwright 自动化因本机 Chrome headless 进程 SIGABRT 未能启动。T0 v24 相同矩阵中未发现低于清理门槛的封闭水体，水体连通分量为 1–3。依据降雨的追加侵蚀暂不实现。最终气候水文与湖泊事实仍需按后续阶段完成，不能将 H0 或代理路由当作最终河网。
 
 **M1.3A 实施顺序：**
 
@@ -61,6 +62,10 @@ M0 工程基础与 M1.1 地质/基础地形已实现并完成历史验收。当�
 3. 使用实际区域面积累计水量。
 4. 建立基础流域、河流路径、稳定 ID 和河网连接。
 5. 提供面积、径流、流量、级序及出口查询。
+
+本轮实现覆盖上述五项：`cryosphere-i0-v1` 与当前 `hydrology-h0-v2` Stage 已注册；Worker/Controller 返回并校验产物；`/mesh-debug` 加入积雪、径流、河网、流域专题与区域水量查询。初始实现实测见 [M1.3A 基准](benchmarks/M1.3A-hydrology-acceptance.json)，后续密度校准见 [河网密度基准](benchmarks/M1.3A-river-density-calibration.json)。`hydrology-h0-v2` 将动态汇水阈值从 8×提升到 16×平均 Mesh 面积，并用 Strahler 级序降低低级支流的显示对比度；L6 三 Seed 河道区域数比 v1 减少 39–44%。粗网格 L4 更稀，需按实际显示尺度进一步调参。Playwright headless E2E 因浏览器启动失败未通过；真实 Chrome 页面已手动确认 Worker 生成、查询和缓存局部失效。
+
+雨雪分配、融雪和蒸散为显式配置的温度指数近似，I0 只模拟一个公转周期的积雪水当量，不建模多年冰川体积。当前河流汇水阈值采用 `max(configuredMinimumKm2, 16 × meanMeshAreaKm2)` 并要求正累计流量；L6 三个 Seed 生成 912–1,138 个河道区域、221–245 个河段。河网密度改善不代表全球水文标定。
 
 单位必须统一：
 
@@ -209,6 +214,12 @@ pnpm --filter @another-earth/web lint
 pnpm --filter @another-earth/web test:browser
 ```
 
+M1.3A 固定 Seed/分辨率性能样本：
+
+```bash
+pnpm --filter @another-earth/world-core bench:hydrology
+```
+
 涉及 `world-data` 时运行对应包检查。最终跨包验收按需运行：
 
 ```bash
@@ -218,7 +229,7 @@ pnpm test
 pnpm build
 ```
 
-现有 `bench:generation` 仅覆盖 Mesh Pipeline；`bench:geology` 和 `bench:terrain` 已存在，但仍不代表完整自然链。未来新增阶段须补相应基准，原始记录统一保留在 docs/benchmarks。
+`bench:hydrology` 输出 I0/H0 冷生成、缓存命中、仅 H0 参数改变、强制重算哈希、数组字节、面积/径流与河网规模摘要。默认样本是 Seed 42 × L4/L5/L6；完整验收需扩展至至少 3 个 Seed，并把实际 JSON 记录归档到 `docs/benchmarks`。现有 Mesh/Geology/Terrain 基准不能替代 H0 实测。
 
 性能记录至少包含：
 

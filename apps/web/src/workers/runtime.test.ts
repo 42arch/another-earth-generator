@@ -1,6 +1,6 @@
 import type { SphericalMesh } from '@another-earth/world-core'
 import type { WorkerResponse } from '../lib/generation/protocol'
-import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateGeologyArtifact, validateSphericalMesh, validateTerrainArtifact } from '@another-earth/world-core'
+import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateTerrainArtifact } from '@another-earth/world-core'
 import { describe, expect, it } from 'vitest'
 import { hydrateMesh } from '../lib/generation/transfer'
 import { GenerationWorkerRuntime } from './runtime'
@@ -77,6 +77,43 @@ it('transfers C0 without detaching cached climate and invalidates only climate o
   await runtime.handle({ ...request, requestId: 'climate-changed', input: { ...request.input, config: { ...request.input.config, climate: { ...DEFAULT_CLIMATE_PARAMETERS, temperatureOffsetC: 2 } } } })
   const third = messages.filter((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')[2]
   expect(third.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['climate-c0'])
+})
+
+it('transfers I0/H0 without detaching cached water artifacts and invalidates H0 for river threshold changes', async () => {
+  const messages: WorkerResponse[] = []
+  const runtime = new GenerationWorkerRuntime((message, transfer = []) => messages.push(structuredClone(message, { transfer })))
+  const base = input(2, 0)
+  const request = {
+    type: 'GENERATE' as const,
+    requestId: 'hydrology-first',
+    input: {
+      ...base,
+      config: {
+        ...base.config,
+        reference: { subdivisionLevel: 2 },
+        geology: DEFAULT_GEOLOGY_PARAMETERS,
+        landforms: DEFAULT_LANDFORM_PARAMETERS,
+        terrain: DEFAULT_TERRAIN_PARAMETERS,
+        climate: DEFAULT_CLIMATE_PARAMETERS,
+        hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
+      },
+    },
+  }
+  await runtime.handle(request)
+  const first = messages.find((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')!
+  expect(first.cryosphere).toBeDefined()
+  expect(first.hydrology).toBeDefined()
+  validateCryosphereArtifact(first.cryosphere!, first.mesh.meshId, first.mesh.regionCount)
+  validateHydrologyArtifact(first.hydrology!, first.mesh, first.terrain!, first.climate!, first.cryosphere!)
+  const snow = first.cryosphere!.monthlySnowWaterEquivalentMm[0]
+  first.cryosphere!.monthlySnowWaterEquivalentMm[0] = 999
+  await runtime.handle({ ...request, requestId: 'hydrology-second' })
+  const second = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[1]
+  expect(second.cryosphere!.monthlySnowWaterEquivalentMm[0]).toBe(snow)
+  expect(second.stages?.every(stage => stage.action === 'cache-hit')).toBe(true)
+  await runtime.handle({ ...request, requestId: 'hydrology-threshold-change', input: { ...request.input, config: { ...request.input.config, hydrology: { ...DEFAULT_HYDROLOGY_PARAMETERS, minimumRiverDrainageAreaKm2: 9000 } } } })
+  const changed = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[2]
+  expect(changed.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['hydrology-h0'])
 })
 
 it('transfers geology copies without detaching cache and recovers after invalid geology', async () => {

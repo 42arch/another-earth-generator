@@ -130,7 +130,7 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 | regionalUpliftCoordinate | Float32 / 非负塑形坐标 | 兼容字段，当前全零，未施加额外区域隆起 |
 | roughnessWeight | Float32 / 0–1 | 兼容字段，当前全一，不再施加平缓区保护 |
 | regionalReliefKm | Float32 / 有符号 km | 兼容字段，当前全零，未施加额外区域起伏 |
-| erosionCoordinate / depositionCoordinate | Float32 / 非负塑形坐标 | 全零兼容诊断，表示本阶段未执行侵蚀/沉积 |
+| erosionCoordinate / depositionCoordinate | Float32 / 非负塑形坐标 | 记录参考处理器产生的侵蚀/沉积塑形坐标差，不能直接与物理 km 高程相加 |
 | foldBelt | Float32 / 相对分类量 | 褶皱带诊断 |
 
 统计包含面积加权的陆地覆盖率和最大连通分量面积、海陆变化数、连通分量数、最低/最高高程，以及按区域排序而非面积加权的五个高程分位数。坡度为相邻中心最大物理高差/物理距离的 atan。
@@ -144,3 +144,27 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 `TerrainParameters` 包含 roughness、terrainWarp、smoothing、ridgeSharpening、glacialErosion 与 hydraulicErosion；两项侵蚀强度范围 [0,1]，默认各 0.5，进入 T0 签名。旧键 continentalUpliftKm 仍在规划/执行、全缓存命中前拒绝。算法变更没有修改 WorldSnapshot Schema 2。
 
 `queryTerrainRegion` 只返回冻结标量对象。Pipeline getOutput 是共享借用，不能修改或 Transfer；Web 只接收独立副本。完整自然快照生成后，正式视图应使用只读世界查询，不能直接持有权威 Buffer。
+
+## 初步冰雪与水文产物 I0/H0
+
+M1.3A 新增 `CryosphereArtifact`（`cryosphere-i0-v1`）与 `HydrologyArtifact`（当前 `hydrology-h0-v2`；历史初版为 v1），仍是阶段产物，不是 Schema 2 快照中的 `HydrologyState`。I0/H0 要求 `meshId === terrainMeshId === climateMeshId`，月数据均为 month-major 的 `12N`；不写入、不修改最终地形，也不生成湖泊对象。
+
+| 产物字段 | 类型/单位 | 语义 |
+| --- | --- | --- |
+| `monthlySnowWaterEquivalentMm` | Float32 / mm | 每月末积雪储量；当前不表示多年冰川体积 |
+| `monthlySnowfallMm` / `monthlySnowmeltMm` | Float32 / mm/月 | 雪水账本输入与融雪输出 |
+| `monthlyEvapotranspirationMm` / `monthlyRunoffMm` | Float32 / mm/月 | H0 温度指数蒸散与地表径流近似 |
+| `annualRunoffMm` | Float32 / mm/年 | 区域局地产流深度，12 月值之和 |
+| `annualRunoffVolumeM3` | Float64 / m³/年 | 区域局地产流体积：深度 × `areaKm2` × 1000 |
+| `accumulatedAnnualFlowM3s` | Float64 / m³/s | 下游汇流累积后按行星公转周期换算的平均流量 |
+| `contributingAreaKm2` | Float64 / km² | 上游陆地区域面积累积 |
+| `downstreamRegion` | Int32 / 区域索引 | 同网格相邻接收区；海洋出口/无海洋时的内流汇点为 -1 |
+| `filledElevationKm` | Float32 / km | Priority Flood 的路由辅助面，不改变 `TerrainArtifact.elevationKm` |
+| `basinIndex` / `riverIndex` | Int32 / 表索引 | 同产物表引用；海洋/非河道为 -1 |
+| `riverMask` | Uint8 / 0 或 1 | 满足汇水面积阈值且累计流量为正的陆地区域 |
+
+当前雨雪线性转化在 `snowTemperatureMinC` 与 `snowTemperatureMaxC` 之间插值；融雪、蒸散均为显式温度指数系数。年初积雪假定为零，只模拟单个公转周期的月序列；不称为冰川稳态或地球尺度水文标定。产流守恒以降水输入 = 蒸散 + 径流 + 年末积雪储量为目标，受 Float32 月数组量化误差影响。
+
+Priority Flood 使用输出 Mesh 邻接。所有海洋区为外流根；没有海洋区时，最低高程区域是唯一内流根。河流 ID 由 Mesh ID 和源区域组成，在相同 Mesh 与算法版本中确定；不承诺跨 Mesh/版本身份稳定。当前河道最低阈值为配置值与十六个平均 Mesh 区域面积的较大者，且要求有正流量。v2 相比 v1 将网格尺度底线从 8×提高到 16×；多分辨率校准记录见 `M1.3A-river-density-calibration.json`。
+
+`HydrologyState` 快照契约仍只列当前已定义的下游区和年径流深；M1.3A 阶段产物不因此自动成为已发布水文事实。静态湖泊属于 M1.3B，快照 Schema 未修改。

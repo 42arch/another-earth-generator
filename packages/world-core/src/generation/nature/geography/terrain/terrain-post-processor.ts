@@ -2,13 +2,13 @@ import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/a
 import type { TectonicSpatialFields } from '#generation/nature/geology/tectonics/tectonic-spatial-fields'
 import type { TerrainClassificationFields } from '#generation/nature/geology/tectonics/terrain-classifier'
 import type { RandomSource } from '#math/random'
+import type { TerrainErosionFields } from './terrain-erosion-processor'
 import type { TerrainFinalizationFields } from './terrain-finalizer'
 import type { TerrainTextureFields } from './terrain-texture-generator'
-import type { TerrainErosionFields } from './terrain-erosion-processor'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { createNoise3D } from 'simplex-noise'
-import { TerrainFinalizer } from './terrain-finalizer'
 import { TerrainErosionProcessor } from './terrain-erosion-processor'
+import { TerrainFinalizer } from './terrain-finalizer'
 import { terrainRoughnessScale, TerrainTextureGenerator } from './terrain-texture-generator'
 
 const REFERENCE_REGION_LEVEL = 6
@@ -105,7 +105,7 @@ export class TerrainPostProcessor {
     }
 
     observe?.('texture', textured.elevation)
-    const finalized = this.finalizer.generate(mesh, textured.elevation, candidateLandMask)
+    const finalized = this.finalizer.generate(mesh, textured.elevation)
     const elevation = Float32Array.from(finalized.elevation)
 
     observe?.('elevation-shaping', elevation)
