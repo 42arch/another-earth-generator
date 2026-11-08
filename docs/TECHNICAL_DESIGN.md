@@ -6,7 +6,7 @@
 
 采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-当前具备已验收的 M0 工程基础与 M1.1 地质/基础地形产物；`terrain-v20` 不执行冰川或水力侵蚀。初步月气候 C0 代码已接入但未验证、模型尚未完成旧版迁移；水文、生态、完整自然快照或初始文明均未生成，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
+当前具备已验收的 M0 工程基础、M1.1 地质/基础地形和 M1.2 C0 实现与链路；工作区按用户要求把基础水力/冰川侵蚀恢复到 T0（`terrain-v22`），水力强度现统一缩为一半，该版本尚未验收。降雨驱动追加侵蚀、水文、生态、完整自然快照或初始文明均未生成，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -390,7 +390,7 @@ export interface NatureSnapshot {
 
 ### 7.3 基础地形 T0（已实现，最终验收待完成）
 
-当前骨架为 `terrain-skeleton-v9`，后处理为 `terrain-v20`，分别固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。实际配置与依赖见生成管线。
+当前骨架为 `terrain-skeleton-v9`，后处理为 `terrain-v22`，分别固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。实际配置与依赖见生成管线。
 
 ```text
 地质与动力学 → 构造骨架、Phasor 山脊、火山体
@@ -406,12 +406,12 @@ export interface NatureSnapshot {
 
 粗糙度范围 0–0.5、默认 0.4，可调纹理相对默认强度为 `(roughness/0.4)³`，后期细节和峰值尖峰也参与。两层后期噪声的基准坐标幅度为 `0.1/6`、`0.05/6`，沿用旧四次幂映射 `6x⁴(5−4x)` 导数的局部补偿（最多 4 倍）。这条补偿是固定的塑形幅度参考，不随当前输出曲线改动；粗糙度 0 时构造骨架和岛屿仍可有起伏。
 
-**侵蚀后移的已定决策**：M1.1 不执行冰川/水力侵蚀及附带排水重建。平滑、锐化和土壤蠕动仍属于基础塑形。旧侵蚀算法保留供后续适配，不视为当前执行能力。后续按 `T0 → 初步气候 C0/径流排水 H0/冰雪 I0 → 侵蚀地形 T1 → 重算 C1/H1` 接入，使用独立产物身份避免循环；C0 已有待验证代码，其余后续 Stage 尚未实现。
+**T0 基础侵蚀决策（2026-11-08）**：按用户要求，在 M1.2 基础上恢复 T0 塑形阶段的水力/冰川侵蚀，暂不实现气候/降雨驱动的追加侵蚀。`terrain-v22` 在 km 映射前调用迁移的参考 `TerrainErosionProcessor`；参数默认均为 0.5，水力输入在处理器前乘以 0.5，冰川输入不变。参数进入 terrain Stage 签名。侵蚀后继续执行山脊锐化、土壤蠕动和排水重建。后续气候与水文阶段读取已侵蚀 T0；若再加降雨驱动侵蚀，须定义与基础 T0 塑形的分工及单独产物身份。
 
 既有侵蚀算法按汇水格数与角格距调参，重接时需处理面积、长度及时间尺度的一致性。当前不承诺严格侵蚀质量守恒或与地球高程直方图一致。
 
 **代码组织**：地形塑形算法位于 `world-core/src/generation/nature/geography/`。
-- `terrain/`：地形表面纹理（`terrain-texture-generator`）、水力侵蚀处理器（`terrain-erosion-processor`，当前保留备用）、表面后处理编排（`terrain-post-processor`）与拓扑修复/整形（`terrain-finalizer`）。
+- `terrain/`：地形表面纹理（`terrain-texture-generator`）、T0 水力/冰川侵蚀处理器（`terrain-erosion-processor`）、表面后处理编排（`terrain-post-processor`）与拓扑修复/整形（`terrain-finalizer`）。
 - 单位与契约：模型塑形坐标与物理高程换算收敛于 `generation/nature/geography/elevation-units.ts`；产物契约与校验由 `types.ts`、`validation.ts` 和 `queries.ts` 维护。
 
 > 以下 §7.4–§9 为尚未落地的目标设计；算法现状描述特指 docs/old-src 参考实现。当前源码没有这些生成器或正式地图，迁移契约以世界数据契约及 M1 实施计划为准。
@@ -757,7 +757,7 @@ world.aearth
 | 阶段 | 当前边界 |
 | --- | --- |
 | M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
-| M1 | M1.1 地质和 T0（terrain-v20）已验收；C0 参考环流与月求解已接入但未验证；水文、侵蚀、生态、发布与集成尚未完成 |
+| M1 | M1.1 地质和 T0 terrain-v20 历史验收；T0 基础侵蚀 terrain-v22 已接入待验证；C0 实现/链路已验收；降雨追加侵蚀、水文、生态、发布尚未完成 |
 | M2 | 初始文明、资源与内容库，尚未实现 |
 | M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
 | M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |

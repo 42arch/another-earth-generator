@@ -1,4 +1,4 @@
-/** Independently validated M1.1B generation artifact, not a complete WorldSnapshot. */
+/** Independently validated T0 terrain artifact, not a complete WorldSnapshot. */
 export interface TerrainArtifact {
   readonly meshId: string
   readonly algorithmVersion: string
@@ -23,8 +23,9 @@ export interface TerrainArtifact {
   readonly regionalReliefKm: Float32Array
   /** Legacy compatibility diagnostic; uniformly 1 in the restored algorithm. */
   readonly roughnessWeight: Float32Array
-  /** Compatibility diagnostics in shaping coordinates; zero means no erosion/deposition executed in M1.1. */
+  /** Water plus glacial erosion delta in internal shaping coordinates. */
   readonly erosionCoordinate: Float32Array
+  /** Deposited shaping-coordinate delta. */
   readonly depositionCoordinate: Float32Array
   readonly foldBelt: Float32Array
   readonly statistics: {

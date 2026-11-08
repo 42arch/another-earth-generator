@@ -4,9 +4,11 @@ import type { TerrainClassificationFields } from '#generation/nature/geology/tec
 import type { RandomSource } from '#math/random'
 import type { TerrainFinalizationFields } from './terrain-finalizer'
 import type { TerrainTextureFields } from './terrain-texture-generator'
+import type { TerrainErosionFields } from './terrain-erosion-processor'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { createNoise3D } from 'simplex-noise'
 import { TerrainFinalizer } from './terrain-finalizer'
+import { TerrainErosionProcessor } from './terrain-erosion-processor'
 import { terrainRoughnessScale, TerrainTextureGenerator } from './terrain-texture-generator'
 
 const REFERENCE_REGION_LEVEL = 6
@@ -17,6 +19,7 @@ export interface TerrainPostProcessData {
   landMask: Uint8Array
   texture?: TerrainTextureFields
   finalization: TerrainFinalizationFields
+  erosion: TerrainErosionFields
 }
 
 const WARP_FREQUENCY = 4
@@ -46,6 +49,7 @@ const RIDGE_SHARPEN_CAP = 2
 const VALLEY_DEEPEN_FACTOR = 0.5
 const VALLEY_FLOOR_FRACTION = 0.5
 const VALLEY_FLOOR_MINIMUM = 0.001
+const HYDRAULIC_EROSION_SCALE = 0.5
 
 interface DetailNoiseOptions {
   amplitudeCoordinate?: number
@@ -60,6 +64,7 @@ interface DetailNoiseOptions {
 export class TerrainPostProcessor {
   private readonly textureGenerator = new TerrainTextureGenerator()
   private readonly finalizer = new TerrainFinalizer()
+  private readonly erosionProcessor = new TerrainErosionProcessor()
 
   generate(
     mesh: SphericalMesh,
@@ -79,6 +84,8 @@ export class TerrainPostProcessor {
     edifices?: Float32Array,
     observe?: (step: string, values: Float32Array) => void,
     captureTexture = false,
+    glacialErosion = 0.5,
+    hydraulicErosion = 0.5,
   ): TerrainPostProcessData {
     const textured = this.textureGenerator.generate(
       mesh,
@@ -139,6 +146,12 @@ export class TerrainPostProcessor {
       }
     }
 
+    const erosion = this.erosionProcessor.generate(mesh, elevation, oceanMask, {
+      glacial: glacialErosion,
+      hydraulic: hydraulicErosion * HYDRAULIC_EROSION_SCALE,
+      drainageDiagnostics: false,
+    })
+
     const sharpening = Math.max(0, Math.min(1, ridgeSharpening))
     if (sharpening > 0) {
       this.sharpenRidges(
@@ -151,6 +164,7 @@ export class TerrainPostProcessor {
     }
 
     this.applySoilCreep(mesh, elevation, oceanMask, 3, 0.1125)
+    this.erosionProcessor.rebuildDrainage(mesh, elevation, oceanMask, erosion)
 
     const landMask = new Uint8Array(mesh.numRegions)
     for (let region = 0; region < mesh.numRegions; region++) {
@@ -164,6 +178,7 @@ export class TerrainPostProcessor {
       landMask,
       texture: textured.texture,
       finalization: finalized.fields,
+      erosion,
     }
   }
 

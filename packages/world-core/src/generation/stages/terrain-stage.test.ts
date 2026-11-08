@@ -51,11 +51,11 @@ describe('terrain stage', () => {
     expect((await pipeline.execute(volcanism)).plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['tectonic-elevation', 'terrain'])
   })
 
-  it('publishes an un-eroded baseline with zero erosion compatibility fields', async () => {
+  it('publishes T0 after configured water and glacial erosion', async () => {
     const terrain = (await createTerrainPipeline().execute(input())).getOutput<TerrainArtifact>('terrain')
-    expect(terrain.algorithmVersion).toBe('terrain-v20')
-    expect(terrain.erosionCoordinate.every(v => v === 0)).toBe(true)
-    expect(terrain.depositionCoordinate.every(v => v === 0)).toBe(true)
+    expect(terrain.algorithmVersion).toBe('terrain-v22')
+    expect(terrain.erosionCoordinate.some(v => v > 0)).toBe(true)
+    expect(terrain.depositionCoordinate.every(Number.isFinite)).toBe(true)
     expect(terrain.roughnessWeight.every(v => v === 1)).toBe(true)
     expect(queryTerrainRegion(terrain, 0).roughnessWeight).toBe(terrain.roughnessWeight[0])
     const badWeight = structuredClone(terrain)
@@ -68,7 +68,8 @@ describe('terrain stage', () => {
     expect(queryTerrainRegion(terrain, 0).regionalUpliftCoordinate).toBe(terrain.regionalUpliftCoordinate[0])
   })
 
-  it.each(['continentalUpliftKm', 'glacialErosion', 'hydraulicErosion'])('rejects obsolete %s even after a full cache hit', async (key) => {
+  it('rejects obsolete continental uplift even after a full cache hit', async () => {
+    const key = 'continentalUpliftKm'
     const pipeline = createTerrainPipeline()
     const base = input()
     await pipeline.execute(base)

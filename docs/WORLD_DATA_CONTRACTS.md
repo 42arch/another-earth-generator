@@ -1,6 +1,6 @@
 # 世界数据与生成产物契约
 
-> 更新：2026-11-06。本文件定义字段、单位、身份和所有权；生成调度见 [生成管线](GENERATION_PIPELINE.md)，算法设计见 [技术设计](TECHNICAL_DESIGN.md)。公开入口为 `@another-earth/world-data` 与 `@another-earth/world-core`。当前快照 Schema 为 2，GenerationArtifact 不等于已发布快照。
+> 更新：2026-11-08。本文件定义字段、单位、身份和所有权；生成调度见 [生成管线](GENERATION_PIPELINE.md)，算法设计见 [技术设计](TECHNICAL_DESIGN.md)。公开入口为 `@another-earth/world-data` 与 `@another-earth/world-core`。当前快照 Schema 为 2，GenerationArtifact 不等于已发布快照。
 
 ## 快照与身份
 
@@ -115,7 +115,7 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 ## 基础地形产物 T0
 
-当前为 `terrain-skeleton-v9` / `terrain-v20`。`TerrainArtifact` 仍是独立阶段产物，带 meshId、算法版本、物理半径与海平面基准；没有自然世界发布或水文事实。
+当前为 `terrain-skeleton-v9` / `terrain-v22`。`TerrainArtifact` 仍是独立阶段产物，带 meshId、算法版本、物理半径与海平面基准；没有自然世界发布或水文事实。
 
 | 字段 | 类型/单位 | 含义 |
 | --- | --- | --- |
@@ -139,8 +139,8 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 内部塑形坐标不会因类型同为 Float32 就自动具有 km 单位。负坐标输出 `8x` km；0–0.5 使用 `6x²(3−2x)`；0.5–1 使用单调 Hermite 锚点 `(0.5,3)/(0.72,4)/(0.82,5)/(1,6)`（坐标、km）；超过 1 则从 6 km 按每单位 6 km 延伸，最后减海平面基准。诊断贡献不能非线性换算后冒充可精确相加的物理分量。
 
-M1.1 不执行冰川/水力侵蚀。`erosionCoordinate`/`depositionCoordinate` 仍为 N 长 Float32 零数组，表示未执行，保留 Worker/查询兼容性；它们不证明生成过侵蚀或沉积事实。`regionalUpliftCoordinate`、`regionalReliefKm` 全零，`roughnessWeight` 全一，为旧诊断兼容值。
+当前 `terrain-v22` 在 T0 的内部塑形坐标中执行基础水力/冰川侵蚀。水力处理器输入为 `terrain.hydraulicErosion × 0.5`，冰川处理器输入保持 `terrain.glacialErosion`。`erosionCoordinate`/`depositionCoordinate` 为 N 长 Float32，记录参考处理器生成的侵蚀/沉积坐标差；它们不能直接与物理 km 高程相加。`regionalUpliftCoordinate`、`regionalReliefKm` 全零，`roughnessWeight` 全一，为旧诊断兼容值。侵蚀不读取气候/降雨，也不构造正式河网。
 
-`TerrainParameters` 仅有 roughness、terrainWarp、smoothing、ridgeSharpening。显式旧键 continentalUpliftKm/glacialErosion/hydraulicErosion（包括取值 0）会在规划/执行、全缓存命中前拒绝；不是静默忽略。算法变更没有修改 WorldSnapshot Schema 2。
+`TerrainParameters` 包含 roughness、terrainWarp、smoothing、ridgeSharpening、glacialErosion 与 hydraulicErosion；两项侵蚀强度范围 [0,1]，默认各 0.5，进入 T0 签名。旧键 continentalUpliftKm 仍在规划/执行、全缓存命中前拒绝。算法变更没有修改 WorldSnapshot Schema 2。
 
 `queryTerrainRegion` 只返回冻结标量对象。Pipeline getOutput 是共享借用，不能修改或 Transfer；Web 只接收独立副本。完整自然快照生成后，正式视图应使用只读世界查询，不能直接持有权威 Buffer。

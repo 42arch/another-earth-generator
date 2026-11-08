@@ -13,7 +13,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-it('builds baseline terrain without erosion or drainage passes and without mutating inputs', async () => {
+it('applies configured shaping erosion before final ridge/soil adjustment without mutating inputs', async () => {
   const erosion = vi.spyOn(TerrainErosionProcessor.prototype, 'generate')
   const drainage = vi.spyOn(TerrainErosionProcessor.prototype, 'rebuildDrainage')
   const result = await createTerrainPipeline().execute({ seed: 'legacy-postprocess', config: {
@@ -61,6 +61,6 @@ it('builds baseline terrain without erosion or drainage passes and without mutat
   for (const field of ['tectonicBand', 'detail', 'uniformLand', 'postDetail'] as const)
     expect(noTexture.texture![field].every(value => value === 0)).toBe(true)
   expect(fields.elevation).toEqual(originalElevation)
-  expect(erosion).not.toHaveBeenCalled()
-  expect(drainage).not.toHaveBeenCalled()
+  expect(erosion).toHaveBeenCalledTimes(3)
+  expect(drainage).toHaveBeenCalledTimes(3)
 })

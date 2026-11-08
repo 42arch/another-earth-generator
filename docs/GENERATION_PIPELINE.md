@@ -1,6 +1,6 @@
 # Generation Pipeline 与 Worker
 
-> 更新：2026-11-06。记录当前执行与缓存契约，不表示完整 M1 已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
+> 更新：2026-11-08。记录当前执行与缓存契约，不表示完整 M1 已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
 ## 公开入口
 
@@ -39,12 +39,12 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | plate-dynamics | terrain-v2 | reference-mesh、plate-topology、continental-crust |
 | tectonics | terrain-v2 | mesh、geology、plate-topology、continental-crust、plate-dynamics |
 | tectonic-elevation | terrain-skeleton-v9 | mesh、geology、tectonics |
-| terrain | terrain-v20 | mesh、geology、tectonics、tectonic-elevation |
+| terrain | terrain-v22 | mesh、geology、tectonics、tectonic-elevation |
 | climate-c0 | climate-c0-v2 | mesh、reference-mesh、geology、terrain |
 
 前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry 再追加四项。Climate Pipeline 再追加 C0；水文、生态和发布 Stage 尚未注册。
 
-配置按源码 configKeys 声明：Mesh 读等级、扰动、可选 Mesh Seed、物理半径；参考 Mesh 另读参考等级（默认 L6，显式 L2–L6）；板块读主/微板块数和板块面积差异；大陆读大陆数、面积差异与候选覆盖率；骨架读三项 landforms；terrain 读四项地形参数、islandDensity 和海平面基准。其余信息由声明的上游获得。
+配置按源码 configKeys 声明：Mesh 读等级、扰动、可选 Mesh Seed、物理半径；参考 Mesh 另读参考等级（默认 L6，显式 L2–L6）；板块读主/微板块数和板块面积差异；大陆读大陆数、面积差异与候选覆盖率；骨架读三项 landforms；terrain 读纹理/扭曲/平滑、山脊锐化、水力/冰川侵蚀强度、islandDensity 和海平面基准。侵蚀强度只使 terrain Stage 失效。
 
 ## 配置与局部失效
 
@@ -61,7 +61,7 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | seaLevelDatumKm | 默认 0，须满足物理径向约束 | terrain |
 | 相机、配色、专题、线框 | ViewState | 不生成 |
 
-roughness 可调纹理强度按 `(roughness/0.4)³` 响应。旧 continentalUpliftKm/glacialErosion/hydraulicErosion 配置即便为零也在计划/执行前报错，包括全缓存命中；M1.1 没有侵蚀参数或运行期侵蚀开关。
+roughness 可调纹理强度按 `(roughness/0.4)³` 响应。`terrain.glacialErosion` 与 `terrain.hydraulicErosion` 范围 [0,1]，默认 0.5，阶段内 km 转换前运行；水力参数进入处理器前统一乘以 0.5，冰川参数不缩放。当前不读取气候/降雨。旧 `continentalUpliftKm` 参数即便为零也在计划/执行前报错，包括全缓存命中。
 
 ## DAG、签名与随机流
 
@@ -95,11 +95,11 @@ Web Controller/Runtime 原有三种生成任务；C0 第四种已接入但未运
 
 ## 未来的气候、水文与侵蚀
 
-采用有限顺序 `T0 → C0/H0/I0 → T1 → C1/H1 → 河流湖泊最终事实 → 生态 → 快照发布`。C0 已有待验证的代码切片；径流、冰雪及 C1 尚未实现。基础气候、径流和冰雪是侵蚀输入，侵蚀后重新计算最终气候水文；T0/T1 和前后轮状态使用不同产物身份，不能在同一个 Stage ID 上构造依赖循环。
+当前顺序为 `T0（基础水力/冰川侵蚀） → C0`。本轮不实现气候/降雨驱动的追加侵蚀；未来如加入，应形成独立地形产物并在其后重算最终气候水文，避免依赖循环。
 
 当前 C0 使用输出面积聚合到参考 Mesh，空参考格退回最近输出格；在参考格计算四季风／洋流代理、月温和月降水，以三个邻近参考格优先同海陆插值回输出，并按物理面积修正全球月降水体积。`climate-c0-v2` 直接读取 climate 的自转、倾角、公转周期、温度偏移、降水倍率；物理半径来自 Mesh 上游签名。月份选择属于显示状态。旧算法的随机输入已改用 Stage fork，日历改为 12 个等时长分箱，距离使用实际物理半径；结果与性能尚待对照验收。
 
-参考侵蚀算法现保留在源码，但没有被 M1.1 调用，也没有预建未来 Stage/空接口。后续接入应重新确定面积、距离、时间和流量单位，统一路由辅助面与地形事实的边界。
+T0 复用参考 `TerrainErosionProcessor`，按内部塑形坐标运行水力/冰川侵蚀及锐化、土壤蠕动前的排水重建；当前不把其流量诊断作为正式河网事实，也不读取 C0 降雨。
 
 ## 证据与复跑
 

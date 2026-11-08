@@ -13,6 +13,8 @@
     { key: 'roughness', label: '地形粗糙度', max: 0.5 },
     { key: 'terrainWarp', label: '地形扭曲', max: 1 },
     { key: 'smoothing', label: '地形平滑', max: 1 },
+    { key: 'hydraulicErosion', label: '水力侵蚀（整体减半）', max: 1 },
+    { key: 'glacialErosion', label: '冰川侵蚀', max: 1 },
     { key: 'ridgeSharpening', label: '山脊锐化', max: 1 },
   ] as const
 
@@ -279,7 +281,7 @@
       {#if generationKind === 'terrain' || generationKind === 'climate'}
         <section class='space-y-3 border-t border-slate-200 pt-4' aria-label='地形参数'>
           <h2 class='text-sm font-semibold'>构造与基础地形 T0</h2>
-          <p class='text-xs leading-relaxed text-slate-500'>地形参数控制纹理、扭曲、平滑和山脊锐化。粗糙度为 0 时关闭可调纹理，构造骨架仍保留；冰川与水力侵蚀在气候、水文接入后执行。</p>
+          <p class='text-xs leading-relaxed text-slate-500'>侵蚀在高程转为 km 前参与 T0 地形塑形；水力参数控制下游汇流刻槽，冰川参数控制高纬/高海拔地形塑形。当前不读取降雨和气候。</p>
           <label class='block text-sm'>岛弧目标数
             <input class='mt-1 w-full rounded border border-slate-300 p-2' type='number' min='0' max='100' step='1' bind:value={landformParameters.islandArcCount} />
           </label>
@@ -297,7 +299,7 @@
           <label class='block text-sm'>海平面基准（km）
             <input aria-label='海平面基准（km）' class='mt-1 w-full rounded border border-slate-300 p-2' type='number' step='0.1' bind:value={seaLevelDatumKm} />
           </label>
-          <p class='text-xs leading-relaxed text-slate-500'>高程使用 km；本阶段不执行水力与冰川侵蚀，尚未生成正式河网。</p>
+          <p class='text-xs leading-relaxed text-slate-500'>高程使用 km；本阶段侵蚀不使用气候或降雨数据，也不生成正式河网。</p>
         </section>
       {/if}
       {#if generationKind === 'climate'}

@@ -22,6 +22,8 @@ export interface TerrainParameters {
   readonly roughness: number
   readonly terrainWarp: number
   readonly smoothing: number
+  readonly glacialErosion: number
+  readonly hydraulicErosion: number
   readonly ridgeSharpening: number
 }
 export interface TerrainGenerationConfig extends GeologyGenerationConfig {
@@ -30,11 +32,11 @@ export interface TerrainGenerationConfig extends GeologyGenerationConfig {
   readonly terrain: TerrainParameters
 }
 export const DEFAULT_LANDFORM_PARAMETERS: LandformParameters = Object.freeze({ islandArcCount: 6, islandDensity: 0.65, hotspotCount: 5 })
-export const DEFAULT_TERRAIN_PARAMETERS: Readonly<Required<TerrainParameters>> = Object.freeze({ roughness: 0.4, terrainWarp: 0.75, smoothing: 0.1, ridgeSharpening: 0.5 })
+export const DEFAULT_TERRAIN_PARAMETERS: Readonly<Required<TerrainParameters>> = Object.freeze({ roughness: 0.4, terrainWarp: 0.75, smoothing: 0.1, glacialErosion: 0.5, hydraulicErosion: 0.5, ridgeSharpening: 0.5 })
 const VERSION = 'terrain-v2'
 const SKELETON_VERSION = 'terrain-skeleton-v9'
 const SKELETON_RANDOM_VERSION = 'terrain-skeleton-v5'
-const TERRAIN_VERSION = 'terrain-v20'
+const TERRAIN_VERSION = 'terrain-v22'
 export const TERRAIN_RANDOM_VERSION = 'terrain-v7'
 interface DynamicsArtifact {
   readonly meshId: string
@@ -180,7 +182,7 @@ const terrainStage: GenerationStage<TerrainArtifact> = {
   id: 'terrain',
   version: TERRAIN_VERSION,
   dependencies: ['mesh', 'geology', 'tectonics', 'tectonic-elevation'],
-  configKeys: ['terrain.roughness', 'terrain.terrainWarp', 'terrain.smoothing', 'terrain.ridgeSharpening', 'landforms.islandDensity', 'planet.seaLevelDatumKm'],
+  configKeys: ['terrain.roughness', 'terrain.terrainWarp', 'terrain.smoothing', 'terrain.glacialErosion', 'terrain.hydraulicErosion', 'terrain.ridgeSharpening', 'landforms.islandDensity', 'planet.seaLevelDatumKm'],
   execute(context) {
     const mesh = copyDependency<SphericalMesh, AlgorithmMeshInput>(context, 'mesh', selectAlgorithmMeshInput)
     const geology = copyDependency<GeologyArtifact, Pick<GeologyArtifact, 'meshId' | 'candidateLandMask' | 'statistics'>>(context, 'geology', ({ meshId, candidateLandMask, statistics }) => ({ meshId, candidateLandMask, statistics }))
@@ -189,6 +191,8 @@ const terrainStage: GenerationStage<TerrainArtifact> = {
     const roughness = parameter(context, 'terrain.roughness', 0, 0.5)
     const warp = parameter(context, 'terrain.terrainWarp', 0, 1)
     const smoothing = parameter(context, 'terrain.smoothing', 0, 1)
+    const glacialErosion = parameter(context, 'terrain.glacialErosion', 0, 1)
+    const hydraulicErosion = parameter(context, 'terrain.hydraulicErosion', 0, 1)
     const sharpening = parameter(context, 'terrain.ridgeSharpening', 0, 1)
     const islandDensity = parameter(context, 'landforms.islandDensity', 0, 1)
     const datumInput = context.getConfig('planet.seaLevelDatumKm')
@@ -198,7 +202,7 @@ const terrainStage: GenerationStage<TerrainArtifact> = {
     const { fields } = skeleton
     // Keep the v7 terrain random pattern while moving only the relief unit boundary.
     const terrainRandom = stageRandom(context.worldSeed, context.stageId, TERRAIN_RANDOM_VERSION)
-    const terrain = new TerrainPostProcessor().generate(algorithmMesh(mesh), fields.elevation, geology.candidateLandMask, fields.spatialFields, fields.classification, terrainRandom, islandDensity, roughness, warp, smoothing, sharpening, tectonics.mantleElevationCoordinate, fields.phasorRidge, fields.edifices.hotspot, fields.edifices.total)
+    const terrain = new TerrainPostProcessor().generate(algorithmMesh(mesh), fields.elevation, geology.candidateLandMask, fields.spatialFields, fields.classification, terrainRandom, islandDensity, roughness, warp, smoothing, sharpening, tectonics.mantleElevationCoordinate, fields.phasorRidge, fields.edifices.hotspot, fields.edifices.total, undefined, false, glacialErosion, hydraulicErosion)
     const elevationKm = normalizedElevationArrayToKm(terrain.elevationCoordinate)
     for (let region = 0; region < elevationKm.length; region++)
       elevationKm[region] -= datum
@@ -258,8 +262,8 @@ const terrainStage: GenerationStage<TerrainArtifact> = {
       regionalUpliftCoordinate: new Float32Array(mesh.regionCount),
       regionalReliefKm: new Float32Array(mesh.regionCount),
       roughnessWeight: new Float32Array(mesh.regionCount).fill(1),
-      erosionCoordinate: new Float32Array(mesh.regionCount),
-      depositionCoordinate: new Float32Array(mesh.regionCount),
+      erosionCoordinate: terrain.erosion.erosionDelta,
+      depositionCoordinate: terrain.erosion.depositionDelta,
       foldBelt: Float32Array.from(fields.classification.foldBelt),
       statistics: { landCoverage: landArea / totalArea, candidateLandCoverage: geology.statistics.outputCandidateLandCoverage, changedCoastRegions, landComponentCount, largestLandAreaKm2, minimumElevationKm: ordered[0], maximumElevationKm: ordered[ordered.length - 1], elevationQuantilesKm: [0, 0.25, 0.5, 0.75, 1].map(q => ordered[Math.floor(q * (ordered.length - 1))]) },
     }
@@ -294,7 +298,7 @@ class TerrainPipeline extends GenerationPipeline<TerrainGenerationConfig> {
 export function assertNoObsoleteTerrainOptions(input: GenerationInput<TerrainGenerationConfig>): void {
   const terrain = input.config.terrain
   if (terrain && typeof terrain === 'object') {
-    for (const key of ['continentalUpliftKm', 'glacialErosion', 'hydraulicErosion']) {
+    for (const key of ['continentalUpliftKm']) {
       if (Object.hasOwn(terrain, key))
         throw new InvalidStageInputError('terrain', `terrain.${key} is no longer supported in M1.1`)
     }
