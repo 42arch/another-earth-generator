@@ -12,6 +12,12 @@ export function validateTerrainArtifact(value: TerrainArtifact, meshId = value.m
   }
   if (!(value.plateAngularVelocity instanceof Float32Array) || value.plateAngularVelocity.length !== plateCount * 3 || !value.plateAngularVelocity.every(Number.isFinite) || !Number.isInteger(plateCount) || plateCount < 2)
     throw new TypeError('Invalid terrain plate motion')
+  if (value.surfaceTexture) {
+    for (const [key, array] of Object.entries(value.surfaceTexture)) {
+      if (!(array instanceof Float32Array) || array.length !== regionCount || !array.every(Number.isFinite))
+        throw new TypeError(`Invalid terrain surface texture ${key}`)
+    }
+  }
   for (let r = 0; r < regionCount; r++) {
     if (value.landMask[r] !== (value.elevationKm[r] > 0 ? 1 : 0) || value.physicalRadiusKm + value.seaLevelDatumKm + value.elevationKm[r] <= 0 || value.slopeRadians[r] < 0 || value.slopeRadians[r] > Math.PI / 2 + 1e-7 || value.boundaryType[r] > 3 || value.stress[r] < 0 || Math.abs(value.mantleFlow[r]) > 1 + 1e-6 || value.roughnessWeight[r] < 0 || value.roughnessWeight[r] > 1 || value.regionalUpliftCoordinate[r] < 0 || value.erosionCoordinate[r] < 0 || value.depositionCoordinate[r] < 0 || value.foldBelt[r] < 0)
       throw new TypeError(`Invalid terrain region ${r}`)

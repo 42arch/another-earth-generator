@@ -79,6 +79,7 @@ export function makeClimateCoastFields(mesh: ClimateMesh, landMask: Uint8Array):
   const westCoastSeed = new Float32Array(count)
   const eastCoastFacing = new Float32Array(count)
   const ocean = new Uint8Array(count)
+  const oceanCoast = new Uint8Array(count)
   for (let region = 0; region < count; region++) {
     if (!landMask[region]) {
       ocean[region] = 1
@@ -94,6 +95,7 @@ export function makeClimateCoastFields(mesh: ClimateMesh, landMask: Uint8Array):
       const neighbor = mesh.neighbors[edge]
       if (!landMask[neighbor]) {
         coast[region] = 1
+        oceanCoast[neighbor] = 1
         const dx = mesh.regionPosition[3 * neighbor] - mesh.regionPosition[index]
         const dy = mesh.regionPosition[3 * neighbor + 1] - mesh.regionPosition[index + 1]
         const dz = mesh.regionPosition[3 * neighbor + 2] - mesh.regionPosition[index + 2]
@@ -112,6 +114,7 @@ export function makeClimateCoastFields(mesh: ClimateMesh, landMask: Uint8Array):
     }
   }
   const distance = graphDistance(mesh, landMask, coast)
+  const oceanDistance = graphDistance(mesh, ocean, oceanCoast)
   const westDistance = graphDistance(mesh, landMask, westCoast)
   const edgeKm = averageEdgeKm(count, mesh.physicalRadiusKm)
   const coastDistanceKm = new Float32Array(count)
@@ -121,8 +124,10 @@ export function makeClimateCoastFields(mesh: ClimateMesh, landMask: Uint8Array):
   const eastCoastStrength = new Float32Array(count)
   const oceanSeed = new Float32Array(count)
   for (let region = 0; region < count; region++) {
-    if (!landMask[region])
+    if (!landMask[region]) {
+      coastDistanceKm[region] = oceanDistance[region] < 0 ? Infinity : oceanDistance[region] * edgeKm
       continue
+    }
     const km = distance[region] < 0 ? Infinity : distance[region] * edgeKm
     coastDistanceKm[region] = km
     continentality[region] = smoothstep(0, 2200, km)
@@ -179,7 +184,7 @@ export function makeClimateCoastFields(mesh: ClimateMesh, landMask: Uint8Array):
 
   // Carry the eastern continental signal inland and over its coastal ocean.
   const next = new Float32Array(count)
-  const landRetention = Math.exp(-edgeKm / 850)
+  const landRetention = Math.exp(-edgeKm / 1100)
   for (let pass = 0; pass < 8; pass++) {
     for (let region = 0; region < count; region++) {
       if (!landMask[region])

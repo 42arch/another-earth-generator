@@ -2,6 +2,7 @@ import type { WorkerRequest, WorkerResponse } from './protocol'
 import { createSphericalMesh, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
 import { describe, expect, it, vi } from 'vitest'
 import { GenerationCancelledError, GenerationController } from './controller'
+import { GenerationWorkerRuntime } from '../../workers/runtime'
 
 class MockWorker extends EventTarget {
   sent: WorkerRequest[] = []
@@ -116,5 +117,46 @@ it.each(['geology', 'terrain', 'climate', 'hydrology'] as const)('rejects an inc
   worker.reply(complete(worker.sent[0].requestId))
   await expect(task).rejects.toThrow('missing requested generation data')
   expect(controller.state.status).toBe('failed')
+  controller.dispose()
+})
+
+it('commits a validated natural candidate and keeps the old world after a rejected successor', async () => {
+  const worker = new MockWorker()
+  let completed: Extract<WorkerResponse, { type: 'COMPLETED' }> | undefined
+  const runtime = new GenerationWorkerRuntime((message, transfer = []) => {
+    const received = structuredClone(message, { transfer })
+    if (received.type === 'COMPLETED')
+      completed = received
+    worker.reply(received)
+  })
+  const controller = new GenerationController(undefined, () => worker as unknown as Worker)
+  const config = {
+    ...input.config,
+    reference: { subdivisionLevel: 2 },
+    geology: DEFAULT_GEOLOGY_PARAMETERS,
+    landforms: DEFAULT_LANDFORM_PARAMETERS,
+    terrain: DEFAULT_TERRAIN_PARAMETERS,
+    climate: DEFAULT_CLIMATE_PARAMETERS,
+    hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
+    ecology: true as const,
+  }
+  const publication = { snapshotId: 'snapshot:controller-world', worldId: 'world:controller-world', name: 'Controller World', createdAt: '2026-11-12T00:00:00Z' }
+  const first = controller.generate({ seed: input.seed, config, publication })
+  await runtime.handle(worker.sent[0])
+  const candidate = await first
+  expect(candidate.candidateWorld?.snapshotId).toBe(publication.snapshotId)
+  expect(controller.publishedWorld).toBeNull()
+  controller.commitWorld(publication.snapshotId)
+  const oldRegion = controller.queryWorldRegion(0)
+  expect(oldRegion.snapshotId).toBe(publication.snapshotId)
+  expect(controller.exportWorldArchive()).toContain('another-earth-m0-json')
+
+  const next = controller.generate({ seed: input.seed, config, publication: { ...publication, snapshotId: 'snapshot:invalid-successor', revision: 1 } })
+  const invalid = structuredClone(completed!)
+  invalid.world!.nature.hydrology.basinIndex.values[0] = 999
+  worker.reply({ ...invalid, requestId: worker.sent[1].requestId, world: { ...invalid.world!, snapshotId: 'snapshot:invalid-successor' } })
+  await expect(next).rejects.toThrow('Invalid world snapshot')
+  expect(controller.publishedWorld?.snapshotId).toBe(publication.snapshotId)
+  expect(controller.queryWorldRegion(0)).toEqual(oldRegion)
   controller.dispose()
 })

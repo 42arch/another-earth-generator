@@ -4,7 +4,7 @@ import type { MonthlyForcing } from './monthly-forcing'
 import type { MonthlySpatialFields } from './monthly-spatial-fields'
 import { clamp, gaussian, smoothstep } from '#math/math'
 import { DEG, smoothMasked } from './climate-geometry'
-import { itczAtLongitude } from './monthly-forcing'
+import { itczAtLongitude, regionalItczLatitude } from './monthly-forcing'
 
 export interface MonthlyWind {
   east: Float32Array
@@ -15,8 +15,10 @@ export interface MonthlyWind {
 }
 
 const FLAT_MOISTURE_DECAY_KM = 20000
+const MOISTURE_TRANSPORT_REACH_KM = 3400
+const RELIEF_MOISTURE_DECAY_PER_KM = 0.55
 
-export function makeMonthlyWind(mesh: ClimateMesh, forcing: MonthlyForcing): MonthlyWind {
+export function makeMonthlyWind(mesh: ClimateMesh, surface: ClimateSurfaceData, spatial: MonthlySpatialFields, forcing: MonthlyForcing): MonthlyWind {
   const count = mesh.numRegions
   const east = new Float32Array(count)
   const north = new Float32Array(count)
@@ -27,11 +29,16 @@ export function makeMonthlyWind(mesh: ClimateMesh, forcing: MonthlyForcing): Mon
     const latitude = mesh.regionLatitude[region]
     const longitude = mesh.regionLongitude[region]
     const absLatitude = Math.abs(latitude / DEG)
-    const itcz = itczAtLongitude(forcing.itczLatitude, longitude)
+    const itcz = regionalItczLatitude(
+      itczAtLongitude(forcing.itczLatitude, longitude),
+      forcing.maritimeItczLatitude,
+      surface.landMask[region] ? 0 : spatial.coastDistanceKm[region],
+    )
     const localSolar = forcing.solarDeclination * Math.tanh(latitude / (10 * DEG))
     const summerFraction = smoothstep(-10 * DEG, 10 * DEG, localSolar)
     // Trades and westerlies move poleward in local summer and equatorward in winter.
-    const tradeEdge = 24 + 10 * summerFraction
+    const maritime = surface.landMask[region] ? 0 : smoothstep(0, 550, spatial.coastDistanceKm[region])
+    const tradeEdge = 24 + (10 - 6 * maritime) * summerFraction
     let zonal: number
     if (absLatitude < tradeEdge)
       zonal = -0.9
@@ -101,11 +108,13 @@ function advectMoisture(
   temperatureC: Float32Array,
   wind: MonthlyWind,
   convergence: Float32Array,
+  landWaterAvailability?: Float32Array,
 ): Float32Array {
   const count = mesh.numRegions
   let source = new Float32Array(count)
   let target = new Float32Array(count)
   const flatRetention = new Float32Array(count)
+  const edgeRetention = new Float32Array(mesh.neighbors.length)
   for (let region = 0; region < count; region++) {
     const warmth = forcing.oceanWarmth[region]
     if (surface.landMask[region]) {
@@ -113,29 +122,49 @@ function advectMoisture(
       const latitude = mesh.regionLatitude[region]
       const absLatitude = Math.abs(latitude / DEG)
       const itcz = itczAtLongitude(forcing.itczLatitude, mesh.regionLongitude[region])
+      const dryBelt = gaussian(absLatitude - 28, 13)
       const frontalAscent = gaussian(absLatitude - 50, 13)
       const convectiveAscent = gaussian(Math.abs(latitude - itcz) / DEG, 11)
-      // Geographic and seasonal evaporation potential replaces stored soil water.
+      // Geography and season set the potential; the annual climate limits the supply.
       const landEvaporationPotential = clamp(
         0.6 - 0.4 * spatial.continentality[region]
-        - 0.25 * gaussian(absLatitude - 28, 13) + 0.2 * convectiveAscent,
-        0.1,
+        - 0.25 * dryBelt + 0.2 * convectiveAscent,
+        0,
         0.8,
       )
-      const thawedSupply = 0.12 + 0.88 * smoothstep(-12, 10, temperature)
-      const evapSupply = 0.05 + 0.13 * Math.sqrt(landEvaporationPotential)
-      source[region] = evapSupply * thawedSupply
+      const thawedSupply = smoothstep(-12, 10, temperature)
+      // Suppress local recycling in the driest continental interiors.
+      const dryInterior = dryBelt * spatial.continentality[region]
+        * (1 - smoothstep(0, 0.35, landEvaporationPotential))
+      const evapSupply = (0.05 + 0.13 * Math.sqrt(landEvaporationPotential))
+        * smoothstep(0, 0.1, landEvaporationPotential) * (1 - dryInterior)
+      const potentialSupply = evapSupply * thawedSupply
         + 0.02 * smoothstep(0, 30, temperature) * (1 - spatial.continentality[region])
-      // Warm, dry subtropical interiors entrain dry air along the flow.
-      const drySubtropicalInterior = gaussian(absLatitude - 28, 13)
-        * (1 - landEvaporationPotential) * spatial.continentality[region]
+      source[region] = potentialSupply * (landWaterAvailability?.[region] ?? 1)
+      // Warm subtropical land entrains dry air as moisture travels over it.
+      const drySubtropicalLand = dryBelt * (1 - landEvaporationPotential)
         * smoothstep(8, 25, temperature)
-      // Cold continental air loses imported moisture much sooner than warm air.
-      const coldInterior = (1 - smoothstep(-8, 10, temperature)) * spatial.continentality[region]
-      const decayKm = FLAT_MOISTURE_DECAY_KM / (1 + 9 * coldInterior + 2 * drySubtropicalInterior)
+      const coldLand = 1 - smoothstep(-8, 10, temperature)
+      // Dry-air mixing acts during travel. Weak winds spend longer crossing the same
+      // distance, while the nominal background flow (speed 1) keeps the reference decay.
+      const transportSpeed = Math.min(1, Math.hypot(wind.east[region], wind.north[region]))
+      const landDecayPerKm = drySubtropicalLand / MOISTURE_TRANSPORT_REACH_KM
+        + 9 * coldLand / FLAT_MOISTURE_DECAY_KM
+      const landRetention = landDecayPerKm > 0 ? Math.exp(-spatial.edgeKm * landDecayPerKm / transportSpeed) : 1
       const rainout = 0.08 * convectiveAscent + 0.04 * frontalAscent
         + 0.05 * smoothstep(0, 0.7, convergence[region])
-      flatRetention[region] = Math.exp(-spatial.edgeKm / decayKm - rainout * spatial.edgeKm / 2500)
+      flatRetention[region] = Math.exp(-spatial.edgeKm * (1 / FLAT_MOISTURE_DECAY_KM + rainout / 2500))
+      const elevation = Math.max(0, surface.elevationKm[region])
+      for (let edge = mesh.neighborOffsets[region]; edge < mesh.neighborOffsets[region + 1]; edge++) {
+        const upstream = mesh.neighbors[edge]
+        const overLand = surface.landMask[upstream] === 1
+        const descent = overLand ? Math.max(0, surface.elevationKm[upstream] - elevation) : 0
+        // Descending air warms on the lee side. Reduce its effective moisture
+        // supply along the warm, dry path before mixing it with other inflow.
+        edgeRetention[edge] = overLand
+          ? landRetention * Math.exp(-RELIEF_MOISTURE_DECAY_PER_KM * descent * drySubtropicalLand)
+          : 1
+      }
     }
     else {
       source[region] = clamp(
@@ -146,7 +175,7 @@ function advectMoisture(
     }
   }
   const localSupply = new Float32Array(source)
-  const hops = clamp(Math.round(3400 / spatial.edgeKm), 8, 24)
+  const hops = clamp(Math.round(MOISTURE_TRANSPORT_REACH_KM / spatial.edgeKm), 8, 24)
   const neighborDx = mesh.neighborDx
   const neighborDy = mesh.neighborDy
   const neighborDz = mesh.neighborDz
@@ -167,13 +196,13 @@ function advectMoisture(
         const alignment = wind.x[neighbor] * dx + wind.y[neighbor] * dy + wind.z[neighbor] * dz
         if (alignment <= 0)
           continue
-        incoming += source[neighbor] * alignment
+        incoming += source[neighbor] * alignment * edgeRetention[edge]
         sourceHeight += Math.max(0, surface.elevationKm[neighbor]) * alignment
         weight += alignment
       }
       if (weight > 0) {
         const rise = Math.max(0, surface.elevationKm[region] - sourceHeight / weight)
-        const carried = incoming / weight * flatRetention[region] * Math.exp(-0.55 * rise)
+        const carried = incoming / weight * flatRetention[region] * Math.exp(-RELIEF_MOISTURE_DECAY_PER_KM * rise)
         target[region] = Math.max(localSupply[region], carried)
       }
       else {
@@ -195,32 +224,45 @@ export function computeMonthlyPrecipitation(
   forcing: MonthlyForcing,
   temperatureC: Float32Array,
   precipitationScale = 1,
+  landWaterAvailability?: Float32Array,
 ): Float32Array {
   const count = mesh.numRegions
-  const wind = makeMonthlyWind(mesh, forcing)
+  const wind = makeMonthlyWind(mesh, surface, spatial, forcing)
   const convergence = windConvergence(mesh, wind, spatial.edgeKm)
-  const moisture = advectMoisture(mesh, surface, spatial, forcing, temperatureC, wind, convergence)
+  const moisture = advectMoisture(mesh, surface, spatial, forcing, temperatureC, wind, convergence, landWaterAvailability)
   const precipitationMm = new Float32Array(count)
   for (let region = 0; region < count; region++) {
     const latitude = mesh.regionLatitude[region]
     const longitude = mesh.regionLongitude[region]
+    const land = surface.landMask[region] === 1
     const absLatitude = Math.abs(latitude / DEG)
-    const itcz = itczAtLongitude(forcing.itczLatitude, longitude)
+    const itcz = regionalItczLatitude(
+      itczAtLongitude(forcing.itczLatitude, longitude),
+      forcing.maritimeItczLatitude,
+      land ? 0 : spatial.coastDistanceKm[region],
+    )
     const itczDistance = Math.abs(latitude - itcz) / DEG
     const humidity = moisture[region]
     const localSolar = forcing.solarDeclination * Math.tanh(latitude / (10 * DEG))
     const summerFraction = smoothstep(-10 * DEG, 10 * DEG, localSolar)
-    const frontalStrength = gaussian(absLatitude - (44 + 12 * summerFraction), 13)
+    const subtropicalCenter = 25 + (land ? 12 : 4) * summerFraction
+    const subtropicalHigh = gaussian(absLatitude - subtropicalCenter, 10)
+    const westCoast = land ? spatial.westCoastInfluence[region] : 0
+    // Confine the Mediterranean seasonal contrast to coasts with clear western exposure.
+    const exposedWestCoast = smoothstep(0.25, 0.8, westCoast)
+    // Subtropical subsidence limits summer fronts without removing them entirely.
+    const frontalStrength = gaussian(absLatitude - (44 + 8 * summerFraction), 15)
+      * (1 - 0.5 * summerFraction * subtropicalHigh * exposedWestCoast)
     const itczStrength = gaussian(itczDistance, 11)
     const convergenceStrength = smoothstep(0, 0.7, convergence[region])
-    let rate = humidity * (1.3 + 5.2 * itczStrength + 1.6 * frontalStrength + 1.4 * convergenceStrength)
+    // Move rainfall from the overactive tropical ocean belt toward the
+    // underfed midlatitude storm tracks in the 1991–2020 GPCP comparison.
+    let rate = humidity * (1.3 + (land ? 5.2 : 3.5) * itczStrength + 3.8 * frontalStrength + 1.4 * convergenceStrength)
 
-    const subtropicalCenter = 25 + 12 * summerFraction
-    const subtropicalHigh = gaussian(absLatitude - subtropicalCenter, 10)
     rate *= 1 - 0.62 * subtropicalHigh
     rate *= 1 - 0.22 * smoothstep(0, 12, forcing.pressureHpa[region] - 1013)
 
-    if (surface.landMask[region]) {
+    if (land) {
       const slope = wind.east[region] * spatial.elevationGradientEast[region]
         + wind.north[region] * spatial.elevationGradientNorth[region]
       if (slope > 0)
@@ -236,25 +278,26 @@ export function computeMonthlyPrecipitation(
         rate += humidity * 1.5 * monsoon
       }
       rate *= 1 - 0.2 * spatial.continentality[region] ** 2
-      rate += 0.25 * frontalStrength * (0.2 + humidity)
+      rate += 0.25 * frontalStrength * humidity
       // Winter westerlies bring ocean moisture and frontal storms onto west coasts.
-      const westCoast = spatial.westCoastInfluence[region]
       const winterOnshore = smoothstep(-0.1, 0.35, wind.east[region])
       rate += humidity * 0.65 * (1 - summerFraction)
-        * gaussian(absLatitude - 38, 11) * westCoast * winterOnshore
+        * gaussian(absLatitude - 38, 11) * exposedWestCoast * winterOnshore
       // Summer subtropical subsidence also suppresses orographic and local rain.
-      rate *= 1 - 0.3 * summerFraction * subtropicalHigh * westCoast
+      rate *= 1 - 0.3 * summerFraction * subtropicalHigh * exposedWestCoast
 
       // Eastern continental shores reverse from a dry winter outflow to an
       // onshore summer monsoon, including latitudes beyond the ITCZ rain belt.
       const monsoonEast = forcing.monsoonEast[region]
       const summerOnshore = Math.max(0, -monsoonEast) * summerFraction
         * smoothstep(0.05, 0.45, -wind.east[region])
-      rate += humidity * 3.2 * summerOnshore
+      const summerOnshoreGain = 3.2 + spatial.eastMonsoonExposure[region] ** 2
+      rate += humidity * summerOnshoreGain * summerOnshore
       const winterOutflow = Math.max(0, monsoonEast) * (1 - summerFraction)
         * (1 - smoothstep(0, 12, temperatureC[region]))
         * (1 - westCoast)
-      rate *= 1 - 0.82 * winterOutflow
+      const winterOutflowDrying = 0.82 + 0.16 * spatial.eastMonsoonExposure[region] ** 2
+      rate *= 1 - winterOutflowDrying * winterOutflow
     }
     precipitationMm[region] = clamp(rate * precipitationScale, 0, 18) * forcing.days
   }

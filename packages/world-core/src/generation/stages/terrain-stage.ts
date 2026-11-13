@@ -4,8 +4,12 @@ import type { ElevationFields, GeologyArtifact, SphericalCrustData, SphericalTec
 import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { CrustArtifact, GeologyGenerationConfig, PlateTopologyArtifact } from './geology-stage'
+import { loadBuiltinGenerationCatalog } from '@another-earth/world-data'
 import { algorithmMesh, selectAlgorithmMeshInput } from '#generation/nature/common'
 import { normalizedElevationArrayToKm, TerrainPostProcessor, validateTerrainArtifact } from '#generation/nature/geography'
+import { generateGeographicRegions } from '#generation/nature/geography/geographic-regions'
+import type { GeographicRegionsArtifact } from '#generation/nature/geography/geographic-regions'
+import { GEOGRAPHIC_NAMES_VERSION, nameGeographicRegions } from '#generation/nature/geography/geographic-names'
 import { PlatePhysicsProcessor, SphericalPlateBoundaryAnalyzer, SuperPlateGenerator, TectonicElevationGenerator } from '#generation/nature/geology'
 import { GenerationPipeline, StageCache } from '#generation/pipeline'
 import { copyDependency } from '#generation/pipeline/copy-dependency'
@@ -34,9 +38,9 @@ export interface TerrainGenerationConfig extends GeologyGenerationConfig {
 export const DEFAULT_LANDFORM_PARAMETERS: LandformParameters = Object.freeze({ islandArcCount: 6, islandDensity: 0.65, hotspotCount: 5 })
 export const DEFAULT_TERRAIN_PARAMETERS: Readonly<Required<TerrainParameters>> = Object.freeze({ roughness: 0.4, terrainWarp: 0.75, smoothing: 0.1, glacialErosion: 0.5, hydraulicErosion: 0.5, ridgeSharpening: 0.5 })
 const VERSION = 'terrain-v2'
-const SKELETON_VERSION = 'terrain-skeleton-v9'
+const SKELETON_VERSION = 'terrain-skeleton-v10'
 const SKELETON_RANDOM_VERSION = 'terrain-skeleton-v5'
-const TERRAIN_VERSION = 'terrain-v24'
+const TERRAIN_VERSION = 'terrain-v26'
 export const TERRAIN_RANDOM_VERSION = 'terrain-v7'
 interface DynamicsArtifact {
   readonly meshId: string
@@ -202,7 +206,7 @@ const terrainStage: GenerationStage<TerrainArtifact> = {
     const { fields } = skeleton
     // Keep the v7 terrain random pattern while moving only the relief unit boundary.
     const terrainRandom = stageRandom(context.worldSeed, context.stageId, TERRAIN_RANDOM_VERSION)
-    const terrain = new TerrainPostProcessor().generate(algorithmMesh(mesh), fields.elevation, geology.candidateLandMask, fields.spatialFields, fields.classification, terrainRandom, islandDensity, roughness, warp, smoothing, sharpening, tectonics.mantleElevationCoordinate, fields.phasorRidge, fields.edifices.hotspot, fields.edifices.total, undefined, false, glacialErosion, hydraulicErosion)
+    const terrain = new TerrainPostProcessor().generate(algorithmMesh(mesh), fields.elevation, geology.candidateLandMask, fields.spatialFields, fields.classification, terrainRandom, islandDensity, roughness, warp, smoothing, sharpening, tectonics.mantleElevationCoordinate, fields.phasorRidge, fields.edifices.hotspot, fields.edifices.total, undefined, true, glacialErosion, hydraulicErosion)
     const elevationKm = normalizedElevationArrayToKm(terrain.elevationCoordinate)
     for (let region = 0; region < elevationKm.length; region++)
       elevationKm[region] -= datum
@@ -265,15 +269,67 @@ const terrainStage: GenerationStage<TerrainArtifact> = {
       erosionCoordinate: terrain.erosion.erosionDelta,
       depositionCoordinate: terrain.erosion.depositionDelta,
       foldBelt: Float32Array.from(fields.classification.foldBelt),
+      surfaceTexture: terrain.texture
+        ? {
+            tectonicBand: terrain.texture.tectonicBand,
+            detail: terrain.texture.detail,
+            coastal: terrain.texture.coastal,
+            uniformLand: terrain.texture.uniformLand,
+            postDetail: terrain.texture.postDetail,
+          }
+        : undefined,
       statistics: { landCoverage: landArea / totalArea, candidateLandCoverage: geology.statistics.outputCandidateLandCoverage, changedCoastRegions, landComponentCount, largestLandAreaKm2, minimumElevationKm: ordered[0], maximumElevationKm: ordered[ordered.length - 1], elevationQuantilesKm: [0, 0.25, 0.5, 0.75, 1].map(q => ordered[Math.floor(q * (ordered.length - 1))]) },
     }
   },
   validate: validateTerrainArtifact,
 }
 
+const geographicRegionsStage: GenerationStage<GeographicRegionsArtifact> = {
+  id: 'geographic-regions',
+  version: 'geographic-regions-v3',
+  dependencies: ['mesh', 'geology', 'terrain'],
+  configKeys: [],
+  execute(context) {
+    const mesh = copyDependency<SphericalMesh, AlgorithmMeshInput>(context, 'mesh', selectAlgorithmMeshInput)
+    const geology = copyDependency<GeologyArtifact, Pick<GeologyArtifact, 'meshId' | 'continents' | 'nearestContinentIndex'>>(context, 'geology', ({ meshId, continents, nearestContinentIndex }) => ({ meshId, continents, nearestContinentIndex }))
+    const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'landMask'>>(context, 'terrain', ({ meshId, landMask }) => ({ meshId, landMask }))
+    if (terrain.meshId !== mesh.meshId) throw new Error('Terrain mesh mismatch')
+    return generateGeographicRegions(mesh, terrain.landMask, geology, context.throwIfCancelled)
+  },
+  validate(output) {
+    if (!(output.continentIndex instanceof Int32Array) || !(output.oceanIndex instanceof Int32Array) || !(output.seaIndex instanceof Int32Array) || output.continentIndex.length !== output.oceanIndex.length || output.oceanIndex.length !== output.seaIndex.length)
+      throw new Error('Invalid geographic regions artifact')
+  },
+}
+
+const geographicNameCatalog = loadBuiltinGenerationCatalog()
+const geographicNamePacks = geographicNameCatalog.packs.flatMap(pack => pack.names)
+const continentNamePool = geographicNamePacks.find(pool => pool.id === 'geography-zh:names/continent')
+const oceanNamePool = geographicNamePacks.find(pool => pool.id === 'geography-zh:names/ocean')
+if (!continentNamePool || !oceanNamePool) throw new Error('Built-in geographic name pools are missing')
+
+const geographicNamesStage: GenerationStage<GeographicRegionsArtifact> = {
+  id: 'geographic-names',
+  version: `${GEOGRAPHIC_NAMES_VERSION}:${geographicNameCatalog.contentSignature}`,
+  dependencies: ['geographic-regions'],
+  configKeys: [],
+  contentKeys: ['geographic-names'],
+  execute(context) {
+    const signature = context.getContentSignature('geographic-names')
+    if (signature !== undefined && signature !== geographicNameCatalog.contentSignature)
+      throw new Error('Geographic naming content signature mismatch')
+    const regions = copyDependency<GeographicRegionsArtifact>(context, 'geographic-regions')
+    return nameGeographicRegions(regions, context.worldSeed, { continent: continentNamePool, ocean: oceanNamePool }, geographicNameCatalog.contentSignature)
+  },
+  validate(output) {
+    if (!output.nameContentSignature || output.continents.some(region => !region.name) || output.oceans.some(region => !region.name))
+      throw new Error('Geographic name is missing')
+  },
+}
+
 export function createTerrainPipeline(cache = new StageCache()): GenerationPipeline<TerrainGenerationConfig> {
   const registry = createGeologyPipeline(cache).registry
-  registry.register(dynamicsStage).register(tectonicStage).register(skeletonStage).register(terrainStage)
+  registry.register(dynamicsStage).register(tectonicStage).register(skeletonStage).register(terrainStage).register(geographicRegionsStage).register(geographicNamesStage)
   return new TerrainPipeline(registry, cache)
 }
 

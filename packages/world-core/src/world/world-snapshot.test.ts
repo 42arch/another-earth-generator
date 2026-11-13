@@ -33,8 +33,18 @@ function snapshot(civilized = false): WorldSnapshot {
       generatorVersion: 'test-1',
       contentSignature: calculateContentSignature([pack]),
       contentPacks: [pack.manifest],
-      generationConfig: { planet, mesh: { subdivisionLevel: 0, irregularity: 0 }, regionCount: 4, civilizationEnabled: civilized },
-      provenance: { stageVersions: { mesh: '1' }, artifactSignatures: { mesh: 'mesh:test' }, configSignature: 'config:test' },
+      generationConfig: {
+        planet,
+        mesh: { subdivisionLevel: 0, irregularity: 0 },
+        regionCount: 4,
+        civilizationEnabled: civilized,
+        geology: { primaryPlateCount: 1, microPlateCount: 0, plateSizeVariety: 0, continentCount: 0, continentSizeVariety: 0, candidateLandCoverage: 0 },
+        landforms: { islandArcCount: 0, islandDensity: 0, hotspotCount: 0 },
+        terrain: { roughness: 0, terrainWarp: 0, smoothing: 0, glacialErosion: 0, hydraulicErosion: 0, ridgeSharpening: 0 },
+        climate: { rotationPeriodHours: 24, axialTiltDegrees: 23.4, orbitalPeriodDays: 365, temperatureOffsetC: 0, precipitationScale: 0 },
+        hydrology: { snowTemperatureMinC: -2, snowTemperatureMaxC: 2, degreeDayMeltFactorMmPerCMonth: 3, evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 5000, riverDensityMultiplier: 1, minimumLakeAreaKm2: 0 },
+      },
+      provenance: { stageVersions: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, '1'])), artifactSignatures: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, 'sig:test'])), configSignature: 'config:test' },
     },
     planet,
     mesh: {
@@ -48,9 +58,9 @@ function snapshot(civilized = false): WorldSnapshot {
     nature: {
       geology: { plates: [{ id: 'plate:test' }], plateIndex: field(new Uint32Array(4)), crustType: field(new Uint8Array(4)) },
       geography: { elevationKm: field(new Float32Array(4)), landMask: field(new Uint8Array(4)) },
-      climate: { monthsPerYear: 12, layout: 'month-major', temperatureC: field(new Float32Array(48)), precipitationMm: field(new Float32Array(48)) },
-      hydrology: { downstreamRegion: field(new Int32Array(4).fill(-1)), annualRunoffMm: field(new Float32Array(4)) },
-      ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: field(new Uint16Array(4)), landCoverIndex: field(new Uint16Array(4)) },
+      climate: { monthsPerYear: 12, layout: 'month-major', temperatureC: field(new Float32Array(48)), precipitationMm: field(new Float32Array(48)), annualMeanTemperatureC: field(new Float32Array(4)), annualPrecipitationMm: field(new Float32Array(4)), koppenClass: field(new Uint8Array(4)) },
+      hydrology: { monthlySnowWaterEquivalentMm: field(new Float32Array(48)), monthlySnowfallMm: field(new Float32Array(48)), monthlySnowmeltMm: field(new Float32Array(48)), downstreamRegion: field(new Int32Array(4).fill(-1)), annualRunoffMm: field(new Float32Array(4)), annualRunoffVolumeM3: field(new Float64Array(4)), accumulatedAnnualFlowM3s: field(new Float64Array(4)), contributingAreaKm2: field(new Float64Array(4)), basinIndex: field(new Int32Array(4).fill(-1)), basins: [], riverIndex: field(new Int32Array(4).fill(-1)), rivers: [], lakeIndex: field(new Int32Array(4).fill(-1)), lakes: [] },
+      ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: field(new Uint16Array(4)), landCoverIndex: field(new Uint16Array(4)), aridityIndex: field(new Float32Array(4)), growingSeasonMonths: field(new Uint8Array(4)) },
     },
     civilization: {
       meshId: 'mesh:test',
@@ -77,7 +87,7 @@ describe('worldSnapshot public contract', () => {
     const s = snapshot()
     expect(validate({ ...s, planet: { ...s.planet, physicalRadiusKm: -1 } }).valid).toBe(false)
     // @ts-expect-error unsupported schema is also forbidden by the public type
-    expect(validate({ ...s, schemaVersion: 3 }).valid).toBe(false)
+    expect(validate({ ...s, schemaVersion: 2 }).valid).toBe(false)
   })
   it('rejects unresolved world entities and content versions', () => {
     const s = snapshot(true)
@@ -122,6 +132,15 @@ describe('worldSnapshot public contract', () => {
   it('rejects missing required metadata', () => {
     const s = snapshot()
     expect(validate({ ...s, metadata: { ...s.metadata, seed: '', createdAt: 'yesterday' } }).valid).toBe(false)
+  })
+  it('requires complete natural provenance and parameters in Schema 3', () => {
+    const s = snapshot()
+    const missingHydrology = { ...s.metadata.generationConfig.hydrology }
+    delete (missingHydrology as Partial<typeof missingHydrology>).minimumRiverDrainageAreaKm2
+    expect(validate({ ...s, metadata: { ...s.metadata, generationConfig: { ...s.metadata.generationConfig, hydrology: missingHydrology } } }).valid).toBe(false)
+    expect(validate({ ...s, metadata: { ...s.metadata, provenance: { ...s.metadata.provenance, stageVersions: { mesh: '1' } } } }).valid).toBe(false)
+    s.nature.hydrology.basinIndex.values[0] = -2
+    expect(validate(s).issues.some(issue => issue.path === 'hydrology.basinIndex[0]')).toBe(true)
   })
   it('round trips a complete world and rejects corruption or missing content', () => {
     const original = snapshot(true)

@@ -1,6 +1,7 @@
 import type { ContentPack } from '@another-earth/world-data'
 import type { NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
+import { DEFAULT_HYDROLOGY_PARAMETERS } from '#generation/nature/hydrology/hydrology'
 import { validateWorldSnapshot } from './world-validator'
 
 const ARRAY_TYPES = {
@@ -26,6 +27,33 @@ function assertValid(snapshot: WorldSnapshot, packs: readonly ContentPack[]): vo
   const result = validateWorldSnapshot(snapshot, packs)
   if (!result.valid)
     throw new Error(`Invalid world snapshot: ${result.issues[0]?.path}: ${result.issues[0]?.message}`)
+}
+
+function applyHydrologyConfigDefaults(snapshot: WorldSnapshot): WorldSnapshot {
+  const metadata = snapshot?.metadata as WorldSnapshot['metadata'] | undefined
+  const generationConfig = metadata?.generationConfig
+  const hydrology = generationConfig?.hydrology as (WorldSnapshot['metadata']['generationConfig']['hydrology'] & Record<string, unknown>) | undefined
+  if (!metadata || !generationConfig || !hydrology)
+    return snapshot
+
+  const additions: Record<string, number> = {}
+  if (!Object.hasOwn(hydrology, 'riverDensityMultiplier'))
+    additions.riverDensityMultiplier = DEFAULT_HYDROLOGY_PARAMETERS.riverDensityMultiplier
+  if (!Object.hasOwn(hydrology, 'minimumLakeAreaKm2'))
+    additions.minimumLakeAreaKm2 = DEFAULT_HYDROLOGY_PARAMETERS.minimumLakeAreaKm2
+  if (!Object.keys(additions).length)
+    return snapshot
+
+  return {
+    ...snapshot,
+    metadata: {
+      ...metadata,
+      generationConfig: {
+        ...generationConfig,
+        hydrology: { ...hydrology, ...additions },
+      },
+    },
+  }
 }
 
 /** M0 JSON round trip. The format is versioned and checked, but is not the M4 binary .aearth format. */
@@ -61,8 +89,9 @@ export function decodeWorldArchive(archive: string, packs: readonly ContentPack[
         throw new Error('Invalid typed array')
       return new ArrayConstructor(marker.values)
     }) as WorldSnapshot
-    assertValid(snapshot, packs)
-    return snapshot
+    const migratedSnapshot = applyHydrologyConfigDefaults(snapshot)
+    assertValid(migratedSnapshot, packs)
+    return migratedSnapshot
   }
   catch (error) {
     throw new Error('Cannot decode world archive', { cause: error })

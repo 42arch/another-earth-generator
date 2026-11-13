@@ -4,7 +4,7 @@ import type { MeshTopology } from '#mesh/mesh-types'
 import type { PlanetParameters } from './planet-parameters'
 import type { WorldMetadata } from './world-metadata'
 
-export const WORLD_SCHEMA_VERSION = 2 as const
+export const WORLD_SCHEMA_VERSION = 3 as const
 /** Complete owned state, never a stage artifact or UI view. See docs/WORLD_DATA_CONTRACTS.md. */
 export interface WorldSnapshot {
   readonly schemaVersion: typeof WORLD_SCHEMA_VERSION

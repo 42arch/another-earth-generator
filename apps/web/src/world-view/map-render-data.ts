@@ -1,7 +1,8 @@
 import type { SphericalMesh } from '@another-earth/world-core'
+import type { MapOverlayGeometry } from './map-overlay-data'
 
-export type DebugMode = 'icosphere' | 'voronoi'
-export interface DebugStats {
+export type MeshViewMode = 'icosphere' | 'voronoi'
+export interface ViewStats {
   level: number
   irregularity: number
   seed: string
@@ -21,13 +22,20 @@ export interface DebugStats {
   hydrateMs: number
   postMessageMs: number
 }
-export interface DebugGeometry {
+export interface RenderGeometry {
   positions: Float32Array
   colors: Float32Array
   lines: Float32Array
   fiveNeighborCenters: Float32Array
+  /** Per-vertex land classification, present only for the satellite surface shader. */
+  satelliteLandMask?: Uint8Array
+  climateVectorPositions?: Float32Array
+  climateVectorColors?: Float32Array
+  climateVectorKind?: 'wind' | 'ocean-current'
+  waterPositions?: Float32Array
+  waterIndices?: Uint32Array
 }
-export interface DebugSelection {
+export interface RegionSelection {
   region: number
   neighbors: number[]
   areaKm2: number
@@ -36,11 +44,12 @@ export interface DebugSelection {
   centers: Float32Array
 }
 /** Display-only conversion. Never changes the core-owned topology or transfers its buffers. */
-export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode, regionColor?: (region: number) => readonly [number, number, number]): DebugGeometry {
+export function prepareRenderGeometry(mesh: SphericalMesh, mode: MeshViewMode, regionColor?: (region: number) => readonly [number, number, number], landMask?: Uint8Array, overlays: MapOverlayGeometry = {}): RenderGeometry {
   const corners = mesh.boundaryCorners
   const vertexCount = mode === 'icosphere' ? mesh.triangles.length : corners.length * 3
   const positions = new Float32Array(vertexCount * 3)
   const colors = new Float32Array(vertexCount * 3)
+  const satelliteLandMask = landMask ? new Uint8Array(vertexCount) : undefined
   const lines = new Float32Array(mesh.edgeRegions.length * 3)
   let fiveNeighborRegions = 0
   for (let r = 0; r < mesh.regionCount; r++) {
@@ -55,6 +64,8 @@ export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode, regio
     }
   }
   const color = (r: number, offset: number) => {
+    if (satelliteLandMask && landMask)
+      satelliteLandMask[offset / 3] = landMask[r]
     if (regionColor) {
       colors.set(regionColor(r), offset)
       return
@@ -111,10 +122,10 @@ export function prepareDebugGeometry(mesh: SphericalMesh, mode: DebugMode, regio
   for (let i = 0; i < edges.length; i++) {
     for (let axis = 0; axis < 3; axis++) lines[i * 3 + axis] = source[edges[i] * 3 + axis] * 1.0005
   }
-  return { positions, colors, lines, fiveNeighborCenters }
+  return { positions, colors, lines, fiveNeighborCenters, satelliteLandMask, ...overlays }
 }
 
-export function prepareDebugSelection(mesh: SphericalMesh, region: number): DebugSelection {
+export function prepareRegionSelection(mesh: SphericalMesh, region: number): RegionSelection {
   const start = mesh.neighborOffsets[region]
   const end = mesh.neighborOffsets[region + 1]
   const neighbors = Array.from(mesh.neighbors.subarray(start, end))

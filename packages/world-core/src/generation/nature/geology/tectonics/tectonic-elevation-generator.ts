@@ -27,9 +27,9 @@ export interface ElevationFields {
 }
 
 const LAND_INTERIOR_WIDTH = referenceCellsToAngle(6)
-const PASSIVE_SHELF_WIDTH = referenceCellsToAngle(5)
-const ACTIVE_SHELF_WIDTH = referenceCellsToAngle(2)
-const CONTINENTAL_SLOPE_WIDTH = referenceCellsToAngle(3.5)
+const PASSIVE_SHELF_WIDTH = referenceCellsToAngle(1)
+const ACTIVE_SHELF_WIDTH = referenceCellsToAngle(0.5)
+const CONTINENTAL_SLOPE_WIDTH = referenceCellsToAngle(1.2)
 const RIFT_HALF_WIDTH = referenceCellsToAngle(1.6)
 const FORELAND_CENTER = referenceCellsToAngle(3.5)
 const FORELAND_WIDTH = referenceCellsToAngle(1.8)
@@ -38,9 +38,9 @@ const BACK_ARC_WIDTH = referenceCellsToAngle(2)
 const ACTIVE_COASTAL_MARGIN_TOLERANCE = referenceCellsToAngle(1.25)
 const RIFT_AXIS_WIDTH = referenceCellsToAngle(0.25)
 
-const SHELF_START = -0.055
-const SHELF_END = -0.14
-const ABYSS_BASE = -0.35
+const SHELF_START = -0.025
+const SHELF_END = -0.18
+const ABYSS_BASE = -0.58
 const INTERIOR_BASE_SHIELD = 0.14
 const INTERIOR_BASE_BASIN = 0.04
 const INTERIOR_TECTONIC_UPLIFT = 0.16
@@ -393,27 +393,19 @@ export class TectonicElevationGenerator {
     noise: ReturnType<typeof createNoise3D>,
   ): number {
     const coastDistance = fields.coastDistance[region]
-    const activeMargin = fields.activeMarginDistance[region] < PASSIVE_SHELF_WIDTH
-    const shelfWidth = activeMargin ? ACTIVE_SHELF_WIDTH : PASSIVE_SHELF_WIDTH
-    let oceanBase: number
-    if (coastDistance <= shelfWidth) {
-      const t = smoothstep(0, shelfWidth, coastDistance)
-      oceanBase = SHELF_START + (SHELF_END - SHELF_START) * t
-    }
-    else if (coastDistance <= shelfWidth + CONTINENTAL_SLOPE_WIDTH) {
-      const t = smoothstep(shelfWidth, shelfWidth + CONTINENTAL_SLOPE_WIDTH, coastDistance)
-      oceanBase = SHELF_END + (ABYSS_BASE - SHELF_END) * t
-    }
-    else {
+    const shelfWidth = oceanShelfWidth(fields.activeMarginDistance[region])
+    let abyssNoise = 0
+    if (coastDistance > shelfWidth + CONTINENTAL_SLOPE_WIDTH) {
       const position = region * 3
-      oceanBase = ABYSS_BASE + this.fbm(
+      abyssNoise = this.fbm(
         noise,
         mesh.regionPosition[position] * 2,
         mesh.regionPosition[position + 1] * 2,
         mesh.regionPosition[position + 2] * 2,
         3,
-      ) * 0.03
+      )
     }
+    const oceanBase = oceanFloorBase(coastDistance, shelfWidth, abyssNoise)
     let elevation = Math.min(baseElevation, oceanBase)
     const ridgeDistance = fields.ridgeDistance[region]
     if (Number.isFinite(ridgeDistance) && ridgeDistance <= referenceCellsToAngle(3)) {

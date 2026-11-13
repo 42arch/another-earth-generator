@@ -6,12 +6,12 @@ import { blendOceanFloorBase, oceanBoundaryRelief, oceanFloorBase, oceanShelfWid
 it('changes shelf width continuously at the end of active-margin influence', () => {
   const active = oceanShelfWidth(0)
   const passive = oceanShelfWidth(Infinity)
-  expect(active).toBeCloseTo(referenceCellsToAngle(2))
-  expect(passive).toBeCloseTo(referenceCellsToAngle(5))
+  expect(active).toBeCloseTo(referenceCellsToAngle(0.5))
+  expect(passive).toBeCloseTo(referenceCellsToAngle(1))
 
-  const edge = referenceCellsToAngle(5)
+  const edge = referenceCellsToAngle(1)
   const epsilon = referenceCellsToAngle(0.001)
-  const coastDistance = referenceCellsToAngle(5)
+  const coastDistance = referenceCellsToAngle(1)
   const inside = oceanFloorBase(coastDistance, oceanShelfWidth(edge - epsilon), 0.4)
   const outside = oceanFloorBase(coastDistance, oceanShelfWidth(edge + epsilon), 0.4)
   expect(Math.abs(outside - inside)).toBeLessThan(1e-4)
@@ -19,28 +19,31 @@ it('changes shelf width continuously at the end of active-margin influence', () 
 
 it('fades abyssal texture in without a depth step after the continental slope', () => {
   const shelf = oceanShelfWidth(Infinity)
-  const edge = shelf + referenceCellsToAngle(3.5)
+  const edge = shelf + referenceCellsToAngle(1.2)
   const epsilon = referenceCellsToAngle(0.001)
   const before = oceanFloorBase(edge - epsilon, shelf, 0.4)
   const after = oceanFloorBase(edge + epsilon, shelf, 0.4)
   expect(Math.abs(after - before)).toBeLessThan(1e-4)
   expect(oceanFloorBase(edge + referenceCellsToAngle(1), shelf, 0.4))
     .toBeGreaterThan(oceanFloorBase(edge + referenceCellsToAngle(1), shelf, 0))
+  expect(oceanFloorBase(0, shelf, 0)).toBeCloseTo(-0.025)
+  expect(oceanFloorBase(shelf, shelf, 0)).toBeCloseTo(-0.18)
+  expect(oceanFloorBase(edge, shelf, 0)).toBeCloseTo(-0.58)
 })
 
 it('retains deep-basin relief and rounds only the crossing of ocean backgrounds', () => {
-  expect(blendOceanFloorBase(-0.6, -0.35)).toBe(-0.6)
-  expect(blendOceanFloorBase(-0.2, -0.35)).toBe(-0.35)
-  expect(blendOceanFloorBase(-0.35, -0.35)).toBeCloseTo(-0.36)
+  expect(blendOceanFloorBase(-0.8, -0.58)).toBe(-0.8)
+  expect(blendOceanFloorBase(-0.2, -0.58)).toBe(-0.58)
+  expect(blendOceanFloorBase(-0.58, -0.58)).toBeCloseTo(-0.59)
   const epsilon = 1e-6
-  const center = blendOceanFloorBase(-0.35, -0.35)
-  const leftSlope = (center - blendOceanFloorBase(-0.35 - epsilon, -0.35)) / epsilon
-  const rightSlope = (blendOceanFloorBase(-0.35 + epsilon, -0.35) - center) / epsilon
+  const center = blendOceanFloorBase(-0.58, -0.58)
+  const leftSlope = (center - blendOceanFloorBase(-0.58 - epsilon, -0.58)) / epsilon
+  const rightSlope = (blendOceanFloorBase(-0.58 + epsilon, -0.58) - center) / epsilon
   expect(leftSlope).toBeCloseTo(rightSlope, 3)
   expect(leftSlope).toBeCloseTo(0.5, 3)
-  for (const base of [-0.6, -0.37, -0.35, -0.33, -0.2]) {
-    expect(blendOceanFloorBase(base, -0.35)).toBeCloseTo(blendOceanFloorBase(-0.35, base), 10)
-    expect(Math.min(base, -0.35) - blendOceanFloorBase(base, -0.35)).toBeLessThanOrEqual(0.010001)
+  for (const base of [-0.8, -0.6, -0.58, -0.56, -0.2]) {
+    expect(blendOceanFloorBase(base, -0.58)).toBeCloseTo(blendOceanFloorBase(-0.58, base), 10)
+    expect(Math.min(base, -0.58) - blendOceanFloorBase(base, -0.58)).toBeLessThanOrEqual(0.010001)
   }
 })
 

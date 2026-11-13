@@ -22,9 +22,9 @@ function orbitalPeriod(context: StageExecutionContext): number {
   return value
 }
 
-const ecologyStage: GenerationStage<EcologyArtifact> = {
+export const ecologyStage: GenerationStage<EcologyArtifact> = {
   id: 'ecology-e0',
-  version: 'ecology-e0-v2',
+  version: 'ecology-e0-v3',
   dependencies: ['mesh', 'terrain', 'climate-c0'],
   configKeys: ['climate.orbitalPeriodDays'],
   execute(context) {

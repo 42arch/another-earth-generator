@@ -1,7 +1,10 @@
-import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
 import type { GenerationConfig, SerializedError, WorkerRequest, WorkerResponse } from './protocol'
-import { validateClimateArtifact, validateCryosphereArtifact, validateEcologyArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact } from '@another-earth/world-core'
+import { validateClimateArtifact, validateCryosphereArtifact, validateEcologyArtifact, validateGeographicRegions, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact, WorldStore } from '@another-earth/world-core'
+import { loadBuiltinGenerationCatalog } from '@another-earth/world-data'
 import { hydrateMesh } from './transfer'
+
+const namingPacks = loadBuiltinGenerationCatalog().packs
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'completed' | 'failed' | 'cancelled'
 export interface GenerationState {
@@ -17,11 +20,13 @@ export interface GenerationResult {
   readonly mesh: SphericalMesh
   readonly geology?: GeologyArtifact
   readonly terrain?: TerrainArtifact
+  readonly regions?: GeographicRegionsArtifact
   readonly climate?: ClimateArtifact
   readonly cryosphere?: CryosphereArtifact
   readonly hydrology?: HydrologyArtifact
   readonly lakes?: StaticLakeArtifact
   readonly ecology?: EcologyArtifact
+  readonly candidateWorld?: { readonly snapshotId: string, readonly worldId: string, readonly revision: number, readonly regionCount: number }
   readonly stages?: readonly StagePlan[]
   readonly cacheHit: boolean
   readonly cacheBytes: number
@@ -55,10 +60,12 @@ function createWorker(): Worker {
 }
 
 export class GenerationController {
+  #worldStore = new WorldStore()
+  #candidateWorldStore?: WorldStore
   #factory: () => Worker
   #worker?: Worker
   #sequence = 0
-  #active?: { id: string, kind: 'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology' | 'ecology', resolve: (value: GenerationResult) => void, reject: (reason: Error) => void, started: number }
+  #active?: { id: string, kind: 'mesh' | 'geology' | 'terrain' | 'climate' | 'hydrology' | 'ecology' | 'world', expectedSnapshotId?: string, resolve: (value: GenerationResult) => void, reject: (reason: Error) => void, started: number }
   #pending = new Map<string, { resolve: (value: number) => void, reject: (reason: Error) => void }>()
   #disposed = false
   #state: GenerationState = { status: 'idle', pipelineProgress: 0 }
@@ -73,6 +80,22 @@ export class GenerationController {
   }
 
   get state(): GenerationState { return this.#state }
+  get publishedWorld() { return this.#worldStore.identity }
+  commitWorld(snapshotId: string): void {
+    if (!this.#candidateWorldStore || this.#candidateWorldStore.identity?.snapshotId !== snapshotId)
+      throw new Error('No matching validated world candidate')
+    this.#worldStore = this.#candidateWorldStore
+    this.#candidateWorldStore = undefined
+  }
+  queryWorldRegion(region: number, month = 0) { return this.#worldStore.region(region, month) }
+  queryWorldBasin(id: string) { return this.#worldStore.basin(id) }
+  queryWorldContinent(id: string) { return this.#worldStore.continent(id) }
+  queryWorldOcean(id: string) { return this.#worldStore.ocean(id) }
+  queryWorldSea(id: string) { return this.#worldStore.sea(id) }
+  queryWorldRiver(id: string) { return this.#worldStore.river(id) }
+  queryWorldLake(id: string) { return this.#worldStore.lake(id) }
+  pickWorld(position: { readonly x: number, readonly y: number, readonly z: number }) { return this.#worldStore.pick(position) }
+  exportWorldArchive() { return this.#worldStore.archive(namingPacks) }
 
   #setState(state: GenerationState): void {
     this.#state = state
@@ -157,7 +180,7 @@ export class GenerationController {
     else if (message.type === 'COMPLETED') {
       try {
         const hydrating = performance.now()
-        if ((active.kind === 'ecology' && (!message.ecology || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'hydrology' && (!message.hydrology || !message.lakes || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'climate' && (!message.climate || !message.terrain || !message.geology)) || (active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
+        if ((active.kind === 'world' && (!message.world || !message.ecology || !message.hydrology || !message.lakes || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'ecology' && (!message.ecology || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'hydrology' && (!message.hydrology || !message.lakes || !message.cryosphere || !message.climate || !message.terrain || !message.geology)) || (active.kind === 'climate' && (!message.climate || !message.terrain || !message.geology)) || (active.kind === 'terrain' && (!message.terrain || !message.geology)) || (active.kind === 'geology' && !message.geology))
           throw new TypeError('Worker response is missing requested generation data')
         const mesh = hydrateMesh(message.mesh)
         if (message.geology)
@@ -166,6 +189,10 @@ export class GenerationController {
           if (!message.geology)
             throw new TypeError('Terrain response is missing geology')
           validateTerrainArtifact(message.terrain, mesh.meshId, mesh.regionCount, message.geology.plates.length)
+        }
+        if (message.regions) {
+          if (!message.terrain) throw new TypeError('Geographic regions require terrain')
+          validateGeographicRegions(message.regions, mesh.meshId, mesh.regionCount, message.terrain.landMask)
         }
         if (message.climate) {
           if (!message.terrain)
@@ -192,11 +219,18 @@ export class GenerationController {
             throw new TypeError('Ecology response is missing terrain or climate')
           validateEcologyArtifact(message.ecology, mesh.meshId, mesh.regionCount)
         }
+        if (active.kind === 'world') {
+          if (!message.world || message.world.snapshotId !== active.expectedSnapshotId || message.world.mesh.meshId !== mesh.meshId)
+            throw new TypeError('Worker world identity mismatch')
+          const candidate = new WorldStore()
+          candidate.publish(message.world, namingPacks)
+          this.#candidateWorldStore = candidate
+        }
         const hydrateMs = performance.now() - hydrating
         this.#active = undefined
         this.#lastCompletedId = active.id
         this.#setState({ status: 'completed', requestId: active.id, pipelineProgress: 1 })
-        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, climate: message.climate, cryosphere: message.cryosphere, hydrology: message.hydrology, lakes: message.lakes, ecology: message.ecology, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
+        active.resolve({ mesh, geology: message.geology, terrain: message.terrain, regions: message.regions, climate: message.climate, cryosphere: message.cryosphere, hydrology: message.hydrology, lakes: message.lakes, ecology: message.ecology, candidateWorld: active.kind === 'world' ? this.#candidateWorldStore?.identity ?? undefined : undefined, stages: message.stages, cacheHit: message.cacheHit, cacheBytes: message.cacheBytes, pipelineMs: message.pipelineMs, copyMs: message.copyMs, meshBytes: message.meshBytes, receiveMs: performance.now() - active.started, hydrateMs })
       }
       catch (cause) {
         const error = cause instanceof Error ? cause : new Error('Mesh recovery failed')
@@ -221,12 +255,13 @@ export class GenerationController {
       return Promise.reject(new Error('Generation Controller is disposed'))
     if (this.#active)
       this.cancel('hard')
+    this.#candidateWorldStore = undefined
     if (!this.#worker)
       this.#spawn()
     const id = `request-${++this.#sequence}`
     this.#setState({ status: 'starting', requestId: id, pipelineProgress: 0 })
     return new Promise((resolve, reject) => {
-      this.#active = { id, kind: input.config.ecology ? 'ecology' : input.config.hydrology ? 'hydrology' : input.config.climate ? 'climate' : input.config.terrain ? 'terrain' : input.config.geology ? 'geology' : 'mesh', resolve, reject, started: performance.now() }
+      this.#active = { id, kind: input.publication ? 'world' : input.config.ecology ? 'ecology' : input.config.hydrology ? 'hydrology' : input.config.climate ? 'climate' : input.config.terrain ? 'terrain' : input.config.geology ? 'geology' : 'mesh', expectedSnapshotId: input.publication?.snapshotId, resolve, reject, started: performance.now() }
       try {
         this.#worker!.postMessage({ type: 'GENERATE', requestId: id, input } satisfies WorkerRequest)
       }

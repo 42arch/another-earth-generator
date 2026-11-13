@@ -52,17 +52,18 @@ const cryosphereStage: GenerationStage<CryosphereArtifact> = {
 
 const hydrologyStage: GenerationStage<HydrologyArtifact> = {
   id: 'hydrology-h0',
-  version: 'hydrology-h0-v2',
+  version: 'hydrology-h0-v4',
   dependencies: ['mesh', 'terrain', 'climate-c0', 'cryosphere-i0'],
-  configKeys: ['hydrology.evapotranspirationFactorMmPerCMonth', 'hydrology.minimumRiverDrainageAreaKm2', 'climate.orbitalPeriodDays'],
+  configKeys: ['hydrology.evapotranspirationFactorMmPerCMonth', 'hydrology.minimumRiverDrainageAreaKm2', 'hydrology.riverDensityMultiplier', 'climate.orbitalPeriodDays'],
   execute(context) {
     const mesh = copyDependency<SphericalMesh>(context, 'mesh')
     const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>>(context, 'terrain', ({ meshId, elevationKm, landMask }) => ({ meshId, elevationKm, landMask }))
-    const climate = copyDependency<ClimateArtifact, Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'precipitationMm'>>(context, 'climate-c0', ({ meshId, regionCount, temperatureC, precipitationMm }) => ({ meshId, regionCount, temperatureC, precipitationMm }))
+    const climate = copyDependency<ClimateArtifact, Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'precipitationMm' | 'koppenClass'>>(context, 'climate-c0', ({ meshId, regionCount, temperatureC, precipitationMm, koppenClass }) => ({ meshId, regionCount, temperatureC, precipitationMm, koppenClass }))
     const cryosphere = copyDependency<CryosphereArtifact>(context, 'cryosphere-i0')
     const output = generateHydrologyH0(mesh, terrain, climate, cryosphere, {
       evapotranspirationFactorMmPerCMonth: configNumber(context, 'hydrology.evapotranspirationFactorMmPerCMonth', 0, 100),
       minimumRiverDrainageAreaKm2: configNumber(context, 'hydrology.minimumRiverDrainageAreaKm2', 0, 1e9),
+      riverDensityMultiplier: configNumber(context, 'hydrology.riverDensityMultiplier', 0.25, 4),
       orbitalPeriodDays: configNumber(context, 'climate.orbitalPeriodDays', 1, 1e6),
     }, (fraction) => {
       context.throwIfCancelled()
@@ -77,14 +78,19 @@ const hydrologyStage: GenerationStage<HydrologyArtifact> = {
 
 const staticLakesStage: GenerationStage<StaticLakeArtifact> = {
   id: 'static-lakes-l1',
-  version: 'static-lakes-l1-v4',
-  dependencies: ['mesh', 'terrain', 'hydrology-h0'],
-  configKeys: [],
+  version: 'static-lakes-l1-v6',
+  dependencies: ['mesh', 'terrain', 'climate-c0', 'hydrology-h0'],
+  configKeys: ['hydrology.evapotranspirationFactorMmPerCMonth', 'hydrology.minimumLakeAreaKm2', 'climate.orbitalPeriodDays'],
   execute(context) {
     const mesh = copyDependency<SphericalMesh>(context, 'mesh')
     const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>>(context, 'terrain', ({ meshId, elevationKm, landMask }) => ({ meshId, elevationKm, landMask }))
+    const climate = copyDependency<ClimateArtifact, Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'koppenClass'>>(context, 'climate-c0', ({ meshId, regionCount, temperatureC, koppenClass }) => ({ meshId, regionCount, temperatureC, koppenClass }))
     const hydrology = copyDependency<HydrologyArtifact>(context, 'hydrology-h0')
-    const output = generateStaticLakesL1(mesh, terrain, hydrology, (fraction) => {
+    const output = generateStaticLakesL1(mesh, terrain, hydrology, climate, {
+      evapotranspirationFactorMmPerCMonth: configNumber(context, 'hydrology.evapotranspirationFactorMmPerCMonth', 0, 100),
+      orbitalPeriodDays: configNumber(context, 'climate.orbitalPeriodDays', 1, 1e6),
+      minimumLakeAreaKm2: configNumber(context, 'hydrology.minimumLakeAreaKm2', 0, Number.POSITIVE_INFINITY),
+    }, (fraction) => {
       context.throwIfCancelled()
       context.progress(fraction, '识别静态湖泊')
     })
@@ -107,9 +113,12 @@ class HydrologyPipeline extends GenerationPipeline<HydrologyGenerationConfig> {
     if (!p || !Number.isFinite(p.snowTemperatureMinC) || !Number.isFinite(p.snowTemperatureMaxC) || p.snowTemperatureMinC >= p.snowTemperatureMaxC
       || !Number.isFinite(p.degreeDayMeltFactorMmPerCMonth) || p.degreeDayMeltFactorMmPerCMonth < 0
       || !Number.isFinite(p.evapotranspirationFactorMmPerCMonth) || p.evapotranspirationFactorMmPerCMonth < 0
-      || !Number.isFinite(p.minimumRiverDrainageAreaKm2) || p.minimumRiverDrainageAreaKm2 < 0) {
+      || !Number.isFinite(p.minimumRiverDrainageAreaKm2) || p.minimumRiverDrainageAreaKm2 < 0
+      || !Number.isFinite(p.riverDensityMultiplier) || p.riverDensityMultiplier < 0.25 || p.riverDensityMultiplier > 4) {
       throw new InvalidStageInputError('hydrology-h0', 'Invalid hydrology parameters')
     }
+    if (!Number.isFinite(p.minimumLakeAreaKm2) || p.minimumLakeAreaKm2 < 0)
+      throw new InvalidStageInputError('static-lakes-l1', 'minimumLakeAreaKm2 must be finite and non-negative')
     // Reuse existing T0/C0 input rules, including obsolete terrain options and Earthlike bounds.
     this.#climatePipeline.plan(input)
   }

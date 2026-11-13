@@ -1,4 +1,5 @@
 import type { SeasonalCirculationData } from './climate-data'
+import { clamp, smoothstep } from '#math/math'
 import { ITCZ_LONGITUDE_SAMPLES } from './climate-data'
 import { DEG } from './climate-geometry'
 
@@ -8,6 +9,7 @@ export interface MonthlyForcing {
   solarDeclination: number
   orbitalPhase: number
   itczLatitude: Float32Array
+  maritimeItczLatitude: number
   pressureHpa: Float32Array
   windEast: Float32Array
   windNorth: Float32Array
@@ -46,6 +48,7 @@ export function interpolateMonthlyForcing(circulation: SeasonalCirculationData, 
     solarDeclination: Math.asin(Math.sin(tilt) * Math.sin(orbitalPhase)),
     orbitalPhase,
     itczLatitude: interpolate(circulation.itczLatitude, ITCZ_LONGITUDE_SAMPLES),
+    maritimeItczLatitude: maritimeItczAtPhase(orbitalPhase, axialTiltDeg),
     pressureHpa: interpolate(circulation.pressureHpa, count),
     windEast: interpolate(circulation.windEast, count),
     windNorth: interpolate(circulation.windNorth, count),
@@ -54,6 +57,17 @@ export function interpolateMonthlyForcing(circulation: SeasonalCirculationData, 
     oceanNorth: interpolate(circulation.oceanNorth, count),
     oceanWarmth: interpolate(circulation.oceanWarmth, count),
   }
+}
+
+/** The open ocean responds to seasonal heating more slowly than the continents. */
+export function maritimeItczAtPhase(phase: number, axialTiltDeg: number): number {
+  const seasonalContrast = clamp(Math.sin(axialTiltDeg * DEG) / Math.sin(23.5 * DEG), 0, 1.5)
+  return 8 * DEG * seasonalContrast * Math.sin(phase - 5 * Math.PI / 12)
+}
+
+export function regionalItczLatitude(itcz: number, maritimeItcz: number, oceanCoastDistanceKm: number): number {
+  const maritime = smoothstep(0, 550, oceanCoastDistanceKm)
+  return itcz + (maritimeItcz - itcz) * maritime
 }
 
 export function itczAtLongitude(itczLatitude: Float32Array, longitude: number): number {

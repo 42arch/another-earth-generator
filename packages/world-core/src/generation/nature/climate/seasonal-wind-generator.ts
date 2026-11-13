@@ -5,11 +5,16 @@ import { clamp, gaussian, smoothstep } from '#math/math'
 import { createNoise3D } from 'simplex-noise'
 import { CLIMATE_SEASON_COUNT, ITCZ_LONGITUDE_SAMPLES } from './climate-data'
 import { averageEdgeKm, DEG, graphDistance, smoothMasked } from './climate-geometry'
+import { maritimeItczAtPhase } from './monthly-forcing'
 import { makeClimateCoastFields } from './monthly-spatial-fields'
 
 const LAT_BINS = 36
 const LON_BINS = ITCZ_LONGITUDE_SAMPLES
 const PRESSURE_BASE_HPA = 1013
+// Maritime seasonal displacement is damped by ocean heat storage. These
+// reference values are screened against the 1991–2020 tropical rain centroid
+// and the persistence of the 30–45° ocean westerlies.
+const MARITIME_PRESSURE_SHIFT_DEG = 4
 
 interface GeoBins {
   area: Float64Array
@@ -67,12 +72,12 @@ function sampleGeography(bins: GeoBins, latitude: number, longitude: number, rad
   return area > 0 ? [land / area, height / area] : [0, 0]
 }
 
-function computeItcz(bins: GeoBins, thermalDeclination: number): Float32Array {
+function computeItcz(bins: GeoBins, thermalDeclination: number, maritimeDeclination: number): Float32Array {
   const result = new Float32Array(LON_BINS)
   const summerSign = Math.sign(thermalDeclination)
   for (let lonBin = 0; lonBin < LON_BINS; lonBin++) {
     const longitude = (-177.5 + lonBin * 5) * DEG
-    let bestLatitude = thermalDeclination
+    let bestLatitude = maritimeDeclination
     let bestScore = -Infinity
     for (let latitudeDeg = -30; latitudeDeg <= 30; latitudeDeg += 2.5) {
       const latitude = latitudeDeg * DEG
@@ -81,8 +86,11 @@ function computeItcz(bins: GeoBins, thermalDeclination: number): Float32Array {
       const [polewardLand] = sampleGeography(bins, latitude + summerSign * 15 * DEG, longitude, 30)
       const continentalScale = smoothstep(0.2, 0.45, Math.max(wideLand, polewardLand * 0.7)) ** 2
       const landGate = smoothstep(0.25, 0.55, localLand)
-      const landBoost = 0.58 * landGate * continentalScale
-      const solarScore = gaussian(latitudeDeg - thermalDeclination / DEG, 25)
+      const landInfluence = landGate * continentalScale
+      const thermalCenter = maritimeDeclination + (thermalDeclination - maritimeDeclination) * landInfluence
+      const continentalHeating = gaussian(latitudeDeg - thermalDeclination / DEG, 25)
+      const landBoost = 0.58 * landInfluence * continentalHeating
+      const solarScore = gaussian(latitudeDeg - thermalCenter / DEG, 25)
       const elevationBoost = Math.min(0.3, heightKm * 0.12) * continentalScale
       const score = solarScore + landBoost + elevationBoost
       if (score > bestScore) {
@@ -171,7 +179,8 @@ export function generateSeasonalWind(
     const thermalPhase = Math.sin(phase - 0.15)
     const declination = tiltRadians * solarPhase
     solarDeclination[season] = declination
-    const itcz = computeItcz(bins, tiltRadians * thermalPhase)
+    const maritimeDeclination = maritimeItczAtPhase(phase, axialTiltDeg)
+    const itcz = computeItcz(bins, tiltRadians * thermalPhase, maritimeDeclination)
     itczLatitude.set(itcz, season * LON_BINS)
     const offset = season * count
 
@@ -179,7 +188,7 @@ export function generateSeasonalWind(
       const latDeg = mesh.regionLatitude[region] / DEG
       const lon = mesh.regionLongitude[region]
       const itczDeg = sampleItcz(itcz, lon) / DEG
-      const highShift = 8 * solarPhase
+      const highShift = (MARITIME_PRESSURE_SHIFT_DEG + (8 - MARITIME_PRESSURE_SHIFT_DEG) * continental[region]) * solarPhase
       const subtropical = 11.9 * (1 - 0.34 * continental[region])
       const absLat = Math.abs(latDeg)
       const thermalLatitude = smoothstep(15, 40, absLat) * (1 - smoothstep(75, 90, absLat))

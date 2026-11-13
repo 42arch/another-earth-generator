@@ -1,6 +1,7 @@
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
+import { KOPPEN_CODES } from '#generation/nature/climate/koppen-classifier'
 
 export interface HydrologyParameters {
   /** Below this monthly mean temperature precipitation is treated as snow. °C */
@@ -11,8 +12,12 @@ export interface HydrologyParameters {
   readonly degreeDayMeltFactorMmPerCMonth: number
   /** Temperature-index potential evapotranspiration. mm / °C / month */
   readonly evapotranspirationFactorMmPerCMonth: number
-  /** Minimum contributing area for river cells, before the mesh support floor. km² */
+  /** Baseline drainage area, scaled by riverDensityMultiplier. km² */
   readonly minimumRiverDrainageAreaKm2: number
+  /** Scales river density; higher values lower the drainage-area threshold. */
+  readonly riverDensityMultiplier: number
+  /** Minimum retained static lake area. km²; zero preserves the region-count floor only. */
+  readonly minimumLakeAreaKm2: number
 }
 
 export const DEFAULT_HYDROLOGY_PARAMETERS: Readonly<HydrologyParameters> = Object.freeze({
@@ -21,6 +26,8 @@ export const DEFAULT_HYDROLOGY_PARAMETERS: Readonly<HydrologyParameters> = Objec
   degreeDayMeltFactorMmPerCMonth: 3,
   evapotranspirationFactorMmPerCMonth: 2,
   minimumRiverDrainageAreaKm2: 5000,
+  riverDensityMultiplier: 1,
+  minimumLakeAreaKm2: 0,
 })
 
 export interface CryosphereArtifact {
@@ -65,7 +72,7 @@ export interface HydrologyArtifact {
   readonly terrainMeshId: string
   readonly climateMeshId: string
   readonly cryosphereMeshId: string
-  readonly algorithmVersion: 'hydrology-h0-v2'
+  readonly algorithmVersion: 'hydrology-h0-v4'
   readonly regionCount: number
   readonly monthsPerYear: 12
   readonly layout: 'month-major'
@@ -321,12 +328,12 @@ function buildRiverSegments(mesh: SphericalMesh, downstream: Int32Array, mask: U
 }
 
 /** Generates preliminary annual runoff, routing, drainage basins and thresholded river segments. */
-export function generateHydrologyH0(mesh: SphericalMesh, terrain: Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>, climate: Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'precipitationMm'>, cryosphere: CryosphereArtifact, parameters: Pick<HydrologyParameters, 'evapotranspirationFactorMmPerCMonth' | 'minimumRiverDrainageAreaKm2'> & { readonly orbitalPeriodDays: number }, check?: (fraction: number) => void): HydrologyArtifact {
+export function generateHydrologyH0(mesh: SphericalMesh, terrain: Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>, climate: Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'precipitationMm' | 'koppenClass'>, cryosphere: CryosphereArtifact, parameters: Pick<HydrologyParameters, 'evapotranspirationFactorMmPerCMonth' | 'minimumRiverDrainageAreaKm2' | 'riverDensityMultiplier'> & { readonly orbitalPeriodDays: number }, check?: (fraction: number) => void): HydrologyArtifact {
   const n = mesh.regionCount
-  if (terrain.meshId !== mesh.meshId || climate.meshId !== mesh.meshId || cryosphere.meshId !== mesh.meshId || climate.regionCount !== n || cryosphere.regionCount !== n || terrain.elevationKm.length !== n || terrain.landMask.length !== n || !(climate.temperatureC instanceof Float32Array) || climate.temperatureC.length !== 12 * n || !(climate.precipitationMm instanceof Float32Array) || climate.precipitationMm.length !== 12 * n)
+  if (terrain.meshId !== mesh.meshId || climate.meshId !== mesh.meshId || cryosphere.meshId !== mesh.meshId || climate.regionCount !== n || cryosphere.regionCount !== n || terrain.elevationKm.length !== n || terrain.landMask.length !== n || !(climate.temperatureC instanceof Float32Array) || climate.temperatureC.length !== 12 * n || !(climate.precipitationMm instanceof Float32Array) || climate.precipitationMm.length !== 12 * n || !(climate.koppenClass instanceof Uint8Array) || climate.koppenClass.length !== n)
     throw new Error('Hydrology input mesh mismatch')
   validateCryosphereArtifact(cryosphere, mesh.meshId, n)
-  if (!Number.isFinite(parameters.evapotranspirationFactorMmPerCMonth) || parameters.evapotranspirationFactorMmPerCMonth < 0 || !Number.isFinite(parameters.minimumRiverDrainageAreaKm2) || parameters.minimumRiverDrainageAreaKm2 < 0 || !(parameters.orbitalPeriodDays > 0) || !Number.isFinite(parameters.orbitalPeriodDays))
+  if (!Number.isFinite(parameters.evapotranspirationFactorMmPerCMonth) || parameters.evapotranspirationFactorMmPerCMonth < 0 || !Number.isFinite(parameters.minimumRiverDrainageAreaKm2) || parameters.minimumRiverDrainageAreaKm2 < 0 || !Number.isFinite(parameters.riverDensityMultiplier) || parameters.riverDensityMultiplier < 0.25 || parameters.riverDensityMultiplier > 4 || !(parameters.orbitalPeriodDays > 0) || !Number.isFinite(parameters.orbitalPeriodDays))
     throw new RangeError('Invalid hydrology parameters')
   const monthlyEvap = new Float32Array(12 * n)
   const monthlyRunoff = new Float32Array(12 * n)
@@ -336,6 +343,8 @@ export function generateHydrologyH0(mesh: SphericalMesh, terrain: Pick<TerrainAr
   for (let r = 0; r < n; r++) {
     if ((r & 255) === 0)
       check?.(0.2 * r / n)
+    if (climate.koppenClass[r] > 31 || (terrain.landMask[r] && climate.koppenClass[r] === 0))
+      throw new Error(`Invalid Köppen climate class at region ${r}`)
     if (!terrain.landMask[r])
       continue
     landArea[r] = mesh.areaKm2[r]
@@ -369,12 +378,20 @@ export function generateHydrologyH0(mesh: SphericalMesh, terrain: Pick<TerrainAr
     }
   }
   const accumulatedVolume = localVolume.slice()
+  const nonDesertSourceVolume = new Float64Array(n)
+  for (let r = 0; r < n; r++) {
+    const climateCode = KOPPEN_CODES[climate.koppenClass?.[r] ?? 0]
+    if (terrain.landMask[r] && !climateCode?.startsWith('BW'))
+      nonDesertSourceVolume[r] = localVolume[r]
+  }
   for (let i = n - 1; i >= 0; i--) {
     if ((i & 1023) === 0)
       check?.(0.7 + 0.1 * (n - i) / n)
     const r = order[i]
-    if (downstream[r] >= 0)
+    if (downstream[r] >= 0) {
       accumulatedVolume[downstream[r]] += accumulatedVolume[r]
+      nonDesertSourceVolume[downstream[r]] += nonDesertSourceVolume[r]
+    }
   }
   const roots = [...new Set(Array.from(basinRoot).filter(root => root >= 0))].sort((a, b) => a - b)
   const rootToIndex = new Map(roots.map((root, i) => [root, i]))
@@ -390,7 +407,8 @@ export function generateHydrologyH0(mesh: SphericalMesh, terrain: Pick<TerrainAr
   const yearSeconds = parameters.orbitalPeriodDays * 86400
   const accumulatedFlow = new Float64Array(n)
   for (let r = 0; r < n; r++) accumulatedFlow[r] = accumulatedVolume[r] / yearSeconds
-  const threshold = Math.max(parameters.minimumRiverDrainageAreaKm2, mesh.areaKm2.reduce((sum, area) => sum + area, 0) / n * 16)
+  const baselineThreshold = Math.max(parameters.minimumRiverDrainageAreaKm2, mesh.areaKm2.reduce((sum, area) => sum + area, 0) / n * 16)
+  const threshold = baselineThreshold / parameters.riverDensityMultiplier
   const contributingArea = new Float64Array(n)
   for (let r = 0; r < n; r++) {
     if (terrain.landMask[r])
@@ -401,11 +419,19 @@ export function generateHydrologyH0(mesh: SphericalMesh, terrain: Pick<TerrainAr
     if (downstream[r] >= 0)
       contributingArea[downstream[r]] += contributingArea[r]
   }
-  const riverMask = Uint8Array.from({ length: n }, (_, r) => terrain.landMask[r] && contributingArea[r] >= threshold && accumulatedFlow[r] > 0 ? 1 : 0)
+  const riverMask = Uint8Array.from({ length: n }, (_, r) => {
+    if (!terrain.landMask[r] || contributingArea[r] < threshold || accumulatedFlow[r] <= 0)
+      return 0
+    const climateCode = KOPPEN_CODES[climate.koppenClass?.[r] ?? 0]
+    if (!climateCode?.startsWith('BW'))
+      return 1
+    const desertSourceVolume = accumulatedVolume[r] - nonDesertSourceVolume[r]
+    return nonDesertSourceVolume[r] > 0 && nonDesertSourceVolume[r] >= desertSourceVolume ? 1 : 0
+  })
   const endorheicCells = Uint8Array.from({ length: n }, (_, r) => basinIndex[r] >= 0 && basins[basinIndex[r]].endorheic ? 1 : 0)
   const { rivers, riverIndex } = buildRiverSegments(mesh, downstream, riverMask, accumulatedFlow, endorheicCells)
   check?.(1)
-  const artifact: HydrologyArtifact = { meshId: mesh.meshId, terrainMeshId: terrain.meshId, climateMeshId: climate.meshId, cryosphereMeshId: cryosphere.meshId, algorithmVersion: 'hydrology-h0-v2', regionCount: n, monthsPerYear: 12, layout: 'month-major', monthlyEvapotranspirationMm: monthlyEvap, monthlyRunoffMm: monthlyRunoff, annualRunoffMm: annualRunoff, annualRunoffVolumeM3: localVolume, accumulatedAnnualFlowM3s: accumulatedFlow, contributingAreaKm2: contributingArea, downstreamRegion: downstream, filledElevationKm: filled, basinIndex, basins, riverMask, riverIndex, rivers, effectiveRiverThresholdKm2: threshold }
+  const artifact: HydrologyArtifact = { meshId: mesh.meshId, terrainMeshId: terrain.meshId, climateMeshId: climate.meshId, cryosphereMeshId: cryosphere.meshId, algorithmVersion: 'hydrology-h0-v4', regionCount: n, monthsPerYear: 12, layout: 'month-major', monthlyEvapotranspirationMm: monthlyEvap, monthlyRunoffMm: monthlyRunoff, annualRunoffMm: annualRunoff, annualRunoffVolumeM3: localVolume, accumulatedAnnualFlowM3s: accumulatedFlow, contributingAreaKm2: contributingArea, downstreamRegion: downstream, filledElevationKm: filled, basinIndex, basins, riverMask, riverIndex, rivers, effectiveRiverThresholdKm2: threshold }
   validateHydrologyArtifact(artifact, mesh, terrain, climate, cryosphere)
   return artifact
 }
@@ -414,7 +440,7 @@ export function validateHydrologyArtifact(value: HydrologyArtifact | null | unde
   if (!value)
     throw new Error('Invalid hydrology artifact structure')
   const n = value.regionCount
-  if (value.algorithmVersion !== 'hydrology-h0-v2' || value.monthsPerYear !== 12 || value.layout !== 'month-major' || !value.meshId || value.terrainMeshId !== value.meshId || value.climateMeshId !== value.meshId || value.cryosphereMeshId !== value.meshId
+  if (value.algorithmVersion !== 'hydrology-h0-v4' || value.monthsPerYear !== 12 || value.layout !== 'month-major' || !value.meshId || value.terrainMeshId !== value.meshId || value.climateMeshId !== value.meshId || value.cryosphereMeshId !== value.meshId
     || !Array.isArray(value.basins) || !Array.isArray(value.rivers)
     || (mesh && value.meshId !== mesh.meshId) || (terrain && value.terrainMeshId !== terrain.meshId) || (climate && value.climateMeshId !== climate.meshId) || (cryosphere && value.cryosphereMeshId !== cryosphere.meshId)
     || !Number.isInteger(n) || n < 1

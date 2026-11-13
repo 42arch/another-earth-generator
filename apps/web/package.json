@@ -15,6 +15,7 @@
     "@another-earth/cartography": "workspace:*",
     "@another-earth/world-core": "workspace:*",
     "@another-earth/world-data": "workspace:*",
+    "@lucide/svelte": "^1.70.0",
     "bits-ui": "^2.19.0",
     "svelte": "^5.56.10",
     "three": "^0.185.1"

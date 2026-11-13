@@ -14,7 +14,7 @@ function inputs(ocean = true, cold = false) {
   const terrain = { meshId: mesh.meshId, landMask, elevationKm } as Pick<TerrainArtifact, 'meshId' | 'landMask' | 'elevationKm'>
   const temperatureC = new Float32Array(12 * n).fill(cold ? -10 : 10)
   const precipitationMm = new Float32Array(12 * n).fill(100)
-  const climate = { meshId: mesh.meshId, regionCount: n, temperatureC, precipitationMm } as ClimateArtifact
+  const climate = { meshId: mesh.meshId, regionCount: n, temperatureC, precipitationMm, koppenClass: new Uint8Array(n).fill(1) } as ClimateArtifact
   return { mesh, terrain, climate }
 }
 
@@ -37,10 +37,10 @@ describe('preliminary cryosphere and hydrology', () => {
   it('keeps annual runoff local while accumulating flow downstream and conserves the annual land water ledger', () => {
     const { mesh, terrain, climate } = inputs()
     const i0 = generateCryosphereI0(mesh, terrain, climate, DEFAULT_HYDROLOGY_PARAMETERS)
-    const h0 = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, orbitalPeriodDays: 400 })
-    const earthYear = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, orbitalPeriodDays: 365.25 })
+    const h0 = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, riverDensityMultiplier: 1, orbitalPeriodDays: 400 })
+    const earthYear = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, riverDensityMultiplier: 1, orbitalPeriodDays: 365.25 })
     validateHydrologyArtifact(h0, mesh, terrain, climate, i0)
-    expect(h0.algorithmVersion).toBe('hydrology-h0-v2')
+    expect(h0.algorithmVersion).toBe('hydrology-h0-v4')
     expect(h0.effectiveRiverThresholdKm2).toBeCloseTo(mesh.areaKm2.reduce((sum, area) => sum + area, 0) / mesh.regionCount * 16)
     for (let r = 1; r < mesh.regionCount; r++) {
       let inputMm = 0
@@ -68,7 +68,7 @@ describe('preliminary cryosphere and hydrology', () => {
   it('creates an explicit internal sink when no ocean outlet exists', () => {
     const { mesh, terrain, climate } = inputs(false)
     const i0 = generateCryosphereI0(mesh, terrain, climate, DEFAULT_HYDROLOGY_PARAMETERS)
-    const h0 = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 0, minimumRiverDrainageAreaKm2: 0, orbitalPeriodDays: 365.25 })
+    const h0 = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 0, minimumRiverDrainageAreaKm2: 0, riverDensityMultiplier: 1, orbitalPeriodDays: 365.25 })
     expect(h0.downstreamRegion.includes(-1)).toBe(true)
     expect(h0.basins).toHaveLength(1)
     expect(h0.basins[0].endorheic).toBe(true)
@@ -78,7 +78,7 @@ describe('preliminary cryosphere and hydrology', () => {
     const { mesh, terrain: original, climate } = inputs(false)
     const terrain = { ...original, elevationKm: new Float32Array(mesh.regionCount).fill(0.1) }
     const i0 = generateCryosphereI0(mesh, terrain, climate, DEFAULT_HYDROLOGY_PARAMETERS)
-    const params = { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, orbitalPeriodDays: 365.25 }
+    const params = { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, riverDensityMultiplier: 1, orbitalPeriodDays: 365.25 }
     const first = generateHydrologyH0(mesh, terrain, climate, i0, params)
     const second = generateHydrologyH0(mesh, terrain, climate, i0, params)
     expect(first.downstreamRegion).toEqual(second.downstreamRegion)
@@ -90,7 +90,7 @@ describe('preliminary cryosphere and hydrology', () => {
     const { mesh, terrain, climate } = inputs()
     climate.precipitationMm.fill(0)
     const i0 = generateCryosphereI0(mesh, terrain, climate, DEFAULT_HYDROLOGY_PARAMETERS)
-    const h0 = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, orbitalPeriodDays: 365.25 })
+    const h0 = generateHydrologyH0(mesh, terrain, climate, i0, { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, riverDensityMultiplier: 1, orbitalPeriodDays: 365.25 })
     expect(h0.annualRunoffMm.every(value => value === 0)).toBe(true)
     expect(h0.riverMask.every(value => value === 0)).toBe(true)
     expect(h0.rivers).toHaveLength(0)
@@ -99,7 +99,7 @@ describe('preliminary cryosphere and hydrology', () => {
   it('is deterministic and rejects malformed mesh references', () => {
     const { mesh, terrain, climate } = inputs()
     const i0 = generateCryosphereI0(mesh, terrain, climate, DEFAULT_HYDROLOGY_PARAMETERS)
-    const parameters = { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, orbitalPeriodDays: 365.25 }
+    const parameters = { evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 0, riverDensityMultiplier: 1, orbitalPeriodDays: 365.25 }
     const first = generateHydrologyH0(mesh, terrain, climate, i0, parameters)
     const second = generateHydrologyH0(mesh, terrain, climate, i0, parameters)
     expect(second.downstreamRegion).toEqual(first.downstreamRegion)

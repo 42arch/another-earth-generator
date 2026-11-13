@@ -4,11 +4,11 @@ import type { TerrainArtifact } from '#generation/nature/geography'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
 import { KOPPEN_CODES } from '#generation/nature/climate/koppen-classifier'
+import { estimatePotentialEvapotranspirationMm } from '#generation/nature/common/potential-evapotranspiration'
 
-const ALGORITHM_VERSION = 'ecology-e0-v2' as const
-const PET_FACTOR_MM_PER_DAY_C = 0.015
-const BIOME_INDEX = new Map(NATURAL_BIOME_DEFINITIONS.map((definition, index) => [definition.code, index] as const))
-const LAND_COVER_INDEX = new Map(NATURAL_LAND_COVER_DEFINITIONS.map((definition, index) => [definition.code, index] as const))
+const ALGORITHM_VERSION = 'ecology-e0-v3' as const
+const BIOME_INDEX = new Map<string, number>(NATURAL_BIOME_DEFINITIONS.map((definition, index) => [definition.code, index] as const))
+const LAND_COVER_INDEX = new Map<string, number>(NATURAL_LAND_COVER_DEFINITIONS.map((definition, index) => [definition.code, index] as const))
 
 export interface EcologyArtifact {
   readonly meshId: string
@@ -91,7 +91,7 @@ export function classifyBiomeSeries(
     const precipitation = precipitationMm[month]
     annualTemperatureC += temperature
     annualPrecipitationMm += precipitation
-    annualPotentialEvapotranspirationMm += equalBinDays * PET_FACTOR_MM_PER_DAY_C * Math.max(0, temperature + 5) ** 1.45
+    annualPotentialEvapotranspirationMm += estimatePotentialEvapotranspirationMm(temperature, equalBinDays)
     warmestMonthC = Math.max(warmestMonthC, temperature)
     coldestMonthC = Math.min(coldestMonthC, temperature)
     driestMonthMm = Math.min(driestMonthMm, precipitation)
@@ -239,7 +239,7 @@ export function generateEcologyE0(
       || Math.abs(monthlyPrecipitation - annualPrecipitation) > Math.max(0.01, annualPrecipitation * 1e-5)) {
       throw new Error(`Invalid annual climate aggregation at region ${region}`)
     }
-    const latitudeRadians = Math.asin(Math.max(-1, Math.min(1, mesh.centers[region * 3 + 2])))
+    const latitudeRadians = Math.asin(Math.max(-1, Math.min(1, mesh.centers[region * 3 + 1])))
     const result = classifyBiomeSeries(
       temperatures,
       precipitation,

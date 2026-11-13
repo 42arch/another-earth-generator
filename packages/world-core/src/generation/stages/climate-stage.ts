@@ -4,10 +4,11 @@ import type { GeologyArtifact } from '#generation/nature/geology'
 import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { TerrainGenerationConfig } from './terrain-stage'
-import { aggregateClimateSurface, generateClimateC0, projectClimateC0, validateClimateArtifact } from '#generation/nature/climate/climate'
+import { aggregateClimateSurface, CLIMATE_C0_VERSION, generateClimateC0, projectClimateC0, validateClimateArtifact } from '#generation/nature/climate/climate'
 import { GenerationPipeline, StageCache } from '#generation/pipeline'
 import { copyDependency } from '#generation/pipeline/copy-dependency'
 import { InvalidStageInputError } from '#generation/pipeline/errors'
+import { stageRandom } from '#math/random'
 import { assertNoObsoleteTerrainOptions, createTerrainPipeline } from './terrain-stage'
 
 export interface ClimateGenerationConfig extends TerrainGenerationConfig {
@@ -23,7 +24,7 @@ function configNumber(context: StageExecutionContext, key: string, min: number, 
 
 const climateStage: GenerationStage<ClimateArtifact> = {
   id: 'climate-c0',
-  version: 'climate-c0-v2',
+  version: CLIMATE_C0_VERSION,
   dependencies: ['mesh', 'reference-mesh', 'geology', 'terrain'],
   configKeys: ['climate.rotationPeriodHours', 'climate.axialTiltDegrees', 'climate.orbitalPeriodDays', 'climate.temperatureOffsetC', 'climate.precipitationScale'],
   execute(context) {
@@ -41,10 +42,12 @@ const climateStage: GenerationStage<ClimateArtifact> = {
     if (mapping.meshId !== mesh.meshId || mapping.referenceMeshId !== reference.meshId)
       throw new Error('Climate reference mapping mesh mismatch')
     const surface = aggregateClimateSurface(mesh, reference, terrain, mapping.geographicReference)
+    // Temperature, precipitation, and projection changes keep the wind noise stable.
+    const circulationRandom = stageRandom(context.worldSeed, context.stageId, 'climate-c0-v2')
     const source = generateClimateC0(reference, surface, parameters, (fraction) => {
       context.throwIfCancelled()
       context.progress(fraction * 0.65)
-    }, context.random)
+    }, circulationRandom)
     return projectClimateC0(mesh, reference, terrain, surface, source, mapping.geographicReference, (fraction) => {
       context.throwIfCancelled()
       context.progress(0.65 + fraction * 0.35)

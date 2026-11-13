@@ -53,7 +53,7 @@ export function createMeshPipeline(cache = new StageCache()): GenerationPipeline
 }
 
 /** Capture exactly the Mesh input and signature used by a successful M0 Pipeline run. */
-export function createMeshGenerationRecord(input: GenerationInput<WorldGenerationConfig>, result: PipelineResult, planet: PlanetParameters, civilizationEnabled: boolean): Pick<WorldMetadata, 'generationConfig' | 'provenance'> {
+export function createMeshGenerationRecord(input: GenerationInput<WorldGenerationConfig>, result: PipelineResult, planet: PlanetParameters, civilizationEnabled: boolean): Pick<WorldMetadata, 'provenance'> & { generationConfig: Pick<WorldMetadata['generationConfig'], 'planet' | 'mesh' | 'regionCount' | 'civilizationEnabled'> } {
   const stage = result.plan.find(item => item.stageId === meshStage.id)
   if (!stage || stage.inputSignature !== createMeshPipeline().plan(input)[0]?.inputSignature || planet.physicalRadiusKm !== input.config.planet.physicalRadiusKm)
     throw new Error('Mesh result and planet configuration do not match')

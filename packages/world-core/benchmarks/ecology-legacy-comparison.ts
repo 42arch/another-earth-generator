@@ -210,7 +210,7 @@ it('writes a fixed-seed legacy classifier comparison on identical C0 monthly inp
     const currentAridity = ecology.aridityIndex[region]
     const koppenClass = climate.koppenClass[region]
     const koppenCode = KOPPEN_CODES[koppenClass]
-    const latitudeRadians = Math.asin(Math.max(-1, Math.min(1, mesh.centers[region * 3 + 2])))
+    const latitudeRadians = Math.asin(Math.max(-1, Math.min(1, mesh.centers[region * 3 + 1])))
     const legacy = classifyLegacyOnC0Bins(
       temperature,
       precipitation,
@@ -241,7 +241,7 @@ it('writes a fixed-seed legacy classifier comparison on identical C0 monthly inp
   }, 0)
   const report = {
     benchmark: 'M1.4 legacy classifier replay on current C0 climate bins',
-    comparisonScope: 'Compares old calendar-day-weighted classifier math with ecology-e0-v2 on identical current C0 monthly fields for every land region. E0 has no hydrology or static-lake dependency. Does not run the legacy climate generator, so it does not measure old-vs-current climate-field differences.',
+    comparisonScope: `Compares old calendar-day-weighted classifier math with ${ecology.algorithmVersion} on identical current C0 monthly fields for every land region. E0 has no hydrology or static-lake dependency. Does not run the legacy climate generator, so it does not measure old-vs-current climate-field differences. Both classifiers use the mesh Y axis for latitude.`,
     generatedAt: new Date().toISOString(),
     input: {
       seed,

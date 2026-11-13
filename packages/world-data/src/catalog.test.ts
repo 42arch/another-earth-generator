@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { createContentCatalog, loadBuiltinCatalog, validateContentPack } from './index'
+import { createContentCatalog, loadBuiltinCatalog, loadBuiltinGenerationCatalog, validateContentPack } from './index'
 
 describe('builtin content catalog', () => {
-  it('loads core and earthlike deterministically with resolved references', () => {
+  it('loads core, earthlike and geographic names deterministically with resolved references', () => {
     const first = loadBuiltinCatalog()
     const second = loadBuiltinCatalog()
     expect(first.contentSignature).toBe(second.contentSignature)
-    expect(first.packs.map(pack => pack.manifest.id)).toEqual(['core', 'earthlike'])
+    expect(first.packs.map(pack => pack.manifest.id)).toEqual(['core', 'earthlike', 'geography', 'geography-zh'])
+    expect(loadBuiltinGenerationCatalog().packs.map(pack => pack.manifest.id)).toEqual(['core', 'earthlike', 'geography-zh'])
+    expect(first.get('geography')?.names.map(pool => pool.id)).toEqual(['geography:names/continent', 'geography:names/ocean'])
+    expect(first.get('geography-zh')?.names.map(pool => pool.id)).toEqual(['geography-zh:names/continent', 'geography-zh:names/ocean'])
+    expect(first.get('geography-zh')?.names.every(pool => pool.entries.every(entry => /^[\u3400-\u9fff]+$/u.test(entry.value)))).toBe(true)
     expect(first.packs.every(pack => validateContentPack(pack, first.packs.filter(other => other !== pack)).valid)).toBe(true)
     expect(first.get('earthlike')?.presets[0].physicalRadiusKm).toBe(6371)
     expect(Object.isFrozen(first.get('core')?.names[0].entries)).toBe(true)

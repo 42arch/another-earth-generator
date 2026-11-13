@@ -1,4 +1,13 @@
 /** Independently validated T0 terrain artifact, not a complete WorldSnapshot. */
+export interface TerrainSurfaceTexture {
+  /** Display-only, dimensionless texture fields generated from the T0 seed. */
+  readonly tectonicBand: Float32Array
+  readonly detail: Float32Array
+  readonly coastal: Float32Array
+  readonly uniformLand: Float32Array
+  readonly postDetail: Float32Array
+}
+
 export interface TerrainArtifact {
   readonly meshId: string
   readonly algorithmVersion: string
@@ -28,6 +37,8 @@ export interface TerrainArtifact {
   /** Deposited shaping-coordinate delta. */
   readonly depositionCoordinate: Float32Array
   readonly foldBelt: Float32Array
+  /** Optional render input; excluded from WorldSnapshot facts and domain queries. */
+  readonly surfaceTexture?: TerrainSurfaceTexture
   readonly statistics: {
     readonly landCoverage: number
     readonly candidateLandCoverage: number

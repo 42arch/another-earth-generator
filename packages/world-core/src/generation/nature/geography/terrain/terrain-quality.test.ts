@@ -1,5 +1,6 @@
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import { expect, it } from 'vitest'
+import { summarizeHypsometry } from '../../../../../benchmarks/terrain-hypsometry-summary'
 import { summarizeRoughnessProtection, summarizeTerrain } from '../../../../../benchmarks/terrain-quality'
 
 it('accounts for area in elevation/relief bins and reports unfilled candidate depressions', () => {
@@ -35,4 +36,12 @@ it('accounts for area in elevation/relief bins and reports unfilled candidate de
   const ocean = summarizeTerrain(mesh, new Float32Array([-1, -2, -3]))
   expect(ocean.landAreaKm2).toBe(0)
   expect(ocean.meanLandHeightKm).toBeNull()
+  const bands = summarizeHypsometry(mesh, new Float32Array([0.2, 3, -5]))
+  expect(bands.landAreaPct).toBeCloseTo(200 / 3)
+  expect(bands.landUnder03Pct).toBe(25)
+  expect(bands.landOver25Pct).toBe(75)
+  expect(bands.oceanOver4KmDepthPct).toBe(100)
+  expect(bands.minimumElevationKm).toBe(-5)
+  expect(() => summarizeHypsometry(mesh, new Float32Array(1))).toThrow('mesh mismatch')
+  expect(() => summarizeHypsometry(mesh, new Float32Array([-1, -2, -3]))).toThrow('both land and ocean')
 })

@@ -2,9 +2,9 @@ import type { ClimateSurfaceData } from './climate-data'
 import type { ClimateMesh } from './climate-mesh'
 import type { MonthlyForcing } from './monthly-forcing'
 import type { MonthlySpatialFields } from './monthly-spatial-fields'
-import { clamp, smoothstep } from '#math/math'
+import { clamp, gaussian, smoothstep } from '#math/math'
 import { DEG, smoothMasked } from './climate-geometry'
-import { itczAtLongitude } from './monthly-forcing'
+import { itczAtLongitude, regionalItczLatitude } from './monthly-forcing'
 
 /** Compute one month's air temperature in degrees Celsius. */
 export function computeMonthlyTemperature(
@@ -30,7 +30,9 @@ export function computeMonthlyTemperature(
     const land = surface.landMask[region] === 1
     const continentality = land ? spatial.continentality[region] : 0
     const latitudeFraction = Math.max(0, (absLatitude - 12.4) / 77.6)
-    let value = 27.8 - 48 * latitudeFraction ** 1.59
+    // Match the stronger tropical-to-midlatitude cooling seen in marine
+    // 2 m temperature normals while retaining the tropical and polar endpoints.
+    let value = 27.8 - 48 * latitudeFraction ** 1.3
     // Approximate unresolved snow/sea-ice albedo and polar heat storage. This
     // cools the high-latitude annual climate and damps its summer temperature
     // peak, while leaving Köppen's formal EF threshold unchanged.
@@ -39,14 +41,29 @@ export function computeMonthlyTemperature(
 
     // ITCZ displacement affects tropical heating; the annual latitude curve
     // remains the primary baseline away from the tropics.
-    const itczLatitude = itczAtLongitude(forcing.itczLatitude, longitude) / DEG
+    const itczLatitude = regionalItczLatitude(
+      itczAtLongitude(forcing.itczLatitude, longitude),
+      forcing.maritimeItczLatitude,
+      land ? 0 : spatial.coastDistanceKm[region],
+    ) / DEG
     const tropicalWeight = 1 - smoothstep(25, 60, absLatitude)
     value += (absLatitude - Math.abs(latitudeDeg - itczLatitude)) * 0.12 * tropicalWeight
 
     const latitudeRatio = absLatitude / 90
+    const landSeasonalAmplitude = 2.5 + 16 * latitudeRatio ** 1.2 + 12 * continentality * latitudeRatio
+    const marineSeasonalAmplitude = 1.5 + 8 * latitudeRatio ** 1.2
+    // Subtropical western shores inherit a marine annual range; inland and polar land retain theirs.
+    const subtropicalWest = smoothstep(22, 30, absLatitude) * (1 - smoothstep(42, 52, absLatitude))
+    const westMaritime = land ? spatial.westCoastInfluence[region] * subtropicalWest : 0
+    // Monsoon-facing eastern interiors have a larger summer/winter contrast;
+    // concentrate it at strong east exposure and taper it at western shores.
+    const easternContinentalSeason = land
+      ? 5 * spatial.eastMonsoonExposure[region] ** 2 * (1 - spatial.westCoastInfluence[region]) ** 2
+        * gaussian(absLatitude - 45, 10)
+      : 0
     const baseSeasonalAmplitude = land
-      ? 2.5 + 16 * latitudeRatio ** 1.2 + 12 * continentality * latitudeRatio
-      : 1.5 + 8 * latitudeRatio ** 1.2
+      ? landSeasonalAmplitude * (1 - westMaritime) + marineSeasonalAmplitude * westMaritime + easternContinentalSeason
+      : marineSeasonalAmplitude
     const seasonalAmplitude = baseSeasonalAmplitude * (1 - 0.38 * polarWeight)
     const lag = land ? 0.35 : 0.65
     const localSeason = Math.sin(forcing.orbitalPhase - lag) * Math.tanh(latitudeDeg / 10)

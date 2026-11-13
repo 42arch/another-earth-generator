@@ -1,6 +1,7 @@
 import type { SphericalMesh } from '@another-earth/world-core'
 import type { WorkerResponse } from '../lib/generation/protocol'
-import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateStaticLakeArtifact, validateTerrainArtifact } from '@another-earth/world-core'
+import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateStaticLakeArtifact, validateTerrainArtifact, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '@another-earth/world-core'
+import { loadBuiltinGenerationCatalog } from '@another-earth/world-data'
 import { describe, expect, it } from 'vitest'
 import { hydrateMesh } from '../lib/generation/transfer'
 import { GenerationWorkerRuntime } from './runtime'
@@ -149,6 +150,9 @@ it('transfers terrain independently, validates it and reuses tectonics on postpr
   await runtime.handle(request)
   const first = messages.find((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')!
   expect(first.terrain).toBeDefined()
+  expect(first.regions).toBeDefined()
+  expect(first.regions!.continentIndex).toBeInstanceOf(Int32Array)
+  expect(first.regions!.seaIndex).toBeInstanceOf(Int32Array)
   validateTerrainArtifact(first.terrain!, first.mesh.meshId, first.mesh.regionCount, first.geology!.plates.length)
   expect(first.terrain!.regionalUpliftCoordinate).toBeInstanceOf(Float32Array)
   expect(first.terrain!.regionalReliefKm).toBeInstanceOf(Float32Array)
@@ -158,14 +162,47 @@ it('transfers terrain independently, validates it and reuses tectonics on postpr
   first.terrain!.regionalUpliftCoordinate[0] = 999
   const height = first.terrain!.elevationKm[0]
   first.terrain!.elevationKm[0] = 999
+  const continent = first.regions!.continentIndex[0]
+  first.regions!.continentIndex[0] = 999
+  const sea = first.regions!.seaIndex[0]
+  first.regions!.seaIndex[0] = 999
   await runtime.handle({ ...request, requestId: 'terrain-second' })
   const second = messages.filter((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')[1]
   expect(second.terrain!.elevationKm[0]).toBe(height)
+  expect(second.regions!.continentIndex[0]).toBe(continent)
+  expect(second.regions!.seaIndex[0]).toBe(sea)
   expect(second.terrain!.regionalUpliftCoordinate[0]).toBe(uplift)
   expect(second.terrain!.roughnessWeight[0]).toBe(weight)
   expect(second.stages?.every(stage => stage.action === 'cache-hit')).toBe(true)
   request.input.config.terrain.roughness = 0.1
   await runtime.handle({ ...request, requestId: 'terrain-changed' })
   const third = messages.filter((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')[2]
-  expect(third.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['terrain'])
+  expect(third.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['terrain', 'geographic-regions', 'geographic-names'])
+})
+
+it('publishes one complete natural world without detaching cached stage outputs', async () => {
+  const messages: WorkerResponse[] = []
+  const runtime = new GenerationWorkerRuntime((message, transfer = []) => messages.push(structuredClone(message, { transfer })))
+  const base = input(1, 0.5)
+  const request = {
+    type: 'GENERATE' as const,
+    requestId: 'world-first',
+    input: {
+      ...base,
+      publication: { snapshotId: 'snapshot:web-world', worldId: 'world:web-world', name: 'Web World', createdAt: '2026-11-12T00:00:00Z' },
+      config: { ...base.config, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS, ecology: true as const },
+    },
+  }
+  await runtime.handle(request)
+  const first = messages.find((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')!
+  expect(first.world?.schemaVersion).toBe(WORLD_SCHEMA_VERSION)
+  expect(first.world && validateWorldSnapshot(first.world, loadBuiltinGenerationCatalog().packs).valid).toBe(true)
+  expect(first.ecology).toBeDefined()
+  expect(first.hydrology).toBeDefined()
+  expect(first.world?.nature.geography.elevationKm.values.buffer).not.toBe(first.terrain?.elevationKm.buffer)
+  await runtime.handle({ ...request, requestId: 'world-second', input: { ...request.input, publication: { ...request.input.publication, snapshotId: 'snapshot:web-world-2' } } })
+  const second = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[1]
+  expect(second.stages?.every(stage => stage.action === 'cache-hit')).toBe(true)
+  expect(second.world?.snapshotId).toBe('snapshot:web-world-2')
+  expect(second.world?.nature.geography.elevationKm.values[0]).toBe(first.world?.nature.geography.elevationKm.values[0])
 })

@@ -2,23 +2,23 @@ import type { SphericalMesh } from '@another-earth/world-core'
 import { createMeshPipeline, createSphericalMesh } from '@another-earth/world-core'
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
-import { prepareDebugGeometry, prepareDebugSelection } from './mesh-debug-data'
-import { disposeDebugObjects } from './mesh-debug-scene'
+import { prepareRenderGeometry, prepareRegionSelection } from './map-render-data'
+import { disposeSceneObjects } from './world-scene'
 
 const mesh = createSphericalMesh({ subdivisionLevel: 1, physicalRadiusKm: 6371 })
-describe('mesh debug display mapping', () => {
+describe('world view geometry mapping', () => {
   it('consumes the public Pipeline MeshStage output and reuses its cached Mesh', async () => {
     const pipeline = createMeshPipeline()
     const input = { seed: 'viewer-test', config: { mesh: { subdivisionLevel: 1, irregularity: 0.5 }, planet: { physicalRadiusKm: 6371 } } }
     const first = await pipeline.execute(input)
     const generated = first.getOutput<SphericalMesh>('mesh')
-    expect(prepareDebugGeometry(generated, 'voronoi').positions.length).toBe(generated.boundaryCorners.length * 9)
+    expect(prepareRenderGeometry(generated, 'voronoi').positions.length).toBe(generated.boundaryCorners.length * 9)
     const second = await pipeline.execute(input)
     expect(second.plan[0].action).toBe('cache-hit')
     expect(second.getOutput<SphericalMesh>('mesh')).toBe(generated)
   })
   it('maps every Icosphere triangle and shared edge to core coordinates', () => {
-    const data = prepareDebugGeometry(mesh, 'icosphere')
+    const data = prepareRenderGeometry(mesh, 'icosphere')
     expect(data.positions.length).toBe(mesh.triangles.length * 3)
     for (let i = 0; i < mesh.triangles.length; i++) {
       for (let axis = 0; axis < 3; axis++) {
@@ -29,7 +29,7 @@ describe('mesh debug display mapping', () => {
     expect(data.fiveNeighborCenters.length / 3).toBe(12)
   })
   it('maps Voronoi fans to each region and its ordered core corners', () => {
-    const data = prepareDebugGeometry(mesh, 'voronoi')
+    const data = prepareRenderGeometry(mesh, 'voronoi')
     let out = 0
     for (let r = 0; r < mesh.regionCount; r++) {
       const start = mesh.neighborOffsets[r]
@@ -48,7 +48,7 @@ describe('mesh debug display mapping', () => {
     expect(out).toBe(data.positions.length)
   })
   it('transfers display buffers without detaching core buffers', () => {
-    const data = prepareDebugGeometry(mesh, 'voronoi')
+    const data = prepareRenderGeometry(mesh, 'voronoi')
     const buffers = Object.values(data).map(a => a.buffer as ArrayBuffer)
     const transferred = structuredClone(data, { transfer: buffers })
     expect(data.positions.byteLength).toBe(0)
@@ -56,7 +56,7 @@ describe('mesh debug display mapping', () => {
     expect(mesh.centers.byteLength).toBe(mesh.regionCount * 3 * 8)
   })
   it('reports exact core selection facts', () => {
-    const selection = prepareDebugSelection(mesh, 0)
+    const selection = prepareRegionSelection(mesh, 0)
     expect(selection.areaKm2).toBe(mesh.areaKm2[0])
     expect(selection.neighbors).toEqual(Array.from(mesh.neighbors.subarray(mesh.neighborOffsets[0], mesh.neighborOffsets[1])))
     expect(selection.ring.length).toBe(selection.neighbors.length * 6)
@@ -66,8 +66,8 @@ describe('mesh debug display mapping', () => {
     }
   })
   it('sizes five-neighbor markers from irregular topology and maps its Voronoi faces', () => {
-    const irregular = createSphericalMesh({ subdivisionLevel: 2, physicalRadiusKm: 6371, irregularity: 1, seed: 'debug-test' })
-    const data = prepareDebugGeometry(irregular, 'voronoi')
+    const irregular = createSphericalMesh({ subdivisionLevel: 2, physicalRadiusKm: 6371, irregularity: 1, seed: 'view-test' })
+    const data = prepareRenderGeometry(irregular, 'voronoi')
     let fiveNeighbors = 0
     for (let region = 0; region < irregular.regionCount; region++) {
       if (irregular.neighborOffsets[region + 1] - irregular.neighborOffsets[region] === 5)
@@ -82,7 +82,7 @@ describe('mesh debug display mapping', () => {
   })
 })
 
-describe('debug GPU resource ownership', () => {
+describe('scene GPU resource ownership', () => {
   it('disposes meshes, line buffers, points and all materials when replacing a scene', () => {
     const root = new THREE.Group()
     const nested = new THREE.Group()
@@ -94,8 +94,8 @@ describe('debug GPU resource ownership', () => {
     materials.forEach(m => m.addEventListener('dispose', () => disposedMaterials++))
     nested.add(new THREE.Mesh(geometries[0], materials.slice(0, 2)))
     root.add(nested, new THREE.LineSegments(geometries[1], materials[2]), new THREE.Points(geometries[2], materials[3]))
-    disposeDebugObjects(root)
-    disposeDebugObjects(root)
+    disposeSceneObjects(root)
+    disposeSceneObjects(root)
     expect(root.children).toHaveLength(0)
     expect(disposedGeometries).toBe(3)
     expect(disposedMaterials).toBe(4)

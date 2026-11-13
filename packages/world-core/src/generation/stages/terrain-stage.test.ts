@@ -39,21 +39,22 @@ describe('terrain stage', () => {
     const pipeline = createTerrainPipeline()
     const base = input()
     const first = await pipeline.execute(base)
+    expect(pipeline.plan({ ...base, contentSignatures: { 'geographic-names': 'another-catalog' } }).filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['geographic-names'])
     const changed = { ...base, config: { ...base.config, terrain: { ...base.config.terrain, roughness: 0.1 } } }
     const next = await pipeline.execute(changed)
-    expect(next.plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['terrain'])
+    expect(next.plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['terrain', 'geographic-regions', 'geographic-names'])
     expect(next.getOutput<TerrainArtifact>('terrain').roughnessWeight).toEqual(first.getOutput<TerrainArtifact>('terrain').roughnessWeight)
     expect(next.getOutput<TerrainArtifact>('terrain').elevationKm).not.toEqual(first.getOutput<TerrainArtifact>('terrain').elevationKm)
     expect(DEFAULT_TERRAIN_PARAMETERS.terrainWarp).toBe(0.75)
     const warped = { ...base, config: { ...base.config, terrain: { ...base.config.terrain, terrainWarp: 0 } } }
-    expect((await pipeline.execute(warped)).plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['terrain'])
+    expect((await pipeline.execute(warped)).plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['terrain', 'geographic-regions', 'geographic-names'])
     const volcanism = { ...changed, config: { ...changed.config, landforms: { ...changed.config.landforms, hotspotCount: 0 } } }
-    expect((await pipeline.execute(volcanism)).plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['tectonic-elevation', 'terrain'])
+    expect((await pipeline.execute(volcanism)).plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names'])
   })
 
   it('publishes T0 after configured water and glacial erosion', async () => {
     const terrain = (await createTerrainPipeline().execute(input())).getOutput<TerrainArtifact>('terrain')
-    expect(terrain.algorithmVersion).toBe('terrain-v24')
+    expect(terrain.algorithmVersion).toBe('terrain-v26')
     expect(terrain.erosionCoordinate.some(v => v > 0)).toBe(true)
     expect(terrain.depositionCoordinate.every(Number.isFinite)).toBe(true)
     expect(terrain.roughnessWeight.every(v => v === 1)).toBe(true)
@@ -117,19 +118,26 @@ describe('terrain stage', () => {
 
   it('converts dimensionless shaping coordinates once, including near zero and deep water', () => {
     expect(normalizedElevationToKm(-0.5)).toBe(-4)
-    expect(normalizedElevationToKm(0.1)).toBeCloseTo(0.168)
-    expect(normalizedElevationToKm(0.2)).toBeCloseTo(0.624)
-    expect(normalizedElevationToKm(0.3)).toBeCloseTo(1.296)
-    expect(normalizedElevationToKm(0.5)).toBe(3)
-    expect(normalizedElevationToKm(0.72)).toBeCloseTo(4)
-    expect(normalizedElevationToKm(0.82)).toBeCloseTo(5)
-    expect(normalizedElevationToKm(1)).toBe(6)
-    expect(normalizedElevationToKm(1.2)).toBeCloseTo(7.2)
+    expect(normalizedElevationToKm(-0.6)).toBeCloseTo(-4.8)
+    expect(normalizedElevationToKm(-0.75)).toBeLessThan(-11)
+    expect(normalizedElevationToKm(0.2)).toBeCloseTo(0.37)
+    expect(normalizedElevationToKm(0.4)).toBeCloseTo(0.92)
+    expect(normalizedElevationToKm(0.65)).toBeCloseTo(2.5)
+    expect(normalizedElevationToKm(0.85)).toBeCloseTo(4.5)
+    expect(normalizedElevationToKm(0.9)).toBeCloseTo(5.1)
+    expect(normalizedElevationToKm(1)).toBe(7.7)
+    expect(normalizedElevationToKm(1.2)).toBeCloseTo(11.3)
     const physical = normalizedElevationArrayToKm(new Float32Array([-1e-30, 0, 1e-30, 1e-20]))
-    expect(Uint8Array.from(physical, v => v > 0 ? 1 : 0)).toEqual(new Uint8Array([0, 0, 0, 1]))
+    expect(Uint8Array.from(physical, v => v > 0 ? 1 : 0)).toEqual(new Uint8Array([0, 0, 1, 1]))
   })
 
-  it('keeps the upland transfer monotone with matching gradients at each join', () => {
+  it('keeps the physical transfer monotone with matching gradients at each join', () => {
+    let previousOcean = normalizedElevationToKm(-0.75)
+    for (let step = -749; step <= 0; step++) {
+      const current = normalizedElevationToKm(step / 1000)
+      expect(current).toBeGreaterThan(previousOcean)
+      previousOcean = current
+    }
     let previous = normalizedElevationToKm(0)
     for (let step = 1; step <= 1200; step++) {
       const current = normalizedElevationToKm(step / 1000)
@@ -137,7 +145,7 @@ describe('terrain stage', () => {
       previous = current
     }
     const delta = 1e-6
-    for (const coordinate of [0.5, 0.72, 0.82, 1]) {
+    for (const coordinate of [-0.6, 0.2, 0.4, 0.65, 0.85, 0.9, 1]) {
       const atJoin = normalizedElevationToKm(coordinate)
       const before = (atJoin - normalizedElevationToKm(coordinate - delta)) / delta
       const after = (normalizedElevationToKm(coordinate + delta) - atJoin) / delta

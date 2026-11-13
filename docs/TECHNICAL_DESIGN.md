@@ -1,12 +1,12 @@
 # Another Earth — 技术设计
 
-> 更新：2026-11-08。产品规则以 [PRD](PRD.md) 为准；实现与验收状态见 [PROGRESS](PROGRESS.md)。本文保留长期架构和当前算法决策，目标接口不等于已实现 API。精确字段和单位见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，执行与缓存见 [生成管线](GENERATION_PIPELINE.md)，后续自然阶段见 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
+> 更新：2026-11-13。产品规则以 [PRD](PRD.md) 为准；实现与验收状态见 [PROGRESS](PROGRESS.md)。本文保留长期架构和当前算法决策，目标接口不等于已实现 API。精确字段和单位见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，执行与缓存见 [生成管线](GENERATION_PIPELINE.md)，后续自然阶段见 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
 ## 0. 架构与当前边界
 
 采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-当前具备已验收的 M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路、M1.3A I0/H0 初步冰雪/水文及 M1.3B L1 静态湖泊。T0 `terrain-v24` 小型负高程水体清理已通过多 Seed/分辨率基准；M1.3A/B Core/Web 检查、湖泊多分辨率基准及调试链路通过。M1.4 E0 已实现并完成一次固定输入分类器回放，但整体仍属实验，Core/Web 自动化与浏览器验收未运行。Playwright headless 自动化曾因本机 Chrome 进程 SIGABRT 未完成，是否完成当前浏览器验收以 `docs/PROGRESS.md` 本轮记录为准。降雨驱动追加侵蚀、基于最终自然输入的生态结果、完整自然快照或初始文明仍未交付，正式 3D/2D 地图与项目存储也未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
+M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路、M1.3A I0/H0 初步冰雪/水文及 M1.3B L1 静态湖泊已实现；用户于 2026-11-12 决定收尾本轮 M1。T0 `terrain-v25` 的小型负高程水体清理有历史多 Seed/分辨率基准；当前 `terrain-v26` 保留相同地形生成结果并携带卫星渲染纹理，地形自动化与空间形态复验仍延期。M1.4 E0 v3 已在 T0/C0 输入上完成专项分类、固定 Seed 形态和真实 Chrome Worker 验收；修复 v2 的纬度轴错误。M1.5 Schema 3 完整自然快照及 Web 发布链路的定向测试、typecheck 与真实 Chrome 主路径已通过，未完成的全量性能矩阵、T0 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存延期（详见 [PROGRESS](PROGRESS.md)）。参考项目 UI 已迁至 `apps/web/src/ui/{components,hud,state}`，首次打开自动以 Seed 1024、L7、扰动 0.75 生成当前 E0 自然链；主应用入口为 `/`，由 `src/world-view/WorldView.svelte` 承载世界视图与生成交互。正式 3D/2D Atlas、浏览器项目存储或初始文明仍未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -132,7 +132,7 @@ another-earth/
 └── tsconfig.base.json
 ```
 
-**当前实现（2026-11-06）**：网格、地质和基础地形 Pipeline 已接入；领域生成算法与管线调度统一组织在 `world-core/src/generation/`（包含 `pipeline/` 调度引擎、`stages/` 生成阶段、`nature/` 自然领域算法、`civilization/` 文明契约），Worker 与调试入口在 Web。文明生成、正式 Cartography、浏览器项目存储和完整自然快照发布尚未接入。目标目录不要求提前建立空模块；实际状态见 [PROGRESS.md](PROGRESS.md)。
+**当前实现（2026-11-12）**：网格、地质和自然生成 Pipeline 已接入；领域算法与管线调度统一组织在 `world-core/src/generation/`（包含 `pipeline/` 调度引擎、`stages/` 生成阶段、`nature/` 自然领域算法、`civilization/` 文明契约）。Web UI 已按参考项目的 Svelte 5、Vite、Bits UI、Tailwind 技术栈，迁入 `src/ui/components/`、`src/ui/hud/`、`src/ui/state/`；`AppUI.svelte` 负责组合 HUD 与面板，`src/world-view/WorldView.svelte` 承载当前世界视图、生成控制、专题和区域查询。M1.5 完整自然快照发布代码已通过本轮定向检查及真实 Chrome 主路径；未完成的全量矩阵和性能项按用户决定延期。文明生成、正式 Cartography 和浏览器项目存储尚未接入。目标目录不要求提前建立空模块；实际状态见 [PROGRESS.md](PROGRESS.md)。
 
 ### 3.1 Package 依赖规则
 
@@ -246,11 +246,19 @@ export interface ResolvedContentCatalog {
 
 **装载流程**：发现 Pack → 校验 Manifest → 解析依赖 → 校验定义 → 检查 ID 冲突/外键 → 规范排序 → 计算内容签名 → 发布只读 Catalog。
 
-当前 M0 实现提供 `loadBuiltinCatalog()` 和 `createContentCatalog()`；内置包 ID 为 `core`、`earthlike`，定义 ID 使用 `namespace:domain/name`。Manifest 依赖目前使用精确 `version`，不是上方示例的 `versionRange`；`ContentCatalog` 暴露 `packs`、`contentSignature` 与按 Pack ID 查询的 `get()`，尚无 `getGovernment()` 等领域专用方法。内容哈希为确定性的 `fnv1a32`，用于版本身份与意外变更检测，不是抗恶意碰撞的安全摘要。命名生成和外部扩展包加载尚未实现。
+当前 M0 实现提供 `loadBuiltinCatalog()`、`loadBuiltinGenerationCatalog()` 和 `createContentCatalog()`；内置包 ID 为 `core`、`earthlike`、`geography`、`geography-zh`，定义 ID 使用 `namespace:domain/name`。Manifest 依赖目前使用精确 `version`，不是上方示例的 `versionRange`；`ContentCatalog` 暴露 `packs`、`contentSignature` 与按 Pack ID 查询的 `get()`，尚无 `getGovernment()` 等领域专用方法。内容哈希为确定性的 `fnv1a32`，用于版本身份与意外变更检测，不是抗恶意碰撞的安全摘要。大陆/大洋名称初版见 4.4；外部扩展包加载尚未实现。
 
-初版仅需内置 `core` 和 `earthlike`，后续 `fantasy` / `sci-fi` 是内容扩展，不应要求修改模拟核心的每个 Generator。**不在首版开放运行任意用户 JavaScript 脚本的 Mod 接口**，只接受经 Schema 验证的数据包。
+自然生成基线内置 `core` 和 `earthlike`，大陆/大洋名称使用独立 `geography` 内容包，后续 `fantasy` / `sci-fi` 是内容扩展，不应要求修改模拟核心的每个 Generator。**不在首版开放运行任意用户 JavaScript 脚本的 Mod 接口**，只接受经 Schema 验证的数据包。
 
 ### 4.4 命名系统确定性
+
+**已定决策与仍有限制（2026-11-13）**：先建立最终海陆上的 `geographic-regions-v3`，再生成地名。大陆按最终陆地连通块及面积占优的候选来源归并；v1 的最近两大陆配对大洋分区在默认地图上形态不合理，v2 用海岸距离和狭窄海峡后的宽阔水域核心划分洋与海，但宽阔海水连通造成默认结果只剩一个洋；v3 在已确认洋区内用离岸峰值与通路最窄处识别多个大洋，并合并小碎区。海域阈值是明示的初步形态规则，默认 Seed 的大洋数、不同网格等级及高等级性能仍待验收。新快照以可选字段保存区域归属以兼容旧 Schema 3 档案；旧 v1/v2 档案保留原事实而不改写。人工边界和分类稳定性跨地形重生的迁移尚未实现；名称初版见下段。
+
+**命名初版实现（2026-11-13）**：新增 `geographic-names-v1` Stage，只依赖已确认的地理分区，读取 `world-data` 的大陆/大洋词库及 `geographic-names` 内容签名。名称从 Seed、稳定区域 ID、词库 ID、命名版本和内容签名选取；同类冲突按稳定 ID 顺序以哈希后缀消歧。输出仍使用分区产物的索引与面积，新增名称和 `nameContentSignature`；完整快照保存实际名称并校验内容包签名一致。海保持无名。v1 当时只使用内置词库和原始专名，图例与侦测显示类型后缀；地图表面文字标签当时尚未实现。用户手动覆盖与跨区域重划后的名称迁移仍待实现。名称 Stage 独立缓存，变更词库不会重算地形和海盆。旧 Schema 3 档案不强制补名。
+
+**中文名称调整（2026-11-13）**：当前 `geographic-names-v2` 改用 `geography-zh` 中文专名内容包，大陆和大洋各 24 个候选；同类重名按稳定 ID 顺序追加中文序号。原 `geography` 拉丁词库保留在完整 Catalog 中以支持已有档案；新世界仅选择 `core`、`earthlike`、`geography-zh` 三包，旧快照的实际名称不被自动翻译或改写。名称作为中文事实保存，界面直接补“大陆”或“洋”；海不命名。新增内容包和算法版本会使名称 Stage 重算，地理分区阶段仍可缓存复用。手动改名和自定义词库仍待实现。
+
+**地图文字标签（2026-11-13）**：`cartography` 的公开 `buildGeographicLabelAnchors(mesh, regions)` 从已命名大陆与洋的成员网格中选取最接近面积加权球面中心的代表网格；球面向量相互抵消时退回面积最大的成员网格。锚点只供制图，区域名称、归属和面积仍以 `world-core` 的分区产物或快照为事实来源。Web 在“大陆、洋与海”专题图层上以透明 DOM 覆盖层显示名称，按相机投影更新位置，按大陆优先和面积排序避让，遮去背面及视口外标签。当前每区仅一个锚点，跨球面区域可能在锚点不可见时缺席；海无名也无标签。标签样式、开关和位置不进入生成签名。默认 Seed 的排版及浏览器表现尚未目视验收。
 
 - 稳定源：`worldSeed + generatorStage + entityStableId + namingProfileId + relevantPackVersion`；某个实体重命名不应影响其余所有实体。
 - 词库/模板排序在参与选择之前规范化；禁止依赖导入顺序和对象遍历的偶然结果。
@@ -272,11 +280,11 @@ export interface ResolvedContentCatalog {
 
 ### 5.1 核心对象
 
-当前公开的 `WorldSnapshot` 是 Schema 2；`WorldProject` 仍是 M4 规划对象。下面仅列当前快照的顶层结构，字段细节以 `packages/world-core/src/world/` 源码为准。
+当前公开的 `WorldSnapshot` 是 Schema 3；`WorldProject` 仍是 M4 规划对象。下面仅列当前快照的顶层结构，字段细节以 `packages/world-core/src/world/` 源码为准。
 
 ```ts
 export interface WorldSnapshot {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   readonly snapshotId: string;
   readonly revision: number;
   readonly time: { readonly year: number };
@@ -295,12 +303,12 @@ export interface WorldMetadata {
   readonly generatorVersion: string;
   readonly contentSignature: string;
   readonly contentPacks: readonly { readonly id: string; readonly version: string; readonly contentHash: string }[];
-  readonly generationConfig: { readonly planet: PlanetParameters; readonly mesh: MeshConfig; readonly regionCount: number; readonly civilizationEnabled: boolean };
+  readonly generationConfig: { readonly planet: PlanetParameters; readonly mesh: MeshConfig; readonly regionCount: number; readonly civilizationEnabled: boolean; readonly reference?: { readonly subdivisionLevel: number }; readonly geology: GeologyParameters; readonly landforms: LandformParameters; readonly terrain: TerrainParameters; readonly climate: ClimateParameters; readonly hydrology: HydrologyParameters };
   readonly provenance: { readonly stageVersions: Readonly<Record<string, string>>; readonly artifactSignatures: Readonly<Record<string, string>>; readonly configSignature: string };
 }
 ```
 
-其中 `MeshConfig` 是此处对当前 Mesh 细分等级、扰动和可选 Seed 覆盖的简写，不是已导出的类型。`WorldViewState` 已在 `cartography` 中独立定义，包含模式、样式/图层、月份、选中实体和具体相机字段，不进入生成签名。当前 `generationConfig` 和 `provenance` 只覆盖 M0/Mesh；M1 新 Stage 必须记录实际使用的配置与来源。Schema 1 尚无迁移器，不能直接由 Schema 2 解码器读取。
+其中 `MeshConfig` 是此处对当前 Mesh 细分等级、扰动和可选 Seed 覆盖的简写，不是已导出的类型。`WorldViewState` 已在 `cartography` 中独立定义，包含模式、样式/图层、月份、选中实体和具体相机字段，不进入生成签名。当前 `generationConfig` 和 `provenance` 覆盖完整自然 DAG 的输入、版本与签名。Schema 1/2 尚无迁移器，当前解码器拒绝旧档案。
 
 ### 5.2 自然状态建议
 
@@ -390,19 +398,21 @@ export interface NatureSnapshot {
 
 ### 7.3 基础地形 T0（已实现，最终验收待完成）
 
-当前骨架为 `terrain-skeleton-v9`，后处理为 `terrain-v24`，分别固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。实际配置与依赖见生成管线。
+当前骨架为 `terrain-skeleton-v10`，后处理 artifact 为 `terrain-v26`，继续固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。v26 仅把已有表面纹理计算结果纳入 TerrainArtifact，不改变地形高程。实际配置与依赖见生成管线。
 
 ```text
 地质与动力学 → 构造骨架、Phasor 山脊、火山体
 → 纹理与地幔贡献 → 峰值/均衡与全局高程排名整形、封闭低地修复
 → Warp、海岸稳定、可选平滑、两层后期噪声
-→ 山脊锐化、土壤蠕动 → 输出边界转换为 km
-→ 小型负高程连通分量清理、海平面基准、最终海陆、坡度、连通分量与统计
+→ 山脊锐化、土壤蠕动 → 小型负高程连通分量清理
+→ 输出边界转换为 km、海平面基准、最终海陆、坡度、连通分量与统计
 ```
 
 内部高程、噪声和成因诊断使用塑形坐标。最后一次性转换为物理 km，再减 `seaLevelDatumKm`；最终 landMask 必须由写入 Float32 的物理高程符号派生。海岸中间 mask 只约束后续塑形，不成为公开海陆事实。
 
-低段 `x≤0.5` 使用 `6x²(3−2x)` km；中高段用单调三次 Hermite 锚点 `(0.5,3)/(0.72,4)/(0.82,5)/(1,6)`（坐标、km），连接梯度连续。海底为 `8x`，超过 1 从 6 km 按每坐标单位 6 km 延伸。高程重映射有意偏离参考曲线，不代表经地球统计校准的物理模型。
+陆地使用单调三次 Hermite 曲线，塑形坐标→km 锚点为 `(0,0)/(0.2,0.37)/(0.4,0.92)/(0.65,2.5)/(0.85,4.5)/(0.9,5.1)/(1,7.7)`；超过 1 后按每坐标单位 18 km 延伸。海底至 `x=-0.6` 使用 `8x`，更深的塑形坐标增加连续、渐近有界的海沟深度，`x=-0.75` 约为 -11.6 km。默认海盆骨架的被动/主动陆架宽度为 1/0.5 个参考网格角距、陆坡宽度为 1.2 个，海盆底坐标为 -0.58；陆架宽度按活动边缘距离连续变化。该曲线以地球面积分带为目标校准默认参数，不保证任意 Seed 的形态或高程逐格对应真实地球。
+
+**T0 默认高程统计校准（2026-11-12）**：参考 [NOAA 海洋平均深度](https://oceanservice.noaa.gov/facts/oceandepth.html)约 3.68 km、[NOAA ETOPO1 高程曲线](https://www.ncei.noaa.gov/sites/default/files/2023-01/Hypsographic%20Curve%20of%20Earth%E2%80%99s%20Surface%20from%20ETOPO1.pdf)深海主峰约 4.3 km，以及 [Millennium Ecosystem Assessment 表 24.3](https://www.millenniumassessment.org/documents/document.293.aspx.pdf)的陆地面积分带；使用 Mesh 区域实际面积加权，不按区域数校准。默认 Seed 1024/L7 的陆地面积 29.90%、陆地低于 1 km 75.34%、高于 2.5 km 7.75%、平均海深 3.49 km；另 3 个 Seed/L6 的高地占比 7.00–7.83%、平均海深 3.54–3.61 km；Seed 1024/L8 的高地占比 7.53%、平均海深 3.46 km。L4/L5 的高地占比为 13.17%/9.70%，粗网格仍存在尺度偏差。诊断记录见 [M1.1B 高程统计](benchmarks/M1.1B-terrain-hypsometry-v25.json)。这仅是全球分布校准；Seed 1024/L7 的 C0/E0 与 Seed 1024/L6 的 H0/L1 已诊断生成成功，单张地形图粗略抽查未见明显断带，但海岸轮廓、山脉走向、海沟数量及下游数值/形态尚未重新验收。阶段版本升级使旧 T0 及下游 C0/I0/H0/L1/E0 缓存失效；随机流版本不变。本次只运行诊断生成，未运行 test、build、lint、typecheck 或浏览器检查。
 
 粗糙度范围 0–0.5、默认 0.4，可调纹理相对默认强度为 `(roughness/0.4)³`，后期细节和峰值尖峰也参与。两层后期噪声的基准坐标幅度为 `0.1/6`、`0.05/6`，沿用旧四次幂映射 `6x⁴(5−4x)` 导数的局部补偿（最多 4 倍）。这条补偿是固定的塑形幅度参考，不随当前输出曲线改动；粗糙度 0 时构造骨架和岛屿仍可有起伏。
 
@@ -422,7 +432,7 @@ export interface NatureSnapshot {
 
 **必须明确模型定位**：这是一套可解释、可调校的 **EarthlikeClimateModel**，不是通用行星大气数值求解器。参考模型包含针对类地球的温度基线、海陆经验系数、季风增益和降水上限。若扩展星球自转周期、大气密度或不同恒星辐射，应建立独立 Planetary Forcing 层，而不是仅叠加 `temperatureOffsetC`。
 
-**当前工作区迁移状态与限制（待验收）**：`climate-c0-v2` 已将 feat-society 四季风场、洋流代理、季风、多轮温湿耦合与 Köppen 亚型迁入 T0 → C0 链路；通过当前 Mesh 适配器使用实际物理半径和阶段随机流，将旧 365 天日历改为 12 个等时长箱。输出投影采用三源海陆感知插值及逐月面积降水修正。结果、形态、缓存、内存和真实 Worker 尚未验证；不提供最终 C1 或完整世界事实。
+**当前工作区实现与限制**：`climate-c0-v21` 保留 feat-society 的四季环流锚点、多轮温湿耦合、Köppen 亚型和 12 个等时长月。夏季副热带高压按较强西岸暴露度削弱锋面降水，西岸季节降水项的作用范围较 v16 收窄，夏季锋面抑制幅度减半；副热带西岸的陆地季节气温振幅按海洋影响向海洋振幅混合，内陆和极地不受此项改变；东岸中纬季风暴露陆地按暴露度平方另有最多约 5°C 的季节振幅增量，东岸冬季离岸气流降雨抑制和夏季迎风降雨增益也按暴露度平方增强，陆向传播距离为 1100 km。暖干与寒冷陆地的额外水汽衰减按相对输送风速估计传播时间，并沿陆地到陆地的输送边累积。暖干地区的背风下坡路径单独降低来流的有效水汽供给。直接上岸的海洋水汽保留基础衰减。第一轮全年温雨用于估计降水与潜在蒸散的比值，第二轮据此限制陆地蒸发供给。三源海陆感知温雨投影保留逐月降水体积修正，气温高程修正只应用于输出陆地。输出洋流从最终相连水体内的参考海洋源采样。参考格上的沿流向热输送使用有界上游混合与边界暖度回归，流场与热量皆为模型代理。开放与阻断绕极通道、反向输热和雨影有专项夹具，海盆闭合环流和物理流速仍是模型限制。 [v21 草原/Dwa 调整](benchmarks/M1.2-Dwa-v21-steppe-adjustment.md) · [v20 Dwa 校准](benchmarks/M1.2-Dwa-v20-adjustment.md) · [v19 Dwa 校准](benchmarks/M1.2-Dwa-v19-adjustment.md) · [v18 Csa/Csb 校准](benchmarks/M1.2-Csa-Csb-v18-adjustment.md) · [v17 Csa 范围校准](benchmarks/M1.2-Csa-v17-adjustment.md) · [v16 陆地水汽再循环对照](benchmarks/M1.2-land-water-limited-recycling.md) · [v15 大陆冬季与背风干燥对照](benchmarks/M1.2-continental-dryness.md) · [v14 副热带沙漠对照](benchmarks/M1.2-subtropical-desert.md) · [v13 西岸夏雨对照](benchmarks/M1.2-west-coast-inland-rainfall.md) · [v12 历史校准](benchmarks/M1.2-climate-calibration.md)
 
 **优化**：
 
@@ -449,13 +459,13 @@ export interface NatureSnapshot {
 
 **关键问题**：旧参考实现对于完全无海洋出口的陆地分量可以建立内部汇点，但未把它表达为可见湖泊；“优先队列填洼生成可排水表面”与“真实盆地蓄水/蒸发”应区分。**计算路由辅助面不等于改变最终地表高程。**
 
-**M1.3A 当前实现（Core/Web 检查及基准通过；Playwright headless 自动化受环境限制）**：`cryosphere-i0-v1` 对 C0 月温/降水作可配置线性雨雪分配，保存月末雪水当量、降雪及融雪；只模拟单年且年初雪储量为零，不是多年冰川。当前 `hydrology-h0-v2` 采用显式温度指数蒸散系数，逐月记账液态降水/融雪、蒸散和径流；局地产流体积按 `mm × km² × 1000` 换为 m³/年，汇流后按行星公转周期换为 m³/s。
+**M1.3A 当前实现（历史 Core/Web 检查及基准通过；当前参数控件尚未运行自动化检查）**：`cryosphere-i0-v1` 对 C0 月温/降水作可配置线性雨雪分配，保存月末雪水当量、降雪及融雪；只模拟单年且年初雪储量为零，不是多年冰川。当前 `hydrology-h0-v4` 采用显式温度指数蒸散系数，逐月记账液态降水/融雪、蒸散和径流；局地产流体积按 `mm × km² × 1000` 换为 m³/年，汇流后按行星公转周期换为 m³/s。河道阈值为 `max(基准汇水面积, 16 × 平均网格面积) / 河网密度倍率`，倍率默认 1；Köppen BW 沙漠区的河道还要求累计来水中至少一半来自非沙漠气候区，以保留跨区大河并压低当地沙漠支流；BS 半干旱区保留气候产流支持的河道。
 
-Priority Flood 从所有海洋区起路由；没有海洋区时，以最低高程区作内流根。下游平坦破同高由 (填洼高程, 区域索引) 稳定排序，结果须单调且无环。H0 流域摘要以终止区为根，河段 ID 由 Mesh ID 与源区索引组成，只承诺相同 Mesh/算法版本内确定。`hydrology-h0-v2` 河网阈值为配置最小汇水面积与十六个平均区域面积的较大值，并要求正累计流量；Strahler 级序同时控制调试图的显示对比度。3 Seed × L4/L5/L6 密度校准见 `M1.3A-river-density-calibration.json`。
+Priority Flood 从所有海洋区起路由；没有海洋区时，以最低高程区作内流根。下游平坦破同高由 (填洼高程, 区域索引) 稳定排序，结果须单调且无环。H0 流域摘要以终止区为根，河段 ID 由 Mesh ID 与源区索引组成，只承诺相同 Mesh/算法版本内确定。`hydrology-h0-v4` 输出的 `effectiveRiverThresholdKm2` 保存经密度倍率缩放后的最终面积门槛；仅改河网参数时重建 H0 及其下游。Köppen BW 沙漠区仅显示非沙漠来水占多数的通道。Strahler 级序同时控制调试图的显示对比度。v2 的历史密度基准见 `M1.3A-river-density-calibration.json`。
 
-**M1.3B 当前实现**：`static-lakes-l1-v4` 依赖 Mesh、T0、H0，把 `filledElevationKm > terrain.elevationKm` 的陆地区域按 Mesh 邻接提取连通洼地，并过滤仅含一个 Mesh 区域的组件。该规则直接依据当前网格的成员数，不依赖固定面积，也适用于用户选择的任意网格等级。湖面水位是组件成员中的最大 Priority Flood 高程，溢流区是指向组件外 H0 路由的边界区域。ID 为 Mesh ID 加最小成员索引；产物保存湖泊区域索引、面积、水位、H0 流域引用和出口。湖泊显示不修改 T0 高程或海陆掩码。v4 基准 `M1.3B-static-lakes.json` 记录 3 Seed × L4/L5/L6 各组湖泊数分别为 L4 0–2、L5 3–7、L6 33–39；L8 Seed 42 可见 Worker 生成 1,063 个。当前算法仍不能区分真实湖盆与河谷/泛滥平原型狭长洼地。
+**M1.3B 当前实现**：`static-lakes-l1-v6` 直接依赖 Mesh、T0、C0、H0，把 `filledElevationKm > terrain.elevationKm` 的陆地区域按 Mesh 邻接提取连通洼地，至少包含两个 Mesh 区域且面积不小于 `minimumLakeAreaKm2` 才保留；该参数默认 0，不改变两区域起步规则。Köppen B 区占湖面多数的候选洼地，还要求流入量大于按同一温度指数蒸散系数估算的年湖面蒸发量；非干旱气候继续沿用地形洼地筛选。面积门槛只筛选候选，不扩大湖盆或改变保留湖泊的边界。该检查用于排除缺少气候水量支持的干旱洼地，不模拟湖面月度涨落或完整储水。L1 缓存签名包含最小湖泊面积；仅改此参数时 H0 保持命中。湖面水位是组件成员中的最大 Priority Flood 高程，溢流区是指向组件外 H0 路由的边界区域。ID 为 Mesh ID 加最小成员索引；产物保存湖泊区域索引、面积、水位、H0 流域引用和出口。湖泊显示不修改 T0 高程或海陆掩码。v4 基准 `M1.3B-static-lakes.json` 是历史地形筛选结果；当前 v6 尚未运行新基准。
 
-I0/H0/L1 是中间 `GenerationArtifact`，不写进 WorldSnapshot Schema 2，不代表最终水文事实。L1 的 `endorheic` 继承 H0 终止流域语义，因此现有含海洋样本均被分类为开口湖；对有海洋行星的气候性内流湖，仍需湖面水量平衡/洼地溢流层级模型。当前不实现湖泊动态水位/储量、湿地、地下水、季节河流或基于气候的追加侵蚀。Core/Web 自动化与 3 Seed × L4/L5/L6 基准通过；真实浏览器链路状态以 `docs/PROGRESS.md` 中本轮验收记录为准。
+I0/H0/L1 单独生成时是中间 `GenerationArtifact`；M1.5 完整自然请求才把它们组装为 Schema 3 水文事实。L1 的 `endorheic` 继承 H0 终止流域语义，因此现有含海洋样本均被分类为开口湖；对有海洋行星的气候性内流湖，仍需湖面水量平衡/洼地溢流层级模型。当前不实现湖泊动态水位/储量、湿地、地下水、季节河流或基于气候的追加侵蚀。M1.3 历史 Core/Web 自动化与 3 Seed × L4/L5/L6 基准通过；M1.5 Schema 3 完整自然链的定向测试、typecheck 与真实 Chrome 主路径通过，全量性能回归延期。
 
 未来如加入人工改道、水坝和灌溉，必须把河网从简单 `riverMask` 扩展为稳定实体和图连接。水文更新可利用下游依赖传播，而非只依赖笔刷覆盖区。
 
@@ -479,7 +489,7 @@ interface EcologyFields {
 
 潜在生物群系属于自然适应性，实际土地覆盖可以由文明开垦、砍伐、火灾和生态恢复改变；二者不应互相覆盖。首版可只提供自然覆盖和基础土壤/农业适宜性，不做全球物种食物网。
 
-**M1.4 当前实现（实验，整体未验收）**：`ecology-e0-v2` 从初步 C0 月气候与 T0 地形生成潜在生物群系、无文明自然覆盖、温度指数干旱度和生长季长度。生态类别 ID 由 `world-data` 拥有。E0 用等时长的 12 月箱适配 feat-society 分类规则，年均温/年降水复用 C0；海洋由 T0 海陆掩码编码，所有陆地区域（含 H0 河道与 L1 湖泊区域）都进入同一套气候/地形分类。E0 不依赖或读取 I0/H0/L1，`SnowIce` 是气候代理，不代表多年冰川。固定 Seed 旧分类器同输入回放只比较规则，不比较旧版与当前 C0 气候场，也不验收空间纹理。E0 仅为中间产物，未进入 WorldSnapshot 或 Schema 2；C0/T0 仍是初步模型，尚无生态气候学标定。完整检查状态见 [PROGRESS](PROGRESS.md)。
+**M1.4 当前实现（按本轮初步输入范围验收）**：`ecology-e0-v3` 从 C0 月气候与 T0 地形生成潜在生物群系、无文明自然覆盖、温度指数干旱度和生长季长度。生态类别 ID 由 `world-data` 拥有。E0 用等时长的 12 月箱适配 feat-society 分类规则，年均温/年降水复用 C0；纬度使用 Mesh Y 轴，与 C0 一致。海洋由 T0 海陆掩码编码，所有陆地区域（含 H0 河道与 L1 湖泊区域）都进入同一套气候/地形分类。E0 不依赖或读取 I0/H0/L1，`SnowIce` 是气候代理，不代表多年冰川。当前 v25/v16/v3 四 Seed 分布、同输入旧分类器回放及 Worker 验收见 [E0 收尾记录](benchmarks/M1.4-E0-closeout.md)。E0 单独请求仍为中间产物，完整自然请求可将其装入 Schema 3；无真实植被分布标定。
 
 ### 7.7 自然资源：连接自然与文明
 
@@ -625,17 +635,17 @@ export interface PickResult {
 
 静态初始文明不等于动态模拟。未来按固定时间步定义人口、经济、交通、政治与文化因果，事件须可解释。历史使用检查点和差量，不能仅靠 Seed 重新执行新版本算法来恢复旧世界。当前不建立模拟器、编辑器或分支空框架。
 
-## 12. Worker、调试器与发布边界
+## 12. Worker、世界视图与发布边界
 
-当前 `/mesh-debug` 使用 Web 的 Controller/Runtime，支持 Mesh、Geology、Terrain 三种任务及 requestId。Worker 内三条 Pipeline 共用 512 MiB LRU，以容纳 L8 地形完整阶段链；只转移结构化克隆出的独立产物副本，缓存原件不 detach。主线程校验身份、dtype、长度和字段后准备显示。权威数组不直接交给渲染层修改。
+当前主应用根路径 `/` 使用 Web 的 Controller/Runtime，支持 Mesh、Geology、Terrain 等生成请求及 requestId。Worker 内三条 Pipeline 共用 512 MiB LRU，以容纳 L8 地形完整阶段链；只转移结构化克隆出的独立产物副本，缓存原件不 detach。主线程校验身份、dtype、长度和字段后准备显示。权威数组不直接交给渲染层修改。
 
 latest request wins：陈旧完成和查询响应被忽略。硬取消终止并重建 Worker，丢失其缓存；旧显示仍可保留，成功重建前禁用区域查询。同步网格构建不能在一轮 CPU 计算中实时处理中断消息，不能把硬取消称为无损协作取消。
 
-调试页等级为 L4–L8，核心为 L0–L8；支持 Voronoi/Icosphere、线框、旋转、五邻域中心标记、专题与区域查询。高程和坡度图例属于显示状态，切换不触发生成。坡度采用固定对数角度色阶，45°以上显示最高档。
+当前世界视图等级为 L4–L8，核心为 L0–L8；支持 Voronoi/Icosphere、线框、旋转、五邻域中心标记、专题与区域查询。Cell 区域边线默认关闭，由图层面板“环境与辅助”开关控制；网格显示切换只更新渲染状态。图层统计和图例说明已从主界面移除；这些显示调整不影响世界事实、缓存签名或生成输入。
 
-当前用单位球和顶点颜色显示地形，没有参考项目的显示高度位移，也不是正式 Cartography。生成内容失败、取消或传输错误时保留最后有效显示；安装新几何前释放旧 GPU 对象。L6+ 限制像素比、关闭默认线框和旋转以控制显示负载。高等级显示数组仍在主线程准备，峰值内存和长期 GPU 压力未测。
+当前用单位球和顶点颜色显示地形，没有参考项目的显示高度位移，也不是正式 Cartography。生成内容失败、取消或传输错误时保留最后有效显示；安装新几何前释放旧 GPU 对象。渲染使用 `window.devicePixelRatio` 原生像素比，不再对高等级降采样；高等级显示数组仍在主线程准备，峰值内存和长期 GPU 压力未测。
 
-未来完整世界发布需在核心定义快照所有者与原子替换，Worker 协议区分中间产物、完整世界和显示副本，不能用当前调试产物替代正式发布。
+未来完整世界发布需在核心定义快照所有者与原子替换，Worker 协议区分中间产物、完整世界和显示副本，不能用当前中间阶段产物替代正式发布。
 
 ## 13. 世界存档、版本与内容一致性
 
@@ -767,7 +777,7 @@ world.aearth
 | 阶段 | 当前边界 |
 | --- | --- |
 | M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
-| M1 | M1.1 地质和 T0 terrain-v20 历史验收；terrain-v24、I0/H0 与 L1 静态湖泊 Core/Web 核心验收通过；E0 实验实现及固定输入分类器对照已完成，整体待验收；气候性内流湖、最终输入驱动的生态和自然快照发布尚未完成 |
+| M1 | 用户于 2026-11-12 决定收尾本轮，接受 T0 v25 数值 / C0 v21 / I0/H0/L1 / E0 v3 为自然链基线。T0 v26 仅增加显示纹理 Artifact 字段。M1.5 快速定向验证通过；全量性能矩阵、T0 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存未完成并延期，不记为通过 |
 | M2 | 初始文明、资源与内容库，尚未实现 |
 | M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
 | M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |
@@ -777,9 +787,23 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 
 ## 17. 已定决策与仍有限制
 
+- 2026-11-13：卫星场景效果以只读迁移基线 `docs/old-src/core/rendering/globe/{atmosphere,water-layer,stars,view}.ts` 为准：复用相机距离淡入的 BackSide 大气边缘、按海洋单元裁剪的 Phong 水面、归一化地球尺度的星空，以及按月份日序和轴倾角计算的太阳方向。为避免昼夜模式暗面吞掉表面细节，夜侧环境补光改为可见的蓝灰色。卫星表面继续使用径向法线 Lambert 材质，并按旧 `SatelliteSurfaceRenderer` 的 hillshade 算法增加固定方向地形明暗调制。T0 的原始地形纹理计算结果以五个仅供显示的数组由 `terrain-v26` Artifact 传到 Web；配色保留参考的纹理权重和调色顺序，不把显示纹理写入 WorldSnapshot。v26 不改变 terrain-v25 高程和海陆结果，但会使旧 T0 与下游缓存失效。此改动尚未运行自动化检查或浏览器视觉验收。
+- 2026-11-13：水文参数面板增加河网密度倍率、基准汇水面积和最小湖泊面积，并显示河段/湖泊数量与面积摘要。密度倍率缩放 H0 面积阈值，最小湖泊面积只过滤 L1 候选，不扩展几何；H0/L1 升级至 v4/v6，参数按实际消费者进入 Stage 签名。Schema 3 档案解码为缺失的新增参数补默认元数据，不修改已保存水文事实。本次未运行测试、类型检查或浏览器验收；参数范围响应和大网格摘要性能待验证。
+- 2026-11-12：用户决定收尾 M1，接受 T0 `terrain-v25` / C0 `climate-c0-v21` / I0/H0/L1 / E0 `ecology-e0-v3` 为本轮自然链基线。快速验证结果：Core 自然快照/档案/发布用例 19/19、Web Controller/Transfer/Worker 用例 24/24、C0 温度/降水/Köppen 用例 11/11；Core/Web typecheck 通过，真实 Chrome 主路径 3/3 通过。全量性能矩阵、T0 v25 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存未完成，作为延期项，不宣称已通过。后续自然模型演进与 M2+ 能力按各自阶段安排。
+- 2026-11-12：C0 v21 在东岸季风强区增加夏季迎风降雨，目标是让半干旱草原按实际月雨、月温转入相应湿润或冬干类别。四 Seed 的 BS 均下降 0.09–0.35 个百分点，Cwa 均增加 0.23–0.34 个百分点；Dwa 三增一微降。默认 Dwa 0.266%→0.291%、Cwa 1.986%→2.323%、BS 23.553%→23.259%，BW 基本稳定。版本变更使缓存与下游失效；四 Seed 和默认 I0/H0/E0 仅完成诊断，本次未运行自动化检查或浏览器验证。见 [v21 对照](benchmarks/M1.2-Dwa-v21-steppe-adjustment.md)。
+- 2026-11-12：C0 v20 针对 v19 的 Dwa 面积偏少，增加强东岸季风区的季节温差，强化暴露区冬季离岸气流降雨抑制，并把东岸暴露信号陆向传播尺度从 850 km 调至 1100 km。四 Seed 的 Dwa 均上升，默认 0.081%→0.266%；默认 BS 增加约 0.40 个百分点，BW 基本稳定，Csa/Csb 变化很小。10°C 季节振幅试验虽得到更大 Dwa，但局地夏温约 30°C，未采用。分类阈值与年温基线不变；同尺度区域观测、test/build/lint/typecheck 及浏览器链路尚未验证。见 [v20 对照](benchmarks/M1.2-Dwa-v20-adjustment.md)。
+- 2026-11-12：C0 v19 针对四 Seed 均缺失的 Dwa，在东岸中纬季风暴露陆地按东岸暴露度平方增加有界季节温差，不改年温基线、降雨或 Köppen 阈值。默认 Dwa 0→0.081% 陆地面积，其余三 Seed 为 0.023%–0.089%，对应东岸低地冬干且炎夏的交集。全局增强冬季离岸气流干燥试验未有效增加 Dwa，已撤回。`Dfd/Dwd/Dsd` 仍为零，默认高纬低地中距岸 ≥1000 km 仅占陆地 0.098%，不因类别为零而制造极寒大陆气候。v19 Stage 缓存与下游依赖失效；四 Seed 及默认 I0/H0/E0 仅完成诊断，本次未运行自动化检查或浏览器验证。见 [v19 对照](benchmarks/M1.2-Dwa-v19-adjustment.md)。
+- 2026-11-12：C0 v18 接替 v17。v17 的 Csa 仍偏多、Csb 偏少；月温原公式使最靠海陆地的季节振幅明显高于海洋。本轮仅在副热带西岸按海洋影响混合陆地与海洋季节振幅，未显式模拟上涌。默认 Csa 6.06%→4.63%、Csb 0.56%→1.95%；全纬度混合初案使 Dfb/EF 剧烈变化，故用 22°–52° 平滑纬度窗限定。科本规则、公开字段和风流算法不变；Stage 版本升级使旧缓存和下游依赖重算。Cfb 上升且沿岸绝对月温仍缺同尺度观测验收。本轮仅运行固定 Seed 与默认下游诊断，未运行 test、build、lint、typecheck 或浏览器检查。见 [v18 对照](benchmarks/M1.2-Csa-Csb-v18-adjustment.md)。
+- 2026-11-12：C0 v17 接替 v16 作为当时 M1 自然链候选。四 Seed 同地形消融显示西岸夏季锋面抑制是 Csa 扩张的主要可控贡献；将季节降水项限制到较强西岸暴露度并把夏季锋面抑制减半。默认 Csa 7.70%→6.06%，强暴露西岸面积仅减少 5.1%，弱/中暴露区域收缩更显著；陆地年雨量 649.9→658.6 mm，BW/BS 各变化不超过 0.3 个陆地百分点。保留 Köppen 阈值、字段、单位和风流算法，升级 Stage 版本使旧缓存与下游依赖失效。未按地球 Csa 面积硬配额；Csb 也减少，区域月雨仍待同尺度观测验收。此轮只运行诊断，未运行 test、build、lint、typecheck 或浏览器检查。见 [v17 对照](benchmarks/M1.2-Csa-v17-adjustment.md)。
+- 2026-11-12（快速收尾验证前记录）：M1.5 将五类完整自然状态及空文明写入 Schema 3，记录自然 DAG 的完整配置、Stage 版本和输入签名；旧 Schema 1/2 档案无迁移器，直接拒绝。档案 envelope 仍独立为 M0 JSON v1。`WorldStore` 复制候选并完整校验后原子切换，仅提供只读查询；Web 场景安装成功后才提交候选。当前 Web 同时传输调试产物和独立快照，L7/L8 峰值内存未测。该记录当时所称的 M1.6 全链验收现已由用户决定收尾，未完成的全量验证作为延期事项，详见本节首条决策。
+- 2026-11-12（早期收尾范围记录）：本轮 M1 的自然事实候选固定在 T0 v25 / C0 v16 / I0/H0/L1 / E0 v3。按当前启发式模型验证生成、索引、相互作用、分类和查询；T1/C1/H1、气候驱动侵蚀、逐月土壤水及更细生态标定转为后续自然模型演进，避免把未实现的阶段当成当前发布前置条件。E0 v3 改用 Mesh Y 轴纬度，与 C0 一致；四 Seed 形态和真实 Chrome Worker 已复验。后来按用户决定完成 M1.5 快速验证并收尾 M1；全链性能及专项验证延期，详见本节首条决策。当前生物群系仍不代表地球真实植被分布。
+- 2026-11-12：默认 T0 高程分布按地球面积加权参考校准，海底骨架收窄陆架并加深海盆，最终 km 映射压低大面积中高陆地、保留高峰与少量海沟；不改变海平面参数默认值、地质候选陆地目标或世界字段单位。`terrain-skeleton-v10` / `terrain-v25` 升级使旧阶段缓存失效，随机流维持原版本。四个 Seed、七组尺度诊断表明 L6–L8 高程分布已接近参考区间，L4/L5 仍偏高，空间形态和下游 C0/I0/H0/L1/E0 仍需复验；本次未运行 test、build、lint、typecheck 或浏览器检查。
 - 2026-11-08：M1.4 E0 使用 C0/T0 作为分类输入；H0 河道和 L1 湖泊不改变群系/自然覆盖分类。用户反馈湖泊曾被 E0 直接编码为淡水并导致分类依赖 H0/L1，因此升级到 `ecology-e0-v2`，从 DAG 和 Artifact 契约移除水文输入；水文专题保持独立。此阶段不隐式实现最终 C1/H1 或完整快照。
 - 2026-11-08：E0 类别字典由 `world-data` 公开稳定 ID 管理，`world-core` 负责分类算法和生成产物；生态和自然覆盖不进入快照，直到 M1.5 完整自然状态契约组装。E0 整体实现/Worker 尚未验收，固定输入旧分类器对照仅覆盖分类输出。
 - 2026-11-08：将 E0 和两张专题明确标为实验。E0 分类输入限制为 C0/T0，水文参数与 H0/L1 成员不进入其依赖或掩码；固定 Seed 同输入旧分类器回放覆盖全部陆地区域。该对照不代表旧/新气候场一致或地图形态验收通过。
+- 2026-11-09：按用户决定，封存当前 M1 实现轮次并先迁移 UI；不宣称 M1 技术验收通过。UI 迁移完成后，以 `docs/old-src` 的 `feat-society` 为算法与流程基线重新审查和迁移 M1，现有实现作为比较材料，届时另定范围和验收证据。
+- 2026-11-10：参考 UI 按 Svelte 5/Vite/Bits UI/Tailwind 技术栈与 `ui/components`、`ui/hud`、`ui/state` 结构迁入 Web；`AppUI` 组合工作台 HUD，现有 `MeshDebug` 提供当前数据和渲染能力。首次打开自动生成当前 E0 链，界面默认 Seed 1024、L7、扰动 0.75，并沿用旧 UI 气候默认倾角 23.5°/降水倍率 1.8。Chrome Worker/UI 回归 10/10 通过。UI 迁移现已完成，下一步重开 M1 算法与流程迁移；此决策不改变 M1 的验收状态，也不代表正式 Atlas、文明、完整自然快照已实现。
+- 2026-11-10：按 UI 反馈把 Cell 区域网格线设为默认关闭，并将开关放入图层面板；增加合并在当前专题图例中的区域数量、总区域占比、逐类陆地区域占比、总体陆地区域占比、颜色条、复制 TSV，以及河网段和湖泊面积摘要。类别按陆地比例降序、同值按总区域比例降序。统计仅为显示派生值，不进入生成或缓存。本次未运行检查。
 
 - 2026-11-06：恢复 feat-society 的主要构造/纹理逻辑，停止额外区域隆起、区域起伏和平缓区保护。兼容诊断字段保留零/一值，含义见数据契约。
 - 2026-11-06：地形处理统一塑形坐标，公开边界转物理 km；输出曲线与粗糙度响应按视觉反馈调整，均由版本标识，不声称与旧版或地球逐值一致。

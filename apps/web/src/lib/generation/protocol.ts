@@ -1,7 +1,9 @@
-import type { ClimateArtifact, ClimateParameters, CryosphereArtifact, EcologyArtifact, GeologyArtifact, GeologyGenerationConfig, GeologyParameters, HydrologyArtifact, HydrologyParameters, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact, TerrainGenerationConfig, WorldGenerationConfig } from '@another-earth/world-core'
+import type { ClimateArtifact, ClimateParameters, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, GeologyGenerationConfig, GeologyParameters, HydrologyArtifact, HydrologyParameters, NaturalWorldIdentity, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact, TerrainGenerationConfig, WorldGenerationConfig, WorldSnapshot } from '@another-earth/world-core'
 
 export interface GenerationConfig {
   readonly seed: string
+  /** Present only for a complete natural-world publication request. */
+  readonly publication?: NaturalWorldIdentity
   readonly config: Omit<WorldGenerationConfig, 'planet'> & { readonly planet: WorldGenerationConfig['planet'] & { readonly seaLevelDatumKm?: number }, readonly geology?: GeologyParameters, readonly reference?: GeologyGenerationConfig['reference'], readonly terrain?: TerrainGenerationConfig['terrain'], readonly landforms?: TerrainGenerationConfig['landforms'], readonly climate?: ClimateParameters, readonly hydrology?: HydrologyParameters, readonly ecology?: true }
   readonly force?: boolean
 }
@@ -23,7 +25,7 @@ export type WorkerResponse
   = | { readonly type: 'READY' }
     | { readonly type: 'STARTED', readonly requestId: string }
     | { readonly type: 'PROGRESS', readonly requestId: string, readonly stageId?: string, readonly stageProgress?: number, readonly pipelineProgress: number, readonly durationMs?: number, readonly status: string, readonly message?: string }
-    | { readonly type: 'COMPLETED', readonly requestId: string, readonly mesh: SphericalMesh, readonly geology?: GeologyArtifact, readonly terrain?: TerrainArtifact, readonly climate?: ClimateArtifact, readonly cryosphere?: CryosphereArtifact, readonly hydrology?: HydrologyArtifact, readonly lakes?: StaticLakeArtifact, readonly ecology?: EcologyArtifact, readonly stages?: readonly StagePlan[], readonly cacheHit: boolean, readonly cacheBytes: number, readonly pipelineMs: number, readonly copyMs: number, readonly meshBytes: number }
+    | { readonly type: 'COMPLETED', readonly requestId: string, readonly mesh: SphericalMesh, readonly geology?: GeologyArtifact, readonly terrain?: TerrainArtifact, readonly regions?: GeographicRegionsArtifact, readonly climate?: ClimateArtifact, readonly cryosphere?: CryosphereArtifact, readonly hydrology?: HydrologyArtifact, readonly lakes?: StaticLakeArtifact, readonly ecology?: EcologyArtifact, readonly world?: WorldSnapshot, readonly stages?: readonly StagePlan[], readonly cacheHit: boolean, readonly cacheBytes: number, readonly pipelineMs: number, readonly copyMs: number, readonly meshBytes: number }
     | { readonly type: 'TRANSFERRED', readonly requestId: string, readonly postMessageMs: number }
     | { readonly type: 'CANCELLED', readonly requestId: string }
     | { readonly type: 'FAILED', readonly requestId: string, readonly error: SerializedError }
