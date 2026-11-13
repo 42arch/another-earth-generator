@@ -13,7 +13,7 @@
 
 `climate-c0-v21` 的 `geographicReference`（Uint32/N）供风采样，`oceanReference`（Int32/N）供洋流和暖度采样。`oceanReference` 取参考海洋格索引，沿最终 Mesh 的相连海水区域补齐近岸空格。值 `-1` 表示陆地或无可用参考源的水体，`sampleClimateCirculation` 对此返回 0，`queryClimateRegion.oceanCurrentAvailable` 区分缺测与实际近静止。风与洋流向量使用模型相对单位，暖度代理范围为 −1 到 1。v21 的温雨与依赖这些输入的分类可能变化，字段结构沿用 v12。旧 C0 产物由 Stage 缓存版本失效并重算。
 
-`queryClimateRegion` 增加 `windSpeedMps: number` 与 `oceanSpeedMps: number | null`。`sampleClimateSpeedMps` 提供同口径的单项查询。两者用观测分带拟合的系数估计月平均向量大小，分别对应 10 米风速与表层流速。洋流缺测返回 `null`，有效零向量返回 0。原分量和暖度字段继续使用模型单位，速度估计仅在读取时派生。 [环流速度标定](benchmarks/M1.2-circulation-speed.md)
+`queryClimateRegion` 增加 `windSpeedMps: number` 与 `oceanSpeedMps: number | null`。`sampleClimateSpeedMps` 提供同口径的单项查询。两者用观测分带拟合的系数估计月平均向量大小，分别对应 10 米风速与表层流速。洋流缺测返回 `null`，有效零向量返回 0。原分量和暖度字段继续使用模型单位，速度估计仅在读取时派生。`extractMonthlyCirculation` 按同一标定系数提取输出网格上的月度环流场（`windEastMps`、`windNorthMps`、`oceanEastMps`、`oceanNorthMps`、`oceanWarmth` 与 `oceanAvailable`），由 `assembleNaturalWorld` 写入 Schema 3 可选字段 `nature.climate.circulation`；旧 Schema 3 档案缺少 `circulation` 时仍合法，`WorldMapReader.capabilities.hasCirculation` 为 `false`。 [环流速度标定](benchmarks/M1.2-circulation-speed.md)
 
 `metadata` 保存 worldId、实际名称、调用者提供的 UTC 创建时间、字符串 seed、生成器版本、内容签名、内容包版本/哈希、Mesh 参数以及生成来源。当前来源包含 Mesh Stage 版本、输入签名和配置签名；M1 接入新 Stage 时必须一并扩展。创建时间和名称不参与随机身份；seed 是不透明字符串。snapshotId/worldId/实体 ID 由调用者提供，不能根据数组顺序、显示名称、当前时间隐式推导。revision 是非负安全整数，同一世界的新版本必须分配新 snapshotId 并增加 revision；校验单个快照无法证明跨快照的单调性。
 
@@ -38,6 +38,9 @@
 | climate.precipitationMm | Float32 / 12N | 月总量 mm/月，≥ 0 | 已确认月气候；年量按月求和 |
 | climate.annualMeanTemperatureC / annualPrecipitationMm | Float32 / N | °C / mm/年；须与月字段一致 | C0 年度聚合 |
 | climate.koppenClass | Uint8 / N | 0 海洋，其余为 C0 Köppen 类索引 | C0 分类；与海陆一致 |
+| climate.circulation?.windEastMps / windNorthMps | Float32 / 12N | m/s，有限实数，month-major | 新生成自然快照可选持久化；从 C0 四季锚点插值并标定 |
+| climate.circulation?.oceanEastMps / oceanNorthMps / oceanWarmth | Float32 / 12N | m/s 与 [-1, 1] 暖度代理，month-major | 仅在 `oceanAvailable[r] === 1` 处允许非零；缺测或陆地强制存 0 |
+| climate.circulation?.oceanAvailable | Uint8 / N | 0 陆地或缺测水体，1 具备洋流估算 | 区分 0 流速与缺测，陆地必须为 0 |
 | hydrology.monthlySnowWaterEquivalentMm / monthlySnowfallMm / monthlySnowmeltMm | Float32 / 12N | mm，≥ 0；month-major | I0 单年冰雪近似 |
 | hydrology.downstreamRegion | Int32 / N | 同网格区域索引，-1 出口；无环 | 已确认排水事实；水文重算后替换 |
 | hydrology.annualRunoffMm | Float32 / N | mm/年，≥ 0 | 已确认径流；不是河流流量 |
@@ -61,7 +64,7 @@ WorldSnapshot 是 world-core 数据所有者使用的完整存储契约，readon
 3. 消费者通过 `createFieldView` 读取字段。该函数零拷贝，返回冻结的小型包装对象，仅暴露 meshId、length 和带边界检查的 get，不暴露数组/Buffer。网格的原始数组也只能留在核心所有者中；未来 Query 按需提供坐标读取。
 4. 已发布数组不可原地修改、detach 或 transfer。变更必须构建下一份候选状态，重新校验并整体切换。可共享且承诺不修改的数组可跨 revision 复用。不通过冻结 TypedArray 或无条件深拷贝实现不可变性。
 
-`WorldStore` 提供全部当前 Dense Field、区域、流域、河段、静态湖泊及球面拾取的只读查询，不返回权威 TypedArray/Buffer。同一 worldId 的再次发布须使用新 snapshotId 和递增 revision；恢复档案可显式切换至存档状态。`FieldView` 仅提供边界检查的逐项读取；旧视图可以继续读取旧的不可变发布版本。
+`WorldStore` 提供全部当前 Dense Field、区域、流域、河段、静态湖泊及球面拾取的只读查询，不返回权威 TypedArray/Buffer，并通过 `WorldStore.mapReader()` 返回绑定当前已发布快照的实例级只读 `WorldMapReader`（公开工厂为 `createWorldMapReader`）。`WorldMapReader` 在不膨胀快照存储的前提下惰性重建球面对偶 Voronoi 边界角点/边拓扑（`MapMeshReader`）、邻域贪心爬山定位 `locateRegion`（`WorldStore.pick` 同步复用该路径）、物理坡度 `slopeDeg`、地形晕渲 `hillshade` 与基于快照 Seed 的确定性多尺度卫星微纹理 `surfaceDetail`，保证新生成与档案恢复的地图数据 100% 同源且零可变 Buffer 泄漏。同一 worldId 的再次发布须使用新 snapshotId 和递增 revision；恢复档案可显式切换至存档状态。`FieldView` 仅提供边界检查的逐项读取；旧视图可以继续读取旧的不可变发布版本。
 
 ## 内容与验证
 

@@ -165,6 +165,51 @@ export function sampleClimateCirculation(climate: ClimateArtifact, region: numbe
   return values[lower * count + source] * (1 - blend) + values[upper * count + source] * blend
 }
 
+/** Extract calibrated monthly wind and surface ocean velocity fields onto the output mesh. */
+export function extractMonthlyCirculation(climate: ClimateArtifact): {
+  readonly windEastMps: Float32Array
+  readonly windNorthMps: Float32Array
+  readonly oceanEastMps: Float32Array
+  readonly oceanNorthMps: Float32Array
+  readonly oceanWarmth: Float32Array
+  readonly oceanAvailable: Uint8Array
+} {
+  const n = climate.regionCount
+  const ref = climate.referenceRegionCount
+  const windEastMps = new Float32Array(12 * n)
+  const windNorthMps = new Float32Array(12 * n)
+  const oceanEastMps = new Float32Array(12 * n)
+  const oceanNorthMps = new Float32Array(12 * n)
+  const oceanWarmth = new Float32Array(12 * n)
+  const oceanAvailable = new Uint8Array(n)
+  for (let r = 0; r < n; r++)
+    oceanAvailable[r] = climate.oceanReference[r] >= 0 ? 1 : 0
+  for (let month = 0; month < 12; month++) {
+    const phase = ((month + 0.5) / 12 - 79 / 365 + 1) % 1
+    const lower = Math.floor(phase * 4)
+    const upper = (lower + 1) % 4
+    const t = phase * 4 - lower
+    const blend = 0.5 - 0.5 * Math.cos(Math.PI * t)
+    const w0 = 1 - blend
+    const lowerBase = lower * ref
+    const upperBase = upper * ref
+    const monthBase = month * n
+    for (let r = 0; r < n; r++) {
+      const geoSource = climate.geographicReference[r]
+      const index = monthBase + r
+      windEastMps[index] = (climate.circulation.windEast[lowerBase + geoSource] * w0 + climate.circulation.windEast[upperBase + geoSource] * blend) * WIND_MPS_PER_MODEL_UNIT
+      windNorthMps[index] = (climate.circulation.windNorth[lowerBase + geoSource] * w0 + climate.circulation.windNorth[upperBase + geoSource] * blend) * WIND_MPS_PER_MODEL_UNIT
+      const oceanSource = climate.oceanReference[r]
+      if (oceanSource >= 0) {
+        oceanEastMps[index] = (climate.circulation.oceanEast[lowerBase + oceanSource] * w0 + climate.circulation.oceanEast[upperBase + oceanSource] * blend) * OCEAN_MPS_PER_MODEL_UNIT
+        oceanNorthMps[index] = (climate.circulation.oceanNorth[lowerBase + oceanSource] * w0 + climate.circulation.oceanNorth[upperBase + oceanSource] * blend) * OCEAN_MPS_PER_MODEL_UNIT
+        oceanWarmth[index] = climate.circulation.oceanWarmth[lowerBase + oceanSource] * w0 + climate.circulation.oceanWarmth[upperBase + oceanSource] * blend
+      }
+    }
+  }
+  return { windEastMps, windNorthMps, oceanEastMps, oceanNorthMps, oceanWarmth, oceanAvailable }
+}
+
 /** Solve the reference-grid year in two passes so land recycling can use annual water availability. */
 export function solveClimateYear(
   mesh: ClimateMesh,

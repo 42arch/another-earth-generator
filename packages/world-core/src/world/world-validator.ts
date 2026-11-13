@@ -208,6 +208,21 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
   field('climate.annualMeanTemperatureC', n.climate.annualMeanTemperatureC, 'Float32Array', count, v => v >= -273.15)
   field('climate.annualPrecipitationMm', n.climate.annualPrecipitationMm, 'Float32Array', count, nonnegative)
   field('climate.koppenClass', n.climate.koppenClass, 'Uint8Array', count, v => v <= 31)
+  const circulation = n.climate.circulation
+  if (circulation !== undefined) {
+    if (!circulation || typeof circulation !== 'object') {
+      add('dtype', 'climate.circulation', 'Expected climate circulation fields')
+    }
+    else {
+      const anyFinite = () => true
+      field('climate.circulation.windEastMps', circulation.windEastMps, 'Float32Array', 12 * count, anyFinite)
+      field('climate.circulation.windNorthMps', circulation.windNorthMps, 'Float32Array', 12 * count, anyFinite)
+      field('climate.circulation.oceanEastMps', circulation.oceanEastMps, 'Float32Array', 12 * count, anyFinite)
+      field('climate.circulation.oceanNorthMps', circulation.oceanNorthMps, 'Float32Array', 12 * count, anyFinite)
+      field('climate.circulation.oceanWarmth', circulation.oceanWarmth, 'Float32Array', 12 * count, v => v >= -1 - 1e-6 && v <= 1 + 1e-6)
+      field('climate.circulation.oceanAvailable', circulation.oceanAvailable, 'Uint8Array', count, v => v === 0 || v === 1)
+    }
+  }
   field('hydrology.monthlySnowWaterEquivalentMm', n.hydrology.monthlySnowWaterEquivalentMm, 'Float32Array', 12 * count, nonnegative)
   field('hydrology.monthlySnowfallMm', n.hydrology.monthlySnowfallMm, 'Float32Array', 12 * count, nonnegative)
   field('hydrology.monthlySnowmeltMm', n.hydrology.monthlySnowmeltMm, 'Float32Array', 12 * count, nonnegative)
@@ -324,6 +339,26 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       }
       if ((n.climate.koppenClass.values[r] === 0) !== !land)
         add('range', `climate.koppenClass[${r}]`, 'Ocean climate class disagrees with land mask')
+      if (circulation && circulation.oceanAvailable.values.length === count
+        && circulation.oceanEastMps.values.length === 12 * count
+        && circulation.oceanNorthMps.values.length === 12 * count
+        && circulation.oceanWarmth.values.length === 12 * count) {
+        const available = circulation.oceanAvailable.values[r]
+        if (land && available !== 0) {
+          add('range', `climate.circulation.oceanAvailable[${r}]`, 'Ocean currents cannot be available on land')
+        }
+        else if (available === 0) {
+          for (let month = 0; month < 12; month++) {
+            const offset = month * count + r
+            if (circulation.oceanEastMps.values[offset] !== 0
+              || circulation.oceanNorthMps.values[offset] !== 0
+              || circulation.oceanWarmth.values[offset] !== 0) {
+              add('range', `climate.circulation[${offset}]`, 'Unavailable ocean current slots must store zero')
+              break
+            }
+          }
+        }
+      }
       let annualTemperature = 0
       let annualPrecipitation = 0
       let snowStorage = 0

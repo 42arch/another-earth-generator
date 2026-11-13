@@ -1,6 +1,6 @@
 export const packageId = '@another-earth/world-core' as const
 export type * from './generation/civilization/civilization-types'
-export { DEFAULT_CLIMATE_PARAMETERS, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, validateClimateArtifact } from './generation/nature/climate/climate'
+export { DEFAULT_CLIMATE_PARAMETERS, extractMonthlyCirculation, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, validateClimateArtifact } from './generation/nature/climate/climate'
 export type { ClimateArtifact, ClimateParameters } from './generation/nature/climate/climate'
 export type { SeasonalCirculationData } from './generation/nature/climate/climate-data'
 export { KOPPEN_CODES } from './generation/nature/climate/koppen-classifier'
@@ -48,6 +48,17 @@ export { assembleNaturalWorld } from './world/natural-world'
 export type { NaturalWorldIdentity } from './world/natural-world'
 export type { PlanetParameters } from './world/planet-parameters'
 export { decodeWorldArchive, encodeWorldArchive } from './world/world-archive'
+export { createWorldMapReader } from './world/world-map-reader'
+export type {
+  BasinMapSummary,
+  GeographicMapRegions,
+  LakeMapSummary,
+  MapMeshReader,
+  RiverMapSummary,
+  WorldMapFieldName,
+  WorldMapReader,
+  WorldMonthlyFieldName,
+} from './world/world-map-reader'
 export type { WorldMetadata } from './world/world-metadata'
 export { WORLD_SCHEMA_VERSION } from './world/world-snapshot'
 export type { WorldSnapshot } from './world/world-snapshot'

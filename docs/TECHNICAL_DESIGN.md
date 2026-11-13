@@ -779,7 +779,7 @@ world.aearth
 | M0 | Workspace、内容/世界契约、Mesh、Pipeline、Worker、最小 JSON 档案已有实现与历史验证 |
 | M1 | 用户于 2026-11-12 决定收尾本轮，接受 T0 v25 数值 / C0 v21 / I0/H0/L1 / E0 v3 为自然链基线。T0 v26 仅增加显示纹理 Artifact 字段。M1.5 快速定向验证通过；全量性能矩阵、T0 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存未完成并延期，不记为通过 |
 | M2 | 初始文明、资源与内容库，尚未实现 |
-| M3 | 正式 Cartography、3D/2D Atlas 与样式，尚未实现 |
+| M3 | 正式 Cartography、3D/2D Atlas 与样式：设计规范已确认（见 [Cartography-System-Design](Cartography-System-Design.md)），Slice 1（`ClimateState.circulation` 持久化、`WorldMapReader` 对偶拓扑/微纹理派生与 `WorldStore.mapReader()`）已接入，Slice 2–5 待实现 |
 | M4 | 浏览器项目保存、导入导出和完整 Genesis & Atlas 旅程，尚未实现 |
 | M5+ | 动态文明、完整编辑器、历史与分支，仅保留设计边界 |
 
@@ -787,6 +787,7 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 
 ## 17. 已定决策与仍有限制
 
+- 2026-11-13：确认 [M3 Cartography 制图系统设计规范](Cartography-System-Design.md) 并落地 Slice 1（Core 数据闭环与 `WorldMapReader`）。正式制图采用单轨 `WorldSnapshot -> WorldMapReader -> MapSourceRegistry -> StyleCompiler -> WorldViewport`（3D Globe + 2D Atlas），收敛为 `raster / fill / line / circle / symbol` 五类标准图层（变宽河网面化为 `fill`），后续将在 Slice 5 废弃 `apps/web` 前 6 个阶段调试展示。Slice 1 在 Schema 3 向后兼容新增可选 `ClimateState.circulation`（月度风/洋流速度与暖度及 `oceanAvailable` 掩码），并新增 `createWorldMapReader` / `WorldStore.mapReader()`（从 `MeshTopology` 惰性恢复球面对偶 Voronoi 角点与逆时针边界环、邻域爬山 `locateRegion`、坡度 `slopeDeg`、晕渲 `hillshade` 与确定性多尺度球面 Simplex 表面细节 `surfaceDetail`），同时在 Web `GenerationController` 提供 `candidateMapReader(snapshotId)` 与 `publishedMapReader()`。本轮未运行 test、build、lint、typecheck 或浏览器检查。
 - 2026-11-13：卫星场景效果以只读迁移基线 `docs/old-src/core/rendering/globe/{atmosphere,water-layer,stars,view}.ts` 为准：复用相机距离淡入的 BackSide 大气边缘、按海洋单元裁剪的 Phong 水面、归一化地球尺度的星空，以及按月份日序和轴倾角计算的太阳方向。为避免昼夜模式暗面吞掉表面细节，夜侧环境补光改为可见的蓝灰色。卫星表面继续使用径向法线 Lambert 材质，并按旧 `SatelliteSurfaceRenderer` 的 hillshade 算法增加固定方向地形明暗调制。T0 的原始地形纹理计算结果以五个仅供显示的数组由 `terrain-v26` Artifact 传到 Web；配色保留参考的纹理权重和调色顺序，不把显示纹理写入 WorldSnapshot。v26 不改变 terrain-v25 高程和海陆结果，但会使旧 T0 与下游缓存失效。此改动尚未运行自动化检查或浏览器视觉验收。
 - 2026-11-13：水文参数面板增加河网密度倍率、基准汇水面积和最小湖泊面积，并显示河段/湖泊数量与面积摘要。密度倍率缩放 H0 面积阈值，最小湖泊面积只过滤 L1 候选，不扩展几何；H0/L1 升级至 v4/v6，参数按实际消费者进入 Stage 签名。Schema 3 档案解码为缺失的新增参数补默认元数据，不修改已保存水文事实。本次未运行测试、类型检查或浏览器验收；参数范围响应和大网格摘要性能待验证。
 - 2026-11-12：用户决定收尾 M1，接受 T0 `terrain-v25` / C0 `climate-c0-v21` / I0/H0/L1 / E0 `ecology-e0-v3` 为本轮自然链基线。快速验证结果：Core 自然快照/档案/发布用例 19/19、Web Controller/Transfer/Worker 用例 24/24、C0 温度/降水/Köppen 用例 11/11；Core/Web typecheck 通过，真实 Chrome 主路径 3/3 通过。全量性能矩阵、T0 v25 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存未完成，作为延期项，不宣称已通过。后续自然模型演进与 M2+ 能力按各自阶段安排。

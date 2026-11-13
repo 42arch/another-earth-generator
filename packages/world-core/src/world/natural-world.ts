@@ -12,6 +12,7 @@ import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
 import { calculateContentSignature } from '@another-earth/world-data'
+import { extractMonthlyCirculation } from '#generation/nature/climate/climate'
 import { normalizeWorldSeed, stableHash } from '#math/random'
 import { WORLD_SCHEMA_VERSION } from './world-snapshot'
 import { validateWorldSnapshot } from './world-validator'
@@ -41,6 +42,7 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
   const terrain = result.getOutput<TerrainArtifact>('terrain')
   const regions = result.getOutput<GeographicRegionsArtifact>('geographic-names')
   const climate = result.getOutput<ClimateArtifact>('climate-c0')
+  const circulation = extractMonthlyCirculation(climate)
   const snow = result.getOutput<CryosphereArtifact>('cryosphere-i0')
   const hydrology = result.getOutput<HydrologyArtifact>('hydrology-h0')
   const lakes = result.getOutput<StaticLakeArtifact>('static-lakes-l1')
@@ -122,6 +124,14 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
         annualMeanTemperatureC: owned(meshId, climate.annualMeanTemperatureC),
         annualPrecipitationMm: owned(meshId, climate.annualPrecipitationMm),
         koppenClass: owned(meshId, climate.koppenClass),
+        circulation: {
+          windEastMps: { meshId, values: circulation.windEastMps },
+          windNorthMps: { meshId, values: circulation.windNorthMps },
+          oceanEastMps: { meshId, values: circulation.oceanEastMps },
+          oceanNorthMps: { meshId, values: circulation.oceanNorthMps },
+          oceanWarmth: { meshId, values: circulation.oceanWarmth },
+          oceanAvailable: { meshId, values: circulation.oceanAvailable },
+        },
       },
       hydrology: {
         monthlySnowWaterEquivalentMm: owned(meshId, snow.monthlySnowWaterEquivalentMm),

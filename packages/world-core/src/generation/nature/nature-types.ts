@@ -25,6 +25,20 @@ export interface GeographyState {
     readonly seas?: readonly { readonly id: string, readonly areaKm2: number }[]
   }
 }
+export interface ClimateCirculationState {
+  /** Monthly 10m-equivalent zonal wind velocity in m/s, month-major, length 12N. */
+  readonly windEastMps: DenseField<Float32Array>
+  /** Monthly 10m-equivalent meridional wind velocity in m/s, month-major, length 12N. */
+  readonly windNorthMps: DenseField<Float32Array>
+  /** Monthly surface ocean zonal velocity in m/s, month-major, length 12N (0 where oceanAvailable is 0). */
+  readonly oceanEastMps: DenseField<Float32Array>
+  /** Monthly surface ocean meridional velocity in m/s, month-major, length 12N (0 where oceanAvailable is 0). */
+  readonly oceanNorthMps: DenseField<Float32Array>
+  /** Monthly surface ocean boundary warmth proxy in [-1, 1], month-major, length 12N (0 where oceanAvailable is 0). */
+  readonly oceanWarmth: DenseField<Float32Array>
+  /** 1 where surface ocean current estimates exist, 0 on land or unrepresented water; length N. */
+  readonly oceanAvailable: DenseField<Uint8Array>
+}
 export interface ClimateState {
   readonly monthsPerYear: 12
   /** Month-major: index = month * regionCount + region, month 0..11. */
@@ -36,6 +50,8 @@ export interface ClimateState {
   readonly annualMeanTemperatureC: DenseField<Float32Array>
   readonly annualPrecipitationMm: DenseField<Float32Array>
   readonly koppenClass: DenseField<Uint8Array>
+  /** Present on newly generated worlds; absent in older Schema 3 archives. */
+  readonly circulation?: ClimateCirculationState
 }
 export interface HydrologyState {
   readonly monthlySnowWaterEquivalentMm: DenseField<Float32Array>

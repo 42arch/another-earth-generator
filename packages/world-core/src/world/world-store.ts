@@ -1,12 +1,15 @@
 import type { ContentPack } from '@another-earth/world-data'
 import type { FieldView } from './fields'
+import type { WorldMapReader } from './world-map-reader'
 import type { WorldSnapshot } from './world-snapshot'
 import { createFieldView } from './fields'
 import { decodeWorldArchive, encodeWorldArchive } from './world-archive'
+import { createWorldMapReader } from './world-map-reader'
 import { validateWorldSnapshot } from './world-validator'
 
 export type WorldFieldName = 'plateIndex' | 'crustType' | 'elevationKm' | 'landMask' | 'continentIndex' | 'oceanIndex' | 'seaIndex'
   | 'temperatureC' | 'precipitationMm' | 'annualMeanTemperatureC' | 'annualPrecipitationMm' | 'koppenClass'
+  | 'windEastMps' | 'windNorthMps' | 'oceanEastMps' | 'oceanNorthMps' | 'oceanWarmth' | 'oceanAvailable'
   | 'monthlySnowWaterEquivalentMm' | 'monthlySnowfallMm' | 'monthlySnowmeltMm'
   | 'downstreamRegion' | 'annualRunoffMm' | 'annualRunoffVolumeM3' | 'accumulatedAnnualFlowM3s' | 'contributingAreaKm2'
   | 'basinIndex' | 'riverIndex' | 'lakeIndex'
@@ -15,6 +18,7 @@ export type WorldFieldName = 'plateIndex' | 'crustType' | 'elevationKm' | 'landM
 /** Owns the last fully validated world; callers never receive its mutable arrays. */
 export class WorldStore {
   #current?: WorldSnapshot
+  #reader?: WorldMapReader
 
   get identity() {
     const world = this.#current
@@ -43,15 +47,23 @@ export class WorldStore {
       && (owned.snapshotId === this.#current.snapshotId || owned.revision <= this.#current.revision))
       throw new Error('Published world revision must advance with a new snapshot ID')
     this.#current = owned
+    this.#reader = undefined
   }
 
   restore(archive: string, packs: readonly ContentPack[]): void {
     const candidate = decodeWorldArchive(archive, packs)
     this.#current = candidate
+    this.#reader = undefined
   }
 
   archive(packs: readonly ContentPack[]): string {
     return encodeWorldArchive(this.#require(), packs)
+  }
+
+  mapReader(): WorldMapReader {
+    const world = this.#require()
+    this.#reader ??= createWorldMapReader(world)
+    return this.#reader
   }
 
   field(name: WorldFieldName): FieldView {
@@ -69,6 +81,12 @@ export class WorldStore {
       case 'annualMeanTemperatureC': return createFieldView(world.nature.climate.annualMeanTemperatureC)
       case 'annualPrecipitationMm': return createFieldView(world.nature.climate.annualPrecipitationMm)
       case 'koppenClass': return createFieldView(world.nature.climate.koppenClass)
+      case 'windEastMps': if (world.nature.climate.circulation) return createFieldView(world.nature.climate.circulation.windEastMps); throw new Error('Climate circulation is unavailable in this world')
+      case 'windNorthMps': if (world.nature.climate.circulation) return createFieldView(world.nature.climate.circulation.windNorthMps); throw new Error('Climate circulation is unavailable in this world')
+      case 'oceanEastMps': if (world.nature.climate.circulation) return createFieldView(world.nature.climate.circulation.oceanEastMps); throw new Error('Climate circulation is unavailable in this world')
+      case 'oceanNorthMps': if (world.nature.climate.circulation) return createFieldView(world.nature.climate.circulation.oceanNorthMps); throw new Error('Climate circulation is unavailable in this world')
+      case 'oceanWarmth': if (world.nature.climate.circulation) return createFieldView(world.nature.climate.circulation.oceanWarmth); throw new Error('Climate circulation is unavailable in this world')
+      case 'oceanAvailable': if (world.nature.climate.circulation) return createFieldView(world.nature.climate.circulation.oceanAvailable); throw new Error('Climate circulation is unavailable in this world')
       case 'monthlySnowWaterEquivalentMm': return createFieldView(world.nature.hydrology.monthlySnowWaterEquivalentMm)
       case 'monthlySnowfallMm': return createFieldView(world.nature.hydrology.monthlySnowfallMm)
       case 'monthlySnowmeltMm': return createFieldView(world.nature.hydrology.monthlySnowmeltMm)
@@ -162,21 +180,12 @@ export class WorldStore {
   }
 
   pick(position: { readonly x: number, readonly y: number, readonly z: number }): number {
-    const world = this.#require()
+    this.#require()
     const { x, y, z } = position
     const length = Math.hypot(x, y, z)
     if (!Number.isFinite(length) || length <= 0)
       throw new RangeError('Invalid pick position')
-    let best = -Infinity
-    let index = 0
-    for (let region = 0; region < world.mesh.regionCount; region++) {
-      const dot = x * world.mesh.centers[3 * region] + y * world.mesh.centers[3 * region + 1] + z * world.mesh.centers[3 * region + 2]
-      if (dot > best) {
-        best = dot
-        index = region
-      }
-    }
-    return index
+    return this.mapReader().mesh.locateRegion(x, y, z)
   }
 
   #require(): WorldSnapshot {

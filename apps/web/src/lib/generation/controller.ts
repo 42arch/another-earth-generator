@@ -1,4 +1,4 @@
-import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact, WorldMapReader } from '@another-earth/world-core'
 import type { GenerationConfig, SerializedError, WorkerRequest, WorkerResponse } from './protocol'
 import { validateClimateArtifact, validateCryosphereArtifact, validateEcologyArtifact, validateGeographicRegions, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact, WorldStore } from '@another-earth/world-core'
 import { loadBuiltinGenerationCatalog } from '@another-earth/world-data'
@@ -81,11 +81,24 @@ export class GenerationController {
 
   get state(): GenerationState { return this.#state }
   get publishedWorld() { return this.#worldStore.identity }
+  candidateMapReader(snapshotId: string): WorldMapReader {
+    if (!this.#candidateWorldStore || this.#candidateWorldStore.identity?.snapshotId !== snapshotId)
+      throw new Error('No matching validated world candidate')
+    return this.#candidateWorldStore.mapReader()
+  }
+  publishedMapReader(): WorldMapReader {
+    return this.#worldStore.mapReader()
+  }
   commitWorld(snapshotId: string): void {
     if (!this.#candidateWorldStore || this.#candidateWorldStore.identity?.snapshotId !== snapshotId)
       throw new Error('No matching validated world candidate')
     this.#worldStore = this.#candidateWorldStore
     this.#candidateWorldStore = undefined
+  }
+  restoreWorldArchive(archive: string): void {
+    const next = new WorldStore()
+    next.restore(archive, namingPacks)
+    this.#worldStore = next
   }
   queryWorldRegion(region: number, month = 0) { return this.#worldStore.region(region, month) }
   queryWorldBasin(id: string) { return this.#worldStore.basin(id) }

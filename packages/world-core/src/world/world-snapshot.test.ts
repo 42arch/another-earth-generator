@@ -174,4 +174,34 @@ describe('worldSnapshot public contract', () => {
     expect(() => view.get(-1)).toThrow(RangeError)
     expect(() => view.get(4)).toThrow(RangeError)
   })
+  it('validates optional climate circulation masks and bounds when present', () => {
+    const s = snapshot()
+    const field = <T extends Float32Array | Uint8Array>(values: T) => ({ meshId: s.mesh.meshId, values })
+    const withCirculation: WorldSnapshot = {
+      ...s,
+      nature: {
+        ...s.nature,
+        climate: {
+          ...s.nature.climate,
+          circulation: {
+            windEastMps: field(new Float32Array(48)),
+            windNorthMps: field(new Float32Array(48)),
+            oceanEastMps: field(new Float32Array(48)),
+            oceanNorthMps: field(new Float32Array(48)),
+            oceanWarmth: field(new Float32Array(48)),
+            oceanAvailable: field(new Uint8Array([1, 1, 0, 1])),
+          },
+        },
+      },
+    }
+    expect(validate(withCirculation).valid).toBe(true)
+
+    const nonzeroUnavailable = structuredClone(withCirculation)
+    nonzeroUnavailable.nature.climate.circulation!.oceanEastMps.values[2] = 0.5
+    expect(validate(nonzeroUnavailable).valid).toBe(false)
+
+    const outOfRangeWarmth = structuredClone(withCirculation)
+    outOfRangeWarmth.nature.climate.circulation!.oceanWarmth.values[0] = 1.5
+    expect(validate(outOfRangeWarmth).valid).toBe(false)
+  })
 })

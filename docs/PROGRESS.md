@@ -2,6 +2,8 @@
 
 > 更新：2026-11-13。记录当前工作区能力、验收状态与下一步，不作为逐轮调参日志。目标范围为 M0–M4；产品规则见 [PRD](PRD.md)。
 
+2026-11-13 确认 [M3 Cartography 制图系统技术设计规范](Cartography-System-Design.md) 并完成 **Slice 1（Core 数据闭环与 `WorldMapReader`）**：`ClimateState` 新增向后兼容的 Schema 3 可选字段 `circulation`（保存输出网格月度标定风速分量 `windEastMps`/`windNorthMps`、洋流分量 `oceanEastMps`/`oceanNorthMps`、寒暖流代理 `oceanWarmth` 与有效掩码 `oceanAvailable`），`assembleNaturalWorld` 自动组装并纳入 `validateWorldSnapshot` 完整校验，旧无环流存档继续合法读取且标记 `hasCirculation === false`。`@another-earth/world-core` 新增 `createWorldMapReader` 与 `WorldStore.mapReader()`（同时将 `WorldStore.pick` 切换为邻域贪心爬山定位），从 `WorldSnapshot.mesh` 确定性惰性恢复球面对偶 Voronoi 外心角点、逆时针边界环与共享对偶边，并惰性派生坡度 `slopeDeg`、地形晕渲 `hillshade` 及基于快照 Seed 的多尺度球面 Simplex 表面细节 `surfaceDetail`，全程零可变 TypedArray / ArrayBuffer 泄漏。Web `GenerationController` 新增 `candidateMapReader(snapshotId)`、`publishedMapReader()` 与 `restoreWorldArchive(archive)`。已补充对偶边界等价性、1,000 点 `locateRegion` 精度、环流档案往返/旧档兼容及 Controller 候选读取单测；按仓库规范本次未运行 `test`、`typecheck`、`lint`、`build` 或浏览器检查。下一步实施 Slice 2（`MapSourceRegistry`、变宽河道面化、PCA 脊线与 `StyleCompiler`）。
+
 2026-11-13 大陆与大洋名称已接入地图表面标注：`cartography` 从已命名分区和 Mesh 选取位于所属区域内的面积加权代表网格，公开 `buildGeographicLabelAnchors`；Web 在“大陆、洋与海”专题图层上绘制中文文字，随相机旋转、缩放和视口尺寸投影，隐藏背面、超出视口或相互重叠的标签。海仍不命名、不绘制标签；其他专题图层不显示地理名称。标签位置与避让只属于显示层，不写入快照或生成缓存。新增锚点归属/确定性/输入不匹配的定向用例；本次未运行 test、build、lint、typecheck 或浏览器目视检查。每个区域当前仅一个锚点，跨球面的大区域在其锚点位于背面时不会显示；默认 Seed 的实际排版与高等级性能待验收，手动改名仍待办。
 
 2026-11-13 按中文名称需求，将当前大陆与大洋词库切换到新增的 `geography-zh` 1.0.0 内容包：各提供 24 个中文专名，生成时直接将中文名称写入快照，图例和区域检查器显示为“苍岚大陆”“沧溟洋”一类完整中文称呼；同类重名以中文序号消歧。命名算法升至 `geographic-names-v2`，只使名称阶段缓存失效，海仍不命名。保留原 `geography` 1.0.0 拉丁词库供已有档案解析，新世界只记录 `core`、`earthlike` 与 `geography-zh` 三个实际使用的内容包；旧档案中的名称不会自动改写。已更新词库/图例/确定性用例；本次未运行 test、build、lint、typecheck 或浏览器检查，默认 Seed 的实际选名效果待验收。
@@ -103,7 +105,7 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 | 范围 | 当前状态 |
 | --- | --- |
 | 工程与内容 | pnpm Workspace 四包、公开 exports、内容定义/Catalog/签名、core/earthlike、历史 geography 与当前 geography-zh 中文名称包 |
-| 世界契约 | Schema 3 完整自然状态、Dense Field/实体、WorldStore 受控发布与只读查询、完整校验、人口约束、版本化 JSON 档案编解码；M1.5 定向测试、typecheck 与真实 Chrome 发布路径通过，全量性能回归延期 |
+| 世界契约 | Schema 3 完整自然状态（含向后兼容的可选月度环流 `climate.circulation`）、Dense Field/实体、WorldStore 受控发布与只读查询、`WorldMapReader`（对偶 Voronoi 拓扑恢复、邻域爬山定位、坡度/晕渲/卫星微纹理确定性派生）、完整校验、人口约束、版本化 JSON 档案编解码；M1.5 历史定向测试、typecheck 与真实 Chrome 发布路径通过，Slice 1 新增代码本次未运行自动化检查，全量性能回归延期 |
 | Mesh | L0–L8 规则/扰动 Icosphere、Delaunay/Voronoi、CSR、物理面积、校验、最近站点查询 |
 | 生成 | Stage DAG、声明输入、命名随机流、LRU 缓存、阶段事件和取消/失败边界 |
 | Worker | Mesh/Geology/Terrain/C0/I0/H0/L1/E0 及完整自然世界 Worker 链路已实现；2026-11-10 阶段调试 10/10 通过，2026-11-12 完整自然世界发布、缓存/硬取消恢复和阶段失败保留旧世界的真实 Chrome 检查 3/3 通过 |
@@ -141,8 +143,8 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 - 部分区域诊断为兼容零/一数组，其含义不是世界事实。后续移除字段必须同步查询、Worker、校验与消费者。
 - L8 单次 terrain artifact 约 31.25 MiB；全链路缓存实测约 399–430.5 MiB，StageCache 默认预算为 512 MiB。core 基准与真实 Chrome Worker 第二次请求均确认全链路缓存命中。峰值 RSS 仍未测，设备端长期内存压力需后续验证；预算试验见[验收基准](benchmarks/M1.1B-terrain-v20-acceptance.json)。
 - CPU/GPU 峰值 RSS、长期浏览器资源压力和远端 CI 未核实；基准记录的缓存/数组字节不是进程峰值。
-- M1.5 的 Worker 同时传输独立快照和中间阶段产物，主线程发布时再复制并校验候选；L7/L8 峰值内存与当前链路耗时未测。`WorldStore.pick` 当前线性扫描网格中心，交互性能尚未测量。Web 目前提供生成和查询入口，未提供档案导入后重建地图的 M4 项目流程。
-- Schema 3 保留当前已定义的五类自然事实字段；C0 参考网格的风场、洋流和暖度仍保留在中间阶段产物及其派生速度查询中，没有作为快照 Dense Field 持久化。正式地图从档案恢复这些图层前需要单独确定可持久化的环流契约。
+- M1.5 的 Worker 同时传输独立快照和中间阶段产物，主线程发布时再复制并校验候选；L7/L8 峰值内存与当前链路耗时未测（中间阶段产物传输将在 M3 Slice 5 单轨收口时清理）。`WorldStore.pick` 现已委托给 `WorldMapReader.mesh.locateRegion` 邻域贪心爬山定位，L7/L8 实测耗时待运行基准验证。Web 目前提供生成和查询入口，未提供档案导入后重建地图的 M4 项目流程。
+- Schema 3 新生成的完整自然世界现将标定后的月度风场、洋流速度分量、寒暖流代理及 `oceanAvailable` 掩码保存在可选 `nature.climate.circulation` 中；旧 Schema 3 档案不含该字段时仍可正常恢复，`WorldMapReader.capabilities.hasCirculation` 为 `false`。正式 Cartography Slice 2–5（数据源、样式编译器、3D/2D 渲染器与 Web 接入）仍待实现。
 
 ## 验证证据与历史基准
 
