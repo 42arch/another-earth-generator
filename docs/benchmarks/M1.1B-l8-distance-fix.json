@@ -1,0 +1,1393 @@
+{
+  "date": "2026-11-05",
+  "algorithmVersions": {
+    "geology": "geology-v2",
+    "terrain": "terrain-v2"
+  },
+  "precision": "Float32 rounded path costs and heap priorities",
+  "inputBase": {
+    "seed": "42",
+    "config": {
+      "planet": {
+        "physicalRadiusKm": 6371,
+        "seaLevelDatumKm": 0
+      },
+      "mesh": {
+        "subdivisionLevel": 7,
+        "irregularity": 0.5
+      },
+      "geology": {
+        "primaryPlateCount": 10,
+        "microPlateCount": 14,
+        "plateSizeVariety": 0.8,
+        "continentCount": 7,
+        "continentSizeVariety": 0.35,
+        "candidateLandCoverage": 0.3
+      },
+      "landforms": {
+        "islandArcCount": 6,
+        "islandDensity": 0.65,
+        "hotspotCount": 5
+      },
+      "terrain": {
+        "roughness": 0.4,
+        "terrainWarp": 0.75,
+        "smoothing": 0.1,
+        "glacialErosion": 0.5,
+        "hydraulicErosion": 0.5,
+        "ridgeSharpening": 0.5
+      }
+    }
+  },
+  "machine": "Apple M3 Pro",
+  "node": "v24.17.0",
+  "scope": "Node Pipeline, excludes transfer and rendering; RSS samples at events are not peak measurements",
+  "baselineL7": {
+    "versions": [
+      "geology-v1",
+      "terrain-v1"
+    ],
+    "hashes": {
+      "elevationKm": "d0de99ddbdb6b303e3a512a89862c073b9ce43b2decd023a90a39fd77330087d",
+      "landMask": "acd4b8a2bbcf5bbae4ccb15ea474c01acf5ada38bd7fb87e3103aa14b69c6919",
+      "slopeRadians": "333bee5b199f79f3bc4ef3563d820e99e78d39a4e0737faf4a358031c241c68b",
+      "boundaryType": "1fc3800b00cad4db31d8f37764e16e3ce08911d800391ea864806bad8b9fbdb0",
+      "stress": "9ac0149dc8cd58713b7804db66abc6f0095d2033180d58e25e641cfc0b9d1bb0",
+      "mantleFlow": "fabd4d53dbc54aa3fba2c24f8206eb57a141e67308df54c88c9b33f16e508d4a",
+      "plateAngularVelocity": "c086b858f8a071429798d50e785e5e23a73dfc5d3a140f022259b5a251fb33a6",
+      "volcanicCoordinate": "1bee09df955c627a9cee79f6b2f33de58c3bfca8593ad53b8ae19d0c5a86860f",
+      "ridgeCoordinate": "40d2c58f0266d0a50dfe41a83347302aea934f6c6272177ac0ccdc0aef47033e",
+      "erosionCoordinate": "560fea7065fb7ef0403569c938038c94646e50a0d4e1349d44650ea6e14091dd",
+      "depositionCoordinate": "bb27b68bed9845ff89b665eba2fbbc118ce47f968d142d8347cf10701040bcc6",
+      "foldBelt": "2e1f36d1d37351b7b44a87ddb704b3e1e3e04f5468b6658e46d2a2bc0464898d"
+    }
+  },
+  "rows": [
+    {
+      "level": 7,
+      "irregularity": 0.5,
+      "totalMs": 2591.640166,
+      "stageMs": {
+        "mesh": 357.937584,
+        "reference-mesh": 83.51512500000001,
+        "geological-mapping": 213.1131670000001,
+        "reference-subdivisions": 86.58720799999992,
+        "plate-topology": 24.777624999999944,
+        "continental-crust": 74.38875000000007,
+        "geology": 8.577624999999898,
+        "plate-dynamics": 38.565292,
+        "tectonics": 152.93225000000007,
+        "tectonic-elevation": 829.533917,
+        "terrain": 720.5428750000001
+      },
+      "progress": [
+        {
+          "fraction": 0.05,
+          "message": "到陆地距离"
+        },
+        {
+          "fraction": 0.07500000000000001,
+          "message": "到海洋距离"
+        },
+        {
+          "fraction": 0.1,
+          "message": "构造边界距离"
+        },
+        {
+          "fraction": 0.15000000000000002,
+          "message": "俯冲与裂谷距离"
+        },
+        {
+          "fraction": 0.325,
+          "message": "地形种子距离"
+        },
+        {
+          "fraction": 0.39999999999999997,
+          "message": "构造影响场"
+        },
+        {
+          "fraction": 0.525,
+          "message": "俯冲极性"
+        },
+        {
+          "fraction": 0.55,
+          "message": "距离与影响场完成"
+        },
+        {
+          "fraction": 0.55,
+          "message": "地形分类"
+        },
+        {
+          "fraction": 0.6,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6149998168967664,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6299996337935327,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6449994506902992,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6599992675870656,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.674999084483832,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6899989013805984,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7049987182773647,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7199985351741311,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7349983520708976,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7499981689676639,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.75,
+          "message": "定向山脊"
+        },
+        {
+          "fraction": 0.88,
+          "message": "火山与岛弧"
+        },
+        {
+          "fraction": 0.99,
+          "message": "构造高程完成"
+        }
+      ],
+      "sampledRssMiB": 545.625,
+      "indexMs": 290.7207080000003,
+      "picks": [
+        {
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "expected": 81921,
+          "actual": 81921
+        },
+        {
+          "expected": 163841,
+          "actual": 163841
+        }
+      ],
+      "algorithmVersion": "terrain-v2",
+      "hashes": {
+        "elevationKm": "e4ac7f4aad731b4cd0dd64a02b829121db5a107f3209fbcf5b3d932f61d7bcc8",
+        "landMask": "6ef56104d8fe178acd7b6c19427f0e96070dbee0d00b1157e2b029f1d8de5d8a",
+        "slopeRadians": "61a968b5f3d5595aa58b6748dca1d9ed048ee19453e8e836a2608f0a3d6a1558",
+        "boundaryType": "596de372568ff36a3b2dae18ae0560941f9567cf9a8d7f81fbdefa2210189068",
+        "stress": "7e124d177560ff29f6b4ae39197e884dd5b55a44333f3e3d51342cf96ded31eb",
+        "mantleFlow": "60b8c374bf92c079fb79640223fe0ba5da89f642db47871cdae3a570ac7325d0",
+        "plateAngularVelocity": "0a36d08936626917684fd9a6402e496072fceb748bcd2d1dd3299f85c1b10231",
+        "volcanicCoordinate": "1d172fd401245a32ea50f9a6f5a6c53852b1fcb150dc9f43a7da5f756c581902",
+        "ridgeCoordinate": "a071501ef7bd4585d4c27405f31132477ffdf5ece89406d67fc5cb0276c64a8c",
+        "erosionCoordinate": "5160b2816f06f24e6758e438b76ca9be82cb802c36b5f329f066c617b1021a49",
+        "depositionCoordinate": "11c39783ac7a5f3b364c63e0e961ee6d62f02a2f16039e9130bb8452c7366bd3",
+        "foldBelt": "585e4bf670b12d2857962e6592c9efb6a5f726c8ddb842d23dbc51d37e76ca99"
+      },
+      "statistics": {
+        "landCoverage": 0.31232249067782414,
+        "candidateLandCoverage": 0.30064098018490576,
+        "changedCoastRegions": 8196,
+        "landComponentCount": 78,
+        "largestLandAreaKm2": 25690723.775100347,
+        "minimumElevationKm": -4.711052417755127,
+        "maximumElevationKm": 6.150064945220947,
+        "elevationQuantilesKm": [
+          -4.711052417755127,
+          -1.7515631914138794,
+          -0.7685306072235107,
+          0.009100752882659435,
+          6.150064945220947
+        ]
+      },
+      "changedHashFields": [
+        "elevationKm",
+        "landMask",
+        "slopeRadians",
+        "boundaryType",
+        "stress",
+        "mantleFlow",
+        "plateAngularVelocity",
+        "volcanicCoordinate",
+        "ridgeCoordinate",
+        "erosionCoordinate",
+        "depositionCoordinate",
+        "foldBelt"
+      ]
+    },
+    {
+      "level": 8,
+      "irregularity": 0,
+      "totalMs": 8897.474041,
+      "stageMs": {
+        "mesh": 1054.4408750000002,
+        "reference-mesh": 52.615999999999985,
+        "geological-mapping": 639.3612910000002,
+        "reference-subdivisions": 82.19124999999985,
+        "plate-topology": 22.402875000000677,
+        "continental-crust": 62.7823329999992,
+        "geology": 32.34108399999968,
+        "plate-dynamics": 33.52362499999981,
+        "tectonics": 588.6934580000006,
+        "tectonic-elevation": 3707.0615829999997,
+        "terrain": 2621.1535840000015
+      },
+      "progress": [
+        {
+          "fraction": 0.05,
+          "message": "到陆地距离"
+        },
+        {
+          "fraction": 0.07500000000000001,
+          "message": "到海洋距离"
+        },
+        {
+          "fraction": 0.1,
+          "message": "构造边界距离"
+        },
+        {
+          "fraction": 0.15000000000000002,
+          "message": "俯冲与裂谷距离"
+        },
+        {
+          "fraction": 0.325,
+          "message": "地形种子距离"
+        },
+        {
+          "fraction": 0.39999999999999997,
+          "message": "构造影响场"
+        },
+        {
+          "fraction": 0.525,
+          "message": "俯冲极性"
+        },
+        {
+          "fraction": 0.55,
+          "message": "距离与影响场完成"
+        },
+        {
+          "fraction": 0.55,
+          "message": "地形分类"
+        },
+        {
+          "fraction": 0.6,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6037499885559431,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6074999771118862,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6112499656678294,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6149999542237725,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6187499427797156,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6224999313356587,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6262499198916018,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6299999084475449,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6337498970034882,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6374998855594313,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6412498741153744,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6449998626713175,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6487498512272606,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6524998397832038,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6562498283391469,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.65999981689509,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6637498054510331,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6674997940069762,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6712497825629193,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6749997711188626,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6787497596748057,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6824997482307488,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6862497367866919,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6899997253426351,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6937497138985782,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6974997024545213,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7012496910104644,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7049996795664075,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7087496681223506,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7124996566782938,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.716249645234237,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7199996337901801,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7237496223461232,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7274996109020663,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7312495994580095,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7349995880139526,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7387495765698957,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7424995651258388,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7462495536817819,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.749999542237725,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.75,
+          "message": "定向山脊"
+        },
+        {
+          "fraction": 0.88,
+          "message": "火山与岛弧"
+        },
+        {
+          "fraction": 0.99,
+          "message": "构造高程完成"
+        }
+      ],
+      "sampledRssMiB": 1267.90625,
+      "indexMs": 1369.071750000001,
+      "picks": [
+        {
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "expected": 327681,
+          "actual": 327681
+        },
+        {
+          "expected": 655361,
+          "actual": 655361
+        }
+      ],
+      "algorithmVersion": "terrain-v2",
+      "hashes": {
+        "elevationKm": "7c5462a1f272722da25639b64c6118c6c70dc36e7fc6d5fe9bf578dd4620f1bf",
+        "landMask": "adcc391354b86bbd6e3484a1cb5d4fcd0533b1c8ff16abd27e6743449b104f73",
+        "slopeRadians": "8499588e822c8cb41a548395545cd741a3313491a34a4e0d6fc747f326a19986",
+        "boundaryType": "a7365a74693da9c9018aec8bb14562f94bd22329ae1ce5a8e44a1b3b2227d5c3",
+        "stress": "3984d33ea46a1833d59e15aa72dacca0c96ae4c8016bbbf175fedb4c9457113f",
+        "mantleFlow": "7be51dc75a6fe9b588fedb5980ecdcd1b6e6fa838aef55ef6927ada76cc91aa5",
+        "plateAngularVelocity": "ce526f5333a3e67c0ca52579b95e7b86d76ac9d07d92d926d313b69ab06d9a80",
+        "volcanicCoordinate": "6fd5133030dde1a7a85c9c8479db4bd8ae00e44fbd8cad99dd9d520f57bd323b",
+        "ridgeCoordinate": "81afb98d15a38a2eebecc6911b48e0e0810b6e7f941dffa34386324b35e02f28",
+        "erosionCoordinate": "cf8c4a6d4a745e3c5d79d29feebfb997ec391f0164d16846c493b07441e2c3dc",
+        "depositionCoordinate": "7ed8b276124a3b43849305a2a78d874abfcd887696d01a998bf4e654dd546551",
+        "foldBelt": "7b373de648096fafe74b44d86ca78c596bf0258e00c9d0d711711be091145bfe"
+      },
+      "statistics": {
+        "landCoverage": 0.31393462119037624,
+        "candidateLandCoverage": 0.30039113008917856,
+        "changedCoastRegions": 35405,
+        "landComponentCount": 228,
+        "largestLandAreaKm2": 35058377.191922836,
+        "minimumElevationKm": -4.363089561462402,
+        "maximumElevationKm": 6.053748607635498,
+        "elevationQuantilesKm": [
+          -4.363089561462402,
+          -1.6020218133926392,
+          -0.7746549844741821,
+          0.005859090480953455,
+          6.053748607635498
+        ]
+      }
+    },
+    {
+      "level": 8,
+      "irregularity": 0.5,
+      "totalMs": 9800.050124999998,
+      "stageMs": {
+        "mesh": 1752.8530420000006,
+        "reference-mesh": 94.40375000000131,
+        "geological-mapping": 647.8947919999991,
+        "reference-subdivisions": 84.42766699999993,
+        "plate-topology": 25.206124999998792,
+        "continental-crust": 67.66891600000054,
+        "geology": 34.16741600000023,
+        "plate-dynamics": 39.14454099999966,
+        "tectonics": 611.1321670000016,
+        "tectonic-elevation": 3669.868957999999,
+        "terrain": 2772.738541999999
+      },
+      "progress": [
+        {
+          "fraction": 0.05,
+          "message": "到陆地距离"
+        },
+        {
+          "fraction": 0.07500000000000001,
+          "message": "到海洋距离"
+        },
+        {
+          "fraction": 0.1,
+          "message": "构造边界距离"
+        },
+        {
+          "fraction": 0.15000000000000002,
+          "message": "俯冲与裂谷距离"
+        },
+        {
+          "fraction": 0.325,
+          "message": "地形种子距离"
+        },
+        {
+          "fraction": 0.39999999999999997,
+          "message": "构造影响场"
+        },
+        {
+          "fraction": 0.525,
+          "message": "俯冲极性"
+        },
+        {
+          "fraction": 0.55,
+          "message": "距离与影响场完成"
+        },
+        {
+          "fraction": 0.55,
+          "message": "地形分类"
+        },
+        {
+          "fraction": 0.6,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6037499885559431,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6074999771118862,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6112499656678294,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6149999542237725,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6187499427797156,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6224999313356587,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6262499198916018,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6299999084475449,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6337498970034882,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6374998855594313,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6412498741153744,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6449998626713175,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6487498512272606,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6524998397832038,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6562498283391469,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.65999981689509,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6637498054510331,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6674997940069762,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6712497825629193,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6749997711188626,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6787497596748057,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6824997482307488,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6862497367866919,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6899997253426351,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6937497138985782,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.6974997024545213,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7012496910104644,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7049996795664075,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7087496681223506,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7124996566782938,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.716249645234237,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7199996337901801,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7237496223461232,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7274996109020663,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7312495994580095,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7349995880139526,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7387495765698957,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7424995651258388,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.7462495536817819,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.749999542237725,
+          "message": "高程骨架"
+        },
+        {
+          "fraction": 0.75,
+          "message": "定向山脊"
+        },
+        {
+          "fraction": 0.88,
+          "message": "火山与岛弧"
+        },
+        {
+          "fraction": 0.99,
+          "message": "构造高程完成"
+        }
+      ],
+      "sampledRssMiB": 1840.375,
+      "indexMs": 1515.0175419999978,
+      "picks": [
+        {
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "expected": 327681,
+          "actual": 327681
+        },
+        {
+          "expected": 655361,
+          "actual": 655361
+        }
+      ],
+      "algorithmVersion": "terrain-v2",
+      "hashes": {
+        "elevationKm": "a703d4cbe2c7a179e5345e7af0674e5b382ff335a088d7b9ab8291c7601a8161",
+        "landMask": "c562451557934b38647d3ea81eaf3a9fba9a96389f5e1a3279d6342e5d855ea9",
+        "slopeRadians": "c21d8d1cec6432b985e77207bc2e6fcfb02508019aceb197289415c6a90fa3d1",
+        "boundaryType": "7556c642dca0509d9a3592fe32b2362a7ec87103af41d4e644134f0bf06a9bf1",
+        "stress": "03973a6e5e15254da611bf57ce90c97d8875945881247fd5eb7eb80d6b79e35b",
+        "mantleFlow": "dcd777f1d0627486601b22cb1ebfe4ab89173921d678417706c220d548077ce1",
+        "plateAngularVelocity": "0a36d08936626917684fd9a6402e496072fceb748bcd2d1dd3299f85c1b10231",
+        "volcanicCoordinate": "2e40bd707a348a13bb673669435d43cee8cc094a34b62465d37bf17d2bbb4846",
+        "ridgeCoordinate": "707ca3cc3aa86f9442387d7d4844f30ce5bdb87085bc6bc239fb6217ff5792c5",
+        "erosionCoordinate": "eb4edc3cab172c17420a443d91294c589c3b48c96f50778b47f593ae4dbf8326",
+        "depositionCoordinate": "406352726adbf1b9dc400e2285db608cd2b28966e3d0d7351a6da8838c393556",
+        "foldBelt": "49a9c9710c1862aee86a9ac495358782638fb12c37020e8174cf641d8a830ddb"
+      },
+      "statistics": {
+        "landCoverage": 0.3205670413152682,
+        "candidateLandCoverage": 0.30050315150532586,
+        "changedCoastRegions": 38803,
+        "landComponentCount": 228,
+        "largestLandAreaKm2": 25783465.007534474,
+        "minimumElevationKm": -4.02467679977417,
+        "maximumElevationKm": 5.999053955078125,
+        "elevationQuantilesKm": [
+          -4.02467679977417,
+          -1.6207942962646484,
+          -0.7098250985145569,
+          0.0059346649795770645,
+          5.999053955078125
+        ]
+      },
+      "forceMs": 9644.788583000001,
+      "forceHashMatch": true
+    }
+  ],
+  "browser": {
+    "browser": "Local Chrome headless",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "rows": [
+      {
+        "irregularity": 0,
+        "readyMs": 9001,
+        "pickMs": 1832,
+        "messages": [
+          {
+            "type": "PROGRESS",
+            "fraction": 0
+          },
+          {
+            "type": "PROGRESS",
+            "message": "到陆地距离",
+            "fraction": 0.05
+          },
+          {
+            "type": "PROGRESS",
+            "message": "到海洋距离",
+            "fraction": 0.07500000000000001
+          },
+          {
+            "type": "PROGRESS",
+            "message": "构造边界距离",
+            "fraction": 0.1
+          },
+          {
+            "type": "PROGRESS",
+            "message": "俯冲与裂谷距离",
+            "fraction": 0.15000000000000002
+          },
+          {
+            "type": "PROGRESS",
+            "message": "地形种子距离",
+            "fraction": 0.325
+          },
+          {
+            "type": "PROGRESS",
+            "message": "构造影响场",
+            "fraction": 0.39999999999999997
+          },
+          {
+            "type": "PROGRESS",
+            "message": "俯冲极性",
+            "fraction": 0.525
+          },
+          {
+            "type": "PROGRESS",
+            "message": "距离与影响场完成",
+            "fraction": 0.55
+          },
+          {
+            "type": "PROGRESS",
+            "message": "地形分类",
+            "fraction": 0.55
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6037499885559431
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6074999771118862
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6112499656678294
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6149999542237725
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6187499427797156
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6224999313356587
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6262499198916018
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6299999084475449
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6337498970034882
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6374998855594313
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6412498741153744
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6449998626713175
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6487498512272606
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6524998397832038
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6562498283391469
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.65999981689509
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6637498054510331
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6674997940069762
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6712497825629193
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6749997711188626
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6787497596748057
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6824997482307488
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6862497367866919
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6899997253426351
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6937497138985782
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6974997024545213
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7012496910104644
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7049996795664075
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7087496681223506
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7124996566782938
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.716249645234237
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7199996337901801
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7237496223461232
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7274996109020663
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7312495994580095
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7349995880139526
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7387495765698957
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7424995651258388
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7462495536817819
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.749999542237725
+          },
+          {
+            "type": "PROGRESS",
+            "message": "定向山脊",
+            "fraction": 0.75
+          },
+          {
+            "type": "PROGRESS",
+            "message": "火山与岛弧",
+            "fraction": 0.88
+          },
+          {
+            "type": "PROGRESS",
+            "message": "构造高程完成",
+            "fraction": 0.99
+          },
+          {
+            "type": "PROGRESS",
+            "fraction": 1
+          },
+          {
+            "type": "COMPLETED",
+            "pipelineMs": 8145.599999904633,
+            "copyMs": 82,
+            "bytes": 230687524
+          }
+        ]
+      },
+      {
+        "irregularity": 0.5,
+        "readyMs": 11006,
+        "pickMs": 1832,
+        "messages": [
+          {
+            "type": "PROGRESS",
+            "fraction": 0
+          },
+          {
+            "type": "PROGRESS",
+            "message": "到陆地距离",
+            "fraction": 0.05
+          },
+          {
+            "type": "PROGRESS",
+            "message": "到海洋距离",
+            "fraction": 0.07500000000000001
+          },
+          {
+            "type": "PROGRESS",
+            "message": "构造边界距离",
+            "fraction": 0.1
+          },
+          {
+            "type": "PROGRESS",
+            "message": "俯冲与裂谷距离",
+            "fraction": 0.15000000000000002
+          },
+          {
+            "type": "PROGRESS",
+            "message": "地形种子距离",
+            "fraction": 0.325
+          },
+          {
+            "type": "PROGRESS",
+            "message": "构造影响场",
+            "fraction": 0.39999999999999997
+          },
+          {
+            "type": "PROGRESS",
+            "message": "俯冲极性",
+            "fraction": 0.525
+          },
+          {
+            "type": "PROGRESS",
+            "message": "距离与影响场完成",
+            "fraction": 0.55
+          },
+          {
+            "type": "PROGRESS",
+            "message": "地形分类",
+            "fraction": 0.55
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6037499885559431
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6074999771118862
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6112499656678294
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6149999542237725
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6187499427797156
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6224999313356587
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6262499198916018
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6299999084475449
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6337498970034882
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6374998855594313
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6412498741153744
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6449998626713175
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6487498512272606
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6524998397832038
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6562498283391469
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.65999981689509
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6637498054510331
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6674997940069762
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6712497825629193
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6749997711188626
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6787497596748057
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6824997482307488
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6862497367866919
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6899997253426351
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6937497138985782
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.6974997024545213
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7012496910104644
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7049996795664075
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7087496681223506
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7124996566782938
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.716249645234237
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7199996337901801
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7237496223461232
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7274996109020663
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7312495994580095
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7349995880139526
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7387495765698957
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7424995651258388
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.7462495536817819
+          },
+          {
+            "type": "PROGRESS",
+            "message": "高程骨架",
+            "fraction": 0.749999542237725
+          },
+          {
+            "type": "PROGRESS",
+            "message": "定向山脊",
+            "fraction": 0.75
+          },
+          {
+            "type": "PROGRESS",
+            "message": "火山与岛弧",
+            "fraction": 0.88
+          },
+          {
+            "type": "PROGRESS",
+            "message": "构造高程完成",
+            "fraction": 0.99
+          },
+          {
+            "type": "PROGRESS",
+            "fraction": 1
+          },
+          {
+            "type": "COMPLETED",
+            "pipelineMs": 9892.700000047684,
+            "copyMs": 173.19999980926514,
+            "bytes": 230687524
+          }
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "reproduceCommand": "TERRAIN_BENCH_LEVELS=8 pnpm --filter @another-earth/world-core bench:terrain",
+  "validation": {
+    "coreTests": 89,
+    "webTests": 28,
+    "types": "core and web passed",
+    "lint": "core and web passed",
+    "existingChromeE2E": "4/4 passed",
+    "L8Chrome": "regular and irregular terrain generation/render/pick passed",
+    "build": "not run",
+    "fullWorkspace": "not run"
+  }
+}

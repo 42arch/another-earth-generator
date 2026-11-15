@@ -1,0 +1,311 @@
+{
+  "date": "2026-11-06T16:35:36.247Z",
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "config": {
+    "seeds": [
+      "42",
+      "314159",
+      "8675309"
+    ],
+    "levels": [
+      4,
+      5,
+      6
+    ],
+    "physicalRadiusKm": 6371,
+    "irregularity": 0.5,
+    "referenceLevel": 6,
+    "climate": {
+      "rotationPeriodHours": 24,
+      "axialTiltDegrees": 23.44,
+      "orbitalPeriodDays": 365.25,
+      "temperatureOffsetC": 0,
+      "precipitationScale": 1
+    }
+  },
+  "rows": [
+    {
+      "seed": "42",
+      "level": 4,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 1774.305625,
+      "hitMs": 0.5224169999999049,
+      "changedMs": 1332.616542,
+      "forceMs": 1736.739083,
+      "temperatureHash": "f54db2ea08026a84347533b2d41570239bbb01a55cab8276c0cd9f702bdbd434",
+      "precipitationHash": "b261f0281c48330b25d30c3ac889320862a4d799e6722432eb3d79e03dba7c20",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 24321370,
+      "climateArrayBytes": 269010,
+      "areaWeightedAnnualRainMm": 501.64228608892967
+    },
+    {
+      "seed": "42",
+      "level": 5,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 1962.8452500000003,
+      "hitMs": 0.17683299999953306,
+      "changedMs": 1506.4259999999995,
+      "forceMs": 1940.0530419999996,
+      "temperatureHash": "0ce241f40a4bde81d43f316fc7329d12178cc744649edbb6f4ff40eaddd1afd1",
+      "precipitationHash": "3430a643b8b0157460d04bce5b44f3c6ba38c19762e13a2a96cb20ce1015b79a",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 30749530,
+      "climateArrayBytes": 1075410,
+      "areaWeightedAnnualRainMm": 511.607741573646
+    },
+    {
+      "seed": "42",
+      "level": 6,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 2287.008915999999,
+      "hitMs": 0.1678330000013375,
+      "changedMs": 1311.9035000000003,
+      "forceMs": 2166.9988329999996,
+      "temperatureHash": "76141d7d2935e7bb4f143d3294b181b9f93a7f46dad2a5bb043ce0d311b4023a",
+      "precipitationHash": "8b804b815f1ca5b467bd9310ab504dcce1cb514c3600f7934a7aa16959dc754e",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 56462170,
+      "climateArrayBytes": 4301010,
+      "areaWeightedAnnualRainMm": 517.0287941137407
+    },
+    {
+      "seed": "314159",
+      "level": 4,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 1740.258417000001,
+      "hitMs": 0.16629199999806588,
+      "changedMs": 1324.724124999997,
+      "forceMs": 1733.5246249999982,
+      "temperatureHash": "4af0bb2846d54d3167260c86f8a409ca1250378f947b654bb7b823dc04e072c3",
+      "precipitationHash": "f3ddb95c9f0c13d8d5c4da22124e0b33d3bb7863befd524827b392c9ae1f5464",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 24321530,
+      "climateArrayBytes": 269010,
+      "areaWeightedAnnualRainMm": 502.13219722569244
+    },
+    {
+      "seed": "314159",
+      "level": 5,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 1818.1404580000017,
+      "hitMs": 0.15966699999989942,
+      "changedMs": 1334.2158750000017,
+      "forceMs": 1811.390457999998,
+      "temperatureHash": "e3209662f43afe8d6f19ee23088895521566b4aa1d04899a9cb21aac79d848de",
+      "precipitationHash": "2a588f2660dd013966c346e7fac5ac3fbb4e6963af85a3433570d7d76b9227da",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 30749690,
+      "climateArrayBytes": 1075410,
+      "areaWeightedAnnualRainMm": 510.01087735105415
+    },
+    {
+      "seed": "314159",
+      "level": 6,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 2023.5063339999979,
+      "hitMs": 0.17375000000174623,
+      "changedMs": 1263.4282920000005,
+      "forceMs": 2090.352833000001,
+      "temperatureHash": "61d536d15f3815df0211eea709852eee78215ed1d3ca3200fa8e0dd306b236e6",
+      "precipitationHash": "82fb320e69a41d13b3d8032dc9c191a523923b706b4c43b7d81d7446efed0f51",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 56462330,
+      "climateArrayBytes": 4301010,
+      "areaWeightedAnnualRainMm": 515.7914655645803
+    },
+    {
+      "seed": "8675309",
+      "level": 4,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 1630.1476670000047,
+      "hitMs": 0.17066699999850243,
+      "changedMs": 1274.490334000002,
+      "forceMs": 1628.9037920000046,
+      "temperatureHash": "d512ee659a62b628cfaea91a6e2bd052ce45621b1d0693ec29f73ede1ce008f3",
+      "precipitationHash": "3eb8a922f3fd6c3f70980061c303560c201828a7b7b8ab24e6050a827d84a48e",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 24321572,
+      "climateArrayBytes": 269010,
+      "areaWeightedAnnualRainMm": 490.7157689039884
+    },
+    {
+      "seed": "8675309",
+      "level": 5,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 1702.5120830000014,
+      "hitMs": 0.14916599999560276,
+      "changedMs": 1283.3672080000033,
+      "forceMs": 1697.4795000000013,
+      "temperatureHash": "ded6606afa60e37082264c1072a5f468ba752e7d35c3b2682993a2f898a2ecb6",
+      "precipitationHash": "9c150e75bc95e1cb4865f2c87b0a36b6f4cbe838f0c5c7a3704e1e9b201fb6e3",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 30749732,
+      "climateArrayBytes": 1075410,
+      "areaWeightedAnnualRainMm": 500.0729522457102
+    },
+    {
+      "seed": "8675309",
+      "level": 6,
+      "algorithmVersion": "climate-c0-v2",
+      "coldMs": 2069.9625830000004,
+      "hitMs": 0.14874999999301508,
+      "changedMs": 1262.5146249999962,
+      "forceMs": 2036.0736250000045,
+      "temperatureHash": "243ee54667f99a75359fbf64ddf1445d7babb29ed9d9025f4315362b95085dc8",
+      "precipitationHash": "bc4ed789343426fd9d7f3c0ac8ae85af6f7d2da5bb67867e953ede9bfe9be0cd",
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0"
+      ],
+      "changedStages": [
+        "climate-c0"
+      ],
+      "cacheBytes": 56462372,
+      "climateArrayBytes": 4301010,
+      "areaWeightedAnnualRainMm": 500.845113430708
+    }
+  ]
+}

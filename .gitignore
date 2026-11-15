@@ -12,6 +12,7 @@ dist
 dev-dist
 dist-ssr
 *.local
+.pnpm-store
 
 # Editor directories and files
 .vscode/*
@@ -24,4 +25,6 @@ dist-ssr
 *.sln
 *.sw?
 
-docs/reference/*
+docs/old-src/*
+apps/web/test-results/
+apps/web/playwright-report/

@@ -1,0 +1,211 @@
+{
+  "benchmark": "M1.4 legacy classifier replay on current C0 climate bins",
+  "comparisonScope": "Compares old calendar-day-weighted classifier math with ecology-e0-v3 on identical current C0 monthly fields for every land region. E0 has no hydrology or static-lake dependency. Does not run the legacy climate generator, so it does not measure old-vs-current climate-field differences. Both classifiers use the mesh Y axis for latitude.",
+  "generatedAt": "2026-11-12T09:49:36.498Z",
+  "input": {
+    "seed": "42",
+    "meshLevel": 6,
+    "irregularity": 0.5,
+    "referenceLevel": 6,
+    "physicalRadiusKm": 6371,
+    "climate": {
+      "rotationPeriodHours": 24,
+      "axialTiltDegrees": 23.44,
+      "orbitalPeriodDays": 365.25,
+      "temperatureOffsetC": 0,
+      "precipitationScale": 1
+    },
+    "oldMonthDays": [
+      31,
+      28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31
+    ],
+    "currentBinDays": 30.4375,
+    "excludedOceanRegions": 29008,
+    "terrestrialRegionsCompared": 11954,
+    "algorithmVersions": {
+      "terrain": "terrain-v25",
+      "climate": "climate-c0-v16",
+      "ecology": "ecology-e0-v3"
+    },
+    "plannedStages": [
+      "mesh",
+      "reference-mesh",
+      "geological-mapping",
+      "reference-subdivisions",
+      "plate-topology",
+      "continental-crust",
+      "geology",
+      "plate-dynamics",
+      "tectonics",
+      "tectonic-elevation",
+      "terrain",
+      "climate-c0",
+      "ecology-e0"
+    ],
+    "hydrologyStagesPlanned": false
+  },
+  "summary": {
+    "changedClassRegions": 0,
+    "changedClassShare": 0,
+    "oldClassCounts": {
+      "AlpineTundra": 446,
+      "BorealForest": 1108,
+      "ColdDesert": 1979,
+      "HotDesert": 2034,
+      "IceSheet": 830,
+      "MediterraneanShrubland": 167,
+      "Savanna": 481,
+      "Steppe": 3275,
+      "TemperateGrassland": 312,
+      "TemperateSeasonalForest": 99,
+      "TropicalRainforest": 7,
+      "TropicalSeasonalForest": 832,
+      "Tundra": 384
+    },
+    "currentClassCounts": {
+      "AlpineTundra": 446,
+      "BorealForest": 1108,
+      "ColdDesert": 1979,
+      "HotDesert": 2034,
+      "IceSheet": 830,
+      "MediterraneanShrubland": 167,
+      "Savanna": 481,
+      "Steppe": 3275,
+      "TemperateGrassland": 312,
+      "TemperateSeasonalForest": 99,
+      "TropicalRainforest": 7,
+      "TropicalSeasonalForest": 832,
+      "Tundra": 384
+    },
+    "classTransitions": {
+      "AlpineTundra -> AlpineTundra": 446,
+      "BorealForest -> BorealForest": 1108,
+      "ColdDesert -> ColdDesert": 1979,
+      "HotDesert -> HotDesert": 2034,
+      "IceSheet -> IceSheet": 830,
+      "MediterraneanShrubland -> MediterraneanShrubland": 167,
+      "Savanna -> Savanna": 481,
+      "Steppe -> Steppe": 3275,
+      "TemperateGrassland -> TemperateGrassland": 312,
+      "TemperateSeasonalForest -> TemperateSeasonalForest": 99,
+      "TropicalRainforest -> TropicalRainforest": 7,
+      "TropicalSeasonalForest -> TropicalSeasonalForest": 832,
+      "Tundra -> Tundra": 384
+    },
+    "annualMeanTemperatureDifferenceC": {
+      "count": 11954,
+      "mean": -0.001834145320264988,
+      "median": -0.002950308380061717,
+      "minimum": -0.07554236130627423,
+      "maximum": 0.08498020885197377
+    },
+    "annualPrecipitationDifferenceMm": {
+      "count": 11954,
+      "mean": 0,
+      "median": 0,
+      "minimum": 0,
+      "maximum": 0
+    },
+    "potentialEvapotranspirationRelativeDifference": {
+      "count": 11386,
+      "mean": -0.0002001436221480002,
+      "median": 0.0003009156573281662,
+      "minimum": -0.01814516129032273,
+      "maximum": 0.009478594948473675
+    },
+    "aridityIndexDifference": {
+      "count": 11954,
+      "mean": 0.004951104966734641,
+      "median": -0.00002925113778901034,
+      "minimum": -0.5155438123905896,
+      "maximum": 4.03419135937213
+    },
+    "classCountRows": [
+      {
+        "code": "Ocean",
+        "legacy": 0,
+        "current": 0
+      },
+      {
+        "code": "TropicalRainforest",
+        "legacy": 7,
+        "current": 7
+      },
+      {
+        "code": "TropicalSeasonalForest",
+        "legacy": 832,
+        "current": 832
+      },
+      {
+        "code": "Savanna",
+        "legacy": 481,
+        "current": 481
+      },
+      {
+        "code": "HotDesert",
+        "legacy": 2034,
+        "current": 2034
+      },
+      {
+        "code": "ColdDesert",
+        "legacy": 1979,
+        "current": 1979
+      },
+      {
+        "code": "Steppe",
+        "legacy": 3275,
+        "current": 3275
+      },
+      {
+        "code": "MediterraneanShrubland",
+        "legacy": 167,
+        "current": 167
+      },
+      {
+        "code": "TemperateGrassland",
+        "legacy": 312,
+        "current": 312
+      },
+      {
+        "code": "TemperateSeasonalForest",
+        "legacy": 99,
+        "current": 99
+      },
+      {
+        "code": "TemperateRainforest",
+        "legacy": 0,
+        "current": 0
+      },
+      {
+        "code": "BorealForest",
+        "legacy": 1108,
+        "current": 1108
+      },
+      {
+        "code": "Tundra",
+        "legacy": 384,
+        "current": 384
+      },
+      {
+        "code": "IceSheet",
+        "legacy": 830,
+        "current": 830
+      },
+      {
+        "code": "AlpineTundra",
+        "legacy": 446,
+        "current": 446
+      }
+    ]
+  }
+}

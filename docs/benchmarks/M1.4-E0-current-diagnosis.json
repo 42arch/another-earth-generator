@@ -1,0 +1,624 @@
+{
+  "description": "Current T0/C0 E0 area-weighted and spatial diagnostics; v2 to v3 fixed-mesh comparison",
+  "config": {
+    "irregularity": 0.75,
+    "physicalRadiusKm": 6371,
+    "seaLevelDatumKm": 0,
+    "axialTiltDegrees": 23.5,
+    "precipitationScale": 1.8
+  },
+  "samples": [
+    {
+      "seed": "1024",
+      "level": 7,
+      "meshId": "icosphere-jitter-v1:L7:R6371:I0.75:S1024",
+      "versions": {
+        "terrain": "terrain-v25",
+        "climate": "climate-c0-v16",
+        "ecology": "ecology-e0-v3"
+      },
+      "regionCount": 163842,
+      "landAreaKm2": 152511838.224851,
+      "oceanAreaKm2": 357552633.6849314,
+      "oceanClassificationErrors": 0,
+      "mismatchedCoverRegions": 0,
+      "desertKoppenShare": 0.09835192818760431,
+      "desertBiomeShare": 0.09681628649803842,
+      "efShare": 0.03893013438672289,
+      "iceSheetShare": 0.03942546314620499,
+      "biomeHash": "06ac8a7f9f602859a3f53ae09321a68410892cd79bf0b31204f1b76c161ea336",
+      "coverHash": "517ed9a5be6ea9d02f4e43add8076a2b88674e3e0ee2989f8e56cc8c171e5a43",
+      "biome": [
+        {
+          "code": "TropicalRainforest",
+          "areaShare": 0.06212094124444226,
+          "meanTemperatureC": 26.215842760628707,
+          "meanPrecipitationMm": 2291.0218129645314,
+          "meanAbsoluteLatitudeDegrees": 7.755852882734384,
+          "componentCount": 49,
+          "largestComponentShareOfClass": 0.547768731112393
+        },
+        {
+          "code": "TropicalSeasonalForest",
+          "areaShare": 0.07640982725369871,
+          "meanTemperatureC": 25.302177022894206,
+          "meanPrecipitationMm": 1336.5418334105116,
+          "meanAbsoluteLatitudeDegrees": 10.124525982365995,
+          "componentCount": 63,
+          "largestComponentShareOfClass": 0.3913569096060369
+        },
+        {
+          "code": "Savanna",
+          "areaShare": 0.018840759547125857,
+          "meanTemperatureC": 24.87116153093315,
+          "meanPrecipitationMm": 838.4726511028005,
+          "meanAbsoluteLatitudeDegrees": 8.345362397760734,
+          "componentCount": 56,
+          "largestComponentShareOfClass": 0.4597645432173463
+        },
+        {
+          "code": "HotDesert",
+          "areaShare": 0.052635229906186715,
+          "meanTemperatureC": 21.3668435698291,
+          "meanPrecipitationMm": 183.28822076176507,
+          "meanAbsoluteLatitudeDegrees": 23.885643077590903,
+          "componentCount": 26,
+          "largestComponentShareOfClass": 0.29410508663505563
+        },
+        {
+          "code": "ColdDesert",
+          "areaShare": 0.04418105659185146,
+          "meanTemperatureC": 12.06595449437153,
+          "meanPrecipitationMm": 155.39675711663048,
+          "meanAbsoluteLatitudeDegrees": 34.156330044324314,
+          "componentCount": 91,
+          "largestComponentShareOfClass": 0.3782569858953792
+        },
+        {
+          "code": "Steppe",
+          "areaShare": 0.22520710366251587,
+          "meanTemperatureC": 13.510646414436392,
+          "meanPrecipitationMm": 355.750038117988,
+          "meanAbsoluteLatitudeDegrees": 33.60674862199847,
+          "componentCount": 237,
+          "largestComponentShareOfClass": 0.14600639420583061
+        },
+        {
+          "code": "MediterraneanShrubland",
+          "areaShare": 0.05563659037144764,
+          "meanTemperatureC": 15.755826555521804,
+          "meanPrecipitationMm": 619.5427929254097,
+          "meanAbsoluteLatitudeDegrees": 37.32434091863362,
+          "componentCount": 56,
+          "largestComponentShareOfClass": 0.2512792607692723
+        },
+        {
+          "code": "TemperateGrassland",
+          "areaShare": 0.06147579480115811,
+          "meanTemperatureC": 15.772293291595595,
+          "meanPrecipitationMm": 580.4124240489118,
+          "meanAbsoluteLatitudeDegrees": 32.34042942922202,
+          "componentCount": 254,
+          "largestComponentShareOfClass": 0.2783700410390166
+        },
+        {
+          "code": "TemperateSeasonalForest",
+          "areaShare": 0.09657536468420062,
+          "meanTemperatureC": 17.80199977084804,
+          "meanPrecipitationMm": 929.6965753729995,
+          "meanAbsoluteLatitudeDegrees": 30.02860832921031,
+          "componentCount": 189,
+          "largestComponentShareOfClass": 0.17758203333271758
+        },
+        {
+          "code": "TemperateRainforest",
+          "areaShare": 0.0030274684545606497,
+          "meanTemperatureC": 21.247670072789727,
+          "meanPrecipitationMm": 1774.800388570655,
+          "meanAbsoluteLatitudeDegrees": 15.93678203268315,
+          "componentCount": 54,
+          "largestComponentShareOfClass": 0.10259945461376101
+        },
+        {
+          "code": "BorealForest",
+          "areaShare": 0.1640319535430853,
+          "meanTemperatureC": 4.433912691882702,
+          "meanPrecipitationMm": 577.3412367433767,
+          "meanAbsoluteLatitudeDegrees": 52.4859691053166,
+          "componentCount": 251,
+          "largestComponentShareOfClass": 0.25598174861144113
+        },
+        {
+          "code": "Tundra",
+          "areaShare": 0.06763866514056194,
+          "meanTemperatureC": -7.3725725554455765,
+          "meanPrecipitationMm": 274.3240226848124,
+          "meanAbsoluteLatitudeDegrees": 63.95173822258204,
+          "componentCount": 200,
+          "largestComponentShareOfClass": 0.27043287045418457
+        },
+        {
+          "code": "IceSheet",
+          "areaShare": 0.03942546314620499,
+          "meanTemperatureC": -18.508827783111,
+          "meanPrecipitationMm": 143.92437471737503,
+          "meanAbsoluteLatitudeDegrees": 54.038097300554604,
+          "componentCount": 81,
+          "largestComponentShareOfClass": 0.19171380876632194
+        },
+        {
+          "code": "AlpineTundra",
+          "areaShare": 0.03279378165295228,
+          "meanTemperatureC": -3.716743471332779,
+          "meanPrecipitationMm": 268.14346868565315,
+          "meanAbsoluteLatitudeDegrees": 32.09227825553454,
+          "componentCount": 175,
+          "largestComponentShareOfClass": 0.15089900683180918
+        }
+      ],
+      "previousEcologyVersion": "ecology-e0-v2",
+      "previousBiomeHash": "8df199cb8e42f917a596e123455e51da8a2a67f2ccd43897f346bbf72156fbd9",
+      "changedRegionCount": 1505,
+      "changedRegionShare": 0.009185678885755789
+    },
+    {
+      "seed": "42",
+      "level": 6,
+      "meshId": "icosphere-jitter-v1:L6:R6371:I0.75:S42",
+      "versions": {
+        "terrain": "terrain-v25",
+        "climate": "climate-c0-v16",
+        "ecology": "ecology-e0-v3"
+      },
+      "regionCount": 40962,
+      "landAreaKm2": 150198820.0608736,
+      "oceanAreaKm2": 359865651.84891516,
+      "oceanClassificationErrors": 0,
+      "mismatchedCoverRegions": 0,
+      "desertKoppenShare": 0.1315330515798396,
+      "desertBiomeShare": 0.1308587022609329,
+      "efShare": 0.11138972392826164,
+      "iceSheetShare": 0.11415984516034246,
+      "biomeHash": "4998fb90c2b6b20d8ec5b0d23e4d2e7a6a4339ab17067cfd3415d3b446389f20",
+      "coverHash": "a55035083b70685062768b79843b6313b5f442059eb95a515108f53609987806",
+      "biome": [
+        {
+          "code": "TropicalRainforest",
+          "areaShare": 0.09183683226960057,
+          "meanTemperatureC": 26.081265381176106,
+          "meanPrecipitationMm": 2230.110261979837,
+          "meanAbsoluteLatitudeDegrees": 6.7491470337798685,
+          "componentCount": 69,
+          "largestComponentShareOfClass": 0.1819818427754133
+        },
+        {
+          "code": "TropicalSeasonalForest",
+          "areaShare": 0.08274415266613638,
+          "meanTemperatureC": 25.407623945217924,
+          "meanPrecipitationMm": 1369.3824630380332,
+          "meanAbsoluteLatitudeDegrees": 9.629473693923648,
+          "componentCount": 54,
+          "largestComponentShareOfClass": 0.31875876173804746
+        },
+        {
+          "code": "Savanna",
+          "areaShare": 0.01757443716518695,
+          "meanTemperatureC": 24.711615308688895,
+          "meanPrecipitationMm": 835.9683987064903,
+          "meanAbsoluteLatitudeDegrees": 9.687791075950392,
+          "componentCount": 36,
+          "largestComponentShareOfClass": 0.18708832202341602
+        },
+        {
+          "code": "HotDesert",
+          "areaShare": 0.10129491021700338,
+          "meanTemperatureC": 22.379615658033444,
+          "meanPrecipitationMm": 202.72639124041604,
+          "meanAbsoluteLatitudeDegrees": 23.000981906539565,
+          "componentCount": 17,
+          "largestComponentShareOfClass": 0.4737350879119483
+        },
+        {
+          "code": "ColdDesert",
+          "areaShare": 0.029563792043929456,
+          "meanTemperatureC": 14.126679308385121,
+          "meanPrecipitationMm": 188.78699390721812,
+          "meanAbsoluteLatitudeDegrees": 28.80696667830379,
+          "componentCount": 27,
+          "largestComponentShareOfClass": 0.3355544502197652
+        },
+        {
+          "code": "Steppe",
+          "areaShare": 0.20280538419803684,
+          "meanTemperatureC": 11.92242809230861,
+          "meanPrecipitationMm": 348.93198722104137,
+          "meanAbsoluteLatitudeDegrees": 37.326947195437356,
+          "componentCount": 84,
+          "largestComponentShareOfClass": 0.14356321391638333
+        },
+        {
+          "code": "MediterraneanShrubland",
+          "areaShare": 0.03136764411911125,
+          "meanTemperatureC": 15.601179971064104,
+          "meanPrecipitationMm": 624.8240863285466,
+          "meanAbsoluteLatitudeDegrees": 36.81324118801462,
+          "componentCount": 28,
+          "largestComponentShareOfClass": 0.15997243629593755
+        },
+        {
+          "code": "TemperateGrassland",
+          "areaShare": 0.05918763828400171,
+          "meanTemperatureC": 15.185735195909178,
+          "meanPrecipitationMm": 569.7228496258537,
+          "meanAbsoluteLatitudeDegrees": 29.89690309280887,
+          "componentCount": 113,
+          "largestComponentShareOfClass": 0.11853026263087978
+        },
+        {
+          "code": "TemperateSeasonalForest",
+          "areaShare": 0.07672565727155714,
+          "meanTemperatureC": 18.567596727573743,
+          "meanPrecipitationMm": 952.3123187358381,
+          "meanAbsoluteLatitudeDegrees": 25.95176087044672,
+          "componentCount": 137,
+          "largestComponentShareOfClass": 0.14783124988749766
+        },
+        {
+          "code": "TemperateRainforest",
+          "areaShare": 0.00233759447364288,
+          "meanTemperatureC": 20.580848247239683,
+          "meanPrecipitationMm": 1663.1297457901126,
+          "meanAbsoluteLatitudeDegrees": 15.071742849080753,
+          "componentCount": 18,
+          "largestComponentShareOfClass": 0.1951792761411032
+        },
+        {
+          "code": "BorealForest",
+          "areaShare": 0.09825383508141429,
+          "meanTemperatureC": 3.8679794700063974,
+          "meanPrecipitationMm": 559.9166636705137,
+          "meanAbsoluteLatitudeDegrees": 53.120742258510774,
+          "componentCount": 103,
+          "largestComponentShareOfClass": 0.17518538155072638
+        },
+        {
+          "code": "Tundra",
+          "areaShare": 0.0578564848454973,
+          "meanTemperatureC": -7.734962134678437,
+          "meanPrecipitationMm": 238.8624930961299,
+          "meanAbsoluteLatitudeDegrees": 65.30681860746886,
+          "componentCount": 73,
+          "largestComponentShareOfClass": 0.2292053585392711
+        },
+        {
+          "code": "IceSheet",
+          "areaShare": 0.11415984516034246,
+          "meanTemperatureC": -19.406173413078427,
+          "meanPrecipitationMm": 100.61875592106006,
+          "meanAbsoluteLatitudeDegrees": 72.88720550302061,
+          "componentCount": 33,
+          "largestComponentShareOfClass": 0.44224495765198835
+        },
+        {
+          "code": "AlpineTundra",
+          "areaShare": 0.03429179220453782,
+          "meanTemperatureC": -0.05240171521611875,
+          "meanPrecipitationMm": 345.3878903715703,
+          "meanAbsoluteLatitudeDegrees": 23.68166045031138,
+          "componentCount": 68,
+          "largestComponentShareOfClass": 0.21461462853663282
+        }
+      ],
+      "previousEcologyVersion": "ecology-e0-v2",
+      "previousBiomeHash": "59591ebd05489484a3620daffb5909d6668cb8ddc95f9993447b8c463bc40d0c",
+      "changedRegionCount": 607,
+      "changedRegionShare": 0.014818612372442752
+    },
+    {
+      "seed": "314159",
+      "level": 6,
+      "meshId": "icosphere-jitter-v1:L6:R6371:I0.75:S314159",
+      "versions": {
+        "terrain": "terrain-v25",
+        "climate": "climate-c0-v16",
+        "ecology": "ecology-e0-v3"
+      },
+      "regionCount": 40962,
+      "landAreaKm2": 147210856.7272243,
+      "oceanAreaKm2": 362853615.18256557,
+      "oceanClassificationErrors": 0,
+      "mismatchedCoverRegions": 0,
+      "desertKoppenShare": 0.0837434221916166,
+      "desertBiomeShare": 0.08340337873917412,
+      "efShare": 0.08962043369861804,
+      "iceSheetShare": 0.09244564341398263,
+      "biomeHash": "33de00f65ed13f8378a6f552f4c57da8c523261bebea8da63ba5c1e01b77b4f1",
+      "coverHash": "0dbbc296c2b498cfca8443859615d434e294ede9e3a439d3bd9725ccc4880518",
+      "biome": [
+        {
+          "code": "TropicalRainforest",
+          "areaShare": 0.10196284521836466,
+          "meanTemperatureC": 25.907495273283295,
+          "meanPrecipitationMm": 2267.631190784211,
+          "meanAbsoluteLatitudeDegrees": 6.702695025772788,
+          "componentCount": 43,
+          "largestComponentShareOfClass": 0.3218724692736847
+        },
+        {
+          "code": "TropicalSeasonalForest",
+          "areaShare": 0.10764160270337957,
+          "meanTemperatureC": 25.111774077018538,
+          "meanPrecipitationMm": 1339.0688362556625,
+          "meanAbsoluteLatitudeDegrees": 11.164237344986782,
+          "componentCount": 67,
+          "largestComponentShareOfClass": 0.2702232363567051
+        },
+        {
+          "code": "Savanna",
+          "areaShare": 0.01684942167705428,
+          "meanTemperatureC": 24.587266895851677,
+          "meanPrecipitationMm": 822.2092977085003,
+          "meanAbsoluteLatitudeDegrees": 9.848262799494462,
+          "componentCount": 52,
+          "largestComponentShareOfClass": 0.22202631567146483
+        },
+        {
+          "code": "HotDesert",
+          "areaShare": 0.07371582212247964,
+          "meanTemperatureC": 22.86462908846468,
+          "meanPrecipitationMm": 226.33026565650502,
+          "meanAbsoluteLatitudeDegrees": 20.343329541460204,
+          "componentCount": 10,
+          "largestComponentShareOfClass": 0.3703720446138142
+        },
+        {
+          "code": "ColdDesert",
+          "areaShare": 0.009687556616694537,
+          "meanTemperatureC": 15.050418025585198,
+          "meanPrecipitationMm": 183.59027118554317,
+          "meanAbsoluteLatitudeDegrees": 27.43354163941865,
+          "componentCount": 16,
+          "largestComponentShareOfClass": 0.31655372913844243
+        },
+        {
+          "code": "Steppe",
+          "areaShare": 0.2011763236499127,
+          "meanTemperatureC": 13.485624062014907,
+          "meanPrecipitationMm": 381.88234693153635,
+          "meanAbsoluteLatitudeDegrees": 35.14275279247474,
+          "componentCount": 80,
+          "largestComponentShareOfClass": 0.18168425301847776
+        },
+        {
+          "code": "MediterraneanShrubland",
+          "areaShare": 0.03251980700400934,
+          "meanTemperatureC": 16.552853728776153,
+          "meanPrecipitationMm": 667.6994581968753,
+          "meanAbsoluteLatitudeDegrees": 36.551865500889924,
+          "componentCount": 34,
+          "largestComponentShareOfClass": 0.24431293869733833
+        },
+        {
+          "code": "TemperateGrassland",
+          "areaShare": 0.05972487175041804,
+          "meanTemperatureC": 15.74603751004227,
+          "meanPrecipitationMm": 577.4331092016293,
+          "meanAbsoluteLatitudeDegrees": 30.13837518650554,
+          "componentCount": 98,
+          "largestComponentShareOfClass": 0.1546118143716739
+        },
+        {
+          "code": "TemperateSeasonalForest",
+          "areaShare": 0.09665493659581252,
+          "meanTemperatureC": 19.24901237178738,
+          "meanPrecipitationMm": 935.8113896027655,
+          "meanAbsoluteLatitudeDegrees": 24.574861187885364,
+          "componentCount": 117,
+          "largestComponentShareOfClass": 0.1521650982898168
+        },
+        {
+          "code": "TemperateRainforest",
+          "areaShare": 0.002896263304658323,
+          "meanTemperatureC": 20.673077245569953,
+          "meanPrecipitationMm": 1680.9304157968097,
+          "meanAbsoluteLatitudeDegrees": 14.690731365568597,
+          "componentCount": 19,
+          "largestComponentShareOfClass": 0.20402449853224525
+        },
+        {
+          "code": "BorealForest",
+          "areaShare": 0.10754742559768292,
+          "meanTemperatureC": 3.535969023727287,
+          "meanPrecipitationMm": 510.0835480351708,
+          "meanAbsoluteLatitudeDegrees": 53.7790065964418,
+          "componentCount": 91,
+          "largestComponentShareOfClass": 0.2112577674509989
+        },
+        {
+          "code": "Tundra",
+          "areaShare": 0.06653204453066013,
+          "meanTemperatureC": -8.645825670589396,
+          "meanPrecipitationMm": 202.30069139837082,
+          "meanAbsoluteLatitudeDegrees": 66.58826937169874,
+          "componentCount": 59,
+          "largestComponentShareOfClass": 0.455953241420226
+        },
+        {
+          "code": "IceSheet",
+          "areaShare": 0.09244564341398263,
+          "meanTemperatureC": -20.638657312835218,
+          "meanPrecipitationMm": 84.81683953232803,
+          "meanAbsoluteLatitudeDegrees": 70.69071145493199,
+          "componentCount": 25,
+          "largestComponentShareOfClass": 0.511476985422709
+        },
+        {
+          "code": "AlpineTundra",
+          "areaShare": 0.03064543581488133,
+          "meanTemperatureC": 0.8098537130921476,
+          "meanPrecipitationMm": 435.0892910414582,
+          "meanAbsoluteLatitudeDegrees": 19.907848911488536,
+          "componentCount": 64,
+          "largestComponentShareOfClass": 0.2333131975646388
+        }
+      ],
+      "previousEcologyVersion": "ecology-e0-v2",
+      "previousBiomeHash": "ab9c99a4277b45ecc9acf850936212bdfd0e39c3d25c2190c2ee3454f4b6df51",
+      "changedRegionCount": 706,
+      "changedRegionShare": 0.017235486548508372
+    },
+    {
+      "seed": "8675309",
+      "level": 6,
+      "meshId": "icosphere-jitter-v1:L6:R6371:I0.75:S8675309",
+      "versions": {
+        "terrain": "terrain-v25",
+        "climate": "climate-c0-v16",
+        "ecology": "ecology-e0-v3"
+      },
+      "regionCount": 40962,
+      "landAreaKm2": 149835447.42327157,
+      "oceanAreaKm2": 360229024.48651445,
+      "oceanClassificationErrors": 0,
+      "mismatchedCoverRegions": 0,
+      "desertKoppenShare": 0.10087656985391527,
+      "desertBiomeShare": 0.1007536032814397,
+      "efShare": 0.061734628553348735,
+      "iceSheetShare": 0.06199257436734993,
+      "biomeHash": "d8935a96caace41943c16571859447a1c244e8634a8d304ec2d6d1fa5ef79df4",
+      "coverHash": "ab2194e2b26455dc7c6630120e9eb1fc4deb97a1d2f0c2495a279e29a226d7ef",
+      "biome": [
+        {
+          "code": "TropicalRainforest",
+          "areaShare": 0.08238268882373893,
+          "meanTemperatureC": 25.956064416882096,
+          "meanPrecipitationMm": 2233.78920469529,
+          "meanAbsoluteLatitudeDegrees": 6.139914336335078,
+          "componentCount": 54,
+          "largestComponentShareOfClass": 0.3107287023864966
+        },
+        {
+          "code": "TropicalSeasonalForest",
+          "areaShare": 0.10147354219145227,
+          "meanTemperatureC": 25.190946908222703,
+          "meanPrecipitationMm": 1321.2330721609496,
+          "meanAbsoluteLatitudeDegrees": 10.517382491645307,
+          "componentCount": 65,
+          "largestComponentShareOfClass": 0.2220552500389024
+        },
+        {
+          "code": "Savanna",
+          "areaShare": 0.03343595422399257,
+          "meanTemperatureC": 25.03424934446772,
+          "meanPrecipitationMm": 825.7083803135336,
+          "meanAbsoluteLatitudeDegrees": 9.056863048959952,
+          "componentCount": 34,
+          "largestComponentShareOfClass": 0.4777278597980338
+        },
+        {
+          "code": "HotDesert",
+          "areaShare": 0.06699950714514971,
+          "meanTemperatureC": 21.750565367377455,
+          "meanPrecipitationMm": 227.98462412100753,
+          "meanAbsoluteLatitudeDegrees": 20.961763705601633,
+          "componentCount": 22,
+          "largestComponentShareOfClass": 0.2184845558555003
+        },
+        {
+          "code": "ColdDesert",
+          "areaShare": 0.03375409613629007,
+          "meanTemperatureC": 13.875449844701052,
+          "meanPrecipitationMm": 161.94566555290132,
+          "meanAbsoluteLatitudeDegrees": 29.294779942191354,
+          "componentCount": 29,
+          "largestComponentShareOfClass": 0.4347216518615901
+        },
+        {
+          "code": "Steppe",
+          "areaShare": 0.19525768688180303,
+          "meanTemperatureC": 16.967049903872716,
+          "meanPrecipitationMm": 426.58251847853245,
+          "meanAbsoluteLatitudeDegrees": 28.251030127437947,
+          "componentCount": 82,
+          "largestComponentShareOfClass": 0.14077402099384692
+        },
+        {
+          "code": "MediterraneanShrubland",
+          "areaShare": 0.04618897503242784,
+          "meanTemperatureC": 16.58402461831145,
+          "meanPrecipitationMm": 616.769402901685,
+          "meanAbsoluteLatitudeDegrees": 36.613047101084696,
+          "componentCount": 20,
+          "largestComponentShareOfClass": 0.18712137893543937
+        },
+        {
+          "code": "TemperateGrassland",
+          "areaShare": 0.07034091815892558,
+          "meanTemperatureC": 15.84480491305969,
+          "meanPrecipitationMm": 575.4219694372098,
+          "meanAbsoluteLatitudeDegrees": 31.106414429775064,
+          "componentCount": 114,
+          "largestComponentShareOfClass": 0.2788975606335704
+        },
+        {
+          "code": "TemperateSeasonalForest",
+          "areaShare": 0.12633121836430344,
+          "meanTemperatureC": 18.654325211589374,
+          "meanPrecipitationMm": 955.3837916708012,
+          "meanAbsoluteLatitudeDegrees": 26.976101688458133,
+          "componentCount": 125,
+          "largestComponentShareOfClass": 0.18600798035897007
+        },
+        {
+          "code": "TemperateRainforest",
+          "areaShare": 0.0026892742345313273,
+          "meanTemperatureC": 21.407440485942427,
+          "meanPrecipitationMm": 1639.8983075689418,
+          "meanAbsoluteLatitudeDegrees": 13.806927376843745,
+          "componentCount": 26,
+          "largestComponentShareOfClass": 0.16532515728398475
+        },
+        {
+          "code": "BorealForest",
+          "areaShare": 0.10721707659253801,
+          "meanTemperatureC": 5.181285086366933,
+          "meanPrecipitationMm": 679.5097978960828,
+          "meanAbsoluteLatitudeDegrees": 52.807164235679316,
+          "componentCount": 72,
+          "largestComponentShareOfClass": 0.2983834223774625
+        },
+        {
+          "code": "Tundra",
+          "areaShare": 0.042450972718094775,
+          "meanTemperatureC": -8.607627361135949,
+          "meanPrecipitationMm": 249.49545374594953,
+          "meanAbsoluteLatitudeDegrees": 63.164847079534525,
+          "componentCount": 46,
+          "largestComponentShareOfClass": 0.29125997773862206
+        },
+        {
+          "code": "IceSheet",
+          "areaShare": 0.06199257436734993,
+          "meanTemperatureC": -23.40013858040051,
+          "meanPrecipitationMm": 113.39709073660435,
+          "meanAbsoluteLatitudeDegrees": 67.58320526940297,
+          "componentCount": 25,
+          "largestComponentShareOfClass": 0.7574523345661485
+        },
+        {
+          "code": "AlpineTundra",
+          "areaShare": 0.029485515129404356,
+          "meanTemperatureC": 1.5998240341225465,
+          "meanPrecipitationMm": 415.76351602534726,
+          "meanAbsoluteLatitudeDegrees": 16.68914859327684,
+          "componentCount": 50,
+          "largestComponentShareOfClass": 0.22912480087659384
+        }
+      ],
+      "previousEcologyVersion": "ecology-e0-v2",
+      "previousBiomeHash": "b5d68924fc4a16aa6409bbc54076e19f116e37f3e42d872197498189dfef0a8c",
+      "changedRegionCount": 785,
+      "changedRegionShare": 0.01916410331526781
+    }
+  ]
+}

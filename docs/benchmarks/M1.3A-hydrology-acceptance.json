@@ -1,0 +1,642 @@
+{
+  "date": "2026-11-08T08:26:38.926Z",
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "config": {
+    "seeds": [
+      "42",
+      "314159",
+      "8675309"
+    ],
+    "levels": [
+      4,
+      5,
+      6
+    ],
+    "physicalRadiusKm": 6371,
+    "irregularity": 0.5,
+    "referenceLevel": 6,
+    "climate": {
+      "rotationPeriodHours": 24,
+      "axialTiltDegrees": 23.44,
+      "orbitalPeriodDays": 365.25,
+      "temperatureOffsetC": 0,
+      "precipitationScale": 1
+    },
+    "hydrology": {
+      "snowTemperatureMinC": -2,
+      "snowTemperatureMaxC": 2,
+      "degreeDayMeltFactorMmPerCMonth": 3,
+      "evapotranspirationFactorMmPerCMonth": 2,
+      "minimumRiverDrainageAreaKm2": 5000
+    }
+  },
+  "rows": [
+    {
+      "seed": "42",
+      "level": 4,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 1725.633875,
+      "hitMs": 0.35987500000010186,
+      "changedMs": 4.140041999999994,
+      "forceMs": 1712.276125,
+      "hashes": {
+        "runoff": "ed1bcd3fe5508e0140a98ec71ef4ed0a44eb9dbcf97414d396dd2ffe4a3e368b",
+        "downstream": "42d6e15515b43c41d0868634ff811942b3be71abfc8c5a39535ada3af402508f",
+        "rivers": "0c0456bd9c9a9989d20d6c5986f1ba35bb6995cceb47b49604190a039f312b42",
+        "contributingArea": "79ad558302c4c1f2f7d21397ecad330f264270650eb170e29d6d55bef6c32102"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "9c854f7e3bde031befecd97597bcb08a4adfeb1771a7e7c52cc65d52f0d93439",
+        "landMaskHash": "7e59b080b0b2729a20152546ebe8e5be763bebc59acbf6874646da6e961d9aa9",
+        "landCoverage": 0.3115063818021929,
+        "candidateLandCoverage": 0.3035263233757174,
+        "changedCoastRegions": 121,
+        "landComponentCount": 14,
+        "largestLandAreaKm2": 27482909.059955686,
+        "minimumElevationKm": -4.7517170906066895,
+        "maximumElevationKm": 5.921029090881348,
+        "elevationQuantilesKm": [
+          -4.7517170906066895,
+          -2.6726067066192627,
+          -1.3812329769134521,
+          0.14257507026195526,
+          5.921029090881348
+        ],
+        "waterComponents": {
+          "oceanComponents": 2,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 20631114,
+      "artifactBytes": 361402,
+      "totalLandAreaKm2": 158888338.13046455,
+      "totalLocalRunoffM3": 14068189421730.799,
+      "riverRegions": 40,
+      "riverSegments": 14,
+      "effectiveRiverThresholdKm2": 1592707.1722397774
+    },
+    {
+      "seed": "42",
+      "level": 5,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 1836.216375,
+      "hitMs": 0.2726670000001832,
+      "changedMs": 8.953708000000006,
+      "forceMs": 1738.5052500000002,
+      "hashes": {
+        "runoff": "4c0f8b621b125162c84ad24869cee802c6816465110e71fd12194625a5102939",
+        "downstream": "6cc3afe4fbbe1d95d1b467440679a81cf284ac0ef5a023e7f5491c43c1946fbd",
+        "rivers": "0d1e08a278fd89a20531680b5f5c589841c2c4150839954456fb5b0fb27bb0a9",
+        "contributingArea": "99843432a868cad203ea18291de5c42f9b7284490ab9a3060496fbc38f6627c8"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "69473f3eb7d3bce177096238f01bc3cfd4d6fdd038d3015ceea63c6c1cd81ac2",
+        "landMaskHash": "f1cf4cdfb0ffdcca0e4f878f254a9ecce46afa32af89d78a49308fd4fed1d123",
+        "landCoverage": 0.3070997479807018,
+        "candidateLandCoverage": 0.3013385011933375,
+        "changedCoastRegions": 498,
+        "landComponentCount": 22,
+        "largestLandAreaKm2": 25736668.86316216,
+        "minimumElevationKm": -4.8186187744140625,
+        "maximumElevationKm": 5.88078498840332,
+        "elevationQuantilesKm": [
+          -4.8186187744140625,
+          -2.329639196395874,
+          -1.0518124103546143,
+          0.10163417458534241,
+          5.88078498840332
+        ],
+        "waterComponents": {
+          "oceanComponents": 3,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 29650706,
+      "artifactBytes": 1445134,
+      "totalLandAreaKm2": 156640670.77740607,
+      "totalLocalRunoffM3": 14811365330512.195,
+      "riverRegions": 253,
+      "riverSegments": 91,
+      "effectiveRiverThresholdKm2": 398410.054215809
+    },
+    {
+      "seed": "42",
+      "level": 6,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 2112.7160000000003,
+      "hitMs": 0.29241600000023027,
+      "changedMs": 26.9976659999993,
+      "forceMs": 2069.5078749999993,
+      "hashes": {
+        "runoff": "dab91717aa442e5e3e8351ea9af5c06a32c13102b8b55b204b29538820277aa3",
+        "downstream": "663296562c31b9b0cbfcd95fa9606ce5adc83552efc464d31ca123cec49f5603",
+        "rivers": "3bf3a1030f0b24c6bc1ea5d040b310fd0bf9e28c61a7aa83e11b0c71bba674e0",
+        "contributingArea": "545285dc247e15c6312617ebf153f2b036003f1c4997d20b700d973de1c8ce9b"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "09556b8a5f91ac238db432b4e89ee528c24d00533659e1199bf1b2b5d161e17a",
+        "landMaskHash": "ebd03d9cf65807ec0e500f7caed2ff6c437bcd83428a41beb35004b75d2994ff",
+        "landCoverage": 0.3070098136060804,
+        "candidateLandCoverage": 0.3012167828733075,
+        "changedCoastRegions": 2101,
+        "landComponentCount": 52,
+        "largestLandAreaKm2": 25137353.541971996,
+        "minimumElevationKm": -4.623962879180908,
+        "maximumElevationKm": 6.148337364196777,
+        "elevationQuantilesKm": [
+          -4.623962879180908,
+          -2.02394962310791,
+          -0.8733873963356018,
+          0.08495211601257324,
+          6.148337364196777
+        ],
+        "waterComponents": {
+          "oceanComponents": 3,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 65617282,
+      "artifactBytes": 5782150,
+      "totalLandAreaKm2": 156594798.44810793,
+      "totalLocalRunoffM3": 15805362173239.74,
+      "riverRegions": 1627,
+      "riverSegments": 535,
+      "effectiveRiverThresholdKm2": 99617.10305352049
+    },
+    {
+      "seed": "314159",
+      "level": 4,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 1691.9022920000007,
+      "hitMs": 0.27304199999889534,
+      "changedMs": 1.8557920000002923,
+      "forceMs": 1695.8032089999997,
+      "hashes": {
+        "runoff": "fa9583bd80e9c4c32c9dd46c8884b1706ec29bb85599a8abd765a3caf5483d2b",
+        "downstream": "550f84d243b831a491c29e339d7d015d4fdd94058bba15bc5d9d732a596633a5",
+        "rivers": "e40a4a8f0fdb6def9938d64fbd3afc461c35424e952b671544e6a3ce052b653b",
+        "contributingArea": "ba2cc69016db48303f05cb1e303fd36ee7f3e3ecf6a95aa0fc7de565c43b0ecd"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "01105467d7f6852aa79d64944d934f45e5b294f2f41f5bd958fef2e0b6466588",
+        "landMaskHash": "10818871873b82c45f9b09c5b22b264941f18f5f528543ee5056085b338ac397",
+        "landCoverage": 0.3168925308934218,
+        "candidateLandCoverage": 0.3036581440322672,
+        "changedCoastRegions": 100,
+        "landComponentCount": 9,
+        "largestLandAreaKm2": 34684225.66280517,
+        "minimumElevationKm": -4.551581859588623,
+        "maximumElevationKm": 6.096744060516357,
+        "elevationQuantilesKm": [
+          -4.551581859588623,
+          -2.6446197032928467,
+          -1.3302580118179321,
+          0.22459650039672852,
+          6.096744060516357
+        ],
+        "waterComponents": {
+          "oceanComponents": 2,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 20631754,
+      "artifactBytes": 361354,
+      "totalLandAreaKm2": 161635621.4223096,
+      "totalLocalRunoffM3": 18405605577041.54,
+      "riverRegions": 28,
+      "riverSegments": 15,
+      "effectiveRiverThresholdKm2": 1592707.1722397776
+    },
+    {
+      "seed": "314159",
+      "level": 5,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 1717.8572920000006,
+      "hitMs": 0.25629100000151084,
+      "changedMs": 6.470666999997775,
+      "forceMs": 1690.321291999997,
+      "hashes": {
+        "runoff": "9e9de6947f9b1dc5e6a7fdb604629f4bc2469fcec6af792909c4ac43e3498ab6",
+        "downstream": "e4089b65b4eb904e94ee6c9534a4b630231ebc769b0426694455133b0f74396e",
+        "rivers": "c9249fc96bab7d72651ad5bc07266a12d2afdc45118a8d62a59f22cfad785d9c",
+        "contributingArea": "a0cb44a23da826c0e94c61c8eda578c72933159a1204ee1e5338e9e00088fb6f"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "dd370320c1aede55dfbe12b6d6424c1cfb46e1ebd0340eae2bd2fbddc74f2c7c",
+        "landMaskHash": "29328f6cc7d60f9a629b35480abb82db047aecc6a512288924204ad006d63ca7",
+        "landCoverage": 0.307347572293292,
+        "candidateLandCoverage": 0.2989009650974295,
+        "changedCoastRegions": 431,
+        "landComponentCount": 22,
+        "largestLandAreaKm2": 31437057.188478384,
+        "minimumElevationKm": -4.440900802612305,
+        "maximumElevationKm": 6.206022262573242,
+        "elevationQuantilesKm": [
+          -4.440900802612305,
+          -2.178021192550659,
+          -1.065666675567627,
+          0.14385858178138733,
+          6.206022262573242
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 29664518,
+      "artifactBytes": 1445198,
+      "totalLandAreaKm2": 156767077.1545333,
+      "totalLocalRunoffM3": 19005768579052.125,
+      "riverRegions": 269,
+      "riverSegments": 108,
+      "effectiveRiverThresholdKm2": 398410.05421580764
+    },
+    {
+      "seed": "314159",
+      "level": 6,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 2094.9378749999996,
+      "hitMs": 0.3532500000001164,
+      "changedMs": 25.314000000002125,
+      "forceMs": 2139.2847079999992,
+      "hashes": {
+        "runoff": "0b8ace5f87e789156d60052894f31a23e6cb1d44bc1ef70fec7b92a9a681bf6a",
+        "downstream": "3f8af4aee8fb8dd2a70211a30fd9de4a2ff293134145bc8316245bb1c3597d4a",
+        "rivers": "1ab84682b7975a3e994f22c57cb0dd1d3011f727c350673fc119bbb6ef53655a",
+        "contributingArea": "17cefb589532f670396e1fbee78acaeecce50134d6bbcced586f6e074671a9cf"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "b3cd6495d88d59715b774ac418a5551be7f98544bbefa3f1b60affe0b8e9bb32",
+        "landMaskHash": "fd671a8db685f9b09c391062e564582ee7dbaee62de07c0d17439a25994da867",
+        "landCoverage": 0.30925173733778105,
+        "candidateLandCoverage": 0.3000519682334957,
+        "changedCoastRegions": 1831,
+        "landComponentCount": 55,
+        "largestLandAreaKm2": 31985005.396415513,
+        "minimumElevationKm": -4.496997833251953,
+        "maximumElevationKm": 6.195255279541016,
+        "elevationQuantilesKm": [
+          -4.496997833251953,
+          -1.7733101844787598,
+          -0.865671694278717,
+          0.11328024417161942,
+          6.195255279541016
+        ],
+        "waterComponents": {
+          "oceanComponents": 3,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 65656302,
+      "artifactBytes": 5782546,
+      "totalLandAreaKm2": 157738324.0923784,
+      "totalLocalRunoffM3": 20859650337651.492,
+      "riverRegions": 1726,
+      "riverSegments": 534,
+      "effectiveRiverThresholdKm2": 99617.10305351958
+    },
+    {
+      "seed": "8675309",
+      "level": 4,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 1615.6547089999985,
+      "hitMs": 0.26604199999928824,
+      "changedMs": 1.774542000002839,
+      "forceMs": 1539.2618340000008,
+      "hashes": {
+        "runoff": "02e7282d5eb6916b46439a143019bfe26c0e46e4105f963b2f71a5ca7ecbd9c3",
+        "downstream": "2ee6263ac19dc0d353561c4d8f7f86b87ca69d12227a3c60b974e85a0dd31444",
+        "rivers": "639c08a01b6cfbd1d99350e8275de137ab605379414a35b904f44c0ed0f79d29",
+        "contributingArea": "1442f455637782c366f4bde5f7e626a0918b3368a18138ca825ccd2e06074076"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "8b9f0ad4181fe45038484a7cf519c32023b038e8a6b208b6d77fb5f9737cb8df",
+        "landMaskHash": "42bf0a344e1b4cb786cf1c622292a2cf520de8a45ddc4adaf5f2b224b2bb6279",
+        "landCoverage": 0.31722350278173284,
+        "candidateLandCoverage": 0.2999575852519342,
+        "changedCoastRegions": 93,
+        "landComponentCount": 16,
+        "largestLandAreaKm2": 50479360.503774256,
+        "minimumElevationKm": -4.780922889709473,
+        "maximumElevationKm": 6.285356521606445,
+        "elevationQuantilesKm": [
+          -4.780922889709473,
+          -2.7342357635498047,
+          -1.6119906902313232,
+          0.3127349615097046,
+          6.285356521606445
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 20636300,
+      "artifactBytes": 361390,
+      "totalLandAreaKm2": 161804438.42373785,
+      "totalLocalRunoffM3": 14919319155648.852,
+      "riverRegions": 37,
+      "riverSegments": 15,
+      "effectiveRiverThresholdKm2": 1592707.1722397762
+    },
+    {
+      "seed": "8675309",
+      "level": 5,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 1699.4133330000004,
+      "hitMs": 0.29545799999687006,
+      "changedMs": 6.39654199999859,
+      "forceMs": 1673.7841670000016,
+      "hashes": {
+        "runoff": "0470f3b4520df489804626b711782e64f3a7bbd9f5b4f6bd3d342b7bca8b8d90",
+        "downstream": "c9cc56de8c8322e8b266fdd8abf717ff5de69fa488ff22305d6578c11a9eaa46",
+        "rivers": "5622d213bd11d8719b843d12d9e6bddfdc002e927b3cae5faea2026a892a5e0d",
+        "contributingArea": "57cb9387c9e003c32c726ca1da620001006fa8922350305479ed57ae8fb91e6d"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "324203754a7fe318475d2c5a654cfc1e8afea388c7a7a33a618b52086ea2d13d",
+        "landMaskHash": "2b83a2d8ec5348169143584a5d18596dc0e7fe424f448166ac6b4775af8d2c21",
+        "landCoverage": 0.31099344008350444,
+        "candidateLandCoverage": 0.2999479062667781,
+        "changedCoastRegions": 373,
+        "landComponentCount": 30,
+        "largestLandAreaKm2": 29467531.153195016,
+        "minimumElevationKm": -4.555305004119873,
+        "maximumElevationKm": 6.037781238555908,
+        "elevationQuantilesKm": [
+          -4.555305004119873,
+          -2.4379494190216064,
+          -1.133806586265564,
+          0.26248908042907715,
+          6.037781238555908
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 29655376,
+      "artifactBytes": 1445318,
+      "totalLandAreaKm2": 158626704.7836014,
+      "totalLocalRunoffM3": 15946301049603.252,
+      "riverRegions": 299,
+      "riverSegments": 91,
+      "effectiveRiverThresholdKm2": 398410.05421580886
+    },
+    {
+      "seed": "8675309",
+      "level": 6,
+      "algorithmVersion": "hydrology-h0-v1",
+      "coldMs": 2070.310458,
+      "hitMs": 0.2953750000015134,
+      "changedMs": 31.198832999998558,
+      "forceMs": 2116.120999999999,
+      "hashes": {
+        "runoff": "83f0be9965c6d0d97cca4ac59fe39c29b2c4c6e95fe58a012df3e5117edc624f",
+        "downstream": "cbcaf1d848203f8ba34482a759321f6728845ecad0f207de4ed7f4c033f09fd8",
+        "rivers": "a832e95b88e11a0edfc661b30b585209cef622defba496fe4fb3df9995d668cf",
+        "contributingArea": "19ce0efd383ffb618005835102c84076e0624c47d93fbc606d6c92afbbf56995"
+      },
+      "terrain": {
+        "algorithmVersion": "terrain-v24",
+        "elevationHash": "2f6d48b8b066bc7aa75980bbeee5410a2209c2440bdcf4fc056fe8509f416ebb",
+        "landMaskHash": "c1ad5bbaff4eb26e9e56662c89c3b38e69e277e59463bb98208fe5bbbfce6a07",
+        "landCoverage": 0.3120663861788483,
+        "candidateLandCoverage": 0.299414628733662,
+        "changedCoastRegions": 1679,
+        "landComponentCount": 42,
+        "largestLandAreaKm2": 47934270.3543065,
+        "minimumElevationKm": -4.44624137878418,
+        "maximumElevationKm": 6.128293037414551,
+        "elevationQuantilesKm": [
+          -4.44624137878418,
+          -2.134012460708618,
+          -0.9398168325424194,
+          0.20311352610588074,
+          6.128293037414551
+        ],
+        "waterComponents": {
+          "oceanComponents": 1,
+          "enclosedWaterComponents": 0,
+          "smallEnclosedWaterComponents": 0,
+          "largestEnclosedWaterAreaKm2": 0,
+          "minimumAreaKm2": 199205.02710790402
+        }
+      },
+      "cacheHitStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "hydrology-h0"
+      ],
+      "changedStages": [
+        "hydrology-h0"
+      ],
+      "cacheBytes": 65623836,
+      "artifactBytes": 5783138,
+      "totalLandAreaKm2": 159173976.4671118,
+      "totalLocalRunoffM3": 16392966526792.41,
+      "riverRegions": 1874,
+      "riverSegments": 541,
+      "effectiveRiverThresholdKm2": 99617.10305352141
+    }
+  ]
+}

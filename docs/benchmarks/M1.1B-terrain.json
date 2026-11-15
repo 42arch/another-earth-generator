@@ -1,0 +1,165 @@
+{
+  "date": "2026-11-04",
+  "algorithmVersion": "terrain-v1",
+  "seed": "42",
+  "config": {
+    "referenceSubdivisionLevel": 6,
+    "irregularity": 0.5,
+    "physicalRadiusKm": 6371,
+    "seaLevelDatumKm": 0,
+    "geology": {
+      "primaryPlateCount": 10,
+      "microPlateCount": 14,
+      "plateSizeVariety": 0.8,
+      "continentCount": 7,
+      "continentSizeVariety": 0.35,
+      "candidateLandCoverage": 0.3
+    },
+    "landforms": {
+      "islandArcCount": 6,
+      "islandDensity": 0.65,
+      "hotspotCount": 5
+    },
+    "terrain": {
+      "roughness": 0.4,
+      "terrainWarp": 0.75,
+      "smoothing": 0.1,
+      "glacialErosion": 0.5,
+      "hydraulicErosion": 0.5,
+      "ridgeSharpening": 0.5
+    }
+  },
+  "machine": {
+    "cpu": "Apple M3 Pro",
+    "platform": "darwin",
+    "node": "v24.17.0"
+  },
+  "rows": [
+    {
+      "level": 4,
+      "coldMs": 4721.57525,
+      "hitMs": 0.5854169999993246,
+      "changedMs": 97.60145899999952,
+      "changedStages": [
+        "terrain"
+      ],
+      "stageMs": {
+        "mesh": 26.95683299999999,
+        "reference-mesh": 112.820875,
+        "geological-mapping": 1175.183333,
+        "reference-subdivisions": 2142.2290000000003,
+        "plate-topology": 220.86349999999993,
+        "continental-crust": 482.68279200000006,
+        "geology": 19.294792000000598,
+        "plate-dynamics": 309.7537090000005,
+        "tectonics": 13.253624999999374,
+        "tectonic-elevation": 110.53649999999925,
+        "terrain": 106.94141600000057
+      },
+      "cacheBytes": 14651522,
+      "artifactBytes": 97644,
+      "statistics": {
+        "landCoverage": 0.3066398747306841,
+        "candidateLandCoverage": 0.29995463514849763,
+        "changedCoastRegions": 74,
+        "landComponentCount": 12,
+        "largestLandAreaKm2": 27569309.07174438,
+        "minimumElevationKm": -4.726064205169678,
+        "maximumElevationKm": 5.954696178436279,
+        "elevationQuantilesKm": [
+          -4.726064205169678,
+          -2.678255081176758,
+          -1.7590949535369873,
+          0.024001842364668846,
+          5.954696178436279
+        ]
+      },
+      "elevationHash": "892f45a0da7da772",
+      "landMaskHash": "941c3186257402b1"
+    },
+    {
+      "level": 5,
+      "coldMs": 5355.743334000001,
+      "hitMs": 0.15200000000004366,
+      "changedMs": 406.2740419999991,
+      "changedStages": [
+        "terrain"
+      ],
+      "stageMs": {
+        "mesh": 59.53441600000042,
+        "reference-mesh": 75.76025000000027,
+        "geological-mapping": 1151.9703340000005,
+        "reference-subdivisions": 2086.5462910000006,
+        "plate-topology": 218.75537500000064,
+        "continental-crust": 479.728000000001,
+        "geology": 34.516333000001396,
+        "plate-dynamics": 311.4100419999995,
+        "tectonics": 48.10558400000082,
+        "tectonic-elevation": 460.04149999999936,
+        "terrain": 429.21370800000113
+      },
+      "cacheBytes": 19605122,
+      "artifactBytes": 389484,
+      "statistics": {
+        "landCoverage": 0.30487212404277536,
+        "candidateLandCoverage": 0.30141845910453635,
+        "changedCoastRegions": 438,
+        "landComponentCount": 24,
+        "largestLandAreaKm2": 23082246.950633798,
+        "minimumElevationKm": -4.567531108856201,
+        "maximumElevationKm": 5.69942569732666,
+        "elevationQuantilesKm": [
+          -4.567531108856201,
+          -2.3739402294158936,
+          -1.2414015531539917,
+          0.016139792278409004,
+          5.69942569732666
+        ]
+      },
+      "elevationHash": "8a3d8cd1f8f15db5",
+      "landMaskHash": "e515a26eb07b6728"
+    },
+    {
+      "level": 6,
+      "coldMs": 9103.934834,
+      "hitMs": 0.16645799999969313,
+      "changedMs": 1771.8281659999993,
+      "changedStages": [
+        "terrain"
+      ],
+      "stageMs": {
+        "mesh": 91.94479200000023,
+        "reference-mesh": 79.96187499999905,
+        "geological-mapping": 1577.863792,
+        "reference-subdivisions": 2141.483624999999,
+        "plate-topology": 236.70887500000026,
+        "continental-crust": 502.67145899999923,
+        "geology": 101.28370899999936,
+        "plate-dynamics": 313.480375000001,
+        "tectonics": 192.3325420000001,
+        "tectonic-elevation": 2019.1717500000013,
+        "terrain": 1846.9096250000002
+      },
+      "cacheBytes": 39419522,
+      "artifactBytes": 1556844,
+      "statistics": {
+        "landCoverage": 0.3050261422997788,
+        "candidateLandCoverage": 0.3020449826849626,
+        "changedCoastRegions": 1734,
+        "landComponentCount": 43,
+        "largestLandAreaKm2": 24207234.794759143,
+        "minimumElevationKm": -4.254151821136475,
+        "maximumElevationKm": 6.2861433029174805,
+        "elevationQuantilesKm": [
+          -4.254151821136475,
+          -2.0561866760253906,
+          -1.0228304862976074,
+          0.01274203322827816,
+          6.2861433029174805
+        ]
+      },
+      "elevationHash": "9d2622b46fa7bdaf",
+      "landMaskHash": "aaf1a668fe0c53e8"
+    }
+  ]
+}

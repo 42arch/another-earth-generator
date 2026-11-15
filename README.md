@@ -1,34 +1,37 @@
-# Another Earth Generator
+# Another Earth
 
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-![Demo](./demo.png)
+A browser project for procedural planets and map exploration, built with TypeScript, Svelte 5, Vite, and a pnpm workspace.
 
-An experimental project to generate procedural virtual planets in the browser. The same seed and parameters determine the spherical grid, tectonic plates, continents, terrain, seasonal climate, river networks, and biomes; the same spherical result can be viewed in both a 3D globe and a 2D map.
+## Current capabilities
 
-## What it can do now
+- Generate regular or perturbed spherical meshes from L0 to L8, reference geology, plates, candidate continents, crust, and base terrain.
+- Use `/mesh-debug` to inspect mesh, geology, terrain themes, region properties, progress, and stage caching.
+- Use content/world contracts, a generation pipeline, Worker copy transfers, and a minimal JSON archive codec.
 
-- Adjust the seed, grid detail, tectonic plate and continent parameters, terrain strength, axial tilt, and temperature/precipitation parameters to regenerate the world.
-- Switch between the globe and map to view satellite imagery, terrain, elevation, tectonic plates, geometric flow, monthly temperature and precipitation, winds, ocean currents, Köppen climate classification, and biomes.
-- Overlay display elements like rivers, clouds, and graticules, and click on regions to inspect elevation, climate, and ecological information.
+M1.1 currently produces generation artifacts. The latest terrain version is `terrain-v20`; glacial and hydraulic erosion are deferred. Monthly climate, hydrology, ecology, complete world publication, civilization generation, formal 3D/2D maps, and browser project storage are not implemented yet. See [progress](docs/PROGRESS.md) for the current validation status.
 
-The generated result is an approximate model for visualization and procedural generation, not a quantitative forecast of the Earth system. Ocean current strength is a relative value; lakes, settlements, and social systems currently have no generation stages.
+## Run locally
 
-## Running locally
-
-Requires Node.js and pnpm. In the project root directory, run:
-
-```bash
+```sh
 pnpm install
 pnpm dev
 ```
 
-Open the local address provided in the terminal. Use `pnpm test` to run existing tests and `pnpm build` to create a production build.
+Open the address printed by Vite and visit `/mesh-debug`. The UI offers L4–L8; L8 requires substantial memory. This is a debugging view, not the full product workspace.
 
-## Where to start reading
+## Documentation
 
-Non-developers can start with the [Wiki Introduction](docs/wiki/README.md) to sequentially understand "Spherical Grid → Plates and Landmasses → Terrain → Seasonal Circulation and Climate → Rivers → Ecology → Visualization". Each chapter first explains the phenomena, then provides the algorithms, fields, and source code entry points.
+The main documents are in Chinese.
 
-Developers can first look at the [System Architecture](docs/wiki/01-system-architecture.md) and the [Worker Pipeline](src/core/simulation/worker/simulation.worker.ts). The core code is located in `src/core/`, and the user interface is in `src/ui/`.
+| Document | Contents |
+| --- | --- |
+| [PRD](docs/PRD.md) | Product goals, user journeys, and scope |
+| [Technical design](docs/TECHNICAL_DESIGN.md) | Package boundaries, algorithms, target architecture, and decisions |
+| [World data contracts](docs/WORLD_DATA_CONTRACTS.md) | Fields, units, identity, snapshots, artifacts, and ownership |
+| [Generation pipeline](docs/GENERATION_PIPELINE.md) | Stages, signatures, randomness, caching, and Workers |
+| [Progress](docs/PROGRESS.md) | Implemented features, pending work, validation, and measured baselines |
+| [M1 implementation plan](docs/M1_IMPLEMENTATION_PLAN.md) | Climate, hydrology, erosion, ecology, and world publication |
 
-Tech Stack: TypeScript, Vite, Svelte 5, Three.js, Tailwind CSS, Vitest. The project uses pnpm for dependency management.
+`packages/world-core` owns generation and domain rules, `packages/world-data` owns content, `packages/cartography` defines the mapping boundary, and `apps/web` owns UI and Worker orchestration. `docs/old-src` contains reference code from feat-society and is not part of the new runtime.

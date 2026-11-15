@@ -1,0 +1,39 @@
+{
+  "name": "@another-earth/world-core",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "imports": {
+    "#generation/nature/common": "./src/generation/nature/common/index.ts",
+    "#generation/nature/geography": "./src/generation/nature/geography/index.ts",
+    "#generation/nature/geology": "./src/generation/nature/geology/index.ts",
+    "#generation/pipeline": "./src/generation/pipeline/index.ts",
+    "#*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "test": "vitest run --config ../../vitest.config.ts --passWithNoTests",
+    "bench:mesh": "vitest run --config vitest.bench.config.ts --project mesh",
+    "bench:generation": "vitest run --config vitest.bench.config.ts --project generation",
+    "bench:geology": "vitest run --config vitest.bench.config.ts --project geology",
+    "bench:terrain": "vitest run --config vitest.bench.config.ts --project terrain",
+    "bench:climate": "vitest run --config vitest.bench.config.ts --project climate",
+    "bench:hydrology": "vitest run --config vitest.bench.config.ts --project hydrology",
+    "bench:ecology-legacy": "vitest run --config vitest.bench.config.ts --project ecology-legacy"
+  },
+  "dependencies": {
+    "@another-earth/world-data": "workspace:*",
+    "alea": "^1.0.1",
+    "delaunator": "^5.1.0",
+    "simplex-noise": "4.0.3"
+  }
+}
