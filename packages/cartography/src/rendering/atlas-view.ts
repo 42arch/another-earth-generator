@@ -517,8 +517,8 @@ export class AtlasView {
     if (compiledLayer.type === 'raster') {
       const inst = new RasterLayer(compiledLayer.id, this.reader, {
         renderOrder,
-        polygonOffsetFactor: thematicRaster ? -1 : 2,
-        polygonOffsetUnits: thematicRaster ? -1 : 2,
+        polygonOffsetFactor: 0,
+        polygonOffsetUnits: thematicRaster ? -2 : 4,
         projection: this.projection,
         zOffset: thematicRaster ? LAYER_STACK.thematicRasterOffset : 0,
         tracker: this.tracker,
@@ -542,6 +542,7 @@ export class AtlasView {
         renderOrder,
         surfaceOffset,
         projection: this.projection,
+        reader: this.reader,
         tracker: this.tracker,
       })
       if (!inst)

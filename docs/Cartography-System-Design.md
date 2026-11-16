@@ -224,7 +224,7 @@ export interface WorldMapReader {
 - **球面三角化与 2D 投影无裂缝流程**：
   1. 将每个 GeoJSON `Polygon`（含外环与任意数量内孔）投影到以其质心为切点的局部球面心射切平面（Gnomonic Projection；跨大范围要素先按立方体六面分块裁切）。
   2. 使用 `earcut` 执行带孔平面三角剖分，保证复杂曲折湖泊、内陆海与群岛大陆绝不漏孔或缠绕错乱。
-  3. 对球面角距大于 `0.036 rad` 的三角形边递归球面中点细分（`GlobeView` 下严格归一化贴合 `1.0 + layerSurfaceOffset` 球壳，不穿透地表；`AtlasView` 下直接复用 3D 球面 Gnomonic 细分后的微元三角形，以每个微元三角形 3D 质心经度为基准解卷绕并按 `[-180, 180] × [-maxLat, maxLat]` 凸裁剪后投影，彻底消除多进出凹海湾在 `±180°` 平面裁剪下产生的横穿全图拉伸伪影）。
+  3. 对球面角距大于 `0.036 rad` 的三角形边递归球面中点细分（`GlobeView` 下严格归一化贴合 `1.0 + layerSurfaceOffset` 球壳，不穿透地表；`AtlasView` 下直接复用 3D 球面 Gnomonic 细分后的微元三角形，以每个微元三角形 3D 质心经度为基准解卷绕并按 `[-180, 180] × [-maxLat, maxLat]` 凸裁剪后投影，彻底消除多进出凹海湾在 `±180°` 平面裁剪下产生的横穿全图拉伸伪影）。传入 `reader` 时，`continent-areas`、`koppen-areas`、`biome-areas`、`land-cover-areas`、`plate-areas` 直接按每个区域的平滑对偶边界构扇形面，与海岸线共享同一套角点和边中点，避免 Gnomonic 耳切在色块内部留下裂纹。
   4. `clipPolygonAtAntimeridian` 在竖直边界 `±180°` 处按进出焦点排序配对生成独立简单环，避免凹湾多次跨越日界线时沿 `±180°` 形成重叠桥接边。
 - **批处理与无重影绘制**：
   - 同一图层所有要素合并为 **1 个 `BufferGeometry`**，附带 `featureIndex` 属性从样式颜色表取色。

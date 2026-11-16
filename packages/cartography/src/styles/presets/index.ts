@@ -991,16 +991,6 @@ export const STANDARD_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
         'raster-hillshade': 0.35,
       },
     },
-    {
-      id: 'base-atlas-land-polygons',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'landLow'],
-        'fill-opacity': 0.22,
-      },
-    },
   ]),
 })
 
@@ -1122,16 +1112,6 @@ export const MINIMAL_LIGHT_STYLE_PRESET: MapStyleDocument = Object.freeze({
         'raster-hillshade': 0.15,
       },
     },
-    {
-      id: 'base-minimal-light-land',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'land'],
-        'fill-opacity': 1,
-      },
-    },
   ]),
 })
 
@@ -1179,16 +1159,6 @@ export const MINIMAL_DARK_STYLE_PRESET: MapStyleDocument = Object.freeze({
         ],
         'raster-opacity': 1,
         'raster-hillshade': 0.2,
-      },
-    },
-    {
-      id: 'base-minimal-dark-land',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'land'],
-        'fill-opacity': 1,
       },
     },
   ]),
@@ -1257,16 +1227,6 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
         ],
         'raster-opacity': 1,
         'raster-hillshade': 0.45,
-      },
-    },
-    {
-      id: 'base-parchment-land',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'landLow'],
-        'fill-opacity': 0.35,
       },
     },
   ]),

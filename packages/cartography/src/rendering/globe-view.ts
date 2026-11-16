@@ -566,8 +566,8 @@ export class GlobeView {
     if (compiledLayer.type === 'raster') {
       const inst = new RasterLayer(compiledLayer.id, this.reader, {
         renderOrder,
-        polygonOffsetFactor: thematicRaster ? -1 : 2,
-        polygonOffsetUnits: thematicRaster ? -1 : 2,
+        polygonOffsetFactor: 0,
+        polygonOffsetUnits: thematicRaster ? -2 : 4,
         radiusScale: 1 + (thematicRaster ? LAYER_STACK.thematicRasterOffset : 0),
         tracker: this.tracker,
       })
@@ -588,6 +588,7 @@ export class GlobeView {
       const inst = createFillLayerFromRegistry(compiledLayer, this.registry, state.climateMonth, {
         renderOrder,
         surfaceOffset,
+        reader: this.reader,
         tracker: this.tracker,
       })
       if (!inst)
