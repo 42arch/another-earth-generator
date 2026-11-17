@@ -32,9 +32,9 @@
       <Tooltip.Content
         {side}
         {sideOffset}
-        class='z-50 rounded-md border border-white/[0.08] bg-[#1e1e20] px-2.5 py-1.5 text-[11px] font-medium text-obs-text-main shadow-xl backdrop-blur-md outline-hidden select-none'
+        class='z-50 rounded-md border border-white/8 bg-[#1e1e20] px-2.5 py-1.5 text-[11px] font-medium text-obs-text-main shadow-xl backdrop-blur-md outline-hidden select-none'
       >
-        <Tooltip.Arrow class='fill-[#1e1e20] stroke-white/[0.08]' />
+        <Tooltip.Arrow class='text-[#2a2a2d] stroke-white/8' style='color: #2a2a2d;' />
         {#if tooltipContent}
           {@render tooltipContent()}
         {:else}

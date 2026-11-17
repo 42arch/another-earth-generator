@@ -8,6 +8,8 @@ export interface GeographicRegionsArtifact {
   readonly algorithmVersion: 'geographic-regions-v3'
   /** Set by geographic-names, using the content signature that supplied the lexicon. */
   readonly nameContentSignature?: string
+  /** Name-pool content IDs used by geographic-names. Absent on older named archives. */
+  readonly namePoolIds?: { readonly continent: string, readonly ocean: string }
   /** -1 on water; indices address continents. */
   readonly continentIndex: Int32Array
   /** -1 outside an open ocean region. */

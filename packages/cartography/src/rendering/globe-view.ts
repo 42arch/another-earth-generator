@@ -15,6 +15,7 @@ import { LAYER_STACK, layerRenderOrder } from '#rendering/layer-stack'
 import { acquireGlobeCellGeometry, RasterLayer } from '#rendering/layers/raster-layer'
 import { SelectionLayer } from '#rendering/layers/selection-layer'
 import { CollisionGrid, createSymbolLayerFromRegistry } from '#rendering/layers/symbol-layer'
+import { seaIceCoverForMonths } from '#rendering/satellite-shader'
 import { readStyleBackgroundColor } from '#styles/spec'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
@@ -25,6 +26,7 @@ export interface GlobeEffectsConfig {
   readonly rotate: boolean
   readonly atmosphere: boolean
   readonly dayNight: boolean
+  readonly polarIce: boolean
 }
 
 export interface GlobeLayerFilterState {
@@ -160,10 +162,12 @@ function createAtmosphereMesh(tracker?: GpuResourceTracker): THREE.Mesh<THREE.Sp
 }
 
 function createSpecularOceanSphere(
-  mesh: WorldMapReader['mesh'],
-  landMask: ReturnType<WorldMapReader['field']>,
+  reader: WorldMapReader,
   tracker?: GpuResourceTracker,
 ): THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> {
+  const mesh = reader.mesh
+  const landMask = reader.field('landMask')
+  const monthlyTemperature = Array.from({ length: 12 }, (_, month) => reader.monthlyField('temperatureC', month))
   const regionCount = mesh.regionCount
   let totalVertices = 0
   let totalTriangles = 0
@@ -179,6 +183,7 @@ function createSpecularOceanSphere(
 
   const positions = new Float32Array(totalVertices * 3)
   const normals = new Float32Array(totalVertices * 3)
+  const iceCovers = new Float32Array(totalVertices)
   const indices = totalVertices > 65535
     ? new Uint32Array(totalTriangles * 3)
     : new Uint16Array(totalTriangles * 3)
@@ -200,6 +205,7 @@ function createSpecularOceanSphere(
     if (landMask.get(r) > 0)
       continue
     const baseVertex = vertexCursor
+    const cover = seaIceCoverForMonths(monthlyTemperature.map(field => field.get(r)))
     let k = 0
     mesh.forEachRegionNeighbor(r, (_neighbor, cornerA) => {
       const c3 = cornerA * 3
@@ -217,6 +223,7 @@ function createSpecularOceanSphere(
       normals[vOffset] = nx
       normals[vOffset + 1] = ny
       normals[vOffset + 2] = nz
+      iceCovers[vertexCursor] = cover
       vertexCursor++
       k++
     })
@@ -231,25 +238,31 @@ function createSpecularOceanSphere(
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
   geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+  geometry.setAttribute('aIceCover', new THREE.BufferAttribute(iceCovers, 1))
   geometry.setIndex(new THREE.BufferAttribute(indices, 1))
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 1.02)
   tracker?.trackGeometry(geometry)
 
   const vertexShader = /* glsl */`
+    attribute float aIceCover;
     varying vec3 vWorldNormal;
     varying vec3 vWorldPosition;
+    varying float vIceCover;
     void main() {
       vec4 worldPos = modelMatrix * vec4(position, 1.0);
       vWorldPosition = worldPos.xyz;
       vWorldNormal = normalize((modelMatrix * vec4(normal, 0.0)).xyz);
+      vIceCover = aIceCover;
       gl_Position = projectionMatrix * viewMatrix * worldPos;
     }
   `
   const fragmentShader = /* glsl */`
     uniform vec3 uSunDirection;
     uniform float uDayNightEnabled;
+    uniform float uPolarIce;
     varying vec3 vWorldNormal;
     varying vec3 vWorldPosition;
+    varying float vIceCover;
 
     vec3 linearToSrgb(vec3 linear) {
       vec3 clamped = clamp(linear, 0.0, 1.0);
@@ -281,13 +294,16 @@ function createSpecularOceanSphere(
 
       vec3 linearLit = (ambientIrradiance + directIrradiance) * (diffuseBase * 0.318309886)
         + directIrradiance * brdfSpec;
-      gl_FragColor = vec4(linearToSrgb(linearLit), 0.55);
+      // Same fade as oceanSpecularOpacity: full sea ice clears the sheen.
+      float openWater = 1.0 - clamp(vIceCover, 0.0, 1.0) * uPolarIce;
+      gl_FragColor = vec4(linearToSrgb(linearLit), 0.55 * openWater);
     }
   `
   const material = new THREE.ShaderMaterial({
     uniforms: {
       uSunDirection: { value: new THREE.Vector3(1.8, 1.2, 2.2).normalize() },
       uDayNightEnabled: { value: 0 },
+      uPolarIce: { value: 1 },
     },
     vertexShader,
     fragmentShader,
@@ -345,6 +361,7 @@ export class GlobeView {
       rotate: false,
       atmosphere: true,
       dayNight: false,
+      polarIce: true,
     },
     selection: {
       regionId: null,
@@ -405,7 +422,7 @@ export class GlobeView {
     this.styleBackground.renderOrder = -1
     this.scene.add(this.styleBackground)
 
-    this.oceanSpecular = createSpecularOceanSphere(reader.mesh, reader.field('landMask'), options.tracker)
+    this.oceanSpecular = createSpecularOceanSphere(reader, options.tracker)
     this.scene.add(this.oceanSpecular)
 
     this.layerGroup.name = 'GlobeStyledLayers'
@@ -566,8 +583,8 @@ export class GlobeView {
     if (compiledLayer.type === 'raster') {
       const inst = new RasterLayer(compiledLayer.id, this.reader, {
         renderOrder,
-        polygonOffsetFactor: thematicRaster ? -1 : 2,
-        polygonOffsetUnits: thematicRaster ? -1 : 2,
+        polygonOffsetFactor: 0,
+        polygonOffsetUnits: thematicRaster ? -2 : 4,
         radiusScale: 1 + (thematicRaster ? LAYER_STACK.thematicRasterOffset : 0),
         tracker: this.tracker,
       })
@@ -588,6 +605,7 @@ export class GlobeView {
       const inst = createFillLayerFromRegistry(compiledLayer, this.registry, state.climateMonth, {
         renderOrder,
         surfaceOffset,
+        reader: this.reader,
         tracker: this.tracker,
       })
       if (!inst)
@@ -670,6 +688,7 @@ export class GlobeView {
     const activeSunDir = state.globeEffects.dayNight ? sunDirection : defaultSunDir
     this.oceanSpecular.material.uniforms.uSunDirection.value.copy(activeSunDir)
     this.oceanSpecular.material.uniforms.uDayNightEnabled.value = state.globeEffects.dayNight ? 1 : 0
+    this.oceanSpecular.material.uniforms.uPolarIce.value = isSatelliteStyle && state.globeEffects.polarIce ? 1 : 0
 
     this.collisionGrid.clear()
 
@@ -694,16 +713,18 @@ export class GlobeView {
           styleZoom,
           state.climateMonth,
           this.compiledStyle!.id,
+          state.globeEffects.polarIce,
         )
         runtime.instance.setLighting(state.globeEffects.dayNight, activeSunDir)
       }
       else if (runtime.type === 'fill') {
         runtime.instance.updateStyle(compiledLayer, styleZoom)
-        const isHydrologyFill = compiledLayer.source === 'lake-polygons' || compiledLayer.source === 'river-polygons'
-        runtime.instance.setLighting(isHydrologyFill ? false : state.globeEffects.dayNight, sunDirection)
+        runtime.instance.setLighting(state.globeEffects.dayNight, activeSunDir)
       }
       else if (runtime.type === 'line') {
         runtime.instance.updateStyle(compiledLayer, styleZoom)
+        if (compiledLayer.source === 'river-centerlines')
+          runtime.instance.setLighting(state.globeEffects.dayNight, activeSunDir)
       }
       else if (runtime.type === 'circle') {
         runtime.instance.updateStyle(compiledLayer, styleZoom)

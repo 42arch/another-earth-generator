@@ -1,4 +1,4 @@
-import type { NamePool } from '@another-earth/world-data'
+import type { NamePoolView } from '#content/content-port'
 import type { GeographicRegionsArtifact } from './geographic-regions'
 import { stableHash } from '#math/random'
 
@@ -15,7 +15,7 @@ function chineseOrdinal(value: number): string {
   return [...String(value)].map(digit => chineseDigits[Number(digit)]).join('')
 }
 
-function nameRegions(regions: readonly NamedRegion[], pool: NamePool, worldSeed: string, contentSignature: string): NamedRegion[] {
+function nameRegions(regions: readonly NamedRegion[], pool: NamePoolView, worldSeed: string, contentSignature: string): NamedRegion[] {
   const entries = [...pool.entries].filter(entry => entry.weight > 0).sort((a, b) => a.value < b.value ? -1 : a.value > b.value ? 1 : a.weight - b.weight)
   const total = entries.reduce((sum, entry) => sum + entry.weight, 0)
   if (!entries.length || !Number.isFinite(total) || total <= 0)
@@ -42,12 +42,13 @@ function nameRegions(regions: readonly NamedRegion[], pool: NamePool, worldSeed:
 }
 
 /** Names are facts attached to stable geographic IDs; the classification arrays remain unchanged. */
-export function nameGeographicRegions(regions: GeographicRegionsArtifact, worldSeed: string, pools: { readonly continent: NamePool, readonly ocean: NamePool }, contentSignature: string): GeographicRegionsArtifact {
+export function nameGeographicRegions(regions: GeographicRegionsArtifact, worldSeed: string, pools: { readonly continent: NamePoolView, readonly ocean: NamePoolView }, contentSignature: string): GeographicRegionsArtifact {
   if (!worldSeed || !contentSignature)
     throw new Error('Geographic naming requires a seed and content signature')
   return {
     ...regions,
     nameContentSignature: contentSignature,
+    namePoolIds: { continent: pools.continent.id, ocean: pools.ocean.id },
     continents: nameRegions(regions.continents, pools.continent, worldSeed, contentSignature),
     oceans: nameRegions(regions.oceans, pools.ocean, worldSeed, contentSignature),
   }

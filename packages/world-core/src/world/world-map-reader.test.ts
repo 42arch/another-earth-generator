@@ -1,5 +1,5 @@
-import { loadBuiltinGenerationCatalog } from '@another-earth/world-data'
 import { describe, expect, it } from 'vitest'
+import { testContentPack, testContentPort, testPipelineContent } from '#content/test-content'
 import {
   assembleNaturalWorld,
   createNaturalPipeline,
@@ -62,9 +62,9 @@ function hasNoTypedArrayOrBuffer(value: unknown, seen = new Set<object>()): bool
 describe('worldMapReader & circulation closure', () => {
   it('reconstructs dual Voronoi corners, CCW boundary rings and shared edges identically to SphericalMesh', async () => {
     const pipeline = createNaturalPipeline()
-    const result = await pipeline.execute(naturalInput)
-    const packs = loadBuiltinGenerationCatalog().packs
-    const snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, packs)
+    const packs = [testContentPack]
+    const result = await pipeline.execute({ ...naturalInput, ...testPipelineContent(packs) })
+    const snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, packs, testContentPort)
     const originalMesh = createSphericalMesh({
       subdivisionLevel: naturalInput.config.mesh.subdivisionLevel,
       irregularity: naturalInput.config.mesh.irregularity,
@@ -221,16 +221,16 @@ describe('worldMapReader & circulation closure', () => {
 
   it('persists calibrated circulation across archive round-trips, preserves backward compatibility and exposes zero mutable buffers', async () => {
     const pipeline = createNaturalPipeline()
-    const result = await pipeline.execute(naturalInput)
-    const packs = loadBuiltinGenerationCatalog().packs
+    const packs = [testContentPack]
+    const result = await pipeline.execute({ ...naturalInput, ...testPipelineContent(packs) })
     const climateArtifact = result.getOutput<Parameters<typeof queryClimateRegion>[0]>('climate-c0')
-    const snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, packs)
+    const snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, packs, testContentPort)
 
     expect(snapshot.nature.climate.circulation).toBeDefined()
-    const archive = encodeWorldArchive(snapshot, packs)
-    const restoredStore = new WorldStore()
+    const archive = encodeWorldArchive(snapshot, packs, testContentPort)
+    const restoredStore = new WorldStore(testContentPort)
     restoredStore.restore(archive, packs)
-    const freshStore = new WorldStore()
+    const freshStore = new WorldStore(testContentPort)
     freshStore.publish(snapshot, packs)
 
     const freshReader = freshStore.mapReader()
@@ -278,9 +278,9 @@ describe('worldMapReader & circulation closure', () => {
     // Older Schema 3 archive without circulation remains valid and marks hasCirculation === false
     const legacySnapshot = structuredClone(snapshot)
     delete (legacySnapshot.nature.climate as { circulation?: unknown }).circulation
-    expect(validateWorldSnapshot(legacySnapshot, packs).valid).toBe(true)
-    const legacyArchive = encodeWorldArchive(legacySnapshot, packs)
-    const legacyDecoded = decodeWorldArchive(legacyArchive, packs)
+    expect(validateWorldSnapshot(legacySnapshot, packs, testContentPort).valid).toBe(true)
+    const legacyArchive = encodeWorldArchive(legacySnapshot, packs, testContentPort)
+    const legacyDecoded = decodeWorldArchive(legacyArchive, packs, testContentPort)
     const legacyReader = createWorldMapReader(legacyDecoded)
     expect(legacyReader.capabilities.hasCirculation).toBe(false)
     expect(() => legacyReader.field('oceanAvailable')).toThrow('Climate circulation is unavailable')

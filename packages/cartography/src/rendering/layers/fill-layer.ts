@@ -4,6 +4,7 @@ import type { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { GeoJsonFeature, GeoJsonPolygonGeometry, GeoJsonSource } from '#sources/types'
 import type { CompiledMapStyleLayer } from '#styles/compiler'
+import type { MapMeshReader, WorldMapReader } from '@another-earth/world-core'
 import { clipRingToGeographicBox } from '#projections/seam-clipper'
 import {
   buildTangentBasis,
@@ -12,10 +13,12 @@ import {
   dotVec3,
   lonLatDegToCartesian,
   normalizeVec3,
+  slerpVec3,
   sphericalAngleRad,
   unwrapLongitudeDegNear,
 } from '#projections/spherical-math'
 import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
+import { evaluateSphericalCatmullRom, smoothBoundaryCornerPositions } from '#sources/topology/spherical-smooth'
 import * as THREE from 'three'
 
 export type GeoJsonRingCoordinates = readonly LonLatTuple[]
@@ -403,15 +406,16 @@ export function triangulateSphericalPolygon(
 
     // Build containment hierarchy on this cube face (even depth = exterior, odd depth = hole)
     clipped2D.sort((a, b) => b.absArea - a.absArea)
-    const parents = Array.from({ length: clipped2D.length }).fill(-1)
-    const depths = Array.from({ length: clipped2D.length }).fill(0)
+    const parents: number[] = Array.from({ length: clipped2D.length }, () => -1)
+    const depths: number[] = Array.from({ length: clipped2D.length }, () => 0)
 
     for (let i = 0; i < clipped2D.length; i++) {
-      const probe = clipped2D[i].ring[0]
+      const ring = clipped2D[i].ring as readonly [number, number][]
+      const probe: [number, number] = ring[0] ?? [0, 0]
       let parent = -1
       let depth = 0
       for (let j = i - 1; j >= 0; j--) {
-        if (pointInRing2D(probe, clipped2D[j].ring)) {
+        if (pointInRing2D(probe, clipped2D[j].ring as readonly [number, number][])) {
           if (parent === -1)
             parent = j
           depth++
@@ -427,7 +431,7 @@ export function triangulateSphericalPolygon(
       const holes: [number, number][][] = []
       for (let j = i + 1; j < clipped2D.length; j++) {
         if (parents[j] === i && depths[j] === depths[i] + 1) {
-          holes.push(clipped2D[j].ring)
+          holes.push(clipped2D[j].ring as [number, number][]) 
         }
       }
       const patch: ProjectedGnomonicPatch = {
@@ -645,6 +649,394 @@ export function containsSphericalPointInPatches(
   return false
 }
 
+function buildCategoricalCellFillGeometry(
+  sourceId: string,
+  source: GeoJsonSource,
+  reader: WorldMapReader,
+  options: {
+    readonly radius: number
+    readonly zOffset: number
+    readonly projection?: MapProjection
+  },
+): {
+  readonly positions: number[]
+  readonly normals: number[]
+  readonly featureIndices: number[]
+  readonly regionFeatureIndices: Int32Array
+} | null {
+  const { mesh, capabilities } = reader
+  const count = mesh.regionCount
+  const groupIds = new Int32Array(count).fill(-1)
+  const regionFeatureIndices = new Int32Array(count).fill(-1)
+
+  if (sourceId === 'continent-areas') {
+    const geoRegions = reader.geographicRegions()
+    if (!capabilities.hasGeographicRegions || !geoRegions)
+      return null
+    const continentField = reader.field('continentIndex')
+    const oceanField = reader.field('oceanIndex')
+    const seaField = capabilities.hasSeaClassification ? reader.field('seaIndex') : null
+    const continentCount = geoRegions.continents.length
+    const oceanCount = geoRegions.oceans.length
+    const seaCount = seaField ? geoRegions.seas.length : 0
+    const featureIndexByGroup = new Map<number, number>()
+    for (let i = 0; i < source.data.features.length; i++) {
+      const props = source.data.features[i].properties ?? {}
+      const gIdx = Number(props.groupIndex ?? -1)
+      if (props.kind === 'continent')
+        featureIndexByGroup.set(gIdx, i)
+      else if (props.kind === 'ocean')
+        featureIndexByGroup.set(continentCount + gIdx, i)
+      else if (props.kind === 'sea')
+        featureIndexByGroup.set(continentCount + oceanCount + gIdx, i)
+    }
+    for (let r = 0; r < count; r++) {
+      const cIdx = continentField.get(r)
+      if (cIdx >= 0 && cIdx < continentCount) {
+        groupIds[r] = cIdx
+        regionFeatureIndices[r] = featureIndexByGroup.get(cIdx) ?? -1
+        continue
+      }
+      const oIdx = oceanField.get(r)
+      if (oIdx >= 0 && oIdx < oceanCount) {
+        const gId = continentCount + oIdx
+        groupIds[r] = gId
+        regionFeatureIndices[r] = featureIndexByGroup.get(gId) ?? -1
+        continue
+      }
+      if (seaField) {
+        const sIdx = seaField.get(r)
+        if (sIdx >= 0 && sIdx < seaCount) {
+          const gId = continentCount + oceanCount + sIdx
+          groupIds[r] = gId
+          regionFeatureIndices[r] = featureIndexByGroup.get(gId) ?? -1
+        }
+      }
+    }
+  }
+  else if (sourceId === 'plate-areas') {
+    const plateField = reader.field('plateIndex')
+    const featureIndexByGroup = new Map<number, number>()
+    for (let i = 0; i < source.data.features.length; i++) {
+      featureIndexByGroup.set(Number(source.data.features[i].properties?.groupIndex ?? -1), i)
+    }
+    for (let r = 0; r < count; r++) {
+      const pIdx = Math.floor(plateField.get(r))
+      groupIds[r] = pIdx
+      regionFeatureIndices[r] = featureIndexByGroup.get(pIdx) ?? -1
+    }
+  }
+  else if (sourceId === 'koppen-areas' || sourceId === 'biome-areas' || sourceId === 'land-cover-areas') {
+    const fieldName = sourceId === 'koppen-areas'
+      ? 'koppenClass'
+      : sourceId === 'biome-areas'
+        ? 'potentialBiomeIndex'
+        : 'landCoverIndex'
+    const landMask = reader.field('landMask')
+    const field = reader.field(fieldName)
+    const featureIndexByGroup = new Map<number, number>()
+    for (let i = 0; i < source.data.features.length; i++) {
+      featureIndexByGroup.set(Number(source.data.features[i].properties?.groupIndex ?? -1), i)
+    }
+    for (let r = 0; r < count; r++) {
+      if (landMask.get(r) === 0)
+        continue
+      const val = Math.floor(field.get(r))
+      if (val < 0)
+        continue
+      groupIds[r] = val
+      regionFeatureIndices[r] = featureIndexByGroup.get(val) ?? -1
+    }
+  }
+  else if (sourceId === 'land-areas') {
+    const landMask = reader.field('landMask')
+    for (let r = 0; r < count; r++) {
+      if (landMask.get(r) !== 0) {
+        groupIds[r] = 1
+        regionFeatureIndices[r] = 0
+      }
+    }
+  }
+  else {
+    return null
+  }
+
+  const rawCorners = new Float64Array(mesh.cornerCount * 3)
+  const cornerOut = { x: 0, y: 0, z: 0 }
+  for (let c = 0; c < mesh.cornerCount; c++) {
+    mesh.getCornerPosition(c, cornerOut)
+    rawCorners[3 * c] = cornerOut.x
+    rawCorners[3 * c + 1] = cornerOut.y
+    rawCorners[3 * c + 2] = cornerOut.z
+  }
+
+  const boundaryEdgeIds: number[] = []
+  mesh.forEachEdge((edgeId, rA, rB) => {
+    if (groupIds[rA] !== groupIds[rB])
+      boundaryEdgeIds.push(edgeId)
+  })
+
+  const { corners, edgeMidpoints } = buildRelaxedClassificationBoundaryGeometry(
+    mesh,
+    rawCorners,
+    Uint32Array.from(boundaryEdgeIds),
+  )
+
+  const positions: number[] = []
+  const normals: number[] = []
+  const featureIndices: number[] = []
+  const centerOut = { x: 0, y: 0, z: 0 }
+
+  if (!options.projection) {
+    const rScale = options.radius
+    const ring: Vec3Tuple[] = []
+    for (let r = 0; r < count; r++) {
+      const fIdx = regionFeatureIndices[r]
+      if (fIdx < 0)
+        continue
+      ring.length = 0
+      mesh.forEachRegionNeighbor(r, (_nb, cornerA, _cornerB, edgeId) => {
+        const cOff = 3 * cornerA
+        ring.push(normalizeVec3(corners[cOff], corners[cOff + 1], corners[cOff + 2]))
+        const mid = edgeMidpoints.get(edgeId)
+        if (mid)
+          ring.push(mid)
+      })
+      if (ring.length < 3)
+        continue
+      mesh.getRegionCenter(r, centerOut)
+      const c0 = normalizeVec3(centerOut.x, centerOut.y, centerOut.z)
+      for (let i = 0; i < ring.length; i++) {
+        const v1 = ring[i]
+        const v2 = ring[(i + 1) % ring.length]
+        positions.push(
+          c0[0] * rScale,
+          c0[1] * rScale,
+          c0[2] * rScale,
+          v1[0] * rScale,
+          v1[1] * rScale,
+          v1[2] * rScale,
+          v2[0] * rScale,
+          v2[1] * rScale,
+          v2[2] * rScale,
+        )
+        normals.push(c0[0], c0[1], c0[2], v1[0], v1[1], v1[2], v2[0], v2[1], v2[2])
+        featureIndices.push(fIdx, fIdx, fIdx)
+      }
+    }
+    return { positions, normals, featureIndices, regionFeatureIndices }
+  }
+
+  const { projection, zOffset } = options
+  const maxLat = projection.maxLatitudeDegrees
+  const cornerLonLat = new Float64Array(mesh.cornerCount * 2)
+  for (let c = 0; c < mesh.cornerCount; c++) {
+    const [lon, lat] = cartesianToLonLatDeg(corners[3 * c], corners[3 * c + 1], corners[3 * c + 2])
+    cornerLonLat[2 * c] = lon
+    cornerLonLat[2 * c + 1] = lat
+  }
+
+  const ringScratch: [number, number][] = []
+  const appendFan = (lonLatRing: readonly [number, number][], fIdx: number, nx: number, ny: number, nz: number): void => {
+    if (lonLatRing.length < 3)
+      return
+    let sumLon = 0
+    let sumLat = 0
+    for (let i = 0; i < lonLatRing.length; i++) {
+      sumLon += lonLatRing[i][0]
+      sumLat += lonLatRing[i][1]
+    }
+    const [p0x, p0y] = projection.project(sumLon / lonLatRing.length, sumLat / lonLatRing.length)
+    for (let i = 0; i < lonLatRing.length; i++) {
+      const [p1x, p1y] = projection.project(lonLatRing[i][0], lonLatRing[i][1])
+      const next = lonLatRing[(i + 1) % lonLatRing.length]
+      const [p2x, p2y] = projection.project(next[0], next[1])
+      positions.push(p0x, p0y, zOffset, p1x, p1y, zOffset, p2x, p2y, zOffset)
+      normals.push(nx, ny, nz, nx, ny, nz, nx, ny, nz)
+      featureIndices.push(fIdx, fIdx, fIdx)
+    }
+  }
+
+  for (let r = 0; r < count; r++) {
+    const fIdx = regionFeatureIndices[r]
+    if (fIdx < 0)
+      continue
+    mesh.getRegionCenter(r, centerOut)
+    const [nx, ny, nz] = normalizeVec3(centerOut.x, centerOut.y, centerOut.z)
+    const [centerLon, centerLat] = cartesianToLonLatDeg(nx, ny, nz)
+    ringScratch.length = 0
+    let minLon = Infinity
+    let maxLon = -Infinity
+    let minLat = Infinity
+    let maxLatCell = -Infinity
+    mesh.forEachRegionNeighbor(r, (_nb, cornerA, _cornerB, edgeId) => {
+      const pushLonLat = (rawLon: number, rawLat: number): void => {
+        const prevLon = ringScratch.length > 0 ? ringScratch[ringScratch.length - 1][0] : centerLon
+        const uLon = unwrapLongitudeDegNear(rawLon, prevLon)
+        ringScratch.push([uLon, rawLat])
+        if (uLon < minLon)
+          minLon = uLon
+        if (uLon > maxLon)
+          maxLon = uLon
+        if (rawLat < minLat)
+          minLat = rawLat
+        if (rawLat > maxLatCell)
+          maxLatCell = rawLat
+      }
+      pushLonLat(cornerLonLat[2 * cornerA], cornerLonLat[2 * cornerA + 1])
+      const mid = edgeMidpoints.get(edgeId)
+      if (mid) {
+        const [mLon, mLat] = cartesianToLonLatDeg(mid[0], mid[1], mid[2])
+        pushLonLat(mLon, mLat)
+      }
+    })
+    if (ringScratch.length < 3)
+      continue
+    if (Math.abs(centerLat) > 82 && (maxLon - minLon) > 240) {
+      const poleLat = centerLat > 0 ? maxLat : -maxLat
+      const sorted = ringScratch
+        .map(([lon, lat]) => [((lon + 180) % 360 + 360) % 360 - 180, Math.max(-maxLat, Math.min(maxLat, lat))] as [number, number])
+        .sort((a, b) => a[0] - b[0])
+      appendFan([[-180, poleLat], [-180, sorted[0][1]], ...sorted, [180, sorted.at(-1)![1]], [180, poleLat]], fIdx, nx, ny, nz)
+      continue
+    }
+    if (minLon >= -180 && maxLon <= 180 && minLat >= -maxLat && maxLatCell <= maxLat) {
+      appendFan(ringScratch, fIdx, nx, ny, nz)
+      continue
+    }
+    const minK = Math.floor((minLon + 180) / 360)
+    const maxK = Math.floor((maxLon + 180 - 1e-9) / 360)
+    for (let k = minK; k <= maxK; k++) {
+      const shift = k * 360
+      const shifted: [number, number][] = ringScratch.map(([lon, lat]) => [lon - shift, lat])
+      const clipped = clipRingToGeographicBox(shifted, -180, 180, -maxLat, maxLat)
+      if (clipped.length >= 3)
+        appendFan(clipped, fIdx, nx, ny, nz)
+    }
+  }
+
+  return {
+    positions,
+    normals,
+    featureIndices,
+    regionFeatureIndices,
+  }
+}
+
+function buildRelaxedClassificationBoundaryGeometry(
+  mesh: MapMeshReader,
+  rawCorners: Float64Array,
+  boundaryEdgeIds: Uint32Array,
+): {
+  readonly corners: Float64Array
+  readonly edgeMidpoints: Map<number, Vec3Tuple>
+} {
+  const edgeCorners = new Uint32Array(2 * mesh.edgeCount)
+  mesh.forEachEdge((edgeId, _rA, _rB, cornerA, cornerB) => {
+    edgeCorners[2 * edgeId] = cornerA
+    edgeCorners[2 * edgeId + 1] = cornerB
+  })
+
+  const relaxedCorners = smoothBoundaryCornerPositions(mesh, rawCorners, boundaryEdgeIds, 3, 0.34)
+  const cornerValence = new Map<number, number>()
+  const cornerIncidentEdges = new Map<number, number[]>()
+  for (let i = 0; i < boundaryEdgeIds.length; i++) {
+    const edgeId = boundaryEdgeIds[i]
+    const cA = edgeCorners[2 * edgeId]
+    const cB = edgeCorners[2 * edgeId + 1]
+    cornerValence.set(cA, (cornerValence.get(cA) ?? 0) + 1)
+    cornerValence.set(cB, (cornerValence.get(cB) ?? 0) + 1)
+    let listA = cornerIncidentEdges.get(cA)
+    if (!listA) {
+      listA = []
+      cornerIncidentEdges.set(cA, listA)
+    }
+    listA.push(edgeId)
+    let listB = cornerIncidentEdges.get(cB)
+    if (!listB) {
+      listB = []
+      cornerIncidentEdges.set(cB, listB)
+    }
+    listB.push(edgeId)
+  }
+
+  const edgeMidpoints = new Map<number, Vec3Tuple>()
+  for (let i = 0; i < boundaryEdgeIds.length; i++) {
+    const edgeId = boundaryEdgeIds[i]
+    const aOff = 3 * edgeCorners[2 * edgeId]
+    const bOff = 3 * edgeCorners[2 * edgeId + 1]
+    edgeMidpoints.set(edgeId, normalizeVec3(
+      relaxedCorners[aOff] + relaxedCorners[bOff],
+      relaxedCorners[aOff + 1] + relaxedCorners[bOff + 1],
+      relaxedCorners[aOff + 2] + relaxedCorners[bOff + 2],
+    ))
+  }
+
+  let currentCorners = relaxedCorners.slice()
+  const edgeRelaxStrength = 0.36
+  for (let iter = 0; iter < 2; iter++) {
+    const nextCorners = currentCorners.slice()
+    const nextMidpoints = new Map<number, Vec3Tuple>()
+    for (let i = 0; i < boundaryEdgeIds.length; i++) {
+      const edgeId = boundaryEdgeIds[i]
+      const cA = edgeCorners[2 * edgeId]
+      const cB = edgeCorners[2 * edgeId + 1]
+      const aOff = 3 * cA
+      const bOff = 3 * cB
+      const p1: Vec3Tuple = [currentCorners[aOff], currentCorners[aOff + 1], currentCorners[aOff + 2]]
+      const p2: Vec3Tuple = [currentCorners[bOff], currentCorners[bOff + 1], currentCorners[bOff + 2]]
+      let p0: Vec3Tuple = p1
+      if (cornerValence.get(cA) === 2) {
+        const incA = cornerIncidentEdges.get(cA)!
+        const other = incA[0] === edgeId ? incA[1] : incA[0]
+        const prev = edgeCorners[2 * other] === cA ? edgeCorners[2 * other + 1] : edgeCorners[2 * other]
+        p0 = [currentCorners[3 * prev], currentCorners[3 * prev + 1], currentCorners[3 * prev + 2]]
+      }
+      let p3: Vec3Tuple = p2
+      if (cornerValence.get(cB) === 2) {
+        const incB = cornerIncidentEdges.get(cB)!
+        const other = incB[0] === edgeId ? incB[1] : incB[0]
+        const next = edgeCorners[2 * other] === cB ? edgeCorners[2 * other + 1] : edgeCorners[2 * other]
+        p3 = [currentCorners[3 * next], currentCorners[3 * next + 1], currentCorners[3 * next + 2]]
+      }
+      const chordMid = normalizeVec3(p1[0] + p2[0], p1[1] + p2[1], p1[2] + p2[2])
+      const cubicMid = evaluateSphericalCatmullRom(p0, p1, p2, p3, 0.5)
+      nextMidpoints.set(edgeId, slerpVec3(chordMid, cubicMid, edgeRelaxStrength))
+    }
+    for (const [corner, valence] of cornerValence) {
+      if (valence !== 2)
+        continue
+      const inc = cornerIncidentEdges.get(corner)!
+      const mA = nextMidpoints.get(inc[0])
+      const mB = nextMidpoints.get(inc[1])
+      if (!mA || !mB)
+        continue
+      const cOff = 3 * corner
+      const cx = currentCorners[cOff]
+      const cy = currentCorners[cOff + 1]
+      const cz = currentCorners[cOff + 2]
+      const avgMid = normalizeVec3(mA[0] + mB[0], mA[1] + mB[1], mA[2] + mB[2])
+      let [rx, ry, rz] = slerpVec3([cx, cy, cz], avgMid, edgeRelaxStrength * 0.65)
+      const da = Math.hypot(mA[0] - cx, mA[1] - cy, mA[2] - cz)
+      const db = Math.hypot(mB[0] - cx, mB[1] - cy, mB[2] - cz)
+      const maxDist = Math.min(da, db) * 0.42
+      const moveDist = Math.hypot(rx - cx, ry - cy, rz - cz)
+      if (moveDist > maxDist && moveDist > 0) {
+        const scale = maxDist / moveDist
+        ;[rx, ry, rz] = normalizeVec3(cx + (rx - cx) * scale, cy + (ry - cy) * scale, cz + (rz - cz) * scale)
+      }
+      nextCorners[cOff] = rx
+      nextCorners[cOff + 1] = ry
+      nextCorners[cOff + 2] = rz
+    }
+    currentCorners = nextCorners
+    for (const [edgeId, mid] of nextMidpoints)
+      edgeMidpoints.set(edgeId, mid)
+  }
+
+  return { corners: currentCorners, edgeMidpoints }
+}
+
 const FILL_VERTEX_SHADER = /* glsl */`
   #if __VERSION__ >= 300
     #define FLAT_VARYING flat
@@ -724,6 +1116,7 @@ export interface FillLayerOptions {
   readonly polygonOffsetFactor?: number
   readonly polygonOffsetUnits?: number
   readonly projection?: MapProjection
+  readonly reader?: WorldMapReader
   readonly tracker?: GpuResourceTracker
 }
 
@@ -750,6 +1143,8 @@ export class FillLayer {
 
   private readonly indexedFeatures: IndexedFillFeature[] = []
   private readonly visibleByFeature: Uint8Array
+  private readonly regionFeatureIndices: Int32Array | null
+  private readonly pickupMesh: MapMeshReader | null
   private disposed = false
 
   constructor(
@@ -760,6 +1155,7 @@ export class FillLayer {
     this.id = compiledLayer.id
     this.sourceId = compiledLayer.source
     this.interactive = compiledLayer.interactive
+    this.pickupMesh = options.reader?.mesh ?? null
 
     const surfaceOffset = options.surfaceOffset ?? 0.001
     const radius = 1.0 + surfaceOffset
@@ -767,43 +1163,67 @@ export class FillLayer {
     const allNormals: number[] = []
     const allFeatureIndices: number[] = []
 
-    for (const feature of source.data.features) {
-      const polygons: GeoJsonPolygonCoordinates[] = feature.geometry.type === 'Polygon'
-        ? [feature.geometry.coordinates]
-        : feature.geometry.type === 'MultiPolygon'
-          ? [...feature.geometry.coordinates]
-          : []
-      if (polygons.length === 0)
-        continue
+    const cellFills = options.reader
+      ? buildCategoricalCellFillGeometry(compiledLayer.source, source, options.reader, {
+          radius,
+          zOffset: surfaceOffset,
+          projection: options.projection,
+        })
+      : null
 
-      const featureIndex = this.indexedFeatures.length
-      const featurePatches: ProjectedGnomonicPatch[] = []
-
-      for (const poly of polygons) {
-        const result = options.projection
-          ? triangulateAtlasPolygon(poly, options.projection, {
-              zOffset: surfaceOffset,
-              maxEdgeDeg: MAX_ATLAS_TRIANGLE_EDGE_DEG,
-            })
-          : triangulateSphericalPolygon(poly, {
-              radius,
-              maxEdgeRad: MAX_SPHERICAL_TRIANGLE_EDGE_RAD,
-            })
-        featurePatches.push(...result.patches)
-        for (let i = 0; i < result.positions.length; i++) {
-          allPositions.push(result.positions[i])
-          allNormals.push(result.normals[i])
-        }
-        const vertexCount = result.positions.length / 3
-        for (let v = 0; v < vertexCount; v++) {
-          allFeatureIndices.push(featureIndex)
-        }
+    if (cellFills) {
+      this.regionFeatureIndices = cellFills.regionFeatureIndices
+      for (const feature of source.data.features) {
+        this.indexedFeatures.push({ feature, patches: [] })
       }
+      for (let i = 0; i < cellFills.positions.length; i++) {
+        allPositions.push(cellFills.positions[i])
+        allNormals.push(cellFills.normals[i])
+      }
+      for (let i = 0; i < cellFills.featureIndices.length; i++) {
+        allFeatureIndices.push(cellFills.featureIndices[i])
+      }
+    }
+    else {
+      this.regionFeatureIndices = null
+      for (const feature of source.data.features) {
+        const polygons: GeoJsonPolygonCoordinates[] = feature.geometry.type === 'Polygon'
+          ? [feature.geometry.coordinates]
+          : feature.geometry.type === 'MultiPolygon'
+            ? [...feature.geometry.coordinates]
+            : []
+        if (polygons.length === 0)
+          continue
 
-      this.indexedFeatures.push({
-        feature,
-        patches: featurePatches,
-      })
+        const featureIndex = this.indexedFeatures.length
+        const featurePatches: ProjectedGnomonicPatch[] = []
+
+        for (const poly of polygons) {
+          const result = options.projection
+            ? triangulateAtlasPolygon(poly, options.projection, {
+                zOffset: surfaceOffset,
+                maxEdgeDeg: MAX_ATLAS_TRIANGLE_EDGE_DEG,
+              })
+            : triangulateSphericalPolygon(poly, {
+                radius,
+                maxEdgeRad: MAX_SPHERICAL_TRIANGLE_EDGE_RAD,
+              })
+          featurePatches.push(...result.patches)
+          for (let i = 0; i < result.positions.length; i++) {
+            allPositions.push(result.positions[i])
+            allNormals.push(result.normals[i])
+          }
+          const vertexCount = result.positions.length / 3
+          for (let v = 0; v < vertexCount; v++) {
+            allFeatureIndices.push(featureIndex)
+          }
+        }
+
+        this.indexedFeatures.push({
+          feature,
+          patches: featurePatches,
+        })
+      }
     }
 
     const featureCount = Math.max(1, this.indexedFeatures.length)
@@ -849,9 +1269,10 @@ export class FillLayer {
       transparent: !isWaterLayer,
       depthTest: true,
       depthWrite: isWaterLayer,
+      depthFunc: THREE.LessEqualDepth,
       polygonOffset: true,
-      polygonOffsetFactor: options.polygonOffsetFactor ?? -1,
-      polygonOffsetUnits: options.polygonOffsetUnits ?? -1,
+      polygonOffsetFactor: options.polygonOffsetFactor ?? 0,
+      polygonOffsetUnits: options.polygonOffsetUnits ?? -2,
     })
     options.tracker?.trackMaterial(material)
 
@@ -922,6 +1343,19 @@ export class FillLayer {
   pickSphericalPoint(unitPoint: Vec3Tuple): { layerId: string, sourceId: string, featureId: string } | null {
     if (this.disposed || !this.mesh.visible || !this.interactive)
       return null
+
+    if (this.regionFeatureIndices && this.pickupMesh) {
+      const regionId = this.pickupMesh.locateRegion(unitPoint[0], unitPoint[1], unitPoint[2])
+      const fIdx = this.regionFeatureIndices[regionId] ?? -1
+      if (fIdx >= 0 && this.visibleByFeature[fIdx]) {
+        return {
+          layerId: this.id,
+          sourceId: this.sourceId,
+          featureId: this.indexedFeatures[fIdx].feature.id,
+        }
+      }
+      return null
+    }
 
     for (let i = this.indexedFeatures.length - 1; i >= 0; i--) {
       if (!this.visibleByFeature[i])

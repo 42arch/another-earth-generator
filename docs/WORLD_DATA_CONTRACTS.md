@@ -68,13 +68,13 @@ WorldSnapshot 是 world-core 数据所有者使用的完整存储契约，readon
 
 ## 内容与验证
 
-内容 ID 为 `namespace:domain/name`，与 displayNameKey 分离。ContentPack 包含内容模板、版本/哈希/依赖清单以及 locale → 翻译键 → 文本。每个声明的语言必须覆盖该包显示键。`loadBuiltinCatalog()` 提供 `core`、`earthlike`、历史拉丁名称包 `geography` 与当前中文名称包 `geography-zh`；`loadBuiltinGenerationCatalog()` 仅选择 `core`、`earthlike`、`geography-zh` 供新世界生成；`@another-earth/world-core` 以 `loadBuiltinContentPacks()` 公开同一组内容包，供不能依赖 `world-data` 的调用方组装自然世界。这是 M0 契约数据，不代表 M2 文明内容库已完成。
+内容 ID 为 `namespace:domain/name`，与 displayNameKey 分离。ContentPack 包含内容模板、版本/哈希/依赖清单以及 locale → 翻译键 → 文本。每个声明的语言必须覆盖该包显示键。`loadBuiltinCatalog()` 提供 `core`、`earthlike`、历史拉丁名称包 `geography` 与当前中文名称包 `geography-zh`；`loadBuiltinGenerationCatalog()` 仅选择 `core`、`earthlike`、`geography-zh` 供新世界生成。这些函数只属于 `@another-earth/world-data`。`@another-earth/world-core` 不依赖该包，也不再导出 `loadBuiltinContentPacks()`。它只接收结构化的 `ContentPackView` 和调用方实现的 `ContentPort`（`calculateContentHash`、`calculateContentSignature`、`validateContentPack`）。`apps/web` 的 `src/lib/generation/builtin-content.ts` 用 `loadBuiltinGenerationCatalog()` 装载上述三包并注入生成、组装、校验和存档。这是 M0 契约数据，不代表 M2 文明内容库已完成。
 
 `validateContentPack(pack, resolvedDependencies)` 检查 ID、重复项、翻译、数值、名称池引用和显式依赖。M0 依赖使用精确版本。`createContentCatalog()` 会复制、校验并冻结已解析内容，验证每包的 `contentHash`，按包 ID 排序计算 `contentSignature`。当前哈希格式为 `fnv1a32`，用于确定性版本身份和意外篡改检测，不作为抗恶意碰撞的安全摘要。
 
-`validateWorldSnapshot(snapshot, resolvedPacks, options)` 返回 `{valid, issues: [{code,path,message}]}`。完整模式为默认值，遍历字段及图，检查月/年气候、积雪收支、径流深与体积、流域汇总、河段路由、湖泊成员/溢流、人口约束等；时间 O(N+E+实体/分组数)，需要 O(N+E) 临时图索引，错误最多报告 100 条世界问题。`structure` 检查长度、类型、元数据和实体引用，但跳过 dense 数值、图遍历和人口守恒，不能用于发布或存档验收。不能因 UI 状态变化重复调用完整校验。
+`validateWorldSnapshot(snapshot, resolvedPacks, content, options)` 返回 `{valid, issues: [{code,path,message}]}`。`content` 是 `ContentPort`；哈希、签名和包校验都走该端口，不在 `world-core` 再实现一套。完整模式为默认值，遍历字段及图，检查月/年气候、积雪收支、径流深与体积、流域汇总、河段路由、湖泊成员/溢流、人口约束等；时间 O(N+E+实体/分组数)，需要 O(N+E) 临时图索引，错误最多报告 100 条世界问题。`structure` 检查长度、类型、元数据和实体引用，但跳过 dense 数值、图遍历和人口守恒，不能用于发布或存档验收。不能因 UI 状态变化重复调用完整校验。
 
-两个校验器接收已经解码的类型化内存对象，不是任意 JSON 的安全解析器。`encodeWorldArchive` / `decodeWorldArchive` 提供 M0 版本化 JSON 往返，保存 TypedArray 类型并校验完整快照、内容版本和校验和；解码失败不返回候选世界。当前 envelope 格式仍是 `another-earth-m0-json` v1，内部世界须为 Schema 3。旧 Schema 1/2 无迁移器，解码时拒绝，不能凭空填充缺失自然事实。针对 Schema 3 水文生成配置，解码器会为缺失的旧版参数补历史默认值 `riverDensityMultiplier = 1` 与 `minimumLakeAreaKm2 = 0`；这只补参数元数据，不改已保存河流/湖泊事实。新生成配置的河网倍率默认值现为 `0.5`。`WorldStore.restore` 只在解码与完整校验成功后替换当前世界。它不是 M4 的 `.aearth` 二进制格式、浏览器持久存储或 UI 导入流程。未引入通用 Schema 引擎。
+两个校验器接收已经解码的类型化内存对象，不是任意 JSON 的安全解析器。`encodeWorldArchive(snapshot, packs, content)` / `decodeWorldArchive(archive, packs, content)` 提供 M0 版本化 JSON 往返，保存 TypedArray 类型并校验完整快照、内容版本和校验和；`content` 同为 `ContentPort`。解码失败不返回候选世界。当前 envelope 格式仍是 `another-earth-m0-json` v1，内部世界须为 Schema 3。旧 Schema 1/2 无迁移器，解码时拒绝，不能凭空填充缺失自然事实。针对 Schema 3 水文生成配置，解码器会为缺失的旧版参数补历史默认值 `riverDensityMultiplier = 1` 与 `minimumLakeAreaKm2 = 0`；这只补参数元数据，不改已保存河流/湖泊事实。新生成配置的河网倍率默认值现为 `0.5`。`WorldStore.restore` 只在解码与完整校验成功后替换当前世界。它不是 M4 的 `.aearth` 二进制格式、浏览器持久存储或 UI 导入流程。未引入通用 Schema 引擎。
 
 ## 与技术设计示例的细化
 
@@ -133,11 +133,13 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 `geographic-names-v1` 以大陆和大洋的稳定 ID 为对象，使用 `world-data` 内置名称词库、世界 Seed 和内容签名确定性选名；同类重名采用稳定后缀消歧，海暂不命名。命名结果作为可选 `name` 存于 `nature.geography.regions.continents` / `oceans`，并记录 `nameContentSignature`；有 `geographic-names` provenance 的新快照必须具备非空且同类唯一的名称，并与快照的内容签名一致。旧 Schema 3 档案缺少该 Stage 和名称时仍有效。`WorldStore.region` 另返回 `continentName` / `oceanName`，区域摘要也包含名称；图例与区域检查器读取快照名称。名称为原始专名，界面加中文类型后缀；译名和作者覆盖尚未实现，地图表面文字标签见下方现状。v1 当时新增独立 `geography` 1.0.0 内容包，原有 `core` / `earthlike` 版本与哈希保持不变；当时新世界记录三个内容包，旧档案仍可按其已记录的包集合解析。
 
-`geographic-names-v2` 当前选用新增 `geography-zh` 1.0.0 内容包的中文专名，并将同类重名后缀改为中文序号；UI 将名称与“大陆”或“洋”直接连接。`geography` 1.0.0 拉丁词库仍保留在内置 Catalog 中，以便解析已有档案。v2 只使名称 Stage 缓存失效，分区数组和面积不变；已发布快照中的旧名称不会自动改写。名称仍作为事实存于 `name` 字段，新生成的世界只记录实际使用的三个内置内容包；海仍无名称。
+`geographic-names-v2` 当前选用 `geography-zh` 1.0.0 内容包的中文专名，并将同类重名后缀改为中文序号；UI 将名称与“大陆”或“洋”直接连接。阶段自身不读取 `world-data`。版本字符串是 `geographic-names-v2`；大陆/大洋词库以内容键 `geographic-name-pools` 注入，对应签名由调用方放入 `contentSignatures`，并进入缓存键，不再嵌进阶段版本。新产物可带 `namePoolIds: { continent, ocean }`。完整校验只在该字段存在且 `provenance.stageVersions['geographic-names']` 非空时，要求这两个 ID 属于已记录内容包；没有 `namePoolIds` 的旧档案仍然有效，旧的长版本字符串也仍被接受。`geography` 1.0.0 拉丁词库仍保留在内置 Catalog 中，以便解析已有档案。词库变化只使名称 Stage 缓存失效，分区数组和面积不变；已发布快照中的旧名称不会自动改写。名称仍作为事实存于 `name` 字段，新生成的世界只记录实际使用的三个内置内容包；海仍无名称。
+
+`ecology-e0` 算法版本仍是 `ecology-e0-v3`。分类代码留在 `world-core`；调用方以内容键 `ecology-classes` 传入生物群系与土地覆盖的 `{ id, code, nameZh }` 词表。阶段用 `ecologyVocabularySignature` 重算签名（对 `['biome'|'land-cover', id, code]` 行做 FNV-1a 32，前缀 `ecology-classes:`），与传入签名不一致则拒绝执行。快照字段不变。阶段 `validate` 仍只做结构检查，因为它看不到注入内容；生成函数自身检查产物 ID 与词表一致。
 
 地图标注使用 `@another-earth/cartography` 公开的 `buildGeographicLabelAnchors(mesh, regions)`，读取 Mesh 中心、面积和已命名分区的成员索引，返回大陆/洋各区域的稳定 ID、名称、面积与落在所属区域内的单位球面位置。Web 将名称格式化为显示文字并投影到视口；遮挡、重叠避让与专题图层开关均只改变显示，不回写 `WorldSnapshot`，也不参与 Stage 签名。无名称的旧分区不产生标签，海目前不产生标签。
 
-当前为 `terrain-skeleton-v10` / `terrain-v26`。`TerrainArtifact` 仍是独立阶段产物，带 meshId、算法版本、物理半径与海平面基准；没有自然世界发布或水文事实。v25 的海底骨架与塑形坐标→km 曲线已重标定；v26 只增加卫星渲染需要的表面纹理字段，不改变 T0 高程或海陆生成结果。
+当前为 `terrain-skeleton-v10` / `terrain-v27`。`TerrainArtifact` 仍是独立阶段产物，带 meshId、算法版本、物理半径与海平面基准；没有自然世界发布或水文事实。v25 的海底骨架与塑形坐标→km 曲线已重标定；v26 增加卫星渲染需要的表面纹理字段；v27 在末端小水体闭合后对新抬升的近岸封闭洼地沿最低溢流路径破口排海，不改动无关的内陆盆地。
 
 | 字段 | 类型/单位 | 含义 |
 | --- | --- | --- |
@@ -162,7 +164,7 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 内部塑形坐标不会因类型同为 Float32 就自动具有 km 单位。海底 `x≥-0.6` 输出 `8x` km，`x<-0.6` 在此基础上增加连续、最多趋近 6 km 的海沟深度；陆地 `0–1` 使用单调 Hermite 锚点 `(0,0)/(0.2,0.37)/(0.4,0.92)/(0.65,2.5)/(0.85,4.5)/(0.9,5.1)/(1,7.7)`（坐标、km），超过 1 从 7.7 km 按每单位 18 km 延伸，最后减海平面基准。诊断贡献不能非线性换算后冒充可精确相加的物理分量。
 
-当前 `terrain-v26` 在 T0 的内部塑形坐标中执行与 v25 相同的基础水力/冰川侵蚀。水力处理器输入为 `terrain.hydraulicErosion × 0.5`，冰川处理器输入保持 `terrain.glacialErosion`。最终塑形后按负高程连通分量清理小于四个 L5 区域等效面积的水体，并把修复改变量记入 `topologyDelta`，不计入沉积物账本。`erosionCoordinate`/`depositionCoordinate` 为 N 长 Float32，记录参考处理器生成的侵蚀/沉积坐标差；它们不能直接与物理 km 高程相加。`regionalUpliftCoordinate`、`regionalReliefKm` 全零，`roughnessWeight` 全一，为旧诊断兼容值。侵蚀不读取气候/降雨，也不构造正式河网。`surfaceTexture` 保存五个由原 T0 纹理生成器计算的显示字段；它们随 TerrainArtifact 传输，检查长度和有限值，但不进入查询接口、WorldSnapshot 或世界事实校验。
+当前 `terrain-v27` 在 T0 的内部塑形坐标中执行与 v25 相同的基础水力/冰川侵蚀。水力处理器输入为 `terrain.hydraulicErosion × 0.5`，冰川处理器输入保持 `terrain.glacialErosion`。最终塑形后按负高程连通分量清理小于四个 L5 区域等效面积的水体，并对此次闭合形成的封闭洼地向公海最低鞍部下切破口、补齐单调顺坡，改变量一并记入 `topologyDelta`，不计入沉积物账本。`erosionCoordinate`/`depositionCoordinate` 为 N 长 Float32，记录参考处理器生成的侵蚀/沉积坐标差；它们不能直接与物理 km 高程相加。`regionalUpliftCoordinate`、`regionalReliefKm` 全零，`roughnessWeight` 全一，为旧诊断兼容值。侵蚀不读取气候/降雨，也不构造正式河网。`surfaceTexture` 保存五个由原 T0 纹理生成器计算的显示字段；它们随 TerrainArtifact 传输，检查长度和有限值，但不进入查询接口、WorldSnapshot 或世界事实校验。
 
 `TerrainParameters` 包含 roughness、terrainWarp、smoothing、ridgeSharpening、glacialErosion 与 hydraulicErosion；两项侵蚀强度范围 [0,1]，默认各 0.5，进入 T0 签名。旧键 continentalUpliftKm 仍在规划/执行、全缓存命中前拒绝。T0 算法版本变化与 Schema 3 升级是独立事件。
 
@@ -170,7 +172,7 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 ## 初步冰雪与水文产物 I0/H0
 
-M1.3A/B 新增 `CryosphereArtifact`（`cryosphere-i0-v1`）、`HydrologyArtifact`（当前 `hydrology-h0-v4`；历史初版为 v1/v2/v3）和 `StaticLakeArtifact`（当前 `static-lakes-l1-v6`；早期版本按面积过滤），单独生成时仍是阶段产物；完整自然请求将它们装入 Schema 3 `HydrologyState`。I0/H0 要求各自输入 Mesh 身份一致，月数据为 month-major 的 `12N`；L1 直接依赖 Mesh、T0、C0 和 H0。H0 在 Köppen BW 沙漠气候区只保留由非沙漠区来水占多数的河道；BS 半干旱区仍按气候驱动产流。L1 对 Köppen B 干旱气候占多数的地形洼地应用年入流与温度指数湖面蒸发筛选。生成配置中，`riverDensityMultiplier` 按倍率缩放汇水面积门槛（当前默认 0.5，使门槛高于旧默认）；`minimumLakeAreaKm2` 过滤较小湖泊候选（默认 0 保留两区域门槛）；前者影响 H0，后者影响 L1。它们仍是简化气候筛选，不是季节河或湖泊动态水量模拟。这些 Stage 不写入、不修改最终地形或海陆掩码。
+M1.3A/B 新增 `CryosphereArtifact`（`cryosphere-i0-v1`）、`HydrologyArtifact`（当前 `hydrology-h0-v4`；历史初版为 v1/v2/v3）和 `StaticLakeArtifact`（当前 `static-lakes-l1-v10`；早期版本按面积过滤，v6 曾对 Köppen B 占多数的洼地做年入流与土壤蒸散系数比较，v7 增加水深与气候筛选，v9 起将平均水深门槛降到 1 m，v10 移除海岸闭合抬升面特判并改由 T0 破口排海）。单独生成时仍是阶段产物；完整自然请求将它们装入 Schema 3 `HydrologyState`。I0/H0 要求各自输入 Mesh 身份一致，月数据为 month-major 的 `12N`；L1 直接依赖 Mesh、T0、C0 和 H0。H0 在 Köppen BW 沙漠气候区只保留由非沙漠区来水占多数的河道；BS 半干旱区仍按气候驱动产流。L1 排除平均水深不足 1 m 的填洼薄膜、最暖月低于 0°C 占一半及以上的冰原洼地，以及 Köppen BW 占一半及以上的荒漠洼地；其余候选要求湖面年降水大于与 E0 相同的温度指数潜在蒸散。生成配置中，`riverDensityMultiplier` 按倍率缩放汇水面积门槛（当前默认 0.5，使门槛高于旧默认）；`minimumLakeAreaKm2` 再过滤较小湖泊候选（默认 0 保留两区域门槛）；前者影响 H0，后者影响 L1。公转周期进入 L1 签名，土壤蒸散系数不再进入。它们仍是简化气候筛选，不是季节河或湖泊动态水量模拟。这些 Stage 不写入、不修改最终地形或海陆掩码。
 
 | 产物字段 | 类型/单位 | 语义 |
 | --- | --- | --- |

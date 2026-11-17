@@ -16,6 +16,8 @@ export interface GeographyState {
   readonly regions?: {
     /** Present when continent and ocean names were generated. */
     readonly nameContentSignature?: string
+    /** Present when names record which content pools supplied them. */
+    readonly namePoolIds?: { readonly continent: string, readonly ocean: string }
     readonly continentIndex: DenseField<Int32Array>
     readonly oceanIndex: DenseField<Int32Array>
     /** Added in geographic-regions-v2; absent in older classified archives. */

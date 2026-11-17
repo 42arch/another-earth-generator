@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-A browser project for procedural planets and map exploration, built with TypeScript, Svelte 5, Vite, and a pnpm workspace.
+A browser project for procedural planets and map exploration, built with TypeScript, Svelte 5, Vite, and a Bun workspace.
 
 ## Current capabilities
 
@@ -15,8 +15,8 @@ M1.1 currently produces generation artifacts. The latest terrain version is `ter
 ## Run locally
 
 ```sh
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
 Open the address printed by Vite and visit `/mesh-debug`. The UI offers L4–L8; L8 requires substantial memory. This is a debugging view, not the full product workspace.

@@ -1,4 +1,4 @@
-import type { ValidationIssue, ValidationResult } from '@another-earth/world-data'
+import type { ContentValidationIssue as ValidationIssue, ContentValidationResult as ValidationResult } from '#content/content-port'
 import type { SphericalMesh } from './spherical-mesh'
 import { sphericalTriangleArea } from '../math/spherical'
 import { icosphereRegionCount } from './icosphere'

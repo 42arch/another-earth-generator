@@ -3,12 +3,21 @@ import type { TerrainArtifact } from '#generation/nature/geography'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { HydrologyArtifact } from './hydrology'
 import { KOPPEN_CODES } from '#generation/nature/climate/koppen-classifier'
+import { estimatePotentialEvapotranspirationMm } from '#generation/nature/common/potential-evapotranspiration'
 
 const MINIMUM_LAKE_REGION_COUNT = 2
-const LAKE_ALGORITHM_VERSION = 'static-lakes-l1-v6' as const
+/**
+ * Sub-meter priority-flood films are numerical closures, not basins.
+ * Mean closure depth scales with local relief, so lowland basins are only a few
+ * meters deep while mountain basins are tens of meters. A tens-of-meters cut
+ * keeps the mountains and deletes the plains. One meter is below that lowland
+ * population and above the sub-meter film pile on the default L7 sample.
+ */
+const MINIMUM_MEAN_LAKE_DEPTH_KM = 0.001
+const UNSUITABLE_SURFACE_FRACTION = 0.5
+const LAKE_ALGORITHM_VERSION = 'static-lakes-l1-v10' as const
 
 export interface StaticLakeClimateParameters {
-  readonly evapotranspirationFactorMmPerCMonth: number
   readonly orbitalPeriodDays: number
 }
 
@@ -53,20 +62,24 @@ function assertFinite(values: ArrayLike<number>, label: string, minimum = -Infin
 
 /**
  * Finds retained terrain depressions from the difference between T0 elevation and
- * H0's spill surface. The spill surface remains a routing diagnostic; this output
- * does not modify terrain or claim dynamic lake storage.
+ * H0's spill surface. Sub-meter films, Köppen deserts, year-round frozen surfaces,
+ * and lake surfaces whose annual precipitation does not meet open-water evaporation
+ * are dropped. The spill surface remains a routing diagnostic; this output does not
+ * modify terrain or claim dynamic lake storage.
  */
-export function generateStaticLakesL1(mesh: SphericalMesh, terrain: Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>, hydrology: HydrologyArtifact, climate: Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'koppenClass'>, parameters: StaticLakeGenerationParameters, check?: (fraction: number) => void): StaticLakeArtifact {
+export function generateStaticLakesL1(mesh: SphericalMesh, terrain: Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>, hydrology: HydrologyArtifact, climate: Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'precipitationMm' | 'koppenClass'>, parameters: StaticLakeGenerationParameters, check?: (fraction: number) => void): StaticLakeArtifact {
   const n = mesh.regionCount
   if (terrain.meshId !== mesh.meshId || hydrology.meshId !== mesh.meshId || hydrology.terrainMeshId !== mesh.meshId
     || terrain.elevationKm.length !== n || terrain.landMask.length !== n || hydrology.regionCount !== n
     || hydrology.filledElevationKm.length !== n || hydrology.downstreamRegion.length !== n || hydrology.basinIndex.length !== n
-    || climate.meshId !== mesh.meshId || climate.regionCount !== n || !(climate.temperatureC instanceof Float32Array) || climate.temperatureC.length !== 12 * n || !(climate.koppenClass instanceof Uint8Array) || climate.koppenClass.length !== n
-    || !Number.isFinite(parameters.evapotranspirationFactorMmPerCMonth) || parameters.evapotranspirationFactorMmPerCMonth < 0
+    || climate.meshId !== mesh.meshId || climate.regionCount !== n || !(climate.temperatureC instanceof Float32Array) || climate.temperatureC.length !== 12 * n
+    || !(climate.precipitationMm instanceof Float32Array) || climate.precipitationMm.length !== 12 * n
+    || !(climate.koppenClass instanceof Uint8Array) || climate.koppenClass.length !== n
     || !Number.isFinite(parameters.orbitalPeriodDays) || parameters.orbitalPeriodDays <= 0
     || !Number.isFinite(parameters.minimumLakeAreaKm2) || parameters.minimumLakeAreaKm2 < 0) {
     throw new Error('Static lake input mesh mismatch')
   }
+  const monthDays = parameters.orbitalPeriodDays / 12
 
   const visited = new Uint8Array(n)
   const queue = new Uint32Array(n)
@@ -129,31 +142,43 @@ export function generateStaticLakesL1(mesh: SphericalMesh, terrain: Pick<Terrain
     if (routedRegion < 0)
       spillRegion = null
     const downstreamRegion = spillRegion === null ? null : routedRegion
-    {
-      let aridAreaKm2 = 0
-      let potentialEvaporationM3 = 0
-      for (const region of members) {
-        const climateCode = KOPPEN_CODES[climate.koppenClass[region]]
-        if (!climateCode)
-          throw new Error(`Invalid Köppen climate class at region ${region}`)
-        if (climateCode.startsWith('B'))
-          aridAreaKm2 += mesh.areaKm2[region]
-        let potentialEvaporationMm = 0
-        for (let month = 0; month < 12; month++) {
-          const temperature = climate.temperatureC[month * n + region]
-          if (!Number.isFinite(temperature))
-            throw new Error(`Invalid climate temperature at month ${month}, region ${region}`)
-          potentialEvaporationMm += Math.max(0, temperature) * parameters.evapotranspirationFactorMmPerCMonth
-        }
-        potentialEvaporationM3 += potentialEvaporationMm * mesh.areaKm2[region] * 1000
+    let depthAreaKm3 = 0
+    let frozenAreaKm2 = 0
+    let desertAreaKm2 = 0
+    let precipitationM3 = 0
+    let openWaterEvaporationM3 = 0
+    for (const region of members) {
+      const area = mesh.areaKm2[region]
+      const bedKm = terrain.elevationKm[region]
+      depthAreaKm3 += (waterLevelKm - bedKm) * area
+      const climateCode = KOPPEN_CODES[climate.koppenClass[region]]
+      if (!climateCode)
+        throw new Error(`Invalid Köppen climate class at region ${region}`)
+      if (climateCode.startsWith('BW'))
+        desertAreaKm2 += area
+      let warmestC = -Infinity
+      let precipitationMm = 0
+      let evaporationMm = 0
+      for (let month = 0; month < 12; month++) {
+        const temperature = climate.temperatureC[month * n + region]
+        const precipitation = climate.precipitationMm[month * n + region]
+        if (!Number.isFinite(temperature) || !Number.isFinite(precipitation) || precipitation < 0)
+          throw new Error(`Invalid lake climate at month ${month}, region ${region}`)
+        warmestC = Math.max(warmestC, temperature)
+        precipitationMm += precipitation
+        evaporationMm += estimatePotentialEvapotranspirationMm(temperature, monthDays)
       }
-      if (aridAreaKm2 >= areaKm2 * 0.5) {
-        const inflowRegion = spillRegion ?? basin.outletRegion
-        const annualInflowM3 = hydrology.accumulatedAnnualFlowM3s[inflowRegion] * parameters.orbitalPeriodDays * 86400
-        if (annualInflowM3 <= potentialEvaporationM3)
-          continue
-      }
+      if (warmestC < 0)
+        frozenAreaKm2 += area
+      precipitationM3 += precipitationMm * area * 1000
+      openWaterEvaporationM3 += evaporationMm * area * 1000
     }
+    if (depthAreaKm3 < MINIMUM_MEAN_LAKE_DEPTH_KM * areaKm2)
+      continue
+    if (frozenAreaKm2 >= areaKm2 * UNSUITABLE_SURFACE_FRACTION || desertAreaKm2 >= areaKm2 * UNSUITABLE_SURFACE_FRACTION)
+      continue
+    if (precipitationM3 <= openWaterEvaporationM3)
+      continue
     const index = lakes.length
     const lake: StaticLake = {
       id: `${mesh.meshId}:lake:${members[0]}`,

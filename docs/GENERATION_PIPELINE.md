@@ -1,6 +1,6 @@
 # Generation Pipeline 与 Worker
 
-2026-11-13 `geographic-regions-v3` 依赖 Mesh、Geology 和最终 Terrain，读取候选大陆来源与最终海陆掩码，无独立配置或随机流。阶段输出大陆、洋、海的区域索引和面积表；沿用 v2 的海岸距离/海峡收窄后的洋海等级，并在宽阔洋区内按离岸峰值间的通路收窄程度划分多个大洋，抑制小面积碎区。`geographic-names-v2` 依赖该分区产物，声明 `geographic-names` 内容签名，通过 `loadBuiltinGenerationCatalog()` 读取 `world-data` 的 `geography-zh` 大陆/大洋中文词库，以 Seed、稳定区域 ID、词库 ID 和内容签名确定性命名；同类重名使用中文序号。词库或命名版本变化只使名称阶段失效；T0/海陆变化使分区与名称阶段重算，不使气候、水文和生态重算。Worker 传输带名称的独立副本，完整自然世界组装时复制入快照。旧 `geography` 词库保留供历史档案解析。当前未运行缓存、Worker 或性能验证。
+2026-11-13 `geographic-regions-v3` 依赖 Mesh、Geology 和最终 Terrain，读取候选大陆来源与最终海陆掩码，无独立配置或随机流。阶段输出大陆、洋、海的区域索引和面积表；沿用 v2 的海岸距离/海峡收窄后的洋海等级，并在宽阔洋区内按离岸峰值间的通路收窄程度划分多个大洋，抑制小面积碎区。`geographic-names` 依赖该分区产物，阶段版本为纯 `geographic-names-v2`，不再把内容签名写进版本字符串，也不再调用 `loadBuiltinGenerationCatalog()`。它声明内容键 `geographic-name-pools`；调用方传入大陆/大洋 `NamePoolView`，并提供 `contentSignatures['geographic-name-pools']`。缓存键已经包含该签名，词库变化只使名称阶段失效。命名仍由 Seed、稳定区域 ID、词库 ID 和内容签名决定，同类重名使用中文序号；新产物写入 `namePoolIds`。`apps/web` 注入 `geography-zh` 中文词库。T0/海陆变化使分区与名称阶段重算，不使气候、水文和生态重算。Worker 传输带名称的独立副本，完整自然世界组装时复制入快照。旧 `geography` 词库保留供历史档案解析。`ecology-e0` 另声明内容键 `ecology-classes`，算法版本仍是 `ecology-e0-v3`；调用方传入生物群系与土地覆盖词表，签名必须等于 `ecologyVocabularySignature`。
 
 > 更新：2026-11-13。记录当前执行与缓存契约，不表示完整 M1 已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
@@ -41,18 +41,18 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | plate-dynamics | terrain-v2 | reference-mesh、plate-topology、continental-crust |
 | tectonics | terrain-v2 | mesh、geology、plate-topology、continental-crust、plate-dynamics |
 | tectonic-elevation | terrain-skeleton-v10 | mesh、geology、tectonics |
-| terrain | terrain-v26 | mesh、geology、tectonics、tectonic-elevation |
+| terrain | terrain-v27 | mesh、geology、tectonics、tectonic-elevation |
 | geographic-regions | geographic-regions-v3 | mesh、geology、terrain |
-| geographic-names | geographic-names-v2 + 内容签名 | geographic-regions |
+| geographic-names | geographic-names-v2 | geographic-regions；内容键 `geographic-name-pools` |
 | climate-c0 | climate-c0-v21 | mesh、reference-mesh、geology、terrain |
 | cryosphere-i0 | cryosphere-i0-v1 | mesh、terrain、climate-c0 |
 | hydrology-h0 | hydrology-h0-v4 | mesh、terrain、climate-c0、cryosphere-i0 |
-| static-lakes-l1 | static-lakes-l1-v6 | mesh、terrain、climate-c0、hydrology-h0 |
-| ecology-e0 | ecology-e0-v3 | mesh、terrain、climate-c0 |
+| static-lakes-l1 | static-lakes-l1-v10 | mesh、terrain、climate-c0、hydrology-h0 |
+| ecology-e0 | ecology-e0-v3 | mesh、terrain、climate-c0；内容键 `ecology-classes` |
 
 前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry，再追加地形、地理分区与地名 Stage。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用该分支并添加 I0/H0/L1；Ecology Pipeline 另建 C0 Registry 并追加 E0。两条调试分支共享 StageCache 的可复用上游产物，但 E0 单独计划不包含任何水文 Stage。Natural Pipeline 在同一 DAG 中包含 I0/H0/L1/E0，E0 仍直接依赖 Mesh/T0/C0，水文参数变化不会使 E0 Stage 失效。
 
-H0 缓存签名包含蒸散系数、基准汇水面积、河网密度倍率和公转周期；L1 包含最小湖泊面积、蒸散系数和公转周期。调整河网参数重算 H0 及其下游，调整湖泊面积只使 L1 失效；上游气候和地形产物保持可复用。
+H0 缓存签名包含蒸散系数、基准汇水面积、河网密度倍率和公转周期；L1 包含最小湖泊面积和公转周期。调整河网参数重算 H0 及其下游，调整湖泊面积或公转周期只使 L1 失效；上游气候和地形产物保持可复用。土壤蒸散系数不再进入 L1 签名。
 
 配置按源码 configKeys 声明：Mesh 读等级、扰动、可选 Mesh Seed、物理半径；参考 Mesh 另读参考等级（默认 L6，显式 L2–L6）；板块读主/微板块数和板块面积差异；大陆读大陆数、面积差异与候选覆盖率；骨架读三项 landforms；terrain 读纹理/扭曲/平滑、山脊锐化、水力/冰川侵蚀强度、islandDensity 和海平面基准。侵蚀强度只使 terrain Stage 失效。
 
@@ -76,7 +76,7 @@ H0 缓存签名包含蒸散系数、基准汇水面积、河网密度倍率和�
 
 roughness 可调纹理强度按 `(roughness/0.4)³` 响应。`terrain.glacialErosion` 与 `terrain.hydraulicErosion` 范围 [0,1]，默认 0.5，阶段内 km 转换前运行；水力参数进入处理器前统一乘以 0.5，冰川参数不缩放。当前不读取气候/降雨。旧 `continentalUpliftKm` 参数即便为零也在计划/执行前报错，包括全缓存命中。
 
-I0 配置通过 `hydrology.snowTemperatureMinC`、`snowTemperatureMaxC` 和 `degreeDayMeltFactorMmPerCMonth` 进入签名；H0 读取蒸散系数、基准汇水面积、`riverDensityMultiplier` 和公转周期。河道阈值为 `max(minimumRiverDrainageAreaKm2, 16 × 平均网格面积) / riverDensityMultiplier`，并要求累计流量大于零。L1 直接读取 C0 与 H0，并按干旱气候年入流/湖面蒸散约束候选；`minimumLakeAreaKm2` 过滤小湖候选。调整河网倍率/基准会重算 H0 及下游，调整最小湖泊面积只使 L1 失效。
+I0 配置通过 `hydrology.snowTemperatureMinC`、`snowTemperatureMaxC` 和 `degreeDayMeltFactorMmPerCMonth` 进入签名；H0 读取蒸散系数、基准汇水面积、`riverDensityMultiplier` 和公转周期。河道阈值为 `max(minimumRiverDrainageAreaKm2, 16 × 平均网格面积) / riverDensityMultiplier`，并要求累计流量大于零。L1 读取 C0 月降水、月温和 Köppen，并按平均水深、冰原、荒漠和湖面降水/潜在蒸散筛选候选；`minimumLakeAreaKm2` 再过滤小湖。调整河网倍率/基准会重算 H0 及下游。调整最小湖泊面积或公转周期只使 L1 失效；土壤蒸散系数不再进入 L1 签名。
 
 ## DAG、签名与随机流
 
@@ -110,7 +110,7 @@ Worker/Controller 支持 Mesh、Geology、Terrain、C0、水文、E0 调试请�
 
 ## 未来的气候、水文与侵蚀
 
-当前顺序为 `T0（基础水力/冰川侵蚀） → C0 → I0 → H0 → L1`。I0 按月温度/降水计算线性雨雪分配、雪水当量储量与融雪；H0 用温度指数蒸散近似和 Priority Flood 生成径流、排水树、流域与阈值河段；L1 v6 将 `filledElevationKm > terrain.elevationKm` 的陆地区域分成连通洼地，只保留至少覆盖两个 Mesh 区域且不小于 `minimumLakeAreaKm2` 的静态湖泊。水位取成员区域的最大 Priority Flood 高程；溢流口取湖内指向外部路由区域的边界区。该水位只表示静态溢流几何，不等于水量平衡结果，也不改地形。湖泊 ID 由 Mesh ID 与成员最小区域索引构成。无海洋网格时，H0 内流根语义传至湖泊；它不表示存在海洋的行星已具备完整内流湖判定。旧 v4 Core/Web 检查、3 Seed × L4/L5/L6 基准见 [M1.3B 基准](benchmarks/M1.3B-static-lakes.json)，不覆盖当前 v6 参数与 climate 筛选。Priority Flood 长条洼地可能对应河谷或泛滥平原型潜在积水区，尚不能保证全部是气候意义上的湖泊。Playwright headless E2E 受 Chrome 进程启动失败限制。
+当前顺序为 `T0（基础水力/冰川侵蚀） → C0 → I0 → H0 → L1`。I0 按月温度/降水计算线性雨雪分配、雪水当量储量与融雪；H0 用温度指数蒸散近似和 Priority Flood 生成径流、排水树、流域与阈值河段；L1 v10 将 `filledElevationKm > terrain.elevationKm` 的陆地区域分成连通洼地，只保留至少覆盖两个 Mesh 区域、不小于 `minimumLakeAreaKm2`、平均水深至少 1 m，且湖面不是荒漠或全年封冻、年降水大于开放水面潜在蒸散的静态湖泊；末端小水体闭合产生的近岸洼地已在 T0 `terrain-v27` 破口排海，不在 L1 做高程特判。水位取成员区域的最大 Priority Flood 高程；溢流口取湖内指向外部路由区域的边界区。该水位只表示静态溢流几何，不等于逐月储水，也不改地形。湖泊 ID 由 Mesh ID 与成员最小区域索引构成。无海洋网格时，H0 内流根语义传至湖泊；它不表示存在海洋的行星已具备完整内流湖判定。旧 v4 Core/Web 检查、3 Seed × L4/L5/L6 基准见 [M1.3B 基准](benchmarks/M1.3B-static-lakes.json)，不覆盖当前 v7 的深度和气候筛选。Priority Flood 长条洼地仍可能对应河谷；1 m 平均水深只去掉不足一米的填洼薄膜，低地数米深的闭合仍会成湖。
 
 E0 从与水文平行的 DAG 分支运行：读取 C0 的 12 个等时长气候箱和 T0 海陆/高程，对全部陆地区域（包括 L1 标记的湖泊成员及 H0 河道区域）依气候与地形分类；不读取 I0/H0/L1，不按水文成员跳过或覆盖分类结果。C0 年均温/年降水作为唯一年度统计来源。分类词表由 `world-data` 拥有；E0 不生成湿地/农业字段，也不修改地形、湖泊或海陆。雪冰分类是温度/降水启发式代理。C0 变化会使 E0 及水文分支分别失效；水文参数变化不应使 E0 失效。E0 不代表最终 C1 驱动结果。
 

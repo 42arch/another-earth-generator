@@ -1,8 +1,8 @@
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { TerrainArtifact } from '#generation/nature/geography'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
-import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
 import { describe, expect, it } from 'vitest'
+import { testEcologyVocabulary } from '#content/test-content'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { generateEcologyE0, queryEcologyRegion, validateEcologyArtifact } from './ecology'
 
 const mesh = createSphericalMesh({ subdivisionLevel: 0, physicalRadiusKm: 6371 })
@@ -45,29 +45,29 @@ describe('e0 ecology contract', () => {
     setRegion(1, 26, 200, 1) // Af
     setRegion(2, 30, 0, 5) // BWh
     setRegion(3, -20, 20, 31) // EF
-    const ecology = generateEcologyE0(mesh, terrain, climate, 365.25)
+    const ecology = generateEcologyE0(testEcologyVocabulary, mesh, terrain, climate, 365.25)
     expect(() => validateEcologyArtifact(ecology, mesh.meshId, n)).not.toThrow()
-    expect(queryEcologyRegion(ecology, 0)).toMatchObject({ potentialBiomeCode: 'Ocean', landCoverCode: 'Ocean', growingSeasonMonths: 0 })
-    expect(queryEcologyRegion(ecology, 1)).toMatchObject({ potentialBiomeCode: 'TropicalRainforest', landCoverCode: 'Forest', growingSeasonMonths: 12 })
-    expect(queryEcologyRegion(ecology, 2)).toMatchObject({ potentialBiomeCode: 'HotDesert', landCoverCode: 'Desert', aridityIndex: 0 })
-    expect(queryEcologyRegion(ecology, 3)).toMatchObject({ potentialBiomeCode: 'IceSheet', landCoverCode: 'SnowIce', growingSeasonMonths: 0 })
-    expect(ecology.potentialBiomeIds).toEqual(NATURAL_BIOME_DEFINITIONS.map(definition => definition.id))
-    expect(ecology.landCoverIds).toEqual(NATURAL_LAND_COVER_DEFINITIONS.map(definition => definition.id))
-    expect(() => queryEcologyRegion(ecology, n)).toThrow(RangeError)
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, 0)).toMatchObject({ potentialBiomeCode: 'Ocean', landCoverCode: 'Ocean', growingSeasonMonths: 0 })
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, 1)).toMatchObject({ potentialBiomeCode: 'TropicalRainforest', landCoverCode: 'Forest', growingSeasonMonths: 12 })
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, 2)).toMatchObject({ potentialBiomeCode: 'HotDesert', landCoverCode: 'Desert', aridityIndex: 0 })
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, 3)).toMatchObject({ potentialBiomeCode: 'IceSheet', landCoverCode: 'SnowIce', growingSeasonMonths: 0 })
+    expect(ecology.potentialBiomeIds).toEqual(testEcologyVocabulary.biomes.map(definition => definition.id))
+    expect(ecology.landCoverIds).toEqual(testEcologyVocabulary.landCover.map(definition => definition.id))
+    expect(() => queryEcologyRegion(testEcologyVocabulary, ecology, n)).toThrow(RangeError)
   })
 
   it('rejects inconsistent annual input and corrupt classification indices', () => {
     const { terrain, climate, setRegion } = inputs()
     setRegion(1, 26, 200, 1)
     climate.annualPrecipitationMm[1] = 0
-    expect(() => generateEcologyE0(mesh, terrain, climate, 365.25)).toThrow('annual climate aggregation')
+    expect(() => generateEcologyE0(testEcologyVocabulary, mesh, terrain, climate, 365.25)).toThrow('annual climate aggregation')
     climate.annualPrecipitationMm[1] = 2400
     climate.precipitationMm[n + 1] = -1
     climate.annualPrecipitationMm[1] = 2199
-    expect(() => generateEcologyE0(mesh, terrain, climate, 365.25)).toThrow('invalid climate')
+    expect(() => generateEcologyE0(testEcologyVocabulary, mesh, terrain, climate, 365.25)).toThrow('invalid climate')
     climate.precipitationMm[n + 1] = 200
     climate.annualPrecipitationMm[1] = 2400
-    const ecology = generateEcologyE0(mesh, terrain, climate, 365.25)
+    const ecology = generateEcologyE0(testEcologyVocabulary, mesh, terrain, climate, 365.25)
     ecology.potentialBiomeIndex[1] = ecology.potentialBiomeIds.length
     expect(() => validateEcologyArtifact(ecology, mesh.meshId, n)).toThrow('values')
   })
@@ -87,9 +87,9 @@ describe('e0 ecology contract', () => {
     centers[polar * 3 + 2] = 0
     centers[equatorial * 3 + 1] = 0
     centers[equatorial * 3 + 2] = 0.99
-    const ecology = generateEcologyE0({ ...mesh, centers }, terrain, climate, 365.25)
-    expect(queryEcologyRegion(ecology, polar).potentialBiomeCode).toBe('IceSheet')
-    expect(queryEcologyRegion(ecology, equatorial).potentialBiomeCode).toBe('Tundra')
+    const ecology = generateEcologyE0(testEcologyVocabulary, { ...mesh, centers }, terrain, climate, 365.25)
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, polar).potentialBiomeCode).toBe('IceSheet')
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, equatorial).potentialBiomeCode).toBe('Tundra')
   })
 
   it('uses the Y hemisphere for seasonal dry-summer classification', () => {
@@ -105,8 +105,8 @@ describe('e0 ecology contract', () => {
     centers[1 * 3 + 2] = 0
     centers[2 * 3 + 1] = -0.3
     centers[2 * 3 + 2] = 0
-    const ecology = generateEcologyE0({ ...mesh, centers }, terrain, climate, 365.25)
-    expect(queryEcologyRegion(ecology, 1).potentialBiomeCode).toBe('MediterraneanShrubland')
-    expect(queryEcologyRegion(ecology, 2).potentialBiomeCode).toBe('TemperateGrassland')
+    const ecology = generateEcologyE0(testEcologyVocabulary, { ...mesh, centers }, terrain, climate, 365.25)
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, 1).potentialBiomeCode).toBe('MediterraneanShrubland')
+    expect(queryEcologyRegion(testEcologyVocabulary, ecology, 2).potentialBiomeCode).toBe('TemperateGrassland')
   })
 })

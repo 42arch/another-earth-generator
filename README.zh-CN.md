@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-浏览器中的过程化星球生成与地图探索项目，采用 TypeScript、Svelte 5、Vite 和 pnpm Workspace。
+浏览器中的过程化星球生成与地图探索项目，采用 TypeScript、Svelte 5、Vite 和 Bun Workspace。
 
 ## 当前能力
 
@@ -15,8 +15,8 @@
 ## 本地运行
 
 ```sh
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
 打开终端给出的地址并进入 `/mesh-debug`。UI 提供 L4–L8，L8 需要较多内存；它是调试入口，尚非完整产品工作台。

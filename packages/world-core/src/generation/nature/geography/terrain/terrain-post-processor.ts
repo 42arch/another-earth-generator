@@ -170,7 +170,7 @@ export class TerrainPostProcessor {
       finalized.fields.topologyDelta,
       finalized.fields.topologyChanged,
     )
-    this.erosionProcessor.rebuildDrainage(mesh, elevation, oceanMask, erosion)
+    this.erosionProcessor.rebuildDrainage(mesh, elevation, this.buildOceanMask(elevation), erosion)
 
     const landMask = new Uint8Array(mesh.numRegions)
     for (let region = 0; region < mesh.numRegions; region++) {

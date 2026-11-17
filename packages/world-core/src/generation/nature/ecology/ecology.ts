@@ -1,14 +1,11 @@
+import type { EcologyClassView, EcologyVocabulary } from '#content/content-port'
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
-import type { EcologyClassDefinition } from '@another-earth/world-data'
 import { KOPPEN_CODES } from '#generation/nature/climate/koppen-classifier'
 import { estimatePotentialEvapotranspirationMm } from '#generation/nature/common/potential-evapotranspiration'
-import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
 
 const ALGORITHM_VERSION = 'ecology-e0-v3' as const
-const BIOME_INDEX = new Map<string, number>(NATURAL_BIOME_DEFINITIONS.map((definition, index) => [definition.code, index] as const))
-const LAND_COVER_INDEX = new Map<string, number>(NATURAL_LAND_COVER_DEFINITIONS.map((definition, index) => [definition.code, index] as const))
 
 export interface EcologyArtifact {
   readonly meshId: string
@@ -32,17 +29,10 @@ export interface BiomeSeriesResult {
   readonly growingSeasonMonths: number
 }
 
-function biomeCode(code: string): number {
-  const index = BIOME_INDEX.get(code)
-  if (index === undefined)
-    throw new Error(`Unknown natural biome code ${code}`)
-  return index
-}
-
-function landCoverCode(code: string): number {
-  const index = LAND_COVER_INDEX.get(code)
-  if (index === undefined)
-    throw new Error(`Unknown natural land-cover code ${code}`)
+function codeIndex(definitions: readonly EcologyClassView[], code: string, kind: string): number {
+  const index = definitions.findIndex(definition => definition.code === code)
+  if (index < 0)
+    throw new Error(`Unknown natural ${kind} code ${code}`)
   return index
 }
 
@@ -182,16 +172,14 @@ function landCoverForBiome(code: string): string {
   return 'Tundra'
 }
 
-function ids(definitions: readonly EcologyClassDefinition[]): readonly string[] {
+function ids(definitions: readonly EcologyClassView[]): readonly string[] {
   return Object.freeze(definitions.map(definition => definition.id))
 }
-
-const potentialBiomeIds = ids(NATURAL_BIOME_DEFINITIONS)
-const landCoverIds = ids(NATURAL_LAND_COVER_DEFINITIONS)
 
 export type EcologyClimateInput = Pick<ClimateArtifact, 'meshId' | 'terrainMeshId' | 'monthsPerYear' | 'layout' | 'regionCount' | 'temperatureC' | 'precipitationMm' | 'annualMeanTemperatureC' | 'annualPrecipitationMm' | 'koppenClass'>
 
 export function generateEcologyE0(
+  vocabulary: EcologyVocabulary,
   mesh: Pick<SphericalMesh, 'meshId' | 'regionCount' | 'centers'>,
   terrain: Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>,
   climate: EcologyClimateInput,
@@ -212,6 +200,8 @@ export function generateEcologyE0(
     throw new Error('Ecology input mesh or artifact mismatch')
   }
 
+  const potentialBiomeIds = ids(vocabulary.biomes)
+  const landCoverIds = ids(vocabulary.landCover)
   const potentialBiomeIndex = new Uint16Array(n)
   const landCoverIndex = new Uint16Array(n)
   const aridityIndex = new Float32Array(n)
@@ -223,8 +213,8 @@ export function generateEcologyE0(
     if ((region & 1023) === 0)
       check?.(region / n)
     if (!terrain.landMask[region]) {
-      potentialBiomeIndex[region] = biomeCode('Ocean')
-      landCoverIndex[region] = landCoverCode('Ocean')
+      potentialBiomeIndex[region] = codeIndex(vocabulary.biomes, 'Ocean', 'biome')
+      landCoverIndex[region] = codeIndex(vocabulary.landCover, 'Ocean', 'land-cover')
       continue
     }
 
@@ -255,8 +245,8 @@ export function generateEcologyE0(
       orbitalPeriodDays,
       annualMeanTemperature,
     )
-    potentialBiomeIndex[region] = biomeCode(result.potentialBiomeCode)
-    landCoverIndex[region] = landCoverCode(landCoverForBiome(result.potentialBiomeCode))
+    potentialBiomeIndex[region] = codeIndex(vocabulary.biomes, result.potentialBiomeCode, 'biome')
+    landCoverIndex[region] = codeIndex(vocabulary.landCover, landCoverForBiome(result.potentialBiomeCode), 'land-cover')
     aridityIndex[region] = result.aridityIndex
     growingSeasonMonths[region] = result.growingSeasonMonths
   }
@@ -275,6 +265,8 @@ export function generateEcologyE0(
     aridityIndex,
     growingSeasonMonths,
   }
+  if (artifact.potentialBiomeIds.some((id, index) => id !== potentialBiomeIds[index]) || artifact.landCoverIds.some((id, index) => id !== landCoverIds[index]))
+    throw new Error('Ecology vocabulary does not match the artifact')
   validateEcologyArtifact(artifact, mesh.meshId, n)
   return artifact
 }
@@ -283,8 +275,8 @@ export function validateEcologyArtifact(value: EcologyArtifact | null | undefine
   const n = regionCount
   if (!value || !meshId || !Number.isInteger(n) || n! < 1 || value.meshId !== meshId || value.terrainMeshId !== meshId
     || value.climateMeshId !== meshId || value.algorithmVersion !== ALGORITHM_VERSION || value.regionCount !== n
-    || !Array.isArray(value.potentialBiomeIds) || value.potentialBiomeIds.length !== potentialBiomeIds.length || value.potentialBiomeIds.some((id, index) => id !== potentialBiomeIds[index])
-    || !Array.isArray(value.landCoverIds) || value.landCoverIds.length !== landCoverIds.length || value.landCoverIds.some((id, index) => id !== landCoverIds[index])
+    || !Array.isArray(value.potentialBiomeIds) || value.potentialBiomeIds.length < 1 || value.potentialBiomeIds.some(id => typeof id !== 'string' || !id.trim())
+    || !Array.isArray(value.landCoverIds) || value.landCoverIds.length < 1 || value.landCoverIds.some(id => typeof id !== 'string' || !id.trim())
     || !(value.potentialBiomeIndex instanceof Uint16Array) || value.potentialBiomeIndex.length !== n
     || !(value.landCoverIndex instanceof Uint16Array) || value.landCoverIndex.length !== n
     || !(value.aridityIndex instanceof Float32Array) || value.aridityIndex.length !== n
@@ -299,19 +291,23 @@ export function validateEcologyArtifact(value: EcologyArtifact | null | undefine
   }
 }
 
-export function queryEcologyRegion(ecology: EcologyArtifact, region: number) {
+export function queryEcologyRegion(vocabulary: EcologyVocabulary, ecology: EcologyArtifact, region: number) {
   if (!Number.isInteger(region) || region < 0 || region >= ecology.regionCount)
     throw new RangeError('Invalid ecology region')
   const biomeIndex = ecology.potentialBiomeIndex[region]
   const landCoverIndex = ecology.landCoverIndex[region]
+  const biome = vocabulary.biomes[biomeIndex]
+  const cover = vocabulary.landCover[landCoverIndex]
+  if (!biome || biome.id !== ecology.potentialBiomeIds[biomeIndex] || !cover || cover.id !== ecology.landCoverIds[landCoverIndex])
+    throw new Error('Ecology vocabulary does not match the artifact')
   return Object.freeze({
     region,
-    potentialBiomeId: ecology.potentialBiomeIds[biomeIndex],
-    potentialBiomeCode: NATURAL_BIOME_DEFINITIONS[biomeIndex].code,
-    potentialBiomeLabel: NATURAL_BIOME_DEFINITIONS[biomeIndex].nameZh,
-    landCoverId: ecology.landCoverIds[landCoverIndex],
-    landCoverCode: NATURAL_LAND_COVER_DEFINITIONS[landCoverIndex].code,
-    landCoverLabel: NATURAL_LAND_COVER_DEFINITIONS[landCoverIndex].nameZh,
+    potentialBiomeId: biome.id,
+    potentialBiomeCode: biome.code,
+    potentialBiomeLabel: biome.nameZh,
+    landCoverId: cover.id,
+    landCoverCode: cover.code,
+    landCoverLabel: cover.nameZh,
     aridityIndex: ecology.aridityIndex[region],
     growingSeasonMonths: ecology.growingSeasonMonths[region],
   })

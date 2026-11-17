@@ -4,9 +4,9 @@
 
 ## 0. 架构与当前边界
 
-采用 pnpm Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
+采用 Bun Workspace：`world-data` 提供内容，`world-core` 拥有生成规则和世界事实，`cartography` 只读制图，`apps/web` 编排 UI、Worker 和浏览器存储。跨包只通过 exports，核心不依赖 DOM、Three.js、Svelte 或 Worker 全局对象。
 
-M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路、M1.3A I0/H0 初步冰雪/水文及 M1.3B L1 静态湖泊已实现；用户于 2026-11-12 决定收尾本轮 M1。T0 `terrain-v25` 的小型负高程水体清理有历史多 Seed/分辨率基准；当前 `terrain-v26` 保留相同地形生成结果并携带卫星渲染纹理，地形自动化与空间形态复验仍延期。M1.4 E0 v3 已在 T0/C0 输入上完成专项分类、固定 Seed 形态和真实 Chrome Worker 验收；修复 v2 的纬度轴错误。M1.5 Schema 3 完整自然快照及 Web 发布链路的定向测试、typecheck 与真实 Chrome 主路径已通过，未完成的全量性能矩阵、T0 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存延期（详见 [PROGRESS](PROGRESS.md)）。参考项目 UI 已迁至 `apps/web/src/ui/{components,hud,state}`，首次打开自动以 Seed 1024、L7、扰动 0.75 生成当前 E0 自然链；主应用入口为 `/`，由 `src/world-view/WorldView.svelte` 承载世界视图与生成交互。正式 3D/2D Atlas、浏览器项目存储或初始文明仍未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
+M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路、M1.3A I0/H0 初步冰雪/水文及 M1.3B L1 静态湖泊已实现；用户于 2026-11-12 决定收尾本轮 M1。T0 `terrain-v25` 的小型负高程水体清理有历史多 Seed/分辨率基准；`terrain-v26` 携带卫星渲染纹理；当前 `terrain-v27` 在末端小水体闭合后对封闭近岸洼地破口排海，地形自动化与空间形态复验仍延期。M1.4 E0 v3 已在 T0/C0 输入上完成专项分类、固定 Seed 形态和真实 Chrome Worker 验收；修复 v2 的纬度轴错误。M1.5 Schema 3 完整自然快照及 Web 发布链路的定向测试、typecheck 与真实 Chrome 主路径已通过，未完成的全量性能矩阵、T0 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存延期（详见 [PROGRESS](PROGRESS.md)）。参考项目 UI 已迁至 `apps/web/src/ui/{components,hud,state}`，首次打开自动以 Seed 1024、L7、扰动 0.75 生成当前 E0 自然链；主应用入口为 `/`，由 `src/world-view/WorldView.svelte` 承载世界视图与生成交互。正式 3D/2D Atlas、浏览器项目存储或初始文明仍未交付。M0–M4 为默认范围；M5+ 的模拟、编辑器和历史只保留必要设计边界。
 
 ## 1. 产品边界与设计原则
 
@@ -35,7 +35,7 @@ M0 工程基础、M1.1 历史验收、M1.2 C0 实现/链路、M1.3A I0/H0 初步
 
 | 层级 | V1 选型 | 边界/决策 |
 | --- | --- | --- |
-| 仓库 | `pnpm-workspace.yaml`、TypeScript 严格模式 | 保持少量高内聚 Package |
+| 仓库 | `package.json` `workspaces` + Bun、TypeScript 严格模式 | 保持少量高内聚 Package |
 | UI | Svelte 5、Vite、Bits UI、Tailwind CSS | 客户端工作台；深度响应式状态不包裹巨型 TypedArray |
 | 图形 | Three.js `WebGLRenderer`（WebGL2） | 一个 Canvas，3D 球面 + 2D 地图两种 View |
 | 网格与数学 | TypeScript + TypedArray、球面图算法 | 与 Three.js 完全解耦 |
@@ -128,7 +128,7 @@ another-earth/
 │   ├── GENERATION_PIPELINE.md
 │   ├── PROGRESS.md
 │   └── M1_IMPLEMENTATION_PLAN.md
-├── pnpm-workspace.yaml
+├── package.json
 └── tsconfig.base.json
 ```
 
@@ -137,29 +137,25 @@ another-earth/
 ### 3.1 Package 依赖规则
 
 ```text
-world-data  ──不依赖其他业务 Package──► 纯数据/类型/校验
-     │
-     ▼
-world-core  ──依赖 world-data 的公开内容契约；不依赖渲染与 UI
-     │
-     ▼
-cartography ──消费 world-core 发布的只读数据接口
-     ▲
-     │
-apps/web ─────编排 world-data、world-core 和 cartography；负责浏览器适配
+world-data    不依赖其他业务 Package。拥有内容包、词库、哈希与包校验。
+world-core    不依赖 world-data、cartography、渲染与 UI。只声明内容视图，由调用方注入。
+cartography   生产代码只依赖 world-core 的只读查询；不修改世界事实，也不依赖 world-data。
+apps/web      编排三者：从 world-data 装载内容并注入 world-core，只读消费 cartography。
 ```
 
 - `world-data` 允许依赖通用的 Schema/校验工具，但**不得导入 `world-core`、`cartography` 或 `apps/web`**。
-- `world-core` 不允许导入 Three.js、Svelte、DOM；Worker 只是运行容器，不是算法自身的依赖。
-- `cartography` 应依赖 `world-core` 的只读查询模型，**禁止修改权威世界字段**；内置地图样式属于 `cartography/styles`，不是 `world-data`。
-- `apps/web` 不应绕过公开 API 修改底层网格或文明数据。
-- 暂不为每个算法子目录创建一个 Package；未来出现独立复用或发布需求时再拆。
+- `world-core` 不允许导入任何 `@another-earth/*`、Three.js、Svelte 或 DOM；Worker 只是运行容器，不是算法自身的依赖。内容哈希、包校验和词库正文留在 `world-data`。
+- `cartography` 依赖 `world-core` 的只读查询模型，**禁止修改权威世界字段**；生产代码不导入 `world-data`。内置地图样式属于 `cartography/styles`，不是 `world-data`。
+- `apps/web` 不应绕过公开 API 修改底层网格或文明数据。它是内容组装根：读取 `world-data`，实现 `ContentPort`，再交给生成、发布和存档。
+- 暂不为每个算法子目录创建一个 Package，也不另设共享契约包；未来出现独立复用或发布需求时再拆。
+
+**已定决策（2026-11-17）**：`world-core` 与 `world-data` 编译期独立。删除 `loadBuiltinContentPacks()`。调用方传入 `ContentPackView` 和 `ContentPort`；发布与存档仍通过该端口重算哈希与签名，不接受与端口不一致的内容身份。生成内容走 `GenerationInput.content` 与 `contentSignatures`，不进入显示状态。`cartography` 仍是独立包，只由 `apps/web` 引用。
 
 ### 3.2 基础工程要求
 
 - 全仓使用统一 TypeScript 严格配置、ESLint、格式化和 import 边界校验。
 - 各 Package 具备明确 `exports`；避免业务层通过 `../../packages/.../internal` 访问实现细节。
-- 支持 `pnpm -r build`、`pnpm -r test`、`pnpm -r typecheck`、`pnpm -r lint` 的明确脚本。
+- 支持 `bun run build`、`bun run test`、`bun run typecheck`、`bun run lint` 的明确脚本。
 - 依赖版本由仓库锁文件管理；核心包可独立在 Node 测试环境中运行。
 
 ---
@@ -257,6 +253,8 @@ export interface ResolvedContentCatalog {
 **命名初版实现（2026-11-13）**：新增 `geographic-names-v1` Stage，只依赖已确认的地理分区，读取 `world-data` 的大陆/大洋词库及 `geographic-names` 内容签名。名称从 Seed、稳定区域 ID、词库 ID、命名版本和内容签名选取；同类冲突按稳定 ID 顺序以哈希后缀消歧。输出仍使用分区产物的索引与面积，新增名称和 `nameContentSignature`；完整快照保存实际名称并校验内容包签名一致。海保持无名。v1 当时只使用内置词库和原始专名，图例与侦测显示类型后缀；地图表面文字标签当时尚未实现。用户手动覆盖与跨区域重划后的名称迁移仍待实现。名称 Stage 独立缓存，变更词库不会重算地形和海盆。旧 Schema 3 档案不强制补名。
 
 **中文名称调整（2026-11-13）**：当前 `geographic-names-v2` 改用 `geography-zh` 中文专名内容包，大陆和大洋各 24 个候选；同类重名按稳定 ID 顺序追加中文序号。原 `geography` 拉丁词库保留在完整 Catalog 中以支持已有档案；新世界仅选择 `core`、`earthlike`、`geography-zh` 三包，旧快照的实际名称不被自动翻译或改写。名称作为中文事实保存，界面直接补“大陆”或“洋”；海不命名。新增内容包和算法版本会使名称 Stage 重算，地理分区阶段仍可缓存复用。手动改名和自定义词库仍待实现。
+
+**内容注入（2026-11-17）**：名称阶段不再调用 `loadBuiltinGenerationCatalog()`。版本字符串仍是 `geographic-names-v2`；词库正文和内容签名由调用方以 `geographic-name-pools` 注入，签名进入缓存键而不是阶段版本。`apps/web` 仍注入 `geography-zh`。生态阶段同样不再内置生物群系定义：分类代码留在 `world-core`，`{id, code, nameZh}` 词表由调用方以 `ecology-classes` 注入，算法版本仍是 `ecology-e0-v3`。
 
 **地图文字标签（2026-11-13）**：`cartography` 的公开 `buildGeographicLabelAnchors(mesh, regions)` 从已命名大陆与洋的成员网格中选取最接近面积加权球面中心的代表网格；球面向量相互抵消时退回面积最大的成员网格。锚点只供制图，区域名称、归属和面积仍以 `world-core` 的分区产物或快照为事实来源。Web 在“大陆、洋与海”专题图层上以透明 DOM 覆盖层显示名称，按相机投影更新位置，按大陆优先和面积排序避让，遮去背面及视口外标签。当前每区仅一个锚点，跨球面区域可能在锚点不可见时缺席；海无名也无标签。标签样式、开关和位置不进入生成签名。默认 Seed 的排版及浏览器表现尚未目视验收。
 
@@ -398,7 +396,7 @@ export interface NatureSnapshot {
 
 ### 7.3 基础地形 T0（已实现，最终验收待完成）
 
-当前骨架为 `terrain-skeleton-v10`，后处理 artifact 为 `terrain-v26`，继续固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。v26 仅把已有表面纹理计算结果纳入 TerrainArtifact，不改变地形高程。实际配置与依赖见生成管线。
+当前骨架为 `terrain-skeleton-v10`，后处理 artifact 为 `terrain-v27`，继续固定使用 skeleton-v5/terrain-v7 随机流以支持同坐标地形对照。v26 把已有表面纹理计算结果纳入 TerrainArtifact；v27 在末端小水体闭合（`repairSeaConnectivity`）后，对新抬升且仍被近岸鞍部围住的洼地沿最低溢流路径下切破口并补齐顺坡，不改动无关的内陆洼地。实际配置与依赖见生成管线。
 
 ```text
 地质与动力学 → 构造骨架、Phasor 山脊、火山体
@@ -463,7 +461,7 @@ export interface NatureSnapshot {
 
 Priority Flood 从所有海洋区起路由；没有海洋区时，以最低高程区作内流根。下游平坦破同高由 (填洼高程, 区域索引) 稳定排序，结果须单调且无环。H0 流域摘要以终止区为根，河段 ID 由 Mesh ID 与源区索引组成，只承诺相同 Mesh/算法版本内确定。`hydrology-h0-v4` 输出的 `effectiveRiverThresholdKm2` 保存经密度倍率缩放后的最终面积门槛；仅改河网参数时重建 H0 及其下游。Köppen BW 沙漠区仅显示非沙漠来水占多数的通道。Strahler 级序同时控制调试图的显示对比度。v2 的历史密度基准见 `M1.3A-river-density-calibration.json`。
 
-**M1.3B 当前实现**：`static-lakes-l1-v6` 直接依赖 Mesh、T0、C0、H0，把 `filledElevationKm > terrain.elevationKm` 的陆地区域按 Mesh 邻接提取连通洼地，至少包含两个 Mesh 区域且面积不小于 `minimumLakeAreaKm2` 才保留；该参数默认 0，不改变两区域起步规则。Köppen B 区占湖面多数的候选洼地，还要求流入量大于按同一温度指数蒸散系数估算的年湖面蒸发量；非干旱气候继续沿用地形洼地筛选。面积门槛只筛选候选，不扩大湖盆或改变保留湖泊的边界。该检查用于排除缺少气候水量支持的干旱洼地，不模拟湖面月度涨落或完整储水。L1 缓存签名包含最小湖泊面积；仅改此参数时 H0 保持命中。湖面水位是组件成员中的最大 Priority Flood 高程，溢流区是指向组件外 H0 路由的边界区域。ID 为 Mesh ID 加最小成员索引；产物保存湖泊区域索引、面积、水位、H0 流域引用和出口。湖泊显示不修改 T0 高程或海陆掩码。v4 基准 `M1.3B-static-lakes.json` 是历史地形筛选结果；当前 v6 尚未运行新基准。
+**M1.3B 当前实现**：`static-lakes-l1-v10` 直接依赖 Mesh、T0、C0、H0，把 `filledElevationKm > terrain.elevationKm` 的陆地区域按 Mesh 邻接提取连通洼地。候选至少包含两个 Mesh 区域，且面积不小于 `minimumLakeAreaKm2`（默认 0，不改变两区域起步规则）。平均水深（溢流水位减床面后的面积加权值）小于 1 m 的组件视为 Priority Flood 薄膜，不保留。闭合深度随周围起伏变化，低地湖盆只有数米，不再用数十米的绝对门槛把它们去掉；海岸闭合产生的小块封闭水体已在 T0 `terrain-v27` 破口排海，L1 不再做闭合高程特判。最暖月低于 0°C 的面积达到一半时视为冰原，Köppen BW 面积达到一半时视为荒漠，这两类都不生成湖泊。其余候选还要求湖面年降水大于与 E0 共用的温度指数潜在蒸散，因此半干旱和雨影区不能只靠过路径流变成湖。面积门槛只筛选候选，不扩大湖盆或改变保留湖泊的边界。这些检查仍不是逐月储水或湖面涨落。L1 缓存签名包含最小湖泊面积和公转周期；土壤蒸散系数只进入 H0。湖面水位是组件成员中的最大 Priority Flood 高程，溢流区是指向组件外 H0 路由的边界区域。ID 为 Mesh ID 加最小成员索引；产物保存湖泊区域索引、面积、水位、H0 流域引用和出口。湖泊显示不修改 T0 高程或海陆掩码。v4 基准 `M1.3B-static-lakes.json` 是历史地形筛选结果；v7 至 v10 的默认 Seed 1024/L7 数量见进度记录，不是多 Seed 基准。
 
 I0/H0/L1 单独生成时是中间 `GenerationArtifact`；M1.5 完整自然请求才把它们组装为 Schema 3 水文事实。L1 的 `endorheic` 继承 H0 终止流域语义，因此现有含海洋样本均被分类为开口湖；对有海洋行星的气候性内流湖，仍需湖面水量平衡/洼地溢流层级模型。当前不实现湖泊动态水位/储量、湿地、地下水、季节河流或基于气候的追加侵蚀。M1.3 历史 Core/Web 自动化与 3 Seed × L4/L5/L6 基准通过；M1.5 Schema 3 完整自然链的定向测试、typecheck 与真实 Chrome 主路径通过，全量性能回归延期。
 
@@ -787,6 +785,10 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 
 ## 17. 已定决策与仍有限制
 
+- 2026-11-17：近岸闭合死坑改由 T0 `terrain-v27` 根治，L1 同步升为 `static-lakes-l1-v10`。`TerrainFinalizer.repairSeaConnectivity` 把小块负高程水体抬成陆地后，沿最低溢流路径向公海下切破口并补齐单调顺坡，不触碰无关的内陆洼地，也不普遍拉高平原起伏；L1 移除闭合抬升面高程特判，保留 1 m 薄膜门槛与气候筛选。旧 T0 及下游缓存失效。本次运行 T0/L1 定向用例及多 Seed 闭合诊断；未运行全仓 test、typecheck、lint、build 或浏览器验收。
+- 2026-11-17：`static-lakes-l1-v9` 把平均水深门槛从 25 m 降到 1 m。闭合深度随局部起伏变浅，25 m 会删掉低地数米深的湖盆、只留下山地深盆；1 m 只去掉不足一米的填洼薄膜。冰原、荒漠、降水和海岸闭合规则不变，也不按海拔配额删湖。默认 Seed 1024/L7 的数量见进度记录。本次运行 L1 定向用例；未运行全仓 test、typecheck、lint、build 或浏览器验收。
+- 2026-11-17：`static-lakes-l1-v8` 不再把海岸闭合抬成陆地的小块封闭水体认成湖。判定是最深湖底落在闭合抬升面上，不改 T0 高程，也不把近岸一格内的天然洼地一并去掉。默认 Seed 1024/L7 的数量见进度记录。本次运行 L1 定向用例；未运行全仓 test、typecheck、lint、build 或浏览器验收。
+- 2026-11-17：静态湖泊升级为 `static-lakes-l1-v7`。平均水深不足 25 m 的 Priority Flood 洼地不再记为湖；最暖月低于 0°C 或 Köppen BW 占湖面一半及以上的洼地直接排除；其余洼地还要求湖面年降水大于与 E0 相同的温度指数潜在蒸散。土壤蒸散系数退出 L1 签名，公转周期仍保留。水位仍是溢流几何，不是逐月储水。默认 Seed 1024/L7 的数量见进度记录。本次运行了 L1 定向用例和该默认样本的湖泊诊断，未运行全仓 test、typecheck、lint、build 或浏览器验收。
 - 2026-11-15：根据当前地图反馈降低默认河网密度：`riverDensityMultiplier` 默认值从 1 调整为 0.5，使 H0 的汇水面积门槛翻倍；河道面与中心线统一按 Strahler 级序 ≥2 显示。旧 Schema 3 档案缺少该参数时仍补历史值 1，不改变存档中已生成的河流事实。默认下河段数与河道覆盖率尚未复测，本次未运行自动化检查或浏览器验收。
 - 2026-11-14：完成 M3 Cartography Slice 2（数据源体系、水系面化、PCA 脊线与 `StyleCompiler`）。`@another-earth/cartography` 新增实例级 `MapSourceRegistry`（按 `${snapshotId}:${adapterVersion}:${sourceId}` 与 `:m${month}` 缓存，缺失快照能力时返回结构化 `SourceUnavailable`）、13 个自然数据源适配器、保拓扑对偶边环追踪与 Chaikin / Catmull-Rom 球面平滑、随流量幂律单调递增的变宽河道多边形与汇流圆片衔接、面积加权切平面 PCA 版图脊线提取（延伸度 `>= 1.35` 提取样条控制点，否则回退内部极点锚点），以及 `StyleCompiler`（静态校验、四级依赖降维预编译、`LegendDescriptor` 自动提取）与 6 套内置 JSON 风格预设（`satellite`、`standard-atlas`、`physical-relief`、`minimal-light`、`minimal-dark`、`historical-parchment`）。本轮未运行 test、build、lint、typecheck 或浏览器检查。
 - 2026-11-13：确认 [M3 Cartography 制图系统设计规范](Cartography-System-Design.md) 并落地 Slice 1（Core 数据闭环与 `WorldMapReader`）。正式制图采用单轨 `WorldSnapshot -> WorldMapReader -> MapSourceRegistry -> StyleCompiler -> WorldViewport`（3D Globe + 2D Atlas），收敛为 `raster / fill / line / circle / symbol` 五类标准图层（变宽河网面化为 `fill`），后续将在 Slice 5 废弃 `apps/web` 前 6 个阶段调试展示。Slice 1 在 Schema 3 向后兼容新增可选 `ClimateState.circulation`（月度风/洋流速度与暖度及 `oceanAvailable` 掩码），并新增 `createWorldMapReader` / `WorldStore.mapReader()`（从 `MeshTopology` 惰性恢复球面对偶 Voronoi 角点与逆时针边界环、邻域爬山 `locateRegion`、坡度 `slopeDeg`、晕渲 `hillshade` 与确定性多尺度球面 Simplex 表面细节 `surfaceDetail`），同时在 Web `GenerationController` 提供 `candidateMapReader(snapshotId)` 与 `publishedMapReader()`。本轮未运行 test、build、lint、typecheck 或浏览器检查。

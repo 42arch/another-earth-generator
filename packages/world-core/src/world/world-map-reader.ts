@@ -606,8 +606,8 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   let slopeDegView: FieldView | undefined
   let hillshadeView: FieldView | undefined
   let surfaceDetailView: FieldView | undefined
-  const windSpeedViews = Array.from({ length: 12 })
-  const oceanSpeedViews = Array.from({ length: 12 })
+  const windSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
+  const oceanSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
 
   let platesCache: readonly { readonly id: string }[] | undefined
   let geoRegionsCache: GeographicMapRegions | null | undefined

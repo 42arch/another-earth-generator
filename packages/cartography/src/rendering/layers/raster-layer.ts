@@ -6,7 +6,7 @@ import type { CompiledMapStyleLayer } from '#styles/compiler'
 import type { MapMeshReader, WorldMapReader } from '@another-earth/world-core'
 import { clipRingToGeographicBox } from '#projections/seam-clipper'
 import { cartesianToLonLatDeg, unwrapLongitudeDegNear } from '#projections/spherical-math'
-import { applyCellHillshadeRgba8, parseCssColorToRgba8, writeSatelliteCellColorsRgba8 } from '#rendering/satellite-shader'
+import { applyCellHillshadeRgba8, applyPolarIceToRgba8, parseCssColorToRgba8, writeSatelliteCellColorsRgba8 } from '#rendering/satellite-shader'
 import * as THREE from 'three'
 
 export const RASTER_TEX_WIDTH = 1024
@@ -699,6 +699,7 @@ export class RasterLayer {
     styleZoom: number,
     month: number,
     styleId: string,
+    polarIce = false,
   ): void {
     if (this.disposed)
       return
@@ -709,7 +710,7 @@ export class RasterLayer {
     if (!this.mesh.visible)
       return
 
-    const rasterModeExpr = compiledLayer.paint['raster-mode']
+    const rasterModeExpr = compiledLayer.paint['raster-mode'] ?? compiledLayer.layout['raster-mode']
     const rasterMode = rasterModeExpr ? String(rasterModeExpr.evaluate({ zoom: styleZoom })) : 'color'
     const hillshadeExpr = compiledLayer.paint['raster-hillshade']
     const hillshadeStrength = hillshadeExpr ? Number(hillshadeExpr.evaluate({ zoom: styleZoom }) ?? 0) : 0
@@ -721,7 +722,8 @@ export class RasterLayer {
       || (hillshadeExpr?.dependency === 'zoom' || hillshadeExpr?.dependency === 'zoom-feature')
 
     const isMonthlySource = compiledLayer.source === 'climate-monthly'
-    const cacheKey = `${styleId}:${compiledLayer.id}:${rasterMode}:${isMonthlySource ? month : 'static'}:${isZoomDependent ? styleZoom.toFixed(2) : 'z0'}:${hillshadeStrength.toFixed(3)}`
+    const paintPolarIce = polarIce && styleId === 'satellite'
+    const cacheKey = `${styleId}:${compiledLayer.id}:${rasterMode}:${isMonthlySource ? month : 'static'}:${isZoomDependent ? styleZoom.toFixed(2) : 'z0'}:${hillshadeStrength.toFixed(3)}:${paintPolarIce ? 'ice' : 'noice'}`
 
     if (cacheKey === this.lastEvaluatedKey)
       return
@@ -732,6 +734,7 @@ export class RasterLayer {
       writeSatelliteCellColorsRgba8(this.reader, this.colorBuffer, {
         hillshadeStrength,
         opacity: constOpacity,
+        polarIce: paintPolarIce,
       })
       this.mesh.material.transparent = constOpacity < 0.999
       this.mesh.material.depthWrite = constOpacity >= 0.999
@@ -743,7 +746,7 @@ export class RasterLayer {
         this.mesh.visible = false
         return
       }
-      this.evaluateCellColors(compiledLayer, resolved, styleZoom, hillshadeStrength)
+      this.evaluateCellColors(compiledLayer, resolved, styleZoom, hillshadeStrength, paintPolarIce)
     }
 
     this.colorTexture.needsUpdate = true
@@ -755,6 +758,7 @@ export class RasterLayer {
     source: RasterCellSource,
     styleZoom: number,
     hillshadeStrength: number,
+    polarIce = false,
   ): void {
     const count = source.regionCount
     const colorExpr = compiledLayer.paint['raster-color']
@@ -817,8 +821,11 @@ export class RasterLayer {
       this.colorBuffer[offset + 3] = finalAlpha
     }
 
+    if (polarIce)
+      applyPolarIceToRgba8(this.reader, this.colorBuffer, count)
+
     if (hillshadeStrength > 0) {
-      applyCellHillshadeRgba8(this.reader, this.colorBuffer, hillshadeStrength)
+      applyCellHillshadeRgba8(this.reader, this.colorBuffer, hillshadeStrength, polarIce)
     }
 
     this.mesh.material.transparent = hasTransparency

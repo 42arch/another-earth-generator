@@ -1,4 +1,4 @@
-import type { ContentPack } from '@another-earth/world-data'
+import type { ContentPackView, ContentPort } from '#content/content-port'
 import type { NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
 import { DEFAULT_HYDROLOGY_PARAMETERS } from '#generation/nature/hydrology/hydrology'
@@ -25,8 +25,8 @@ function checksum(value: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-function assertValid(snapshot: WorldSnapshot, packs: readonly ContentPack[]): void {
-  const result = validateWorldSnapshot(snapshot, packs)
+function assertValid(snapshot: WorldSnapshot, packs: readonly ContentPackView[], content: ContentPort): void {
+  const result = validateWorldSnapshot(snapshot, packs, content)
   if (!result.valid)
     throw new Error(`Invalid world snapshot: ${result.issues[0]?.path}: ${result.issues[0]?.message}`)
 }
@@ -59,8 +59,8 @@ function applyHydrologyConfigDefaults(snapshot: WorldSnapshot): WorldSnapshot {
 }
 
 /** M0 JSON round trip. The format is versioned and checked, but is not the M4 binary .aearth format. */
-export function encodeWorldArchive(snapshot: WorldSnapshot, packs: readonly ContentPack[]): string {
-  assertValid(snapshot, packs)
+export function encodeWorldArchive(snapshot: WorldSnapshot, packs: readonly ContentPackView[], content: ContentPort): string {
+  assertValid(snapshot, packs, content)
   const payload = JSON.stringify(snapshot, (_, value: unknown) => {
     if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
       const array = value as NumericArray
@@ -71,7 +71,7 @@ export function encodeWorldArchive(snapshot: WorldSnapshot, packs: readonly Cont
   return JSON.stringify({ format: 'another-earth-m0-json', version: 1, checksum: checksum(payload), payload })
 }
 
-export function decodeWorldArchive(archive: string, packs: readonly ContentPack[]): WorldSnapshot {
+export function decodeWorldArchive(archive: string, packs: readonly ContentPackView[], content: ContentPort): WorldSnapshot {
   try {
     const envelope: unknown = JSON.parse(archive)
     if (!envelope || typeof envelope !== 'object')
@@ -92,7 +92,7 @@ export function decodeWorldArchive(archive: string, packs: readonly ContentPack[
       return new ArrayConstructor(marker.values)
     }) as WorldSnapshot
     const migratedSnapshot = applyHydrologyConfigDefaults(snapshot)
-    assertValid(migratedSnapshot, packs)
+    assertValid(migratedSnapshot, packs, content)
     return migratedSnapshot
   }
   catch (error) {

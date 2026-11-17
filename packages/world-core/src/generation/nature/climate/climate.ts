@@ -28,6 +28,17 @@ export interface ClimateParameters {
 
 export const DEFAULT_CLIMATE_PARAMETERS: Readonly<ClimateParameters> = Object.freeze({ rotationPeriodHours: 24, axialTiltDegrees: 23.44, orbitalPeriodDays: 365.25, temperatureOffsetC: 0, precipitationScale: 1 })
 
+/**
+ * Inclusive bounds for the Earthlike temperature offset.
+ * The tropical sea-level baseline is about 28°C and ocean warmth can add about 7°C,
+ * so −40°C puts that warmest baseline below seawater freezing. Land cools about 7°C/km,
+ * so a roughly 7 km peak starts near −25°C; +60°C lifts that summit through freezing
+ * while the tropics sit on the 60°C monthly clamp. Monthly temperatures themselves
+ * stay clamped to [−90, 60].
+ */
+export const TEMPERATURE_OFFSET_MIN_C = -40
+export const TEMPERATURE_OFFSET_MAX_C = 60
+
 export const CLIMATE_C0_VERSION = 'climate-c0-v21'
 
 // Area-weighted fits to monthly latitude-band observations. See M1.2-circulation-speed.md.
@@ -259,7 +270,7 @@ export function generateClimateC0(mesh: SphericalMesh, terrain: Pick<TerrainArti
   const n = mesh.regionCount
   if (mesh.physicalRadiusKm !== 6371 || parameters.rotationPeriodHours !== 24)
     throw new RangeError('Earthlike C0 currently requires a 6371 km radius and 24-hour rotation')
-  for (const [key, min, max] of [['axialTiltDegrees', 0, 45], ['orbitalPeriodDays', 300, 430], ['temperatureOffsetC', -20, 20], ['precipitationScale', 0, 3]] as const) {
+  for (const [key, min, max] of [['axialTiltDegrees', 0, 45], ['orbitalPeriodDays', 300, 430], ['temperatureOffsetC', TEMPERATURE_OFFSET_MIN_C, TEMPERATURE_OFFSET_MAX_C], ['precipitationScale', 0, 3]] as const) {
     const value = parameters[key]
     if (!Number.isFinite(value) || value < min || value > max)
       throw new RangeError(`Invalid Earthlike climate parameter ${key}`)

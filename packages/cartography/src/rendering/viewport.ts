@@ -67,6 +67,7 @@ export class WorldViewport {
         canvas: options.canvas ?? undefined,
         antialias: true,
         powerPreference: 'high-performance',
+        preserveDrawingBuffer: true,
       })
       renderer.outputColorSpace = THREE.SRGBColorSpace
       renderer.setClearColor('#030308')

@@ -1,11 +1,12 @@
 import type { ElevationFields } from '#generation/nature/geology/tectonics/tectonic-elevation-generator'
 import type { GeologyArtifact } from '#generation/nature/geology/types'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
+import { afterEach, expect, it, vi } from 'vitest'
+import { testContentPack, testPipelineContent } from '#content/test-content'
 import { algorithmMesh } from '#generation/nature/common/algorithm-mesh'
 import { DEFAULT_GEOLOGY_PARAMETERS } from '#generation/stages/geology-stage'
 import { createTerrainPipeline, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '#generation/stages/terrain-stage'
 import { DeterministicRandom } from '#math/random'
-import { afterEach, expect, it, vi } from 'vitest'
 import { TerrainErosionProcessor } from './terrain-erosion-processor'
 import { TerrainPostProcessor } from './terrain-post-processor'
 
@@ -16,7 +17,7 @@ afterEach(() => {
 it('applies configured shaping erosion before final ridge/soil adjustment without mutating inputs', async () => {
   const erosion = vi.spyOn(TerrainErosionProcessor.prototype, 'generate')
   const drainage = vi.spyOn(TerrainErosionProcessor.prototype, 'rebuildDrainage')
-  const result = await createTerrainPipeline().execute({ seed: 'legacy-postprocess', config: {
+  const result = await createTerrainPipeline().execute({ seed: 'legacy-postprocess', ...testPipelineContent([testContentPack]), config: {
     planet: { physicalRadiusKm: 6371 },
     mesh: { subdivisionLevel: 3, irregularity: 0 },
     reference: { subdivisionLevel: 2 },

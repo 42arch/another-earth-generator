@@ -4,7 +4,7 @@ import type { GeologyArtifact } from '#generation/nature/geology'
 import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { TerrainGenerationConfig } from './terrain-stage'
-import { aggregateClimateSurface, CLIMATE_C0_VERSION, generateClimateC0, projectClimateC0, validateClimateArtifact } from '#generation/nature/climate/climate'
+import { aggregateClimateSurface, CLIMATE_C0_VERSION, generateClimateC0, projectClimateC0, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C, validateClimateArtifact } from '#generation/nature/climate/climate'
 import { GenerationPipeline, StageCache } from '#generation/pipeline'
 import { copyDependency } from '#generation/pipeline/copy-dependency'
 import { InvalidStageInputError } from '#generation/pipeline/errors'
@@ -32,7 +32,7 @@ const climateStage: GenerationStage<ClimateArtifact> = {
       rotationPeriodHours: configNumber(context, 'climate.rotationPeriodHours', 24, 24),
       axialTiltDegrees: configNumber(context, 'climate.axialTiltDegrees', 0, 45),
       orbitalPeriodDays: configNumber(context, 'climate.orbitalPeriodDays', 300, 430),
-      temperatureOffsetC: configNumber(context, 'climate.temperatureOffsetC', -20, 20),
+      temperatureOffsetC: configNumber(context, 'climate.temperatureOffsetC', TEMPERATURE_OFFSET_MIN_C, TEMPERATURE_OFFSET_MAX_C),
       precipitationScale: configNumber(context, 'climate.precipitationScale', 0, 3),
     }
     const mesh = copyDependency<SphericalMesh>(context, 'mesh')
@@ -62,7 +62,7 @@ class ClimatePipeline extends GenerationPipeline<ClimateGenerationConfig> {
     const c = input.config.climate
     if (input.config.planet.physicalRadiusKm !== 6371)
       throw new InvalidStageInputError('climate-c0', 'Earthlike C0 currently requires a 6371 km radius')
-    for (const [key, min, max] of [['rotationPeriodHours', 24, 24], ['axialTiltDegrees', 0, 45], ['orbitalPeriodDays', 300, 430], ['temperatureOffsetC', -20, 20], ['precipitationScale', 0, 3]] as const) {
+    for (const [key, min, max] of [['rotationPeriodHours', 24, 24], ['axialTiltDegrees', 0, 45], ['orbitalPeriodDays', 300, 430], ['temperatureOffsetC', TEMPERATURE_OFFSET_MIN_C, TEMPERATURE_OFFSET_MAX_C], ['precipitationScale', 0, 3]] as const) {
       const value = c?.[key]
       if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max)
         throw new InvalidStageInputError('climate-c0', `climate.${key} must be finite in [${min}, ${max}]`)

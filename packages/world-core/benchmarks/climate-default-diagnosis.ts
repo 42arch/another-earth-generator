@@ -1,7 +1,7 @@
 /* eslint-disable antfu/no-top-level-await -- This diagnostic runs as a standalone jiti entry point. */
+import { testContentPack, testEcologyVocabulary, testPipelineContent } from '../src/content/test-content'
 import type { ClimateArtifact, EcologyArtifact, GeologyArtifact, SphericalMesh, TerrainArtifact } from '../src/index'
 import process from 'node:process'
-import { NATURAL_BIOME_DEFINITIONS } from '@another-earth/world-data'
 import { aggregateClimateSurface } from '../src/generation/nature/climate/climate'
 import {
   createEcologyPipeline,
@@ -99,7 +99,7 @@ const config = {
   climate: { ...DEFAULT_CLIMATE_PARAMETERS, axialTiltDegrees: 23.5, precipitationScale: 1.8 },
   ecology: true as const,
 }
-const result = await createEcologyPipeline().execute({ seed, config })
+const result = await createEcologyPipeline().execute({ seed, config, ...testPipelineContent([testContentPack]) })
 const mesh = result.getOutput<SphericalMesh>('mesh')
 const terrain = result.getOutput<TerrainArtifact>('terrain')
 const climate = result.getOutput<ClimateArtifact>('climate-c0')
@@ -212,7 +212,7 @@ for (let region = 0; region < mesh.regionCount; region++) {
     put(landTemperatureBands, temperatureKey, annualTemperature, area)
     put(landPrecipitationBands, precipitationKey, annualPrecipitation, area)
     const koppen = KOPPEN_CODES[climate.koppenClass[region]]
-    const biome = NATURAL_BIOME_DEFINITIONS[ecology.potentialBiomeIndex[region]].code
+    const biome = testEcologyVocabulary.biomes[ecology.potentialBiomeIndex[region]].code
     koppenArea.set(koppen, (koppenArea.get(koppen) ?? 0) + area)
     biomeArea.set(biome, (biomeArea.get(biome) ?? 0) + area)
   }

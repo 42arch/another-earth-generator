@@ -880,8 +880,14 @@ export const SATELLITE_STYLE_PRESET: MapStyleDocument = Object.freeze({
       slot: 'base',
       legend: {
         title: '仿真卫星地表',
-        fieldName: 'elevationKm',
-        unit: 'km',
+        categories: [
+          { label: '深海', color: '#244d73' },
+          { label: '浅海', color: '#48909e' },
+          { label: '湿润植被', color: '#488e55' },
+          { label: '干旱裸地', color: '#d4ba95' },
+          { label: '高海拔裸岩', color: '#a8a49b' },
+          { label: '冰雪', color: '#dfecf7' },
+        ],
       },
       layout: {
         'visibility': 'visible',
@@ -989,16 +995,6 @@ export const STANDARD_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
         ],
         'raster-opacity': 1,
         'raster-hillshade': 0.35,
-      },
-    },
-    {
-      id: 'base-atlas-land-polygons',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'landLow'],
-        'fill-opacity': 0.22,
       },
     },
   ]),
@@ -1122,16 +1118,6 @@ export const MINIMAL_LIGHT_STYLE_PRESET: MapStyleDocument = Object.freeze({
         'raster-hillshade': 0.15,
       },
     },
-    {
-      id: 'base-minimal-light-land',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'land'],
-        'fill-opacity': 1,
-      },
-    },
   ]),
 })
 
@@ -1179,16 +1165,6 @@ export const MINIMAL_DARK_STYLE_PRESET: MapStyleDocument = Object.freeze({
         ],
         'raster-opacity': 1,
         'raster-hillshade': 0.2,
-      },
-    },
-    {
-      id: 'base-minimal-dark-land',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'land'],
-        'fill-opacity': 1,
       },
     },
   ]),
@@ -1257,16 +1233,6 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
         ],
         'raster-opacity': 1,
         'raster-hillshade': 0.45,
-      },
-    },
-    {
-      id: 'base-parchment-land',
-      type: 'fill',
-      source: 'land-areas',
-      slot: 'base',
-      paint: {
-        'fill-color': ['token', 'landLow'],
-        'fill-opacity': 0.35,
       },
     },
   ]),

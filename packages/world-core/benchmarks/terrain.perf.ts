@@ -3,6 +3,7 @@ import type { GeologyArtifact } from '#generation/nature/geology'
 import type { ElevationFields } from '#generation/nature/geology/tectonics/tectonic-elevation-generator'
 import type { PipelineEvent } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
+import { testContentPack, testPipelineContent } from '../src/content/test-content'
 import { writeFileSync } from 'node:fs'
 import { cpus, platform, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -33,21 +34,21 @@ it('records tectonic terrain stages, fixed-seed field summaries and postprocessi
       const input = { seed, config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm }, mesh: { subdivisionLevel: level, irregularity: 0.5 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: { ...DEFAULT_TERRAIN_PARAMETERS, roughness, terrainWarp } } }
       const events: PipelineEvent[] = []
       const start = performance.now()
-      const first = await pipeline.execute(input, { onEvent: event => events.push(event) })
+      const first = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) }, { onEvent: event => events.push(event) })
       const coldMs = performance.now() - start
       const terrain = first.getOutput<TerrainArtifact>('terrain')
       const hitStart = performance.now()
-      const hit = await pipeline.execute(input)
+      const hit = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) })
       const hitMs = performance.now() - hitStart
       const cacheHitStages = hit.plan.filter(stage => stage.action === 'cache-hit').map(stage => stage.stageId)
       const changedStart = performance.now()
-      const changed = await pipeline.execute({ ...input, config: { ...input.config, terrain: { ...input.config.terrain, roughness: changedRoughness } } })
+      const changed = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]), config: { ...input.config, terrain: { ...input.config.terrain, roughness: changedRoughness } } })
       const changedMs = performance.now() - changedStart
       const changedStages = changed.plan.filter(stage => stage.action === 'execute').map(stage => stage.stageId)
       if (cacheHitStages.length === hit.plan.length)
         expect(changedStages).toEqual(['terrain'])
       const forceStart = performance.now()
-      const forced = await pipeline.execute(input, { force: true })
+      const forced = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) }, { force: true })
       const forceMs = performance.now() - forceStart
       const forcedTerrain = forced.getOutput<TerrainArtifact>('terrain')
       const elevationHash = stableHash(Array.from(terrain.elevationKm).join(','))

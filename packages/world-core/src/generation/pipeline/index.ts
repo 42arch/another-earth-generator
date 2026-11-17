@@ -10,6 +10,7 @@ export interface StageExecutionContext {
   readonly random: RandomSource
   readonly signal?: AbortSignal
   getConfig: (path: string) => ConfigValue | undefined
+  getContent: <T>(key: string) => T
   getContentSignature: (key: string) => string | undefined
   getDependency: <T>(id: string) => Readonly<T>
   throwIfCancelled: () => void
@@ -33,6 +34,7 @@ export interface GenerationStage<TOutput = unknown> {
 export interface GenerationInput<TConfig extends object> {
   readonly seed: string | number
   readonly config: Readonly<TConfig>
+  readonly content?: Readonly<{ [key: string]: unknown }>
   readonly contentSignatures?: Readonly<{ [key: string]: string }>
 }
 
@@ -445,6 +447,11 @@ export class GenerationPipeline<TConfig extends object> {
             if (!allowedConfig.has(path))
               throw new InvalidStageInputError(stage.id, `Undeclared config key ${path}`)
             return readOnlyBorrow(getPath(input.config, path) as ConfigValue | undefined)
+          },
+          getContent<T>(key: string): T {
+            if (!allowedContent.has(key) || !input.content || !Object.hasOwn(input.content, key))
+              throw new InvalidStageInputError(stage.id, `Undeclared or missing content ${key}`)
+            return input.content[key] as T
           },
           getContentSignature(key) {
             if (!allowedContent.has(key))

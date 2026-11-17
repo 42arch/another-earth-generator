@@ -1,9 +1,9 @@
-import type { NamePool } from '@another-earth/world-data'
+import type { NamePoolView } from '#content/content-port'
 import type { GeographicRegionsArtifact } from './geographic-regions'
 import { describe, expect, it } from 'vitest'
 import { nameGeographicRegions } from './geographic-names'
 
-const pool = (id: 'continent' | 'ocean'): NamePool => ({ id: `test:names/${id}`, displayNameKey: id, tags: [], entries: [{ value: '苍岚', weight: 1 }] })
+const pool = (id: 'continent' | 'ocean'): NamePoolView => ({ id: `test:names/${id}`, entries: [{ value: '苍岚', weight: 1 }] })
 const regions: GeographicRegionsArtifact = {
   meshId: 'mesh:test',
   algorithmVersion: 'geographic-regions-v3',

@@ -36,6 +36,11 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
       // Base legend when thematic is null
       const baseLegend = compiled.getActiveLegend(null)
       expect(baseLegend).not.toBeNull()
+      if (preset.id === 'satellite') {
+        expect(baseLegend?.kind).toBe('categorical')
+        const surface = compiled.layers.find(layer => layer.id === 'base-satellite-surface')
+        expect(String(surface?.layout['raster-mode']?.evaluate({ zoom: 0 }))).toBe('satellite')
+      }
 
       // Continuous thematic legend
       const tempLegend = compiled.getActiveLegend('temperature')

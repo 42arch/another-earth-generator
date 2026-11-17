@@ -36,6 +36,7 @@ export interface CartographyViewState {
     rotate: boolean
     atmosphere: boolean
     dayNight: boolean
+    polarIce: boolean
   }>
   readonly selection: Readonly<{
     regionId: number | null
@@ -55,6 +56,7 @@ export const DEFAULT_CARTOGRAPHY_VIEW_STATE: CartographyViewState = Object.freez
     rotate: false,
     atmosphere: true,
     dayNight: false,
+    polarIce: true,
   }),
   selection: Object.freeze({
     regionId: null,

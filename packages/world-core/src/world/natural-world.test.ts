@@ -1,5 +1,5 @@
-import { calculateContentSignature, loadBuiltinGenerationCatalog } from '@another-earth/world-data'
 import { describe, expect, it } from 'vitest'
+import { testContentPack, testContentPort, testPipelineContent } from '#content/test-content'
 import {
   assembleNaturalWorld,
   createNaturalPipeline,
@@ -34,34 +34,34 @@ const identity = { snapshotId: 'snapshot:natural-test', worldId: 'world:natural-
 describe('natural world publication', () => {
   it('assembles all natural facts, validates them and round trips a full archive', async () => {
     const pipeline = createNaturalPipeline()
-    const result = await pipeline.execute(input)
-    const packs = loadBuiltinGenerationCatalog().packs
-    const candidate = assembleNaturalWorld(input, result, pipeline.registry, identity, packs)
+    const packs = [testContentPack]
+    const result = await pipeline.execute({ ...input, ...testPipelineContent(packs) })
+    const candidate = assembleNaturalWorld(input, result, pipeline.registry, identity, packs, testContentPort)
     expect(candidate.schemaVersion).toBe(WORLD_SCHEMA_VERSION)
-    expect(candidate.metadata.contentSignature).toBe(calculateContentSignature(packs))
-    expect(candidate.metadata.contentPacks.map(pack => pack.id)).toEqual(['core', 'earthlike', 'geography-zh'])
+    expect(candidate.metadata.contentSignature).toBe(testContentPort.calculateContentSignature(packs))
+    expect(candidate.metadata.contentPacks.map(pack => pack.id)).toEqual(['test:core'])
     expect(candidate.metadata.generationConfig.hydrology).toEqual(DEFAULT_HYDROLOGY_PARAMETERS)
     expect(candidate.metadata.provenance.stageVersions['ecology-e0']).toBe('ecology-e0-v3')
-    expect(candidate.metadata.provenance.stageVersions['geographic-names']).toBe(`geographic-names-v2:${calculateContentSignature(packs)}`)
+    expect(candidate.metadata.provenance.stageVersions['geographic-names']).toBe('geographic-names-v2')
     expect(candidate.nature.geography.regions?.nameContentSignature).toBe(candidate.metadata.contentSignature)
     expect(candidate.nature.geography.regions?.continents.every(item => !!item.name)).toBe(true)
     expect(candidate.nature.geography.regions?.oceans.every(item => !!item.name)).toBe(true)
-    expect([...candidate.nature.geography.regions!.continents, ...candidate.nature.geography.regions!.oceans].every(item => /^[\u3400-\u9FFF〇·]+$/u.test(item.name ?? ''))).toBe(true)
+    expect([...candidate.nature.geography.regions!.continents, ...candidate.nature.geography.regions!.oceans].every(item => item.name?.startsWith('苍岚') || item.name?.startsWith('沧溟'))).toBe(true)
     expect(candidate.nature.geography.regions?.seas?.every(item => !('name' in item))).toBe(true)
     expect(candidate.nature.hydrology.riverIndex.values.length).toBe(candidate.mesh.regionCount)
-    expect(validateWorldSnapshot(candidate, packs).valid).toBe(true)
+    expect(validateWorldSnapshot(candidate, packs, testContentPort).valid).toBe(true)
     const wrongLexicon = { ...candidate, nature: { ...candidate.nature, geography: { ...candidate.nature.geography, regions: { ...candidate.nature.geography.regions!, nameContentSignature: 'content:wrong' } } } }
-    expect(validateWorldSnapshot(wrongLexicon, packs).issues.some(issue => issue.path === 'geography.regions.nameContentSignature')).toBe(true)
-    const restored = decodeWorldArchive(encodeWorldArchive(candidate, packs), packs)
+    expect(validateWorldSnapshot(wrongLexicon, packs, testContentPort).issues.some(issue => issue.path === 'geography.regions.nameContentSignature')).toBe(true)
+    const restored = decodeWorldArchive(encodeWorldArchive(candidate, packs, testContentPort), packs, testContentPort)
     expect(restored).toEqual(candidate)
     expect(result.getOutput<{ elevationKm: Float32Array }>('terrain').elevationKm.buffer).not.toBe(candidate.nature.geography.elevationKm.values.buffer)
   })
 
   it('keeps the last valid world through rejected candidates and hides mutable storage', async () => {
     const pipeline = createNaturalPipeline()
-    const packs = loadBuiltinGenerationCatalog().packs
-    const candidate = assembleNaturalWorld(input, await pipeline.execute(input), pipeline.registry, identity, packs)
-    const store = new WorldStore()
+    const packs = [testContentPack]
+    const candidate = assembleNaturalWorld(input, await pipeline.execute({ ...input, ...testPipelineContent(packs) }), pipeline.registry, identity, packs, testContentPort)
+    const store = new WorldStore(testContentPort)
     store.publish(candidate, packs)
     const firstContinent = candidate.nature.geography.regions?.continents[0]
     if (firstContinent)
@@ -86,7 +86,7 @@ describe('natural world publication', () => {
     expect(() => store.restore('not an archive', packs)).toThrow()
     expect(store.region(0)).toEqual(before)
     const archive = store.archive(packs)
-    const recovered = new WorldStore()
+    const recovered = new WorldStore(testContentPort)
     recovered.restore(archive, packs)
     expect(recovered.region(0)).toEqual(before)
     expect(recovered.identity?.snapshotId).toBe(identity.snapshotId)

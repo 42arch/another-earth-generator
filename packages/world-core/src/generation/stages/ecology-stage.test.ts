@@ -1,7 +1,8 @@
 import type { EcologyArtifact } from '#generation/nature/ecology/ecology'
 import type { TerrainArtifact } from '#generation/nature/geography'
-import { DEFAULT_CLIMATE_PARAMETERS } from '#generation/nature/climate/climate'
 import { describe, expect, it } from 'vitest'
+import { testContentPack, testPipelineContent } from '#content/test-content'
+import { DEFAULT_CLIMATE_PARAMETERS } from '#generation/nature/climate/climate'
 import { createEcologyPipeline } from './ecology-stage'
 import { DEFAULT_GEOLOGY_PARAMETERS } from './geology-stage'
 import { DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from './terrain-stage'
@@ -11,6 +12,7 @@ describe('e0 stage integration', () => {
     const pipeline = createEcologyPipeline()
     const input = {
       seed: 'ecology-stage',
+      ...testPipelineContent([testContentPack]),
       config: {
         ecology: true as const,
         planet: { physicalRadiusKm: 6371, seaLevelDatumKm: 0 },

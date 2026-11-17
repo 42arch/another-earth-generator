@@ -32,9 +32,9 @@
 
   const variantClasses = {
     primary: 'bg-obs-primary/15 text-obs-primary border-obs-primary/40 hover:bg-obs-primary/25 hover:border-obs-primary/70 shadow-[0_0_12px_rgba(22,119,255,0.2)]',
-    secondary: 'bg-white/[0.04] text-obs-text-muted border-white/[0.08] hover:border-white/[0.2] hover:text-obs-text-main hover:bg-white/[0.08]',
-    ghost: 'bg-transparent text-obs-text-dim border-transparent hover:text-obs-text-main hover:bg-white/[0.05]',
-    icon: 'p-1.5 bg-white/[0.04] text-obs-text-muted border-white/[0.08] hover:border-obs-primary/50 hover:text-obs-primary hover:bg-white/[0.08]',
+    secondary: 'bg-white/4 text-obs-text-muted border-white/8 hover:border-white/20 hover:text-obs-text-main hover:bg-white/8',
+    ghost: 'bg-transparent text-obs-text-dim border-transparent hover:text-obs-text-main hover:bg-white/5',
+    icon: 'p-1.5 bg-white/4 text-obs-text-muted border-white/8 hover:border-obs-primary/50 hover:text-obs-primary hover:bg-white/8',
   }
 </script>
 
