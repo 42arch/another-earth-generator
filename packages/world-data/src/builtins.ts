@@ -2,15 +2,19 @@ import type { ContentPackV1 } from './schemas/content'
 import { calculateContentHash, createContentCatalog } from './catalog'
 import { createNamingStylePack } from './names/naming-style-pack'
 import { loadBuiltinNamingStyles } from './names/builtin-naming-styles'
+import { loadBuiltinSocietyPacks } from './society/builtin-society-packs'
 
 function withHash(pack: Omit<ContentPackV1, 'manifest'> & { manifest: Omit<ContentPackV1['manifest'], 'contentHash'> }): ContentPackV1 {
   return { ...pack, manifest: { ...pack.manifest, contentHash: calculateContentHash(pack) } }
 }
 
 const core = withHash({
-  manifest: { id: 'core', version: '1.0.0', schemaVersion: 1, nameKey: 'core.pack', dependencies: [] },
+  manifest: { id: 'core', version: '1.0.0', schemaVersion: 1, nameKey: 'core.pack', dependencies: [{ id: 'builtin:naming-style/western-zh-cn', version: '1.4.0' }] },
   names: [{ id: 'core:names/basic', displayNameKey: 'core.names', tags: [], entries: [{ value: 'Aru', weight: 1 }, { value: 'Ena', weight: 1 }] }],
-  cultures: [{ id: 'core:culture/basic', displayNameKey: 'core.culture', tags: [], namePoolId: 'core:names/basic', traits: [] }],
+  namingStyles: [],
+  peoples: [],
+  states: [],
+  cultures: [{ id: 'core:culture/basic', displayNameKey: 'core.culture', tags: [], namingStyleId: 'builtin:naming-style/western-zh-cn', traits: [] }],
   religions: [{ id: 'core:religion/local', displayNameKey: 'core.religion', tags: [], organization: 'decentralized', traits: [], tolerance: 0.5, spreadBias: 0.5, weight: 1 }],
   governments: [{ id: 'core:government/council', displayNameKey: 'core.government', tags: [], governance: 'distributed', succession: 'elective', weight: 1 }],
   resources: [{ id: 'core:resource/timber', displayNameKey: 'core.resource', tags: [], category: 'biological', geologyTags: [] }],
@@ -21,7 +25,10 @@ const core = withHash({
 const earthlike = withHash({
   manifest: { id: 'earthlike', version: '1.0.0', schemaVersion: 1, nameKey: 'earthlike.pack', dependencies: [{ id: 'core', version: '1.0.0' }] },
   names: [],
+  namingStyles: [],
   cultures: [],
+  peoples: [],
+  states: [],
   religions: [],
   governments: [],
   resources: [],
@@ -35,8 +42,10 @@ const defaultGeographicNamingProfilePack = builtinNamingStylePacks.find(pack => 
 if (!defaultGeographicNamingProfilePack)
   throw new Error('Built-in Western Chinese naming profile is missing')
 
+const builtinSocietyPacks = loadBuiltinSocietyPacks(builtinNamingStylePacks)
+
 export function loadBuiltinCatalog() {
-  return createContentCatalog([core, earthlike, ...builtinNamingStylePacks])
+  return createContentCatalog([core, earthlike, ...builtinNamingStylePacks, ...builtinSocietyPacks])
 }
 
 export function loadBuiltinGenerationCatalog() {

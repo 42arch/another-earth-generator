@@ -4,10 +4,19 @@ import { validateContentPack } from './validation/validate-content-pack'
 
 export function calculateContentHash(pack: ContentPackHashInput): string {
   const manifest = { ...pack.manifest, contentHash: undefined }
-  const content = { manifest, names: pack.names, cultures: pack.cultures, religions: pack.religions, governments: pack.governments, resources: pack.resources, presets: pack.presets, translations: pack.translations }
-  // Preserve the v1 wire format exactly: no new fields or defaults enter its hash.
-  if (manifest.schemaVersion === 2 && 'namingStyles' in pack)
-    return hash(canonical({ ...content, namingStyles: pack.namingStyles }))
+  const content = {
+    manifest,
+    names: pack.names,
+    namingStyles: pack.namingStyles,
+    cultures: pack.cultures,
+    peoples: pack.peoples,
+    states: pack.states,
+    religions: pack.religions,
+    governments: pack.governments,
+    resources: pack.resources,
+    presets: pack.presets,
+    translations: pack.translations,
+  }
   return hash(canonical(content))
 }
 
@@ -42,6 +51,8 @@ export function createContentCatalog(input: readonly ContentPack[]): ContentCata
     const entries = [
       ...pack.names, ...pack.cultures, ...pack.religions, ...pack.governments, ...pack.resources, ...pack.presets,
       ...('namingStyles' in pack ? pack.namingStyles : []),
+      ...('peoples' in pack ? pack.peoples : []),
+      ...('states' in pack ? pack.states : []),
     ]
     for (const entry of entries) {
       if (contentIds.has(entry.id))

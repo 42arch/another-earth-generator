@@ -3,7 +3,7 @@
 > **日期**：2026-11-14
 > **范围**：M3（Cartography 正式制图系统——自然世界 3D Globe & 2D Atlas、数据源适配、类 Mapbox Style JSON、五类批处理渲染管线与 Web 单轨收口）
 > **状态**：已实现（Slice 1–Slice 5 全部落地并补齐单元测试，待用户授权后执行自动化检查与浏览器验收）
-> **上游依据**：[PRD 第 8 章](PRD.md)、[技术设计第 9 章](TECHNICAL_DESIGN.md)、[世界数据契约](WORLD_DATA_CONTRACTS.md)、[当前进度](PROGRESS.md)
+> **上游依据**：[PRD 第 8 章](PRD.md)、[技术设计](TECHNICAL_DESIGN.md#架构边界)、[世界数据契约](WORLD_DATA_CONTRACTS.md)、[当前进度](PROGRESS.md)
 
 ---
 
@@ -399,7 +399,7 @@ packages/cartography/src/
 
 ## 9. 分步实施切片与验收矩阵
 
-按可独立测试、渐进交付的 5 个切片实施（每完成一个切片同步更新 `docs/PROGRESS.md` 及涉及的契约文档）：
+按可独立测试、渐进交付的 5 个切片实施。仅当切片改变当前能力、验证结论或公开契约时，更新 `docs/PROGRESS.md` 及直接受影响的契约文档；普通实现推进不追加文档日志。
 
 | 切片 | 核心交付内容 | 关键单元测试与不变量验收 |
 |---|---|---|

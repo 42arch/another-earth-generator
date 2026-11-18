@@ -9,13 +9,17 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
   const nonempty = (v: string) => typeof v === 'string' && v.trim().length > 0
   const version = (v: string) => /^\d+\.\d+\.\d+(?:-[0-9A-Z.-]+)?$/i.test(v)
   const m = pack.manifest
-  if (![1, 2].includes(m.schemaVersion) || !version(m.version))
+  if (m.schemaVersion !== 1 || !version(m.version))
     add('version', 'manifest', 'Unsupported schema or invalid semantic version')
-  const styles: readonly NamingStyle[] = 'namingStyles' in pack && Array.isArray(pack.namingStyles) ? pack.namingStyles : []
-  if (m.schemaVersion === 2 && (!('namingStyles' in pack) || !Array.isArray(pack.namingStyles)))
-    add('required', 'namingStyles', 'Schema v2 requires a naming styles array')
-  if (m.schemaVersion === 1 && 'namingStyles' in pack)
-    add('version', 'namingStyles', 'Naming styles require content schema v2')
+  const styles: readonly NamingStyle[] = Array.isArray(pack.namingStyles) ? pack.namingStyles : []
+  const peoples = Array.isArray(pack.peoples) ? pack.peoples : []
+  const states = Array.isArray(pack.states) ? pack.states : []
+  if (!Array.isArray(pack.namingStyles))
+    add('required', 'namingStyles', 'Schema v1 requires a naming styles array')
+  if (!Array.isArray(pack.peoples))
+    add('required', 'peoples', 'Schema v1 requires a peoples array')
+  if (!Array.isArray(pack.states))
+    add('required', 'states', 'Schema v1 requires a states array')
   for (const key of ['id', 'nameKey', 'contentHash'] as const) {
     if (!nonempty(m[key]))
       add('required', `manifest.${key}`, 'Required nonempty string')
@@ -29,7 +33,7 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
       add('reference', `manifest.dependencies[${i}]`, 'Exact dependency version is not resolved')
   }
   const domains = ['names', 'cultures', 'religions', 'governments', 'resources', 'presets'] as const
-  const definitions: ContentDefinition[] = domains.flatMap(key => [...pack[key]])
+  const definitions: ContentDefinition[] = [...domains.flatMap(key => [...pack[key]]), ...peoples, ...states]
   const ids = new Set<string>()
   for (const [i, d] of definitions.entries()) {
     if (!/^[a-z0-9-]+:[a-z0-9-]+\/[a-z0-9-]+$/.test(d.id))
@@ -39,6 +43,8 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
     ids.add(d.id)
     if (!nonempty(d.displayNameKey) || d.tags.some(t => !nonempty(t)))
       add('required', `definitions[${i}]`, 'Invalid name key or tag')
+    if (d.description !== undefined && !nonempty(d.description))
+      add('required', `definitions[${i}].description`, 'Description must be nonempty text')
   }
   for (const [i, style] of styles.entries()) {
     const parsed = parseNamingStyle(style)
@@ -50,23 +56,17 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
   }
   const resolved = dependencies.filter(p => m.dependencies.some(d => d.id === p.manifest.id && d.version === p.manifest.version))
   for (const dep of resolved) {
-    const entries = [...domains.flatMap(key => [...dep[key]]), ...('namingStyles' in dep ? dep.namingStyles : [])]
+    const entries = [...domains.flatMap(key => [...dep[key]]), ...('namingStyles' in dep ? dep.namingStyles : []), ...('peoples' in dep ? dep.peoples : []), ...('states' in dep ? dep.states : [])]
     for (const d of entries) {
       if (ids.has(d.id))
         add('duplicate', 'dependencies', `Conflicting content ID ${d.id}`)
       ids.add(d.id)
     }
   }
-  const names = new Set([...pack.names, ...resolved.flatMap(p => [...p.names])].map(d => d.id))
   const namingStyles = new Set([...styles, ...resolved.flatMap(p => 'namingStyles' in p ? [...p.namingStyles] : [])].map(style => style.id))
-  for (const [i, c] of pack.cultures.entries()) {
-    if (m.schemaVersion === 1) {
-      if (!('namePoolId' in c) || !names.has(c.namePoolId) || 'namingStyleId' in c)
-        add('reference', `cultures[${i}].namePoolId`, 'Schema v1 requires a name pool reference')
-    }
-    else if (!('namingStyleId' in c) || !namingStyles.has(c.namingStyleId) || 'namePoolId' in c) {
-      add('reference', `cultures[${i}].namingStyleId`, 'Schema v2 requires a naming style reference')
-    }
+  for (const [i, culture] of pack.cultures.entries()) {
+    if (!namingStyles.has(culture.namingStyleId))
+      add('reference', `cultures[${i}].namingStyleId`, 'Schema v1 requires a naming style reference')
   }
   const numeric = (v: number, path: string, max = Infinity) => {
     if (!Number.isFinite(v) || v < 0 || v > max)
@@ -94,6 +94,22 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
     numeric(g.weight, `governments[${i}].weight`)
     if (!['centralized', 'distributed', 'federated'].includes(g.governance) || !['hereditary', 'elective', 'appointed', 'mixed'].includes(g.succession))
       add('range', `governments[${i}]`, 'Invalid government')
+  })
+  states.forEach((state, i) => {
+    const path = `states[${i}]`
+    if (!['republic', 'empire', 'dynastic-monarchy', 'federation', 'confederation', 'chiefdom', 'emirate', 'khanate', 'league', 'free-territory', 'kingdom', 'principality', 'theocracy', 'merchant-republic', 'city-state', 'sultanate', 'tribal-confederation', 'military-junta', 'protectorate', 'commune'].includes(state.politicalForm))
+      add('range', `${path}.politicalForm`, 'Invalid political form')
+    if (!['centralized', 'parliamentary', 'presidential', 'federal-council', 'confederal-assembly', 'tribal-council', 'theocratic-hierarchy', 'merchant-council', 'military-command', 'rotating-delegation', 'chartered-administration'].includes(state.governmentOrganization))
+      add('range', `${path}.governmentOrganization`, 'Invalid government organization')
+    if (!nonempty(state.headOfStateTitle))
+      add('required', `${path}.headOfStateTitle`, 'Head of state title is required')
+    if (state.headOfGovernmentTitle !== null && !nonempty(state.headOfGovernmentTitle))
+      add('required', `${path}.headOfGovernmentTitle`, 'Expected a title or null')
+    if (state.legislatureTitle !== null && !nonempty(state.legislatureTitle))
+      add('required', `${path}.legislatureTitle`, 'Expected a title or null')
+    if (!['hereditary', 'elective', 'appointed', 'rotating', 'collective', 'mixed'].includes(state.succession))
+      add('range', `${path}.succession`, 'Invalid succession')
+    numeric(state.weight, `${path}.weight`)
   })
   pack.resources.forEach((r, i) => {
     if (!['mineral', 'biological', 'energy'].includes(r.category))

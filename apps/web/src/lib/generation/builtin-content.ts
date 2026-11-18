@@ -1,11 +1,11 @@
 import type { ContentPackView, ContentPort, EcologyVocabulary } from '@another-earth/world-core'
-import type { ContentPack, ContentPackV2, NamingStyle } from '@another-earth/world-data'
+import type { ContentPack, ContentPackV1, NamingStyle } from '@another-earth/world-data'
 import { ecologyVocabularySignature } from '@another-earth/world-core'
 import { calculateContentHash, calculateContentSignature, calculateNamingStyleSignature, loadBuiltinGenerationCatalog, NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS, validateContentPack } from '@another-earth/world-data'
 
 const defaultGeographicProfileId = 'builtin:naming-style/western-zh-cn'
 const catalog = loadBuiltinGenerationCatalog()
-const profilePack = catalog.get(defaultGeographicProfileId) as ContentPackV2 | undefined
+const profilePack = catalog.get(defaultGeographicProfileId) as ContentPackV1 | undefined
 if (!profilePack)
   throw new Error(`Built-in naming profile ${defaultGeographicProfileId} is missing`)
 

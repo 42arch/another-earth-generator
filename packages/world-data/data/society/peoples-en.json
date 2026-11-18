@@ -1,0 +1,35 @@
+{
+  "format": "another-earth/society-pack",
+  "schemaVersion": 1,
+  "id": "builtin-peoples-en",
+  "version": "1.0.0",
+  "language": "en",
+  "dependencies": [],
+  "peoples": [
+    {
+      "id": "builtin:people/avilan-en",
+      "tags": [],
+      "displayName": "Avilans",
+      "description": "A broadly distributed people whose communities are connected by overland trade and shared civic traditions."
+    },
+    {
+      "id": "builtin:people/novari-en",
+      "tags": [],
+      "displayName": "Novari",
+      "description": "A coastal people known for adapting their settlements and livelihoods to changing sea routes."
+    },
+    {
+      "id": "builtin:people/taren-en",
+      "tags": [],
+      "displayName": "Taren",
+      "description": "A highland people whose communities are shaped by steep terrain, seasonal travel, and local alliances."
+    },
+    {
+      "id": "builtin:people/lomiri-en",
+      "tags": [],
+      "displayName": "Lomiri",
+      "description": "A woodland people whose villages rely on forest resources, craft exchange, and managed clearings."
+    }
+  ],
+  "displayName": "Peoples"
+}

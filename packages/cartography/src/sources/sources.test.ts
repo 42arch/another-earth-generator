@@ -1,5 +1,5 @@
 import type { ContentPort, WorldMapReader, WorldSnapshot } from '@another-earth/world-core'
-import type { ContentPack, ContentPackV2, NamingStyle } from '@another-earth/world-data'
+import type { ContentPack, ContentPackV1, NamingStyle } from '@another-earth/world-data'
 import {
   assembleNaturalWorld,
   createNaturalPipeline,
@@ -29,7 +29,7 @@ const namingCatalog = createContentCatalog([
   createNamingStylePack(loadBuiltinNamingStyles().find(style => style.id === styleId)!),
 ])
 const builtinContentPacks = namingCatalog.packs
-const builtinNamingStyle = (namingCatalog.get(styleId) as ContentPackV2).namingStyles.find(style => style.id === styleId)!
+const builtinNamingStyle = (namingCatalog.get(styleId) as ContentPackV1).namingStyles.find(style => style.id === styleId)!
 const builtinEcologyVocabulary = {
   biomes: NATURAL_BIOME_DEFINITIONS.map(({ id, code, nameZh }) => ({ id, code, nameZh })),
   landCover: NATURAL_LAND_COVER_DEFINITIONS.map(({ id, code, nameZh }) => ({ id, code, nameZh })),

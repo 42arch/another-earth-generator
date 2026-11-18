@@ -1,4 +1,4 @@
-import type { ContentPackV1, ContentPackV2, NamingStyle } from '../index'
+import type { ContentPackV1, NamingStyle } from '../index'
 import { describe, expect, it } from 'vitest'
 import { calculateContentHash, calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, loadBuiltinCatalog, validateContentPack } from '../index'
 
@@ -11,10 +11,10 @@ function style(id: NamingStyle['id'] = 'test:naming-style/western-zh-cn', langua
   }
 }
 
-function culturePack(dependency: ContentPackV2, namingStyleId = dependency.namingStyles[0].id): ContentPackV2 {
-  const pack: ContentPackV2 = {
-    manifest: { id: 'cultures', version: '1.0.0', schemaVersion: 2, nameKey: 'pack', contentHash: '', dependencies: [{ id: dependency.manifest.id, version: dependency.manifest.version }] },
-    names: [], namingStyles: [],
+function culturePack(dependency: ContentPackV1, namingStyleId = dependency.namingStyles[0].id): ContentPackV1 {
+  const pack: ContentPackV1 = {
+    manifest: { id: 'cultures', version: '1.0.0', schemaVersion: 1, nameKey: 'pack', contentHash: '', dependencies: [{ id: dependency.manifest.id, version: dependency.manifest.version }] },
+    names: [], namingStyles: [], peoples: [], states: [],
     cultures: [{ id: 'test:culture/first', displayNameKey: 'culture', tags: [], traits: [], namingStyleId }],
     religions: [], governments: [], resources: [], presets: [],
     translations: { en: { pack: 'Cultures', culture: 'First' } },
@@ -33,7 +33,7 @@ describe('naming styles in content packs', () => {
     const catalog = createContentCatalog(inputs)
     expect(catalog.contentSignature).toBe(createContentCatalog([...inputs].reverse()).contentSignature)
     expect(catalog.get(chinese.manifest.id)).toEqual(chinese)
-    const stored = catalog.get(chinese.manifest.id) as ContentPackV2
+    const stored = catalog.get(chinese.manifest.id) as ContentPackV1
     expect(stored.namingStyles[0]).toEqual(style())
     expect(Object.isFrozen(stored.namingStyles[0].pools.whole)).toBe(true)
     expect(Object.isFrozen(chinese.namingStyles[0].pools.whole)).toBe(false)
@@ -78,16 +78,14 @@ describe('naming styles in content packs', () => {
     expect(validateContentPack(invalid).issues.some(issue => issue.path.startsWith('namingStyles[0].rules.continent'))).toBe(true)
   })
 
-  it('preserves the v1 hash wire representation', () => {
-    const legacy: ContentPackV1 = {
-      manifest: { id: 'legacy', version: '1.0.0', schemaVersion: 1, nameKey: 'pack', contentHash: '', dependencies: [] },
-      names: [], cultures: [], religions: [], governments: [], resources: [], presets: [], translations: { en: { pack: 'Legacy' } },
-    }
-    // Frozen pre-v2 canonical wire format; compute FNV-1a independently with bigint.
-    const wire = '{"cultures":[],"governments":[],"manifest":{"dependencies":[],"id":"legacy","nameKey":"pack","schemaVersion":1,"version":"1.0.0"},"names":[],"presets":[],"religions":[],"resources":[],"translations":{"en":{"pack":"Legacy"}}}'
-    let hash = 0x811C9DC5n
-    for (let i = 0; i < wire.length; i++)
-      hash = BigInt.asUintN(32, (hash ^ BigInt(wire.charCodeAt(i))) * 0x01000193n)
-    expect(calculateContentHash(legacy)).toBe(`fnv1a32:${hash.toString(16).padStart(8, '0')}`)
+  it('uses the current v1 content projection for naming-style packs', () => {
+    const original = createNamingStylePack(style())
+    expect(original.manifest.schemaVersion).toBe(1)
+    const changed = { ...original, states: [{
+      id: 'test:state/republic', displayNameKey: 'state.republic', tags: [], politicalForm: 'republic' as const,
+      governmentOrganization: 'presidential' as const, headOfStateTitle: 'President', headOfGovernmentTitle: 'Prime Minister',
+      legislatureTitle: 'Assembly', succession: 'elective' as const, weight: 1,
+    }] }
+    expect(calculateContentHash(changed)).not.toBe(original.manifest.contentHash)
   })
 })

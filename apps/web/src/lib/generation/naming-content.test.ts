@@ -1,4 +1,4 @@
-import type { ContentPackV2, NamingStyle } from '@another-earth/world-data'
+import type { ContentPackV1, NamingStyle } from '@another-earth/world-data'
 import { generateName } from '@another-earth/world-core'
 import { calculateContentHash, calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, decodeNamingStyleJson, encodeNamingStyleJson, loadBuiltinNamingStyles } from '@another-earth/world-data'
 import { describe, expect, it } from 'vitest'
@@ -11,10 +11,10 @@ function roundTrip(style: NamingStyle): NamingStyle {
   return result.value
 }
 
-function cultures(names: readonly ContentPackV2[]): ContentPackV2 {
-  const pack: ContentPackV2 = {
-    manifest: { id: 'example-cultures', version: '1.0.0', schemaVersion: 2, nameKey: 'pack', contentHash: '', dependencies: names.map(pack => ({ id: pack.manifest.id, version: pack.manifest.version })) },
-    names: [], namingStyles: [],
+function cultures(names: readonly ContentPackV1[]): ContentPackV1 {
+  const pack: ContentPackV1 = {
+    manifest: { id: 'example-cultures', version: '1.0.0', schemaVersion: 1, nameKey: 'pack', contentHash: '', dependencies: names.map(pack => ({ id: pack.manifest.id, version: pack.manifest.version })) },
+    names: [], namingStyles: [], peoples: [], states: [],
     cultures: names.map((pack, index) => ({ id: `example:culture/culture-${index}` as const, displayNameKey: `culture.${index}`, tags: [], traits: [], namingStyleId: pack.namingStyles[0].id })),
     religions: [], governments: [], resources: [], presets: [],
     translations: { en: { pack: 'Cultures', ...Object.fromEntries(names.map((_pack, index) => [`culture.${index}`, `Culture ${index}`])) } },
@@ -52,7 +52,7 @@ describe('naming content public API integration', () => {
     const packs = styles.map(createNamingStylePack)
     const culturePack = cultures(packs)
     const catalog = createContentCatalog([...packs, culturePack])
-    const storedCultures = catalog.get(culturePack.manifest.id) as ContentPackV2
+    const storedCultures = catalog.get(culturePack.manifest.id) as ContentPackV1
     const availableStyles = catalog.packs.flatMap(pack => 'namingStyles' in pack ? [...pack.namingStyles] : [])
     const names = storedCultures.cultures.map((culture, index) => {
       const style = availableStyles.find(style => style.id === culture.namingStyleId)!
@@ -76,7 +76,7 @@ describe('naming content public API integration', () => {
     const input = { style: selected, styleSignature: signature, worldSeed: 'fixed', entityId: 'person:1', rule: 'person' }
     const before = generateName(input)
     const catalog = createContentCatalog([createNamingStylePack(selected), createNamingStylePack({ ...unused, version: '2.0.0' })])
-    const pack = catalog.get(selected.id) as ContentPackV2
+    const pack = catalog.get(selected.id) as ContentPackV1
     const resolved = pack.namingStyles[0]
     expect(generateName({ ...input, style: resolved, styleSignature: calculateNamingStyleSignature(resolved) })).toBe(before)
     expect(calculateNamingStyleSignature(resolved)).toBe(signature)

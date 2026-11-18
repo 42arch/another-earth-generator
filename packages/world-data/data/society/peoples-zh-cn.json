@@ -1,0 +1,35 @@
+{
+  "format": "another-earth/society-pack",
+  "schemaVersion": 1,
+  "id": "builtin-peoples-zh-cn",
+  "version": "1.0.0",
+  "language": "zh-CN",
+  "dependencies": [],
+  "peoples": [
+    {
+      "id": "builtin:people/avilan-zh-cn",
+      "tags": [],
+      "displayName": "阿维兰人",
+      "description": "分布广泛的民族群体，各地社群通过陆路贸易与共同的公共传统保持联系。"
+    },
+    {
+      "id": "builtin:people/novari-zh-cn",
+      "tags": [],
+      "displayName": "诺瓦里人",
+      "description": "沿海民族群体，聚落与生计善于适应不断变化的海上航路。"
+    },
+    {
+      "id": "builtin:people/taren-zh-cn",
+      "tags": [],
+      "displayName": "塔伦人",
+      "description": "高地民族群体，社群生活受到崎岖地形、季节迁行与地方盟约影响。"
+    },
+    {
+      "id": "builtin:people/lomiri-zh-cn",
+      "tags": [],
+      "displayName": "洛米里人",
+      "description": "林地民族群体，村落依靠森林资源、手工交换与有规划的林间开垦。"
+    }
+  ],
+  "displayName": "民族／种族候选"
+}
