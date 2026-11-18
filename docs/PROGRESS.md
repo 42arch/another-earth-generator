@@ -2,6 +2,10 @@
 
 > 更新：2026-11-18。记录当前工作区能力、验收状态与下一步，不作为逐轮调参日志。目标范围为 M0–M4；产品规则见 [PRD](PRD.md)。
 
+2026-11-18 Web 默认大陆、大洋命名接入中文 `NamingStyle` 和 `naming-v1` 模板生成，地名阶段升级至 `geographic-names-v3`；中文风格的大陆和大洋词库均改为现代音译专名，例如“阿维亚大陆”“诺维尔大陆”“阿维伦洋”“塞维尔洋”，替换神话感较强和城镇感较强的旧候选；两类候选各从 24 个增至 48 个。默认内容包现在明确采用西式构词传统和中文转写，尚未接入文明实体生成。命名配置现显式区分 `style` 与 BCP 47 `language`，作为风格-语言档案整体发布；“阿维亚大陆”属于 `western-zh-CN` 档案。NamingStyle JSON Schema 升至 v2，档案 ID 与签名都包含风格和语言；内置档案为 `western-zh-CN` / `western-en`，Web 继续使用中文语言档案。同类冲突仍追加中文序号，海仍无名。世界快照记录所用风格 ID 和风格签名，并从已记录内容包校验签名。按开发阶段决策，已移除旧 `geography` / `geography-zh` 内置包、历史档案专用 Catalog、旧名称来源字段与 v1/v2 阶段恢复兼容；快照校验要求地名阶段为 v3。当前 v3 档案仍可导出并恢复。由于算法和随机身份改变，同 Seed 新生成名称可能不同，未运行固定 Seed 对照；已保存名称不会重新抽取。风格选择、JSON 文件操作和自定义 Worker 内容仍未实现。兼容清理后 world-data 43/43、world-core 195/195、Web 29/29、cartography 22/22 定向测试通过；未运行 typecheck、lint、build 或浏览器验证。
+
+2026-11-18 名称配置增加独立 JSON 格式 v1：`world-data` 提供 unknown/JSON 解析、字段路径错误、稳定导出、风格生成签名和 ContentPack v2 适配。多份风格通过原 Catalog 并存，重复 ID 报错；v2 文化通过 `namingStyleId` 引用本包或直接精确版本依赖中的风格，多个文化可共用。新增可选的中式/西式小型 JSON 示例。`world-core` 增加 `naming-v1` 模板解释器，按 Seed、对象 ID、所选风格和规则建立独立随机流，支持完整候选、姓名顺序、固定文本和词根后缀组合。该轮保留 v1 包哈希投影与当时的内置自然世界加载路径，地图当时仍用 `geographic-names-v2`；后续地名接入见上一条。文化绑定仅是内容契约，尚未接入文明实体或地图命名。浏览器文件 UI、Worker 自定义内容传递、档案内嵌配置与分享复现仍待完成。已编写解析、组合、模板与跨包公开 API 用例，包括 v1 哈希格式回归；本次未运行 test、typecheck、lint、build 或浏览器验证，没有将新增用例记为通过。格式与边界见 [世界数据契约](WORLD_DATA_CONTRACTS.md#名称配置与模板生成2026-11-18)。
+
 2026-11-18 3D 自转改为绕极轴向东转动地球，相机、星空和太阳方向保持不动，晨昏线不再跟着画面转。默认转速与原先相机自转相同，为每秒 0.6°；开启自转后可在设置中调到 0.1–30°/秒。点击查询、地名朝向和 3D/2D 视角对齐按当前转角换回地理坐标。经纬网格、Cell 边界网格和自转开关都在侧栏设置中，自转仅 3D 可用。大气光晕、昼夜效果和两极冰盖仍留在图层辅助显示；换风格只重设大气光晕和昼夜效果。`planet-spin` 定向用例 2/2 通过。未运行全仓 test、typecheck、lint、build 或浏览器验证。
 
 2026-11-18 温度偏移热端从 +40°C 放到 +60°C，冷端仍是 −40°C。+60°C 能把大约 7 km 山峰在偏移前接近 −25°C 的气温抬过冰点，热带则停在 60°C 月温上限。卫星地表的高山积雪改为跟着最暖月：最暖月高于 2°C 不再因为海拔另铺一层白。默认值仍是 0°C，月温公式和 `climate-c0-v21` 没有改。`climate.test.ts` 与 `monthly-temperature-generator.test.ts` 共 13/13 通过，`satellite-shader.test.ts` 与 `compiler.test.ts` 共 10/10 通过。参数面板滑块已是 −40–60°C、当前值 0。未用 +60°C 重新生成地图，未运行全仓 test、typecheck、lint 或 build。
@@ -218,7 +222,7 @@ M0 工程基础和 M1.1 地质/基础地形 terrain-v20 已完成历史验收。
 
 | 范围 | 当前状态 |
 | --- | --- |
-| 工程与内容 | pnpm Workspace 四包、公开 exports、内容定义/Catalog/签名、core/earthlike、历史 geography 与当前 geography-zh 中文名称包 |
+| 工程与内容 | Workspace 四包、公开 exports、内容定义/Catalog/签名、core/earthlike、内置 `western-zh-CN` 与 `western-en` 风格-语言 NamingStyle JSON；旧 geography 名称包已移除 |
 | 世界契约 | Schema 3 完整自然状态（含向后兼容的可选月度环流 `climate.circulation`）、Dense Field/实体、WorldStore 受控发布与只读查询、`WorldMapReader`（对偶 Voronoi 拓扑恢复、邻域爬山定位、坡度/晕渲/卫星微纹理确定性派生）、完整校验、人口约束、版本化 JSON 档案编解码；M1.5 历史定向测试、typecheck 与真实 Chrome 发布路径通过，Slice 1 新增代码本次未运行自动化检查，全量性能回归延期 |
 | Mesh | L0–L8 规则/扰动 Icosphere、Delaunay/Voronoi、CSR、物理面积、校验、最近站点查询 |
 | 生成 | Stage DAG、声明输入、命名随机流、LRU 缓存、阶段事件和取消/失败边界 |

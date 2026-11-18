@@ -1,6 +1,6 @@
 import type { FieldView, WorldSnapshot } from '../index'
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import { testContentPack, testContentPort } from '#content/test-content'
+import { testContentPack, testContentPort, testNamingStyle } from '#content/test-content'
 import { createFieldView, decodeWorldArchive, encodeWorldArchive, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '../index'
 
 const pack = testContentPack
@@ -33,7 +33,7 @@ function snapshot(civilized = false): WorldSnapshot {
         climate: { rotationPeriodHours: 24, axialTiltDegrees: 23.4, orbitalPeriodDays: 365, temperatureOffsetC: 0, precipitationScale: 0 },
         hydrology: { snowTemperatureMinC: -2, snowTemperatureMaxC: 2, degreeDayMeltFactorMmPerCMonth: 3, evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 5000, riverDensityMultiplier: 1, minimumLakeAreaKm2: 0 },
       },
-      provenance: { stageVersions: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, '1'])), artifactSignatures: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, 'sig:test'])), configSignature: 'config:test' },
+      provenance: { stageVersions: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, id === 'geographic-names' ? 'geographic-names-v3' : '1'])), artifactSignatures: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, 'sig:test'])), configSignature: 'config:test' },
     },
     planet,
     mesh: {
@@ -46,7 +46,7 @@ function snapshot(civilized = false): WorldSnapshot {
     },
     nature: {
       geology: { plates: [{ id: 'plate:test' }], plateIndex: field(new Uint32Array(4)), crustType: field(new Uint8Array(4)) },
-      geography: { elevationKm: field(new Float32Array(4)), landMask: field(new Uint8Array(4)) },
+      geography: { elevationKm: field(new Float32Array(4)), landMask: field(new Uint8Array(4)), regions: { nameStyleId: testNamingStyle.id, nameStyleSignature: testContentPort.calculateNamingStyleSignature(testNamingStyle), continentIndex: field(new Int32Array(4).fill(-1)), oceanIndex: field(new Int32Array(4).fill(-1)), seaIndex: field(new Int32Array(4).fill(-1)), continents: [], oceans: [], seas: [] } },
       climate: { monthsPerYear: 12, layout: 'month-major', temperatureC: field(new Float32Array(48)), precipitationMm: field(new Float32Array(48)), annualMeanTemperatureC: field(new Float32Array(4)), annualPrecipitationMm: field(new Float32Array(4)), koppenClass: field(new Uint8Array(4)) },
       hydrology: { monthlySnowWaterEquivalentMm: field(new Float32Array(48)), monthlySnowfallMm: field(new Float32Array(48)), monthlySnowmeltMm: field(new Float32Array(48)), downstreamRegion: field(new Int32Array(4).fill(-1)), annualRunoffMm: field(new Float32Array(4)), annualRunoffVolumeM3: field(new Float64Array(4)), accumulatedAnnualFlowM3s: field(new Float64Array(4)), contributingAreaKm2: field(new Float64Array(4)), basinIndex: field(new Int32Array(4).fill(-1)), basins: [], riverIndex: field(new Int32Array(4).fill(-1)), rivers: [], lakeIndex: field(new Int32Array(4).fill(-1)), lakes: [] },
       ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: field(new Uint16Array(4)), landCoverIndex: field(new Uint16Array(4)), aridityIndex: field(new Float32Array(4)), growingSeasonMonths: field(new Uint8Array(4)) },

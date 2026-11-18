@@ -700,7 +700,7 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   const hasGeographicRegions = Boolean(regions)
   const hasGeographicNames = Boolean(
     regions
-    && (Boolean(regions.nameContentSignature)
+    && (Boolean(regions.nameStyleSignature)
       || regions.continents.some(item => Boolean(item.name))
       || regions.oceans.some(item => Boolean(item.name))),
   )

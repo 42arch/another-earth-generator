@@ -40,7 +40,7 @@ describe('terrain stage', () => {
     const pipeline = createTerrainPipeline()
     const base = input()
     const first = await pipeline.execute(base)
-    expect(pipeline.plan({ ...base, contentSignatures: { ...testPipelineContent([testContentPack]).contentSignatures, 'geographic-name-pools': 'another-catalog' } }).filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['geographic-names'])
+    expect(pipeline.plan({ ...base, contentSignatures: { ...testPipelineContent([testContentPack]).contentSignatures, 'geographic-naming-style': 'another-style' } }).filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['geographic-names'])
     const changed = { ...base, config: { ...base.config, terrain: { ...base.config.terrain, roughness: 0.1 } } }
     const next = await pipeline.execute(changed)
     expect(next.plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['terrain', 'geographic-regions', 'geographic-names'])

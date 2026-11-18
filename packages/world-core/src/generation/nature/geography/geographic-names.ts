@@ -1,8 +1,8 @@
-import type { NamePoolView } from '#content/content-port'
+import type { NamingStyleView } from '#content/content-port'
 import type { GeographicRegionsArtifact } from './geographic-regions'
-import { stableHash } from '#math/random'
+import { generateName } from '#generation/names/naming'
 
-export const GEOGRAPHIC_NAMES_VERSION = 'geographic-names-v2' as const
+export const GEOGRAPHIC_NAMES_VERSION = 'geographic-names-v3' as const
 
 interface NamedRegion { readonly id: string, readonly areaKm2: number, readonly name?: string }
 
@@ -15,24 +15,11 @@ function chineseOrdinal(value: number): string {
   return [...String(value)].map(digit => chineseDigits[Number(digit)]).join('')
 }
 
-function nameRegions(regions: readonly NamedRegion[], pool: NamePoolView, worldSeed: string, contentSignature: string): NamedRegion[] {
-  const entries = [...pool.entries].filter(entry => entry.weight > 0).sort((a, b) => a.value < b.value ? -1 : a.value > b.value ? 1 : a.weight - b.weight)
-  const total = entries.reduce((sum, entry) => sum + entry.weight, 0)
-  if (!entries.length || !Number.isFinite(total) || total <= 0)
-    throw new Error(`Empty geographic name pool ${pool.id}`)
+function nameRegions(regions: readonly NamedRegion[], style: NamingStyleView, rule: 'continent' | 'ocean', worldSeed: string, styleSignature: string): NamedRegion[] {
   const names = new Map<string, string>()
   const used = new Set<string>()
   for (const region of [...regions].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) {
-    const hash = stableHash(JSON.stringify([GEOGRAPHIC_NAMES_VERSION, worldSeed, region.id, pool.id, contentSignature]))
-    let draw = Number.parseInt(hash.slice(0, 8), 16) / 0x100000000 * total
-    let base = entries[entries.length - 1].value
-    for (const entry of entries) {
-      draw -= entry.weight
-      if (draw < 0) {
-        base = entry.value
-        break
-      }
-    }
+    const base = generateName({ style, rule, worldSeed, entityId: region.id, styleSignature })
     let name = base
     for (let suffix = 2; used.has(name); suffix++) name = `${base}·${chineseOrdinal(suffix)}`
     used.add(name)
@@ -42,14 +29,18 @@ function nameRegions(regions: readonly NamedRegion[], pool: NamePoolView, worldS
 }
 
 /** Names are facts attached to stable geographic IDs; the classification arrays remain unchanged. */
-export function nameGeographicRegions(regions: GeographicRegionsArtifact, worldSeed: string, pools: { readonly continent: NamePoolView, readonly ocean: NamePoolView }, contentSignature: string): GeographicRegionsArtifact {
-  if (!worldSeed || !contentSignature)
-    throw new Error('Geographic naming requires a seed and content signature')
+export function nameGeographicRegions(regions: GeographicRegionsArtifact, worldSeed: string, style: NamingStyleView, styleSignature: string): GeographicRegionsArtifact {
+  if (!worldSeed?.trim() || !styleSignature?.trim() || !style?.id?.trim())
+    throw new Error('Geographic naming requires a seed, style and style signature')
+  for (const rule of ['continent', 'ocean'] as const) {
+    if (!style.rules || !Object.prototype.hasOwnProperty.call(style.rules, rule) || !Array.isArray(style.rules[rule]) || style.rules[rule].length === 0)
+      throw new Error(`Geographic naming rule "${rule}" is missing or empty`)
+  }
   return {
     ...regions,
-    nameContentSignature: contentSignature,
-    namePoolIds: { continent: pools.continent.id, ocean: pools.ocean.id },
-    continents: nameRegions(regions.continents, pools.continent, worldSeed, contentSignature),
-    oceans: nameRegions(regions.oceans, pools.ocean, worldSeed, contentSignature),
+    nameStyleId: style.id,
+    nameStyleSignature: styleSignature,
+    continents: nameRegions(regions.continents, style, 'continent', worldSeed, styleSignature),
+    oceans: nameRegions(regions.oceans, style, 'ocean', worldSeed, styleSignature),
   }
 }

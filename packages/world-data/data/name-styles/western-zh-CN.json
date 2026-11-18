@@ -1,0 +1,50 @@
+{
+  "format": "another-earth/naming-style",
+  "schemaVersion": 2,
+  "id": "builtin:naming-style/western-zh-cn",
+  "style": "western",
+  "language": "zh-CN",
+  "version": "1.4.0",
+  "displayName": { "zh-CN": "西式命名 · 中文", "en": "Western naming · Chinese" },
+  "source": "Small fictional examples for the naming configuration format",
+  "pools": {
+    "family": [{ "value": "维尔", "weight": 1 }, { "value": "里德", "weight": 1 }],
+    "given": [{ "value": "艾达", "weight": 1 }, { "value": "罗文", "weight": 1 }],
+    "root": [{ "value": "阿什", "weight": 1 }, { "value": "雷文", "weight": 1 }],
+    "suffix": [{ "value": "福德", "weight": 1 }, { "value": "海文", "weight": 1 }],
+    "continent": [
+      { "value": "阿维亚", "weight": 1 }, { "value": "诺维尔", "weight": 1 }, { "value": "塞维亚", "weight": 1 }, { "value": "埃洛安", "weight": 1 },
+      { "value": "卡维尔", "weight": 1 }, { "value": "罗安", "weight": 1 }, { "value": "维斯顿", "weight": 1 }, { "value": "莱森", "weight": 1 },
+      { "value": "奥维尔", "weight": 1 }, { "value": "贝洛", "weight": 1 }, { "value": "纳维亚", "weight": 1 }, { "value": "特兰", "weight": 1 },
+      { "value": "伊萨伦", "weight": 1 }, { "value": "科维亚", "weight": 1 }, { "value": "安德尔", "weight": 1 }, { "value": "维洛森", "weight": 1 },
+      { "value": "塔维亚", "weight": 1 }, { "value": "瑞斯顿", "weight": 1 }, { "value": "诺兰", "weight": 1 }, { "value": "卡斯特", "weight": 1 },
+      { "value": "德维恩", "weight": 1 }, { "value": "洛维亚", "weight": 1 }, { "value": "米德兰", "weight": 1 }, { "value": "维兰", "weight": 1 },
+      { "value": "萨维尔", "weight": 1 }, { "value": "凯洛安", "weight": 1 }, { "value": "阿斯顿", "weight": 1 }, { "value": "埃文", "weight": 1 },
+      { "value": "维斯兰", "weight": 1 }, { "value": "诺森", "weight": 1 }, { "value": "卡伦", "weight": 1 }, { "value": "洛森", "weight": 1 },
+      { "value": "伊维亚", "weight": 1 }, { "value": "贝尔顿", "weight": 1 }, { "value": "泰维尔", "weight": 1 }, { "value": "西尔文", "weight": 1 },
+      { "value": "罗维亚", "weight": 1 }, { "value": "格兰", "weight": 1 }, { "value": "维尔顿", "weight": 1 }, { "value": "埃斯顿", "weight": 1 },
+      { "value": "安维尔", "weight": 1 }, { "value": "赛伦", "weight": 1 }, { "value": "奥兰", "weight": 1 }, { "value": "纳森", "weight": 1 },
+      { "value": "贝维亚", "weight": 1 }, { "value": "卡洛", "weight": 1 }, { "value": "德兰", "weight": 1 }, { "value": "莱维亚", "weight": 1 }
+    ],
+    "ocean": [
+      { "value": "阿维伦", "weight": 1 }, { "value": "诺瓦", "weight": 1 }, { "value": "塞维尔", "weight": 1 }, { "value": "埃洛", "weight": 1 },
+      { "value": "卡斯", "weight": 1 }, { "value": "罗维安", "weight": 1 }, { "value": "维森", "weight": 1 }, { "value": "莱恩", "weight": 1 },
+      { "value": "奥德", "weight": 1 }, { "value": "贝林", "weight": 1 }, { "value": "纳维尔", "weight": 1 }, { "value": "特兰", "weight": 1 },
+      { "value": "伊斯特", "weight": 1 }, { "value": "科伦", "weight": 1 }, { "value": "安维亚", "weight": 1 }, { "value": "维洛", "weight": 1 },
+      { "value": "塔伦", "weight": 1 }, { "value": "瑞安", "weight": 1 }, { "value": "诺兰", "weight": 1 }, { "value": "卡斯兰", "weight": 1 },
+      { "value": "德文", "weight": 1 }, { "value": "洛维安", "weight": 1 }, { "value": "米兰", "weight": 1 }, { "value": "维尔", "weight": 1 },
+      { "value": "萨伦", "weight": 1 }, { "value": "凯文", "weight": 1 }, { "value": "阿斯兰", "weight": 1 }, { "value": "埃森", "weight": 1 },
+      { "value": "维斯", "weight": 1 }, { "value": "诺尔", "weight": 1 }, { "value": "卡维亚", "weight": 1 }, { "value": "洛恩", "weight": 1 },
+      { "value": "伊维尔", "weight": 1 }, { "value": "贝伦", "weight": 1 }, { "value": "泰伦", "weight": 1 }, { "value": "西文", "weight": 1 },
+      { "value": "罗维尔", "weight": 1 }, { "value": "格兰", "weight": 1 }, { "value": "维兰", "weight": 1 }, { "value": "埃斯伦", "weight": 1 },
+      { "value": "安德", "weight": 1 }, { "value": "赛维尔", "weight": 1 }, { "value": "奥维亚", "weight": 1 }, { "value": "纳伦", "weight": 1 },
+      { "value": "贝维尔", "weight": 1 }, { "value": "卡洛安", "weight": 1 }, { "value": "德维尔", "weight": 1 }, { "value": "莱维尔", "weight": 1 }
+    ]
+  },
+  "rules": {
+    "person": [{ "weight": 1, "parts": [{ "pool": "given" }, { "literal": "·" }, { "pool": "family" }] }],
+    "settlement": [{ "weight": 1, "parts": [{ "pool": "root" }, { "pool": "suffix" }] }],
+    "continent": [{ "weight": 1, "parts": [{ "pool": "continent" }] }],
+    "ocean": [{ "weight": 1, "parts": [{ "pool": "ocean" }] }]
+  }
+}

@@ -2,7 +2,7 @@ import type { SphericalMesh } from '@another-earth/world-core'
 import type { WorkerResponse } from '../lib/generation/protocol'
 import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateStaticLakeArtifact, validateTerrainArtifact, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '@another-earth/world-core'
 import { describe, expect, it } from 'vitest'
-import { builtinContentPacks, builtinContentPort } from '../lib/generation/builtin-content'
+import { builtinContentPacks, builtinContentPort, builtinGeographicNamingProfile, builtinPipelineContent } from '../lib/generation/builtin-content'
 import { hydrateMesh } from '../lib/generation/transfer'
 import { GenerationWorkerRuntime } from './runtime'
 
@@ -197,6 +197,9 @@ it('publishes one complete natural world without detaching cached stage outputs'
   const first = messages.find((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')!
   expect(first.world?.schemaVersion).toBe(WORLD_SCHEMA_VERSION)
   expect(first.world && validateWorldSnapshot(first.world, builtinContentPacks, builtinContentPort).valid).toBe(true)
+  expect(first.world?.metadata.contentPacks.map(pack => pack.id).sort()).toEqual(['builtin:naming-style/western-zh-cn', 'core', 'earthlike'])
+  expect(first.world?.nature.geography.regions?.nameStyleId).toBe(builtinGeographicNamingProfile.id)
+  expect(first.world?.nature.geography.regions?.nameStyleSignature).toBe(builtinPipelineContent.contentSignatures['geographic-naming-style'])
   expect(first.ecology).toBeDefined()
   expect(first.hydrology).toBeDefined()
   expect(first.world?.nature.geography.elevationKm.values.buffer).not.toBe(first.terrain?.elevationKm.buffer)

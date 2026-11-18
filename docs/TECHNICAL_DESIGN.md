@@ -242,9 +242,9 @@ export interface ResolvedContentCatalog {
 
 **装载流程**：发现 Pack → 校验 Manifest → 解析依赖 → 校验定义 → 检查 ID 冲突/外键 → 规范排序 → 计算内容签名 → 发布只读 Catalog。
 
-当前 M0 实现提供 `loadBuiltinCatalog()`、`loadBuiltinGenerationCatalog()` 和 `createContentCatalog()`；内置包 ID 为 `core`、`earthlike`、`geography`、`geography-zh`，定义 ID 使用 `namespace:domain/name`。Manifest 依赖目前使用精确 `version`，不是上方示例的 `versionRange`；`ContentCatalog` 暴露 `packs`、`contentSignature` 与按 Pack ID 查询的 `get()`，尚无 `getGovernment()` 等领域专用方法。内容哈希为确定性的 `fnv1a32`，用于版本身份与意外变更检测，不是抗恶意碰撞的安全摘要。大陆/大洋名称初版见 4.4；外部扩展包加载尚未实现。
+当前 M0 实现提供 `loadBuiltinCatalog()`、`loadBuiltinGenerationCatalog()` 和 `createContentCatalog()`；内置包包含 `core`、`earthlike` 及 `western-zh-CN`、`western-en` 两个风格-语言 NamingStyle 档案，旧 `geography` / `geography-zh` 包已移除，定义 ID 使用 `namespace:domain/name`。Manifest 依赖目前使用精确 `version`，不是上方示例的 `versionRange`；`ContentCatalog` 暴露 `packs`、`contentSignature` 与按 Pack ID 查询的 `get()`，尚无 `getGovernment()` 等领域专用方法。内容哈希为确定性的 `fnv1a32`，用于版本身份与意外变更检测，不是抗恶意碰撞的安全摘要。大陆/大洋名称初版见 4.4；外部扩展包加载尚未实现。
 
-自然生成基线内置 `core` 和 `earthlike`，大陆/大洋名称使用独立 `geography` 内容包，后续 `fantasy` / `sci-fi` 是内容扩展，不应要求修改模拟核心的每个 Generator。**不在首版开放运行任意用户 JavaScript 脚本的 Mod 接口**，只接受经 Schema 验证的数据包。
+自然生成基线内置 `core` 和 `earthlike`，大陆/大洋名称使用独立 NamingStyle JSON 适配的内容包；后续 `fantasy` / `sci-fi` 是内容扩展，不应要求修改模拟核心的每个 Generator。**不在首版开放运行任意用户 JavaScript 脚本的 Mod 接口**，只接受经 Schema 验证的数据包。
 
 ### 4.4 命名系统确定性
 
@@ -252,9 +252,9 @@ export interface ResolvedContentCatalog {
 
 **命名初版实现（2026-11-13）**：新增 `geographic-names-v1` Stage，只依赖已确认的地理分区，读取 `world-data` 的大陆/大洋词库及 `geographic-names` 内容签名。名称从 Seed、稳定区域 ID、词库 ID、命名版本和内容签名选取；同类冲突按稳定 ID 顺序以哈希后缀消歧。输出仍使用分区产物的索引与面积，新增名称和 `nameContentSignature`；完整快照保存实际名称并校验内容包签名一致。海保持无名。v1 当时只使用内置词库和原始专名，图例与侦测显示类型后缀；地图表面文字标签当时尚未实现。用户手动覆盖与跨区域重划后的名称迁移仍待实现。名称 Stage 独立缓存，变更词库不会重算地形和海盆。旧 Schema 3 档案不强制补名。
 
-**中文名称调整（2026-11-13）**：当前 `geographic-names-v2` 改用 `geography-zh` 中文专名内容包，大陆和大洋各 24 个候选；同类重名按稳定 ID 顺序追加中文序号。原 `geography` 拉丁词库保留在完整 Catalog 中以支持已有档案；新世界仅选择 `core`、`earthlike`、`geography-zh` 三包，旧快照的实际名称不被自动翻译或改写。名称作为中文事实保存，界面直接补“大陆”或“洋”；海不命名。新增内容包和算法版本会使名称 Stage 重算，地理分区阶段仍可缓存复用。手动改名和自定义词库仍待实现。
+**中文名称调整历史（2026-11-13）**：当时 `geographic-names-v2` 改用 `geography-zh` 中文专名内容包，大陆和大洋各 24 个候选；同类重名按稳定 ID 顺序追加中文序号。原 `geography` 拉丁词库保留在完整 Catalog 中以支持已有档案；新世界仅选择 `core`、`earthlike`、`geography-zh` 三包，旧快照的实际名称不被自动翻译或改写。名称作为中文事实保存，界面直接补“大陆”或“洋”；海不命名。新增内容包和算法版本会使名称 Stage 重算，地理分区阶段仍可缓存复用。手动改名和自定义词库仍待实现。
 
-**内容注入（2026-11-17）**：名称阶段不再调用 `loadBuiltinGenerationCatalog()`。版本字符串仍是 `geographic-names-v2`；词库正文和内容签名由调用方以 `geographic-name-pools` 注入，签名进入缓存键而不是阶段版本。`apps/web` 仍注入 `geography-zh`。生态阶段同样不再内置生物群系定义：分类代码留在 `world-core`，`{id, code, nameZh}` 词表由调用方以 `ecology-classes` 注入，算法版本仍是 `ecology-e0-v3`。
+**内容注入历史（2026-11-17）**：当时名称阶段不再调用 `loadBuiltinGenerationCatalog()`。版本字符串仍是 `geographic-names-v2`；词库正文和内容签名由调用方以 `geographic-name-pools` 注入，签名进入缓存键而不是阶段版本。`apps/web` 仍注入 `geography-zh`。生态阶段同样不再内置生物群系定义：分类代码留在 `world-core`，`{id, code, nameZh}` 词表由调用方以 `ecology-classes` 注入，算法版本仍是 `ecology-e0-v3`。
 
 **地图文字标签（2026-11-13）**：`cartography` 的公开 `buildGeographicLabelAnchors(mesh, regions)` 从已命名大陆与洋的成员网格中选取最接近面积加权球面中心的代表网格；球面向量相互抵消时退回面积最大的成员网格。锚点只供制图，区域名称、归属和面积仍以 `world-core` 的分区产物或快照为事实来源。Web 在“大陆、洋与海”专题图层上以透明 DOM 覆盖层显示名称，按相机投影更新位置，按大陆优先和面积排序避让，遮去背面及视口外标签。当前每区仅一个锚点，跨球面区域可能在锚点不可见时缺席；海无名也无标签。标签样式、开关和位置不进入生成签名。默认 Seed 的排版及浏览器表现尚未目视验收。
 
@@ -785,6 +785,8 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 
 ## 17. 已定决策与仍有限制
 
+- 2026-11-18：Web 的大陆和大洋名称由 `geographic-names-v3` 调用 `western-zh-CN` 风格-语言档案与 `naming-v1` 模板解释器生成；现代音译专名候选如“阿维亚大陆”“阿维伦洋”，大陆和大洋词库各 48 项，冲突仍追加中文序号。命名 JSON Schema v2 显式记录命名规则风格和 BCP 47 名称语言，档案 ID/签名将二者绑定；当前另提供 `western-en` 档案供按语言选择。名称产物与快照分别记录风格 ID 和风格签名，发布时从已记录内容包中重新计算签名；世界整体内容签名仍独立校验。Worker 和主线程从同一冻结内容目录构造输入与签名。按开发阶段决策，移除旧 `geography` / `geography-zh` 内置内容包、档案专用 Catalog、旧快照命名字段和 `geographic-names-v1/v2` 恢复兼容；完整快照只接受 v3 地名阶段，当前 v3 档案仍可正常恢复。未增加界面选择、文件导入导出或文明命名；同 Seed 新名称可能因算法版本和随机身份变化而不同，尚无实测对照。风格签名当前包含人物等非地理规则，其变化也会使地名缓存失效。兼容清理后 world-data 43/43、world-core 195/195、Web 29/29、cartography 22/22 测试通过；未运行 typecheck、lint、build 或浏览器验证。
+- 2026-11-18：命名内容采用独立 `NamingStyle` JSON（Schema v2）并适配为 ContentPack v2，继续复用 Catalog 的 ID 冲突、精确依赖、哈希与冻结机制。每份风格-语言档案拥有自己的词库及简单模板；文化通过 `namingStyleId` 绑定单个完整档案，多个文化可共用。`world-data` 拥有格式、编解码和内容签名，`world-core` 的 `naming-v1` 纯解释器只消费 `NamingStyleView`，维持 2026-11-17 的端口解耦；根 AGENTS.md 中“core 通过 world-data 公开 API 消费内容”的文字与当前编译期独立实现存在差异，本次沿用已实施端口边界。风格生成签名排除展示/作者元数据，独立于完整内容包签名。该轮保留 v1 内容包、旧哈希投影和当时的自然世界加载，尚未将 `geographic-names-v2` 接入新解释器；之后的地理名称接入见上一条决策。文化实体生成、用户切换自然地名风格、Worker 自定义配置传输、浏览器文件 UI 与档案内嵌配置正文仍未实现。示例 JSON、定向测试与公开 API 集成用例已加入，本次未运行 test、typecheck、lint、build 或浏览器验证；无固定 Seed 新旧地图实测结论。字段与使用方式见 [世界数据契约](WORLD_DATA_CONTRACTS.md#名称配置与模板生成2026-11-18)。
 - 2026-11-17：近岸闭合死坑改由 T0 `terrain-v27` 根治，L1 同步升为 `static-lakes-l1-v10`。`TerrainFinalizer.repairSeaConnectivity` 把小块负高程水体抬成陆地后，沿最低溢流路径向公海下切破口并补齐单调顺坡，不触碰无关的内陆洼地，也不普遍拉高平原起伏；L1 移除闭合抬升面高程特判，保留 1 m 薄膜门槛与气候筛选。旧 T0 及下游缓存失效。本次运行 T0/L1 定向用例及多 Seed 闭合诊断；未运行全仓 test、typecheck、lint、build 或浏览器验收。
 - 2026-11-17：`static-lakes-l1-v9` 把平均水深门槛从 25 m 降到 1 m。闭合深度随局部起伏变浅，25 m 会删掉低地数米深的湖盆、只留下山地深盆；1 m 只去掉不足一米的填洼薄膜。冰原、荒漠、降水和海岸闭合规则不变，也不按海拔配额删湖。默认 Seed 1024/L7 的数量见进度记录。本次运行 L1 定向用例；未运行全仓 test、typecheck、lint、build 或浏览器验收。
 - 2026-11-17：`static-lakes-l1-v8` 不再把海岸闭合抬成陆地的小块封闭水体认成湖。判定是最深湖底落在闭合抬升面上，不改 T0 高程，也不把近岸一格内的天然洼地一并去掉。默认 Seed 1024/L7 的数量见进度记录。本次运行 L1 定向用例；未运行全仓 test、typecheck、lint、build 或浏览器验收。

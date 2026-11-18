@@ -56,7 +56,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     add('range', 'metadata.generationConfig.mesh', 'Invalid mesh generation parameters')
   if (config.mesh && config.mesh.seed !== undefined && !((typeof config.mesh.seed === 'string' && nonempty(config.mesh.seed)) || (typeof config.mesh.seed === 'number' && Number.isSafeInteger(config.mesh.seed))))
     add('range', 'metadata.generationConfig.mesh.seed', 'Invalid mesh seed override')
-  const naturalStages = ['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0']
+  const naturalStages = ['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0']
   if (!m.provenance || !nonempty(m.provenance.configSignature) || naturalStages.some(stage => !nonempty(m.provenance.stageVersions?.[stage]) || !nonempty(m.provenance.artifactSignatures?.[stage])))
     add('required', 'metadata.provenance', 'Complete natural stage versions and signatures are required')
   const requiredParameters = { geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS }
@@ -89,12 +89,24 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     else selected.push(pack)
   }
   for (const pack of selected) {
-    for (const issue of content.validateContentPack(pack, selected).issues) issues.push({ ...issue, path: `content.${pack.manifest.id}.${issue.path}` })
-    if (pack.manifest.contentHash !== content.calculateContentHash(pack))
-      add('reference', `content.${pack.manifest.id}.contentHash`, 'Content hash mismatch')
+    try {
+      for (const issue of content.validateContentPack(pack, selected).issues) add(issue.code, `content.${pack.manifest.id}.${issue.path}`, issue.message)
+      if (pack.manifest.contentHash !== content.calculateContentHash(pack))
+        add('reference', `content.${pack.manifest.id}.contentHash`, 'Content hash mismatch')
+    }
+    catch {
+      add('reference', `content.${pack.manifest.id}`, 'Content validation or hashing failed')
+    }
   }
-  if (selected.length === m.contentPacks.length && m.contentSignature !== content.calculateContentSignature(selected))
-    add('reference', 'metadata.contentSignature', 'Content signature mismatch')
+  if (selected.length === m.contentPacks.length) {
+    try {
+      if (m.contentSignature !== content.calculateContentSignature(selected))
+        add('reference', 'metadata.contentSignature', 'Content signature mismatch')
+    }
+    catch {
+      add('reference', 'metadata.contentSignature', 'Content signature calculation failed')
+    }
+  }
   const contentIds = new Set<string>()
   for (const pack of selected) {
     for (const domain of ['names', 'cultures', 'religions', 'governments', 'resources', 'presets'] as const) {
@@ -105,14 +117,43 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       }
     }
   }
+  const namesVersion = m.provenance?.stageVersions?.['geographic-names']
+  if (namesVersion && namesVersion !== 'geographic-names-v3')
+    add('version', 'metadata.provenance.stageVersions.geographic-names', 'Unsupported geographic naming version')
+  if (namesVersion === 'geographic-names-v3') {
+    for (const pack of selected) {
+      for (const style of pack.namingStyles ?? []) {
+        if (contentIds.has(style.id))
+          add('duplicate', 'content', `Conflicting ID ${style.id}`)
+        contentIds.add(style.id)
+      }
+    }
+    const regions = n.geography.regions
+    if (regions) {
+      if (!nonempty(regions.nameStyleId))
+        add('required', 'geography.regions.nameStyleId', 'Geographic naming style ID is required')
+      if (!nonempty(regions.nameStyleSignature))
+        add('required', 'geography.regions.nameStyleSignature', 'Geographic naming style signature is required')
+      const styles = selected.flatMap(pack => pack.namingStyles ?? []).filter(style => style.id === regions.nameStyleId)
+      if (styles.length !== 1) {
+        add('reference', 'geography.regions.nameStyleId', 'Geographic naming style must belong to exactly one recorded pack')
+      }
+      else if (nonempty(regions.nameStyleSignature)) {
+        try {
+          if (content.calculateNamingStyleSignature(styles[0]) !== regions.nameStyleSignature)
+            add('reference', 'geography.regions.nameStyleSignature', 'Geographic naming style signature mismatch')
+        }
+        catch {
+          add('reference', 'geography.regions.nameStyleSignature', 'Geographic naming style signature calculation failed')
+        }
+      }
+    }
+  }
   const archetypes = {
     cultures: new Set(selected.flatMap(p => p.cultures.map(a => a.id))),
     religions: new Set(selected.flatMap(p => p.religions.map(a => a.id))),
     governments: new Set(selected.flatMap(p => p.governments.map(a => a.id))),
   }
-  const namePoolIds = n.geography.regions?.namePoolIds
-  if (namePoolIds && nonempty(m.provenance.stageVersions?.['geographic-names']) && ![namePoolIds.continent, namePoolIds.ocean].every(id => contentIds.has(id)))
-    add('reference', 'geography.regions.namePoolIds', 'Geographic name pools are not in the recorded content packs')
   function field(path: string, f: DenseField<NumericArray>, dtype: string, length: number, valid: (v: number) => boolean) {
     if (f.meshId !== mesh.meshId)
       add('reference', `${path}.meshId`, 'Field belongs to another mesh')
@@ -154,8 +195,6 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       const generatedNames = nonempty(m.provenance.stageVersions?.['geographic-names'])
       if (generatedNames && !nonempty(m.provenance.artifactSignatures?.['geographic-names']))
         add('required', 'metadata.provenance.geographic-names', 'Geographic naming signature is required')
-      if (generatedNames && geographicRegions.nameContentSignature !== m.contentSignature)
-        add('reference', 'geography.regions.nameContentSignature', 'Geographic names must match the recorded content packs')
       for (const [kind, table] of [['continents', continents], ['oceans', oceans], ['seas', seas ?? []]] as const) {
         for (let i = 0; i < table.length; i++) {
           const item = table[i]

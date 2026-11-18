@@ -10,6 +10,7 @@ export interface ContentPackView {
     readonly dependencies: readonly { readonly id: string, readonly version: string }[]
   }
   readonly names: readonly { readonly id: string }[]
+  readonly namingStyles?: readonly NamingStyleView[]
   readonly cultures: readonly { readonly id: string }[]
   readonly religions: readonly { readonly id: string }[]
   readonly governments: readonly { readonly id: string }[]
@@ -32,12 +33,34 @@ export interface ContentValidationResult {
 export interface ContentPort {
   calculateContentHash: (pack: ContentPackView) => string
   calculateContentSignature: (packs: readonly ContentPackView[]) => string
+  calculateNamingStyleSignature: (style: NamingStyleView) => string
   validateContentPack: (pack: ContentPackView, resolved: readonly ContentPackView[]) => ContentValidationResult
 }
 
 export interface NamePoolView {
   readonly id: string
   readonly entries: readonly { readonly value: string, readonly weight: number }[]
+}
+
+export type NamingPartView = { readonly pool: string, readonly literal?: never } | { readonly literal: string, readonly pool?: never }
+
+export interface NamingRuleView {
+  readonly weight: number
+  readonly parts: readonly NamingPartView[]
+}
+
+export interface NamingStyleView {
+  readonly format: 'another-earth/naming-style'
+  readonly schemaVersion: 2
+  readonly id: string
+  readonly style: string
+  readonly language: string
+  readonly version: string
+  readonly displayName: Readonly<Record<string, string>>
+  readonly author?: string
+  readonly source?: string
+  readonly pools: Readonly<Record<string, readonly { readonly value: string, readonly weight: number }[]>>
+  readonly rules: Readonly<Record<string, readonly NamingRuleView[]>>
 }
 
 export interface EcologyClassView {

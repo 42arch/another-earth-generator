@@ -1,5 +1,5 @@
 import type { ContentPort, WorldMapReader, WorldSnapshot } from '@another-earth/world-core'
-import type { ContentPack } from '@another-earth/world-data'
+import type { ContentPack, ContentPackV2, NamingStyle } from '@another-earth/world-data'
 import {
   assembleNaturalWorld,
   createNaturalPipeline,
@@ -11,7 +11,7 @@ import {
   DEFAULT_TERRAIN_PARAMETERS,
   ecologyVocabularySignature,
 } from '@another-earth/world-core'
-import { calculateContentHash, calculateContentSignature, loadBuiltinGenerationCatalog, NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS, validateContentPack } from '@another-earth/world-data'
+import { calculateContentHash, calculateContentSignature, calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, loadBuiltinCatalog, loadBuiltinNamingStyles, NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS, validateContentPack } from '@another-earth/world-data'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
   BUILTIN_MAP_SOURCE_SCHEMAS,
@@ -23,12 +23,13 @@ import {
   sphericalAngleRad,
 } from '../index'
 
-const namingCatalog = loadBuiltinGenerationCatalog()
+const styleId = 'builtin:naming-style/western-zh-cn'
+const namingCatalog = createContentCatalog([
+  ...loadBuiltinCatalog().packs.filter(pack => pack.manifest.id === 'core' || pack.manifest.id === 'earthlike'),
+  createNamingStylePack(loadBuiltinNamingStyles().find(style => style.id === styleId)!),
+])
 const builtinContentPacks = namingCatalog.packs
-const builtinNamePools = {
-  continent: namingCatalog.packs.flatMap(pack => pack.names).find(pool => pool.id === 'geography-zh:names/continent')!,
-  ocean: namingCatalog.packs.flatMap(pack => pack.names).find(pool => pool.id === 'geography-zh:names/ocean')!,
-}
+const builtinNamingStyle = (namingCatalog.get(styleId) as ContentPackV2).namingStyles.find(style => style.id === styleId)!
 const builtinEcologyVocabulary = {
   biomes: NATURAL_BIOME_DEFINITIONS.map(({ id, code, nameZh }) => ({ id, code, nameZh })),
   landCover: NATURAL_LAND_COVER_DEFINITIONS.map(({ id, code, nameZh }) => ({ id, code, nameZh })),
@@ -36,12 +37,13 @@ const builtinEcologyVocabulary = {
 const builtinContentPort: ContentPort = {
   calculateContentHash: pack => calculateContentHash(pack as ContentPack),
   calculateContentSignature: packs => calculateContentSignature(packs as readonly ContentPack[]),
+  calculateNamingStyleSignature: style => calculateNamingStyleSignature(style as NamingStyle),
   validateContentPack: (pack, resolved) => validateContentPack(pack as ContentPack, resolved as readonly ContentPack[]),
 }
 const builtinPipelineContent = {
-  content: { 'geographic-name-pools': builtinNamePools, 'ecology-classes': builtinEcologyVocabulary },
+  content: { 'geographic-naming-style': builtinNamingStyle, 'ecology-classes': builtinEcologyVocabulary },
   contentSignatures: {
-    'geographic-name-pools': namingCatalog.contentSignature,
+    'geographic-naming-style': calculateNamingStyleSignature(builtinNamingStyle),
     'ecology-classes': ecologyVocabularySignature(builtinEcologyVocabulary),
   },
 }

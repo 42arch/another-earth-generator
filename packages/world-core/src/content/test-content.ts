@@ -1,4 +1,4 @@
-import type { ContentPackView, ContentPort, EcologyClassView, EcologyVocabulary, NamePoolView } from './content-port'
+import type { ContentPackView, ContentPort, EcologyClassView, EcologyVocabulary, NamePoolView, NamingStyleView } from './content-port'
 import { ecologyVocabularySignature } from './content-port'
 
 function hash(value: string): string {
@@ -14,7 +14,20 @@ function hash(value: string): string {
 export const testContentPort: ContentPort = {
   calculateContentHash: pack => hash(JSON.stringify([pack.manifest.id, pack.manifest.version])),
   calculateContentSignature: packs => hash(JSON.stringify([...packs].map(pack => [pack.manifest.id, pack.manifest.version, pack.manifest.contentHash]).sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))),
+  calculateNamingStyleSignature: style => hash(JSON.stringify(style)),
   validateContentPack: () => ({ valid: true, issues: [] }),
+}
+
+const entries = (prefix: string, count: number) => Array.from({ length: count }, (_, index) => ({ value: `${prefix}${index + 1}`, weight: 1 }))
+
+export const testNamingStyle: NamingStyleView = {
+  format: 'another-earth/naming-style', schemaVersion: 2,
+  id: 'test:naming-style/western-zh-cn', style: 'western', language: 'zh-CN', version: '1.0.0', displayName: { en: 'Test geography' },
+  pools: { continent: entries('苍岚', 8), ocean: entries('沧溟', 8) },
+  rules: {
+    continent: [{ weight: 1, parts: [{ pool: 'continent' }] }],
+    ocean: [{ weight: 1, parts: [{ pool: 'ocean' }] }],
+  },
 }
 
 export const testContentPack: ContentPackView = {
@@ -23,14 +36,13 @@ export const testContentPack: ContentPackView = {
     { id: 'test:names/continent' },
     { id: 'test:names/ocean' },
   ],
+  namingStyles: [testNamingStyle],
   cultures: [{ id: 'test:culture/basic' }],
   religions: [{ id: 'test:religion/basic' }],
   governments: [{ id: 'test:government/basic' }],
   resources: [],
   presets: [],
 }
-
-const entries = (prefix: string, count: number) => Array.from({ length: count }, (_, index) => ({ value: `${prefix}${index + 1}`, weight: 1 }))
 
 export const testNamePools: { readonly continent: NamePoolView, readonly ocean: NamePoolView } = {
   continent: { id: 'test:names/continent', entries: entries('苍岚', 8) },
@@ -46,15 +58,16 @@ export const testEcologyVocabulary: EcologyVocabulary = {
   landCover: ['Ocean', 'SnowIce', 'Forest', 'Savanna', 'Desert', 'Grassland', 'Shrubland', 'Tundra'].map(cover),
 }
 
-/** Name-pool signature matches the packs so assembled snapshots pass content checks. */
+/** Generation and validation use the same style from the selected packs. */
 export function testPipelineContent(packs: readonly ContentPackView[] = [testContentPack]) {
+  const style = packs.flatMap(pack => pack.namingStyles ?? []).find(item => item.id === testNamingStyle.id) ?? testNamingStyle
   return {
     content: {
-      'geographic-name-pools': testNamePools,
+      'geographic-naming-style': style,
       'ecology-classes': testEcologyVocabulary,
     },
     contentSignatures: {
-      'geographic-name-pools': testContentPort.calculateContentSignature(packs),
+      'geographic-naming-style': testContentPort.calculateNamingStyleSignature(style),
       'ecology-classes': ecologyVocabularySignature(testEcologyVocabulary),
     },
   }

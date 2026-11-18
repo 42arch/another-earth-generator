@@ -1,4 +1,6 @@
 import type { ContentDefinition, ContentPack, ValidationIssue, ValidationResult } from '../schemas/content'
+import type { NamingStyle } from '../schemas/naming-style'
+import { parseNamingStyle } from '../names/parse-naming-style'
 
 /** Validates typed data; this is not a parser for untrusted JSON. Dependencies must be resolved first. */
 export function validateContentPack(pack: ContentPack, dependencies: readonly ContentPack[] = []): ValidationResult {
@@ -7,8 +9,13 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
   const nonempty = (v: string) => typeof v === 'string' && v.trim().length > 0
   const version = (v: string) => /^\d+\.\d+\.\d+(?:-[0-9A-Z.-]+)?$/i.test(v)
   const m = pack.manifest
-  if (m.schemaVersion !== 1 || !version(m.version))
+  if (![1, 2].includes(m.schemaVersion) || !version(m.version))
     add('version', 'manifest', 'Unsupported schema or invalid semantic version')
+  const styles: readonly NamingStyle[] = 'namingStyles' in pack && Array.isArray(pack.namingStyles) ? pack.namingStyles : []
+  if (m.schemaVersion === 2 && (!('namingStyles' in pack) || !Array.isArray(pack.namingStyles)))
+    add('required', 'namingStyles', 'Schema v2 requires a naming styles array')
+  if (m.schemaVersion === 1 && 'namingStyles' in pack)
+    add('version', 'namingStyles', 'Naming styles require content schema v2')
   for (const key of ['id', 'nameKey', 'contentHash'] as const) {
     if (!nonempty(m[key]))
       add('required', `manifest.${key}`, 'Required nonempty string')
@@ -33,20 +40,33 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
     if (!nonempty(d.displayNameKey) || d.tags.some(t => !nonempty(t)))
       add('required', `definitions[${i}]`, 'Invalid name key or tag')
   }
+  for (const [i, style] of styles.entries()) {
+    const parsed = parseNamingStyle(style)
+    for (const issue of parsed.issues)
+      add(issue.code, `namingStyles[${i}].${issue.path}`, issue.message)
+    if (ids.has(style.id))
+      add('duplicate', `namingStyles[${i}].id`, 'Duplicate content ID')
+    ids.add(style.id)
+  }
   const resolved = dependencies.filter(p => m.dependencies.some(d => d.id === p.manifest.id && d.version === p.manifest.version))
   for (const dep of resolved) {
-    for (const key of domains) {
-      for (const d of dep[key]) {
-        if (ids.has(d.id))
-          add('duplicate', 'dependencies', `Conflicting content ID ${d.id}`)
-        ids.add(d.id)
-      }
+    const entries = [...domains.flatMap(key => [...dep[key]]), ...('namingStyles' in dep ? dep.namingStyles : [])]
+    for (const d of entries) {
+      if (ids.has(d.id))
+        add('duplicate', 'dependencies', `Conflicting content ID ${d.id}`)
+      ids.add(d.id)
     }
   }
   const names = new Set([...pack.names, ...resolved.flatMap(p => [...p.names])].map(d => d.id))
+  const namingStyles = new Set([...styles, ...resolved.flatMap(p => 'namingStyles' in p ? [...p.namingStyles] : [])].map(style => style.id))
   for (const [i, c] of pack.cultures.entries()) {
-    if (!names.has(c.namePoolId))
-      add('reference', `cultures[${i}].namePoolId`, 'Missing name pool')
+    if (m.schemaVersion === 1) {
+      if (!('namePoolId' in c) || !names.has(c.namePoolId) || 'namingStyleId' in c)
+        add('reference', `cultures[${i}].namePoolId`, 'Schema v1 requires a name pool reference')
+    }
+    else if (!('namingStyleId' in c) || !namingStyles.has(c.namingStyleId) || 'namePoolId' in c) {
+      add('reference', `cultures[${i}].namingStyleId`, 'Schema v2 requires a naming style reference')
+    }
   }
   const numeric = (v: number, path: string, max = Infinity) => {
     if (!Number.isFinite(v) || v < 0 || v > max)

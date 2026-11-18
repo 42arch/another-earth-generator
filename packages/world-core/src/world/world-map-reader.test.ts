@@ -242,6 +242,10 @@ describe('worldMapReader & circulation closure', () => {
       hasCirculation: true,
     })
     expect(restoredReader.capabilities).toEqual(freshReader.capabilities)
+    const emptyRegions = structuredClone(snapshot)
+    const geography = emptyRegions.nature.geography as { regions: typeof snapshot.nature.geography.regions }
+    geography.regions = { ...geography.regions!, continents: [], oceans: [] }
+    expect(createWorldMapReader(emptyRegions).capabilities.hasGeographicNames).toBe(true)
 
     for (const month of [0, 3, 6, 10]) {
       const windSpeed = restoredReader.monthlyField('windSpeedMps', month)

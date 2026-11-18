@@ -68,13 +68,59 @@ WorldSnapshot 是 world-core 数据所有者使用的完整存储契约，readon
 
 ## 内容与验证
 
-内容 ID 为 `namespace:domain/name`，与 displayNameKey 分离。ContentPack 包含内容模板、版本/哈希/依赖清单以及 locale → 翻译键 → 文本。每个声明的语言必须覆盖该包显示键。`loadBuiltinCatalog()` 提供 `core`、`earthlike`、历史拉丁名称包 `geography` 与当前中文名称包 `geography-zh`；`loadBuiltinGenerationCatalog()` 仅选择 `core`、`earthlike`、`geography-zh` 供新世界生成。这些函数只属于 `@another-earth/world-data`。`@another-earth/world-core` 不依赖该包，也不再导出 `loadBuiltinContentPacks()`。它只接收结构化的 `ContentPackView` 和调用方实现的 `ContentPort`（`calculateContentHash`、`calculateContentSignature`、`validateContentPack`）。`apps/web` 的 `src/lib/generation/builtin-content.ts` 用 `loadBuiltinGenerationCatalog()` 装载上述三包并注入生成、组装、校验和存档。这是 M0 契约数据，不代表 M2 文明内容库已完成。
+内容 ID 为 `namespace:domain/name`，与 displayNameKey 分离。ContentPack 包含内容模板、版本/哈希/依赖清单以及 locale → 翻译键 → 文本。每个声明的语言必须覆盖该包显示键。`loadBuiltinCatalog()` 提供 `core`、`earthlike` 和内置风格-语言档案；`loadBuiltinGenerationCatalog()` 提供 `core`、`earthlike` 和默认 `western-zh-CN` 档案。旧 `geography` / `geography-zh` 内容包已从当前 Catalog 移除，不再用于历史世界档案恢复。`@another-earth/world-core` 不依赖 `world-data`，只接收结构化的 `ContentPackView` 和调用方实现的 `ContentPort`（包哈希、集合签名、风格签名、包校验）。这是 M0 契约数据，不代表 M2 文明内容库已完成。
 
 `validateContentPack(pack, resolvedDependencies)` 检查 ID、重复项、翻译、数值、名称池引用和显式依赖。M0 依赖使用精确版本。`createContentCatalog()` 会复制、校验并冻结已解析内容，验证每包的 `contentHash`，按包 ID 排序计算 `contentSignature`。当前哈希格式为 `fnv1a32`，用于确定性版本身份和意外篡改检测，不作为抗恶意碰撞的安全摘要。
 
 `validateWorldSnapshot(snapshot, resolvedPacks, content, options)` 返回 `{valid, issues: [{code,path,message}]}`。`content` 是 `ContentPort`；哈希、签名和包校验都走该端口，不在 `world-core` 再实现一套。完整模式为默认值，遍历字段及图，检查月/年气候、积雪收支、径流深与体积、流域汇总、河段路由、湖泊成员/溢流、人口约束等；时间 O(N+E+实体/分组数)，需要 O(N+E) 临时图索引，错误最多报告 100 条世界问题。`structure` 检查长度、类型、元数据和实体引用，但跳过 dense 数值、图遍历和人口守恒，不能用于发布或存档验收。不能因 UI 状态变化重复调用完整校验。
 
 两个校验器接收已经解码的类型化内存对象，不是任意 JSON 的安全解析器。`encodeWorldArchive(snapshot, packs, content)` / `decodeWorldArchive(archive, packs, content)` 提供 M0 版本化 JSON 往返，保存 TypedArray 类型并校验完整快照、内容版本和校验和；`content` 同为 `ContentPort`。解码失败不返回候选世界。当前 envelope 格式仍是 `another-earth-m0-json` v1，内部世界须为 Schema 3。旧 Schema 1/2 无迁移器，解码时拒绝，不能凭空填充缺失自然事实。针对 Schema 3 水文生成配置，解码器会为缺失的旧版参数补历史默认值 `riverDensityMultiplier = 1` 与 `minimumLakeAreaKm2 = 0`；这只补参数元数据，不改已保存河流/湖泊事实。新生成配置的河网倍率默认值现为 `0.5`。`WorldStore.restore` 只在解码与完整校验成功后替换当前世界。它不是 M4 的 `.aearth` 二进制格式、浏览器持久存储或 UI 导入流程。未引入通用 Schema 引擎。
+
+## 名称配置与模板生成（2026-11-18）
+
+命名配置是一个不可拆分的“风格-语言”档案，JSON 类型为 `NamingStyle`，格式标识为 `another-earth/naming-style`，`schemaVersion: 2`。它与 `ContentPack.manifest.schemaVersion`、档案内容 `version` 和命名算法版本分别管理。
+
+- `style` 是命名规则传统标识（如 `western`），`language` 是名称文本使用的 BCP 47 语言标签（如 `zh-CN`、`en`）。它们共同确定一个完整档案；每份档案的词库与模板自包含，不跨语言或风格拼接。
+- `id` 使用 `namespace:naming-style/<style>-<language-lowercase>`，例如 `builtin:naming-style/western-zh-cn`；`version` 使用内容包相同的版本格式。文化引用这个完整档案 ID。
+- `displayName` 是档案标签的 locale → 文本映射，与 `language`（生成名称的语言）不同；可选 `author`、`source` 为非空说明文本。
+- `pools` 是局部 ID → `{ value, weight }[]`，`rules` 是规则类别 → `{ weight, parts }[]`。局部 ID 使用小写字母开头的小写字母、数字和连字符。
+- `parts` 的每项严格为 `{ pool: "局部词库ID" }` 或 `{ literal: "固定文本" }`。例如中式人名用 family + given，西式人名用 given + literal 空格 + family；完整候选名用一个 pool 片段表达。
+- 权重是有限非负数，候选集合的总权重必须有限且大于零，零权重候选不被抽中。词库、规则集合、候选数组及模板 parts 不能为空；词库值不可全空白，每个模板必须能生成非空名称。固定文本按原样保留，包括空格。
+- 拒绝未知字段、错误类型、缺失词库引用、递归规则和跨风格引用。对象键顺序不影响签名；条目、模板和 parts 的数组顺序属于语义，导出时保留。
+
+`world-data` 提供 `parseNamingStyle(unknown)` 和 `decodeNamingStyleJson(string)`，返回 `{ valid: true, value, issues: [] }` 或 `{ valid: false, issues }`。成功值是独立副本。`encodeNamingStyleJson(profile)` 先校验，再输出稳定对象键顺序的可读 JSON；`createNamingStylePack(profile)` 将一个风格-语言档案转为一个 v2 内容包，包 ID 等于档案 ID，包版本等于档案版本，翻译键由适配器生成。`loadBuiltinNamingStyles()` 当前返回 `western-zh-CN` 与 `western-en` 两份档案，文件在 `packages/world-data/data/name-styles/`；Web 默认选用 `western-zh-CN` 生成大陆和大洋名称。应用可按 `profile.language` 选择可用于当前 UI 语言的档案。姓名、聚落及地理词库仍为小型示例，不代表完整语言词库。
+
+ContentPack 现在是 `ContentPackV1 | ContentPackV2`。v1 保留 `names`、文化的 `namePoolId` 和原哈希投影；v2 增加 `namingStyles`，文化通过 `namingStyleId` 引用一个风格。`CultureArchetypeV1` / `CultureArchetypeV2` 分别描述这两个版本，`CultureArchetype` 是联合类型。风格文档自带 `displayName`，不同于其他内容定义的 `displayNameKey`；生成包的 manifest 显示键仍遵守翻译覆盖要求。
+
+多个配置通过 `createContentCatalog(styles.map(createNamingStylePack))` 组合。全局风格 ID 与其他内容 ID 一样必须唯一，冲突报错；风格内部可使用同名局部 pool。文化可引用本包或直接声明且精确版本匹配的依赖包中的风格，多个文化可以引用同一个风格。不按导入顺序覆盖或追加词库。v1 内容包和内置包 ID、版本、哈希计算方式保留；v2 哈希额外包含完整风格内容及元数据。联合类型调用方可用 `'namingStyles' in pack` 收窄版本。
+
+`calculateNamingStyleSignature(profile)` 的身份包含结构版本、档案 ID、`style`、`language`、内容版本、pools 和 rules，排除显示名称、作者与来源说明。该签名仍使用现有 `fnv1a32` 摘要，不是安全签名；修改内容必须重新计算。调用方应在解析/组合阶段计算并保存签名，不应为每个实体重复解析和哈希整个配置。
+
+`world-core` 通过 `NamingStyleView` 消费内容，公开 `generateName({ style, styleSignature, worldSeed, entityId, rule })`，算法版本为 `naming-v1`。随机流身份依次包含算法版本、标准化 Seed、对象稳定 ID、风格 ID、风格版本、生成签名及规则类别。先抽一次模板，再按顺序为每个 pool 片段抽一次，即使只有一个候选也消耗一次随机值；literal 不抽样。不同对象的调用顺序不会相互影响，未使用风格不进入随机身份。解释器不解析 JSON、不访问 DOM、不依赖 world-data，也不隐式重抽或去重；去重范围与消歧规则由具体领域调用方确定。
+
+最小调用示例（应用层仅通过包公开 API 消费）：
+
+```ts
+import { generateName } from '@another-earth/world-core'
+import { calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, loadBuiltinNamingStyles } from '@another-earth/world-data'
+
+const styles = loadBuiltinNamingStyles()
+const catalog = createContentCatalog(styles.map(createNamingStylePack))
+const pack = catalog.get(styles[0].id)!
+if ('namingStyles' in pack) {
+  const style = pack.namingStyles[0]
+  const name = generateName({
+    style,
+    styleSignature: calculateNamingStyleSignature(style),
+    worldSeed: '1024',
+    entityId: 'person:1',
+    rule: 'person',
+  })
+  // name 是候选名称；领域调用方决定如何确认和保存它。
+}
+```
+
+Web 自然世界的大陆、大洋名称使用 `geographic-names-v3` 和 `western-zh-CN` 风格-语言档案；阶段与快照记录完整档案 `nameStyleId` / `nameStyleSignature`。发布校验从世界记录的内容包解析该风格，并通过 `ContentPort` 重算风格签名；世界整体 `metadata.contentSignature` 仍独立验证内容包集合。完整快照必须具有 v3 地名阶段；旧 v1/v2 地名阶段和缺少地名阶段的历史世界档案均拒绝恢复。当前 v3 档案仍支持正常编解码往返，已保存名称作为世界事实，不会重新抽取。当前没有人物/聚落/文明实体生成、浏览器配置管理或文件按钮；Worker 自定义内容传递、按文化运行的命名流程、档案正文嵌入和自定义内容分享仍待实现。本次兼容清理后已运行 world-data、world-core、Web 与 cartography 测试：43、195、29、22 项通过；未运行 typecheck、lint、build 或浏览器验证。
 
 ## 与技术设计示例的细化
 
@@ -131,9 +177,9 @@ meshId 包含算法、等级、物理半径和适用时的扰动/Seed。规则�
 
 `geographic-regions-v3` 独立依赖 Mesh、Geology 与最终 T0；`continentIndex`、`oceanIndex`、`seaIndex` 均为 N 长 Int32，-1 表示不属于该类。每个陆地网格恰归一个大陆，每个水域网格恰归一个洋或海。大陆从最终陆地连通块出发，每块按面积占优的候选大陆来源归并。海水到最终海岸的球面路径距离定义宽阔核心；在 `max(2 × 平均网格宽度, 0.03 × 行星半径)` 的海岸带外相连的水格构成同一核心，沿岸水格沿海水路径归入最近核心。最大连通水体的最大宽阔核心归洋；其他核心同时满足最大离岸距离不低于全球最大值 50%、核心面积不低于全部核心面积 8% 时归洋，其余归海。v3 再在每个已划洋区内找离岸距离局部峰值：候选峰值不低于该区最大值 45%，且与既有远海中心间最宽海水路径的最窄离岸距离低于候选峰值的 55%，才成为独立洋种子；海水最短路径给各洋分区，面积小于原洋区 8% 的碎区并回。全水世界为一个洋；没有宽阔核心的水体归海。洋/海边界及洋间分界为初步形态规则，不等同于气候洋流区或传统海域名称，阈值需要固定 Seed 与不同网格等级校准。区域表保存稳定 ID 和面积；改变 Mesh 或最终海岸线须重建归属。新完整自然世界将这些字段置于可选的 `nature.geography.regions`；缺失该对象的旧 Schema 3 档案保持未划分，v1 档案缺少 `seaIndex` / `seas` 时按旧数据读取，v2 档案保留原来单洋事实。`WorldStore.region` 返回 `continentId` / `oceanId` / `seaId`，并提供 `continent(id)` / `ocean(id)` / `sea(id)` 只读摘要。v3 纯分区产物不包含地名。
 
-`geographic-names-v1` 以大陆和大洋的稳定 ID 为对象，使用 `world-data` 内置名称词库、世界 Seed 和内容签名确定性选名；同类重名采用稳定后缀消歧，海暂不命名。命名结果作为可选 `name` 存于 `nature.geography.regions.continents` / `oceans`，并记录 `nameContentSignature`；有 `geographic-names` provenance 的新快照必须具备非空且同类唯一的名称，并与快照的内容签名一致。旧 Schema 3 档案缺少该 Stage 和名称时仍有效。`WorldStore.region` 另返回 `continentName` / `oceanName`，区域摘要也包含名称；图例与区域检查器读取快照名称。名称为原始专名，界面加中文类型后缀；译名和作者覆盖尚未实现，地图表面文字标签见下方现状。v1 当时新增独立 `geography` 1.0.0 内容包，原有 `core` / `earthlike` 版本与哈希保持不变；当时新世界记录三个内容包，旧档案仍可按其已记录的包集合解析。
+历史实现记录：`geographic-names-v1` 曾以大陆和大洋的稳定 ID 为对象，使用 `world-data` 内置名称词库、世界 Seed 和内容签名确定性选名；同类重名采用稳定后缀消歧，海不命名。命名结果曾作为可选 `name` 存于 `nature.geography.regions.continents` / `oceans`，并记录 `nameContentSignature`。此版本及缺少地名阶段的旧快照现均不再通过当前快照校验。`WorldStore.region` 另返回 `continentName` / `oceanName`，区域摘要也包含名称；图例与区域检查器读取快照名称。名称为原始专名，界面加中文类型后缀；译名和作者覆盖尚未实现，地图表面文字标签见下方现状。v1 当时新增独立 `geography` 1.0.0 内容包，原有 `core` / `earthlike` 版本与哈希保持不变；当时新世界记录三个内容包。该历史包和旧快照解析能力现已移除。
 
-`geographic-names-v2` 当前选用 `geography-zh` 1.0.0 内容包的中文专名，并将同类重名后缀改为中文序号；UI 将名称与“大陆”或“洋”直接连接。阶段自身不读取 `world-data`。版本字符串是 `geographic-names-v2`；大陆/大洋词库以内容键 `geographic-name-pools` 注入，对应签名由调用方放入 `contentSignatures`，并进入缓存键，不再嵌进阶段版本。新产物可带 `namePoolIds: { continent, ocean }`。完整校验只在该字段存在且 `provenance.stageVersions['geographic-names']` 非空时，要求这两个 ID 属于已记录内容包；没有 `namePoolIds` 的旧档案仍然有效，旧的长版本字符串也仍被接受。`geography` 1.0.0 拉丁词库仍保留在内置 Catalog 中，以便解析已有档案。词库变化只使名称 Stage 缓存失效，分区数组和面积不变；已发布快照中的旧名称不会自动改写。名称仍作为事实存于 `name` 字段，新生成的世界只记录实际使用的三个内置内容包；海仍无名称。
+历史实现记录：`geographic-names-v2` 曾选用 `geography-zh` 1.0.0 内容包的中文专名，同类重名后缀为中文序号；阶段以 `geographic-name-pools` 注入词库，并可能记录 `namePoolIds`。该阶段版本、旧 `geography` / `geography-zh` 内容包及对应的历史档案恢复兼容均已移除。
 
 `ecology-e0` 算法版本仍是 `ecology-e0-v3`。分类代码留在 `world-core`；调用方以内容键 `ecology-classes` 传入生物群系与土地覆盖的 `{ id, code, nameZh }` 词表。阶段用 `ecologyVocabularySignature` 重算签名（对 `['biome'|'land-cover', id, code]` 行做 FNV-1a 32，前缀 `ecology-classes:`），与传入签名不一致则拒绝执行。快照字段不变。阶段 `validate` 仍只做结构检查，因为它看不到注入内容；生成函数自身检查产物 ID 与词表一致。
 

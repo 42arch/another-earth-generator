@@ -1,8 +1,10 @@
 # Generation Pipeline 与 Worker
 
-2026-11-13 `geographic-regions-v3` 依赖 Mesh、Geology 和最终 Terrain，读取候选大陆来源与最终海陆掩码，无独立配置或随机流。阶段输出大陆、洋、海的区域索引和面积表；沿用 v2 的海岸距离/海峡收窄后的洋海等级，并在宽阔洋区内按离岸峰值间的通路收窄程度划分多个大洋，抑制小面积碎区。`geographic-names` 依赖该分区产物，阶段版本为纯 `geographic-names-v2`，不再把内容签名写进版本字符串，也不再调用 `loadBuiltinGenerationCatalog()`。它声明内容键 `geographic-name-pools`；调用方传入大陆/大洋 `NamePoolView`，并提供 `contentSignatures['geographic-name-pools']`。缓存键已经包含该签名，词库变化只使名称阶段失效。命名仍由 Seed、稳定区域 ID、词库 ID 和内容签名决定，同类重名使用中文序号；新产物写入 `namePoolIds`。`apps/web` 注入 `geography-zh` 中文词库。T0/海陆变化使分区与名称阶段重算，不使气候、水文和生态重算。Worker 传输带名称的独立副本，完整自然世界组装时复制入快照。旧 `geography` 词库保留供历史档案解析。`ecology-e0` 另声明内容键 `ecology-classes`，算法版本仍是 `ecology-e0-v3`；调用方传入生物群系与土地覆盖词表，签名必须等于 `ecologyVocabularySignature`。
+2026-11-18 大陆和大洋名称阶段升级为 `geographic-names-v3`，声明 `geographic-naming-style` 内容键，由调用方注入完整风格和其生成签名；阶段调用 `naming-v1` 模板解释器，按 Seed、区域稳定 ID、风格和对应规则生成候选，同类冲突仍按稳定 ID 排序并追加中文序号。海保持无名。Web 从冻结内容目录中选择 `western-zh-CN` 风格-语言档案，其 `continent` / `ocean` 词库各有 48 个现代音译专名候选；另有同风格的 `western-en` 档案，应用可按语言选择。产物与快照记录 `nameStyleId` 和 `nameStyleSignature`；世界完整内容签名保持独立。阶段版本和风格签名进入缓存键，风格变化只使名称阶段失效；现有风格签名覆盖整个风格，所以人物等其他规则改变也会使地名重算。通用 Pipeline 依赖调用方确保内容正文和签名一致，包括缓存命中情况；Web 由同一冻结风格对象计算签名，发布快照时按记录内容包再次验证。快照校验只接受 `geographic-names-v3`，缺失地名阶段或旧 v1/v2 阶段版本的世界档案不再恢复；当前 v3 档案仍可往返。算法和签名改变会使相同 Seed 的新生成名称可能不同，未实测固定 Seed 对照；本次尚未运行 test、typecheck、lint、build 或浏览器验证。
 
-> 更新：2026-11-13。记录当前执行与缓存契约，不表示完整 M1 已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
+历史记录（2026-11-13）：`geographic-regions-v3` 依赖 Mesh、Geology 和最终 Terrain，读取候选大陆来源与最终海陆掩码，无独立配置或随机流。阶段输出大陆、洋、海的区域索引和面积表；沿用 v2 的海岸距离/海峡收窄后的洋海等级，并在宽阔洋区内按离岸峰值间的通路收窄程度划分多个大洋，抑制小面积碎区。`geographic-names` 依赖该分区产物，阶段版本为纯 `geographic-names-v2`，不再把内容签名写进版本字符串，也不再调用 `loadBuiltinGenerationCatalog()`。它声明内容键 `geographic-name-pools`；调用方传入大陆/大洋 `NamePoolView`，并提供 `contentSignatures['geographic-name-pools']`。缓存键已经包含该签名，词库变化只使名称阶段失效。命名仍由 Seed、稳定区域 ID、词库 ID 和内容签名决定，同类重名使用中文序号；新产物写入 `namePoolIds`。`apps/web` 注入 `geography-zh` 中文词库。T0/海陆变化使分区与名称阶段重算，不使气候、水文和生态重算。Worker 传输带名称的独立副本，完整自然世界组装时复制入快照。旧 `geography` 词库保留供历史档案解析。`ecology-e0` 另声明内容键 `ecology-classes`，算法版本仍是 `ecology-e0-v3`；调用方传入生物群系与土地覆盖词表，签名必须等于 `ecologyVocabularySignature`。
+
+> 更新：2026-11-18。记录当前执行与缓存契约，不表示完整 M1 已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
 ## 公开入口
 
@@ -43,7 +45,7 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | tectonic-elevation | terrain-skeleton-v10 | mesh、geology、tectonics |
 | terrain | terrain-v27 | mesh、geology、tectonics、tectonic-elevation |
 | geographic-regions | geographic-regions-v3 | mesh、geology、terrain |
-| geographic-names | geographic-names-v2 | geographic-regions；内容键 `geographic-name-pools` |
+| geographic-names | geographic-names-v3 | geographic-regions；内容键 `geographic-naming-style` |
 | climate-c0 | climate-c0-v21 | mesh、reference-mesh、geology、terrain |
 | cryosphere-i0 | cryosphere-i0-v1 | mesh、terrain、climate-c0 |
 | hydrology-h0 | hydrology-h0-v4 | mesh、terrain、climate-c0、cryosphere-i0 |

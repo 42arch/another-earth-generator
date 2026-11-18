@@ -1,4 +1,4 @@
-import type { NamePoolView } from '#content/content-port'
+import type { NamingStyleView } from '#content/content-port'
 import type { AlgorithmMeshInput } from '#generation/nature/common'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { GeographicRegionsArtifact } from '#generation/nature/geography/geographic-regions'
@@ -308,17 +308,17 @@ const geographicNamesStage: GenerationStage<GeographicRegionsArtifact> = {
   version: GEOGRAPHIC_NAMES_VERSION,
   dependencies: ['geographic-regions'],
   configKeys: [],
-  contentKeys: ['geographic-name-pools'],
+  contentKeys: ['geographic-naming-style'],
   execute(context) {
-    const signature = context.getContentSignature('geographic-name-pools')
+    const signature = context.getContentSignature('geographic-naming-style')
     if (!signature)
-      throw new Error('Geographic naming content signature is missing')
-    const pools = context.getContent<{ readonly continent: NamePoolView, readonly ocean: NamePoolView }>('geographic-name-pools')
+      throw new Error('Geographic naming style signature is missing')
+    const style = context.getContent<NamingStyleView>('geographic-naming-style')
     const regions = copyDependency<GeographicRegionsArtifact>(context, 'geographic-regions')
-    return nameGeographicRegions(regions, context.worldSeed, pools, signature)
+    return nameGeographicRegions(regions, context.worldSeed, style, signature)
   },
   validate(output) {
-    if (!output.nameContentSignature || output.continents.some(region => !region.name) || output.oceans.some(region => !region.name))
+    if (!output.nameStyleId || !output.nameStyleSignature || output.continents.some(region => !region.name) || output.oceans.some(region => !region.name))
       throw new Error('Geographic name is missing')
   },
 }

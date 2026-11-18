@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { testContentPack, testContentPort, testPipelineContent } from '#content/test-content'
+import { testContentPack, testContentPort, testNamingStyle, testPipelineContent } from '#content/test-content'
 import {
   assembleNaturalWorld,
   createNaturalPipeline,
@@ -42,16 +42,33 @@ describe('natural world publication', () => {
     expect(candidate.metadata.contentPacks.map(pack => pack.id)).toEqual(['test:core'])
     expect(candidate.metadata.generationConfig.hydrology).toEqual(DEFAULT_HYDROLOGY_PARAMETERS)
     expect(candidate.metadata.provenance.stageVersions['ecology-e0']).toBe('ecology-e0-v3')
-    expect(candidate.metadata.provenance.stageVersions['geographic-names']).toBe('geographic-names-v2')
-    expect(candidate.nature.geography.regions?.nameContentSignature).toBe(candidate.metadata.contentSignature)
+    expect(candidate.metadata.provenance.stageVersions['geographic-names']).toBe('geographic-names-v3')
+    expect(candidate.nature.geography.regions?.nameStyleId).toBe(testNamingStyle.id)
+    expect(candidate.nature.geography.regions?.nameStyleSignature).toBe(testContentPort.calculateNamingStyleSignature(testNamingStyle))
     expect(candidate.nature.geography.regions?.continents.every(item => !!item.name)).toBe(true)
     expect(candidate.nature.geography.regions?.oceans.every(item => !!item.name)).toBe(true)
     expect([...candidate.nature.geography.regions!.continents, ...candidate.nature.geography.regions!.oceans].every(item => item.name?.startsWith('苍岚') || item.name?.startsWith('沧溟'))).toBe(true)
     expect(candidate.nature.geography.regions?.seas?.every(item => !('name' in item))).toBe(true)
     expect(candidate.nature.hydrology.riverIndex.values.length).toBe(candidate.mesh.regionCount)
     expect(validateWorldSnapshot(candidate, packs, testContentPort).valid).toBe(true)
-    const wrongLexicon = { ...candidate, nature: { ...candidate.nature, geography: { ...candidate.nature.geography, regions: { ...candidate.nature.geography.regions!, nameContentSignature: 'content:wrong' } } } }
-    expect(validateWorldSnapshot(wrongLexicon, packs, testContentPort).issues.some(issue => issue.path === 'geography.regions.nameContentSignature')).toBe(true)
+    const withRegions = (changes: object) => ({ ...candidate, nature: { ...candidate.nature, geography: { ...candidate.nature.geography, regions: { ...candidate.nature.geography.regions!, ...changes } } } })
+    for (const changes of [{ nameStyleId: '' }, { nameStyleId: 'missing' }, { nameStyleSignature: '' }, { nameStyleSignature: 'wrong' }])
+      expect(validateWorldSnapshot(withRegions(changes), packs, testContentPort).valid).toBe(false)
+    const conflictingPack = { ...testContentPack, names: [...testContentPack.names, { id: testNamingStyle.id }] }
+    expect(validateWorldSnapshot(candidate, [conflictingPack], testContentPort).issues.some(issue => issue.code === 'duplicate')).toBe(true)
+    const duplicateStylePack = { ...testContentPack, namingStyles: [testNamingStyle, testNamingStyle] }
+    expect(validateWorldSnapshot(candidate, [duplicateStylePack], testContentPort).issues.some(issue => issue.path === 'geography.regions.nameStyleId')).toBe(true)
+    const throwingPort = { ...testContentPort, calculateNamingStyleSignature: () => { throw new Error('invalid') } }
+    expect(validateWorldSnapshot(candidate, packs, throwingPort).issues.some(issue => issue.path === 'geography.regions.nameStyleSignature')).toBe(true)
+    const throwingValidator = { ...testContentPort, validateContentPack: () => { throw new Error('invalid') } }
+    expect(validateWorldSnapshot(candidate, packs, throwingValidator).valid).toBe(false)
+    const legacyV2 = structuredClone(candidate)
+    legacyV2.metadata.provenance.stageVersions['geographic-names'] = 'geographic-names-v2'
+    expect(validateWorldSnapshot(legacyV2, packs, testContentPort).issues.some(issue => issue.code === 'version')).toBe(true)
+    const unnamed = structuredClone(candidate)
+    delete (unnamed.metadata.provenance.stageVersions as Record<string, string>)['geographic-names']
+    delete (unnamed.metadata.provenance.artifactSignatures as Record<string, string>)['geographic-names']
+    expect(validateWorldSnapshot(unnamed, packs, testContentPort).valid).toBe(false)
     const restored = decodeWorldArchive(encodeWorldArchive(candidate, packs, testContentPort), packs, testContentPort)
     expect(restored).toEqual(candidate)
     expect(result.getOutput<{ elevationKm: Float32Array }>('terrain').elevationKm.buffer).not.toBe(candidate.nature.geography.elevationKm.values.buffer)

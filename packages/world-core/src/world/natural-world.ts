@@ -106,8 +106,8 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
         elevationKm: owned(meshId, terrain.elevationKm),
         landMask: owned(meshId, terrain.landMask),
         regions: {
-          nameContentSignature: regions.nameContentSignature,
-          ...(regions.namePoolIds ? { namePoolIds: { ...regions.namePoolIds } } : {}),
+          ...(regions.nameStyleId ? { nameStyleId: regions.nameStyleId } : {}),
+          ...(regions.nameStyleSignature ? { nameStyleSignature: regions.nameStyleSignature } : {}),
           continentIndex: owned(meshId, regions.continentIndex),
           oceanIndex: owned(meshId, regions.oceanIndex),
           seaIndex: owned(meshId, regions.seaIndex),

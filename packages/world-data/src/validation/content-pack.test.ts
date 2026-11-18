@@ -1,8 +1,8 @@
-import type { ContentPack } from '../index'
+import type { ContentPackV1 } from '../index'
 import { describe, expect, it } from 'vitest'
 import { validateContentPack } from '../index'
 
-function pack(): ContentPack {
+function pack(): ContentPackV1 {
   return {
     manifest: { id: 'test:core', version: '1.0.0', schemaVersion: 1, nameKey: 'pack', contentHash: 'test-hash', dependencies: [] },
     names: [{ id: 'test:names/basic', displayNameKey: 'names', tags: [], entries: [{ value: 'Ada', weight: 1 }] }],
@@ -37,7 +37,7 @@ describe('content pack validation', () => {
   })
   it('resolves references only through exact declared dependencies', () => {
     const base = pack()
-    const extension: ContentPack = {
+    const extension: ContentPackV1 = {
       ...base,
       manifest: { ...base.manifest, id: 'test:extension', dependencies: [{ id: 'test:core', version: '1.0.0' }] },
       names: [],

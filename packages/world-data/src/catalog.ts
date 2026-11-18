@@ -1,26 +1,14 @@
-import type { ContentPack, ContentPackManifest } from './schemas/content'
+import type { ContentPack, ContentPackHashInput } from './schemas/content'
+import { canonical, hash } from './content-hash'
 import { validateContentPack } from './validation/validate-content-pack'
 
-function hash(value: string): string {
-  let h = 0x811C9DC5
-  for (let i = 0; i < value.length; i++) {
-    h ^= value.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  return `fnv1a32:${(h >>> 0).toString(16).padStart(8, '0')}`
-}
-
-function canonical(value: unknown): string {
-  if (Array.isArray(value))
-    return `[${value.map(canonical).join(',')}]`
-  if (value && typeof value === 'object')
-    return `{${Object.entries(value).filter(([, item]) => item !== undefined).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`).join(',')}}`
-  return JSON.stringify(value) ?? 'null'
-}
-
-export function calculateContentHash(pack: Omit<ContentPack, 'manifest'> & { manifest: Omit<ContentPackManifest, 'contentHash'> | ContentPackManifest }): string {
+export function calculateContentHash(pack: ContentPackHashInput): string {
   const manifest = { ...pack.manifest, contentHash: undefined }
-  return hash(canonical({ manifest, names: pack.names, cultures: pack.cultures, religions: pack.religions, governments: pack.governments, resources: pack.resources, presets: pack.presets, translations: pack.translations }))
+  const content = { manifest, names: pack.names, cultures: pack.cultures, religions: pack.religions, governments: pack.governments, resources: pack.resources, presets: pack.presets, translations: pack.translations }
+  // Preserve the v1 wire format exactly: no new fields or defaults enter its hash.
+  if (manifest.schemaVersion === 2 && 'namingStyles' in pack)
+    return hash(canonical({ ...content, namingStyles: pack.namingStyles }))
+  return hash(canonical(content))
 }
 
 export function calculateContentSignature(packs: readonly ContentPack[]): string {
@@ -51,12 +39,14 @@ export function createContentCatalog(input: readonly ContentPack[]): ContentCata
   }
   const contentIds = new Set<string>()
   for (const pack of packs) {
-    for (const domain of ['names', 'cultures', 'religions', 'governments', 'resources', 'presets'] as const) {
-      for (const entry of pack[domain]) {
-        if (contentIds.has(entry.id))
-          throw new Error(`Duplicate content ID: ${entry.id}`)
-        contentIds.add(entry.id)
-      }
+    const entries = [
+      ...pack.names, ...pack.cultures, ...pack.religions, ...pack.governments, ...pack.resources, ...pack.presets,
+      ...('namingStyles' in pack ? pack.namingStyles : []),
+    ]
+    for (const entry of entries) {
+      if (contentIds.has(entry.id))
+        throw new Error(`Duplicate content ID: ${entry.id}`)
+      contentIds.add(entry.id)
     }
   }
   for (const pack of packs) {
