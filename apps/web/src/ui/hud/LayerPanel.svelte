@@ -25,9 +25,6 @@
     activeThematicId: string | null
     surfaceEnabled: boolean
     enabledOverlayIds: string[]
-    graticuleEnabled: boolean
-    cellWireframeEnabled: boolean
-    rotate: boolean
     showAtmosphere: boolean
     showDayNight: boolean
     showPolarIce: boolean
@@ -44,9 +41,6 @@
     activeThematicId = $bindable(),
     surfaceEnabled = $bindable(),
     enabledOverlayIds = $bindable(),
-    graticuleEnabled = $bindable(),
-    cellWireframeEnabled = $bindable(),
-    rotate = $bindable(),
     showAtmosphere = $bindable(),
     showDayNight = $bindable(),
     showPolarIce = $bindable(),
@@ -190,18 +184,6 @@
           <div class='flex items-center justify-between px-0.5'>
             <span class='text-[10px] font-bold tracking-wider uppercase text-obs-primary/90'>辅助显示</span>
           </div>
-          <Toggle label='经纬网格' checked={graticuleEnabled} oncommit={(value) => {
-            graticuleEnabled = value
-            onViewStateChange()
-          }} />
-          <Toggle label='Cell 边界网格' checked={cellWireframeEnabled} oncommit={(value) => {
-            cellWireframeEnabled = value
-            onViewStateChange()
-          }} />
-          <Toggle label='自转' description='仅 3D 星球' checked={rotate} disabled={viewMode !== 'globe'} oncommit={(value) => {
-            rotate = value
-            onViewStateChange()
-          }} />
           <Toggle label='大气光晕' description='仅 3D 星球' checked={showAtmosphere} disabled={viewMode !== 'globe'} oncommit={(value) => {
             showAtmosphere = value
             onViewStateChange()

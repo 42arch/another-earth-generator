@@ -5,7 +5,7 @@ import type { MapSourceRegistry } from '#sources/registry'
 import type { GeoJsonFeature, GeoJsonSource } from '#sources/types'
 import type { CompiledMapStyleLayer } from '#styles/compiler'
 import { clipPolylineAtAntimeridian } from '#projections/seam-clipper'
-import { lonLatDegToCartesian, slerpVec3, sphericalAngleRad } from '#projections/spherical-math'
+import { lonLatDegToCartesian, rotateAroundPolarAxis, slerpVec3, sphericalAngleRad } from '#projections/spherical-math'
 import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
 import * as THREE from 'three'
 
@@ -720,6 +720,7 @@ export class LineLayer {
     camera: THREE.Camera,
     hitTolerancePx = 5,
     worldOffsetsX: readonly number[] = [0],
+    planetSpinRadians = 0,
   ): { layerId: string, sourceId: string, featureId: string, distancePx: number } | null {
     if (this.disposed || !this.mesh.visible)
       return null
@@ -740,8 +741,8 @@ export class LineLayer {
       for (const offsetX of worldOffsetsX) {
         for (const poly of entry.polylines) {
           for (let j = 0; j < poly.length - 1; j++) {
-            const a = poly[j]
-            const b = poly[j + 1]
+            const a = this.isGlobe ? rotateAroundPolarAxis(poly[j], planetSpinRadians) : poly[j]
+            const b = this.isGlobe ? rotateAroundPolarAxis(poly[j + 1], planetSpinRadians) : poly[j + 1]
             if (this.isGlobe
               && a[0] * camPos.x + a[1] * camPos.y + a[2] * camPos.z <= 0.1
               && b[0] * camPos.x + b[1] * camPos.y + b[2] * camPos.z <= 0.1) {

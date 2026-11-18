@@ -84,6 +84,17 @@ export function cartesianToLonLatDeg(x: number, y: number, z: number): LonLatTup
   return [lonDeg, Object.is(latDeg, -0) ? 0 : latDeg]
 }
 
+/** Eastward spin around the +Y polar axis. Positive radians move a point to greater longitude. */
+export function rotateAroundPolarAxis(point: Vec3Tuple, radians: number): Vec3Tuple {
+  const cos = Math.cos(radians)
+  const sin = Math.sin(radians)
+  return [
+    point[0] * cos + point[2] * sin,
+    point[1],
+    point[2] * cos - point[0] * sin,
+  ]
+}
+
 export function lonLatDegToCartesian(lonDeg: number, latDeg: number): Vec3Tuple {
   if (!Number.isFinite(lonDeg) || !Number.isFinite(latDeg) || Math.abs(latDeg) > 90)
     throw new RangeError('Invalid geographic coordinates in degrees')

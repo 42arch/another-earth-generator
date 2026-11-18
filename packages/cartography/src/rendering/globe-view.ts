@@ -7,7 +7,7 @@ import type { SymbolLayer } from '#rendering/layers/symbol-layer'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { CompiledMapStyle, CompiledMapStyleLayer } from '#styles/compiler'
 import type { WorldMapReader } from '@another-earth/world-core'
-import { cartesianToLonLatDeg, lonLatDegToCartesian, normalizeVec3 } from '#projections/spherical-math'
+import { cartesianToLonLatDeg, lonLatDegToCartesian, normalizeVec3, rotateAroundPolarAxis, type Vec3Tuple } from '#projections/spherical-math'
 import { createCircleLayerFromRegistry } from '#rendering/layers/circle-layer'
 import { createFillLayerFromRegistry } from '#rendering/layers/fill-layer'
 import { createLineLayerFromRegistry } from '#rendering/layers/line-layer'
@@ -22,8 +22,18 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
+/** Eastward planet spin used when rotation is first enabled, in degrees per second. */
+export const DEFAULT_PLANET_SPIN_DEGREES_PER_SECOND = 0.6
+
+export function planetSpinStepRadians(elapsedMs: number, degreesPerSecond: number): number {
+  const speed = Math.max(0, Math.min(90, degreesPerSecond))
+  return Math.max(0, elapsedMs) * 0.001 * speed * (Math.PI / 180)
+}
+
 export interface GlobeEffectsConfig {
   readonly rotate: boolean
+  /** Eastward spin around the polar axis, in degrees per second. Ignored while rotation is off. */
+  readonly rotateSpeedDegreesPerSecond: number
   readonly atmosphere: boolean
   readonly dayNight: boolean
   readonly polarIce: boolean
@@ -330,6 +340,8 @@ type ManagedRuntimeLayer
  * 3D `GlobeView` scene controller:
  * - Perspective camera (`fov = 42`), altitude-adaptive damping `OrbitControls`, starfield,
  *   backside additive atmosphere rim, specular water highlight, and seasonal sun direction.
+ * - Optional spin rotates the planet eastward around its polar axis. The camera, stars, and sun stay fixed,
+ *   so the terminator does not travel with the surface.
  * - Orchestrates the 5 GPU layer types (`RasterLayer`, `FillLayer`, `LineLayer`, `CircleLayer`, `SymbolLayer`)
  *   plus `SelectionLayer` and `CollisionGrid`.
  */
@@ -344,6 +356,7 @@ export class GlobeView {
   private readonly registry: MapSourceRegistry
   private readonly tracker?: GpuResourceTracker
   private readonly layerGroup = new THREE.Group()
+  private readonly planetGroup = new THREE.Group()
   private readonly stars: THREE.Points<THREE.BufferGeometry, THREE.PointsMaterial>
   private readonly atmosphere: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>
   private readonly oceanSpecular: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
@@ -359,6 +372,7 @@ export class GlobeView {
     climateMonth: 0,
     globeEffects: {
       rotate: false,
+      rotateSpeedDegreesPerSecond: DEFAULT_PLANET_SPIN_DEGREES_PER_SECOND,
       atmosphere: true,
       dayNight: false,
       polarIce: true,
@@ -373,6 +387,8 @@ export class GlobeView {
   private viewportHeight = 720
   private pixelRatio = 1
   private lastMonth = -1
+  private spinRadians = 0
+  private lastFrameMs = 0
   private disposed = false
 
   constructor(
@@ -399,7 +415,6 @@ export class GlobeView {
       this.controls.enablePan = false
       this.controls.minDistance = 1.15
       this.controls.maxDistance = 7.0
-      this.controls.autoRotateSpeed = 0.6
     }
 
     this.stars = createStarfield(options.tracker)
@@ -420,16 +435,18 @@ export class GlobeView {
     this.styleBackground.name = 'GlobeStyleBackground'
     this.styleBackground.scale.setScalar(0.996)
     this.styleBackground.renderOrder = -1
-    this.scene.add(this.styleBackground)
+    this.planetGroup.add(this.styleBackground)
 
     this.oceanSpecular = createSpecularOceanSphere(reader, options.tracker)
-    this.scene.add(this.oceanSpecular)
+    this.planetGroup.add(this.oceanSpecular)
 
     this.layerGroup.name = 'GlobeStyledLayers'
-    this.scene.add(this.layerGroup)
+    this.planetGroup.add(this.layerGroup)
 
     this.selectionLayer = new SelectionLayer(reader, options.tracker)
-    this.scene.add(this.selectionLayer.group)
+    this.planetGroup.add(this.selectionLayer.group)
+    this.planetGroup.name = 'GlobePlanet'
+    this.scene.add(this.planetGroup)
 
     this.atmosphere = createAtmosphereMesh(options.tracker)
     this.scene.add(this.atmosphere)
@@ -440,11 +457,11 @@ export class GlobeView {
   }
 
   getCenterCoordinates(): { longitudeDegrees: number, latitudeDegrees: number, styleZoom: number } {
-    const dir = normalizeVec3(
+    const dir = this.worldDirectionToPlanet(normalizeVec3(
       this.camera.position.x,
       this.camera.position.y,
       this.camera.position.z,
-    )
+    ))
     const [lon, lat] = cartesianToLonLatDeg(dir[0], dir[1], dir[2])
     return {
       longitudeDegrees: lon,
@@ -459,7 +476,7 @@ export class GlobeView {
     const halfFovRad = (this.camera.fov * Math.PI / 180) * 0.5
     const altitude = Math.tan(visibleArcRad * 0.5) / Math.max(1e-4, Math.tan(halfFovRad))
     const distance = Math.max(1.15, Math.min(7.0, 1.0 + altitude))
-    const unit = lonLatDegToCartesian(longitudeDegrees, latitudeDegrees)
+    const unit = this.planetDirectionToWorld(lonLatDegToCartesian(longitudeDegrees, latitudeDegrees))
     this.camera.position.set(unit[0] * distance, unit[1] * distance, unit[2] * distance)
     this.camera.lookAt(0, 0, 0)
     this.camera.updateMatrixWorld()
@@ -676,7 +693,6 @@ export class GlobeView {
     )
 
     if (this.controls) {
-      this.controls.autoRotate = state.globeEffects.rotate
       const altitude = Math.max(0.1, this.camera.position.length() - 1.0)
       this.controls.rotateSpeed = Math.max(0.15, Math.min(0.75, altitude * 0.35))
     }
@@ -731,18 +747,38 @@ export class GlobeView {
       }
       else if (runtime.type === 'symbol') {
         runtime.instance.updateStyle(compiledLayer, styleZoom)
-        runtime.instance.updatePlacement(this.camera, this.collisionGrid)
+        runtime.instance.updatePlacement(this.camera, this.collisionGrid, this.spinRadians)
       }
     })
 
     this.selectionLayer.updateSelection(state.selection, this.registry, state.climateMonth)
   }
 
-  updateFrame(): void {
+  updateFrame(nowMs = performance.now()): void {
     if (this.disposed)
       return
+    const elapsedMs = this.lastFrameMs > 0 ? Math.min(100, Math.max(0, nowMs - this.lastFrameMs)) : 0
+    this.lastFrameMs = nowMs
+    if (this.filterState.globeEffects.rotate && elapsedMs > 0) {
+      const speed = this.filterState.globeEffects.rotateSpeedDegreesPerSecond
+      this.spinRadians += planetSpinStepRadians(elapsedMs, speed)
+      this.planetGroup.rotation.y = this.spinRadians
+    }
     this.controls?.update()
     this.syncVisualState()
+  }
+
+  /** Current eastward spin of the planet around its polar axis, in radians. */
+  getPlanetSpinRadians(): number {
+    return this.spinRadians
+  }
+
+  worldDirectionToPlanet(direction: Vec3Tuple): Vec3Tuple {
+    return rotateAroundPolarAxis(direction, -this.spinRadians)
+  }
+
+  planetDirectionToWorld(direction: Vec3Tuple): Vec3Tuple {
+    return rotateAroundPolarAxis(direction, this.spinRadians)
   }
 
   getPickableLayersInStyleOrder(): PickableMapLayer[] {
@@ -796,6 +832,7 @@ export class GlobeView {
     this.layerGroup.clear()
 
     this.selectionLayer.dispose()
+    this.planetGroup.clear()
     this.stars.geometry.dispose()
     this.stars.material.dispose()
     this.releaseStyleBackground()

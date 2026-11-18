@@ -16,11 +16,12 @@
 
   type OverviewPanelData = Pick<ComponentProps<typeof OverviewPanel>, 'worldSummary' | 'stages' | 'stats' | 'gpuCounts'>
   type ParameterPanelData = Pick<ComponentProps<typeof ParameterPanel>, 'level' | 'seed' | 'irregularity' | 'geologyParameters' | 'terrainParameters' | 'landformParameters' | 'climateParameters' | 'hydrologyParameters'>
-  type LayerPanelState = Pick<ComponentProps<typeof LayerPanel>, 'styleId' | 'activeThematicId' | 'surfaceEnabled' | 'enabledOverlayIds' | 'graticuleEnabled' | 'cellWireframeEnabled' | 'rotate' | 'showAtmosphere' | 'showDayNight' | 'showPolarIce'>
+  type LayerPanelState = Pick<ComponentProps<typeof LayerPanel>, 'styleId' | 'activeThematicId' | 'surfaceEnabled' | 'enabledOverlayIds' | 'showAtmosphere' | 'showDayNight' | 'showPolarIce'>
+  type SettingsDisplayState = Pick<ComponentProps<typeof Sidebar>, 'graticuleEnabled' | 'cellWireframeEnabled' | 'rotate' | 'rotateSpeedDegreesPerSecond'>
   type GenerationLoadingState = ComponentProps<typeof GenerationLoading>['state']
   type RegionInspectionData = ComponentProps<typeof RegionInspector>['inspection']
 
-  interface Props extends ParameterPanelData, LayerPanelState {
+  interface Props extends ParameterPanelData, LayerPanelState, SettingsDisplayState {
     busy: boolean
     generationLoadingState: GenerationLoadingState
     error: string
@@ -97,6 +98,7 @@
     graticuleEnabled = $bindable(),
     cellWireframeEnabled = $bindable(),
     rotate = $bindable(),
+    rotateSpeedDegreesPerSecond = $bindable(),
     showAtmosphere = $bindable(),
     showDayNight = $bindable(),
     showPolarIce = $bindable(),
@@ -117,11 +119,16 @@
     {busy}
     {viewMode}
     {projectionId}
+    {onViewStateChange}
     {onRandomize}
     onSelectViewMode={mode => onSelectViewMode(mode)}
     onSelectProjection={id => onSelectProjection(id)}
     {onExportScene}
     {shareUrl}
+    bind:graticuleEnabled
+    bind:cellWireframeEnabled
+    bind:rotate
+    bind:rotateSpeedDegreesPerSecond
   />
 
   <ParameterPanel
@@ -152,9 +159,6 @@
     bind:activeThematicId
     bind:surfaceEnabled
     bind:enabledOverlayIds
-    bind:graticuleEnabled
-    bind:cellWireframeEnabled
-    bind:rotate
     bind:showAtmosphere
     bind:showDayNight
     bind:showPolarIce

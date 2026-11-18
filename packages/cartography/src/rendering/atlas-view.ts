@@ -122,6 +122,7 @@ export class AtlasView {
     climateMonth: 0,
     globeEffects: {
       rotate: false,
+      rotateSpeedDegreesPerSecond: 0.6,
       atmosphere: true,
       dayNight: false,
       polarIce: true,

@@ -199,7 +199,7 @@ export interface WorldMapReader {
 ### 5.1 `WorldViewport` 与统一缩放标尺
 - **单一 `THREE.WebGLRenderer`**：输出色彩空间固定为 `SRGBColorSpace`；像素比采用 `Math.min(window.devicePixelRatio, 2)`（兼顾 Retina 清晰度与 L7/L8 填充率稳定性，可通过配置覆盖）。
 - **对等双视图**：
-  - `GlobeView`：单位球（半径 `1.0`）透视相机，自定义球面拖拽旋转、滚轮指数缩放、可选平滑自转，旋转灵敏度随相机离地高度自适应衰减（拉近看局部细节时不漂移）。
+  - `GlobeView`：单位球（半径 `1.0`）透视相机，自定义球面拖拽旋转、滚轮指数缩放、可选平滑自转。自转绕行星极轴转动地球本身，相机、星空和太阳方向保持不动，因此晨昏线不随地表移动；拖拽灵敏度仍随相机离地高度自适应衰减（拉近看局部细节时不漂移）。
   - `AtlasView`：正交相机平面视图，内置三种可实时切换的地图投影：**`equirectangular`（等距圆柱）**、**`equal-earth`（等面积自然地球）**、**`mercator`（墨卡托，纬度截断 `±85.05°`）**。对于支持水平环绕的投影（如等距圆柱），在主地图左右两侧挂载共享材质与缓冲的环绕副本（`[-worldWidth, 0, +worldWidth]`），平移越过 `±180°` 时相机坐标无缝回绕。
 - **统一 `styleZoom`（`0`–`12`）与视角保持**：
   - 定义 `visibleArcRadians` 为当前视口垂直高度所覆盖的行星表面弧度：$\text{styleZoom} = \text{clamp}(\log_2(\pi / \text{visibleArcRadians}), 0, 12)$。
@@ -297,8 +297,10 @@ export interface CartographyViewState {
   readonly climateMonth: number // 0..11
   readonly globeEffects: Readonly<{
     rotate: boolean
+    rotateSpeedDegreesPerSecond: number
     atmosphere: boolean
     dayNight: boolean
+    polarIce: boolean
   }>
   readonly selection: Readonly<{
     regionId: number | null
@@ -338,11 +340,11 @@ export interface CartographySession {
    - 参数面板移除“生成内容（仅网格 / 板块 / 基础地形 / 气候 / 水文 / 生态）”下拉选择器，生成按钮固定执行**完整自然世界（`world`）**生成并发布权威快照；Worker 协议清理不再被 UI 调用的单阶段渲染耦合路径（保留核心包 Stage 单元测试不变）。
    - 彻底删除 `apps/web/src/world-view/` 下旧的调试渲染模块：`world-scene.ts`、`map-render-data.ts`、`map-theme-data.ts`、`map-overlay-data.ts` 及对应的旧单测，替换为针对新 `CartographySession` 与图例统计的测试。
 2. **补齐正式制图交互控件**：
-   - **左侧工具条（`Sidebar`）**：贴左上方的浮动窄图标条，高度随内容，圆角与其他面板一致，不拉满视口。最上方为随机，其下为视图、参数、图层、概览、侦测，底部为分享与重置视角。分享弹窗顶部显示当前参数链接和复制按钮，并导出当前视口 PNG。参数链接为 `#w=9.` 加上相对默认值的压缩差值；旧版链接不还原。导入导出世界档案尚未接入。各项均用图标，悬停显示名称。工具条不显示种子。视图在条右侧弹出选择卡，分 3D（星球）与 2D（三种投影）两组。环境开关不放在工具条。
+   - **左侧工具条（`Sidebar`）**：贴左上方的浮动窄图标条，高度随内容，圆角与其他面板一致，不拉满视口。最上方为随机，其下为视图、参数、图层、概览、侦测，底部为分享与设置。分享弹窗顶部显示当前参数链接和复制按钮，并导出当前视口 PNG。参数链接为 `#w=9.` 加上相对默认值的压缩差值；旧版链接不还原。导入导出世界档案尚未接入。各项均用图标，悬停显示名称。工具条不显示种子。视图在条右侧弹出选择卡，分 3D（星球）与 2D（三种投影）两组。设置弹层包含图例显示、地图导航、经纬网格、Cell 边界网格和自转。自转仅 3D 可用，且不随风格改变；开启后在其下显示角速度滑块，范围 0.1–30°/秒，默认 0.6°/秒。
    - **图层抽屉（`LayerBar`）**分三块：
      1. **风格**：6 套内置预设（仿真卫星 / 标准地图 / 自然地理 / 极简明亮 / 极简暗色 / 古典羊皮纸）。
      2. **图层**：地表与专题使用同一类图层按钮。地表按当前风格绘制表面，可与一个专题同时选中；专题仍互斥（高程、板块、陆海分区、气温、降水量、Köppen、风速、洋流速度、积雪、年径流、流域、生物群系、自然覆盖）。气温和降水量默认显示年统计；图例内的「按月显示」切到对应月统计并露出月份滑块。积雪、风速、洋流始终显示月份滑块。覆盖与注记多选（河网、湖泊、海岸线、板块边界、风向、洋流、大陆与大洋地名）。
-     3. **辅助显示**：经纬网、Cell 边界、自转、大气光晕、昼夜光照、两极冰盖。自转、大气光晕和昼夜光照仅 3D 可用；两极冰盖仅仿真卫星可切换，默认显示。切换风格时大气光晕和昼夜光照按 `defaultGlobeEffects` 重设；自转、经纬网、Cell 边界和两极冰盖保持当前选择。
+     3. **辅助显示**：大气光晕、昼夜光照、两极冰盖。大气光晕和昼夜光照仅 3D 可用；两极冰盖仅仿真卫星可切换，默认显示。切换风格时大气光晕和昼夜光照按 `defaultGlobeEffects` 重设；两极冰盖保持当前选择。
    - **概览面板（`OverviewPanel`）**：替换原顶栏「显示」菜单，承载行星自然概览、生成管线缓存和网格与制图性能。
    - **图例与分布统计卡片**：直接消费 `session.activeLegend` 与 `WorldMapReader` 面积加权统计，保证图例色块/色带与画面 100% 同源。
    - **右侧侦测面板（`RegionInspector`）**：点击地图任意位置后，统一通过 `controller.queryWorldRegion(regionId, climateMonth)` 及关联实体查询（河流、湖泊、流域、大陆/大洋）展示权威物理与地理指标。

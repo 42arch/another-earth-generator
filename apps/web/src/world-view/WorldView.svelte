@@ -61,6 +61,7 @@
   let cellWireframeEnabled = $state(false)
   let climateMonth = $state(0)
   let rotate = $state(false)
+  let rotateSpeedDegreesPerSecond = $state(0.6)
   let showAtmosphere = $state(true)
   let showDayNight = $state(true)
   let showPolarIce = $state(true)
@@ -102,6 +103,7 @@
       climateMonth,
       globeEffects: {
         rotate,
+        rotateSpeedDegreesPerSecond,
         atmosphere: showAtmosphere,
         dayNight: showDayNight,
         polarIce: showPolarIce,
@@ -667,6 +669,7 @@
   bind:graticuleEnabled
   bind:cellWireframeEnabled
   bind:rotate
+  bind:rotateSpeedDegreesPerSecond
   bind:showAtmosphere
   bind:showDayNight
   bind:showPolarIce

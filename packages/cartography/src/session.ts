@@ -34,6 +34,8 @@ export interface CartographyViewState {
   readonly climateMonth: number // 0..11
   readonly globeEffects: Readonly<{
     rotate: boolean
+    /** Eastward spin around the polar axis, in degrees per second. */
+    rotateSpeedDegreesPerSecond: number
     atmosphere: boolean
     dayNight: boolean
     polarIce: boolean
@@ -54,6 +56,7 @@ export const DEFAULT_CARTOGRAPHY_VIEW_STATE: CartographyViewState = Object.freez
   climateMonth: 0,
   globeEffects: Object.freeze({
     rotate: false,
+    rotateSpeedDegreesPerSecond: 0.6,
     atmosphere: true,
     dayNight: false,
     polarIce: true,

@@ -1,6 +1,7 @@
 <script lang='ts'>
   import type { MapProjectionId, MapViewportMode } from '@another-earth/cartography'
   import { Check, Copy, Dices, Gauge, Globe, ImageDown, Layers, Map, Satellite, Settings, Share2, SlidersHorizontal } from '@lucide/svelte'
+  import Slider from '@/ui/components/Slider.svelte'
   import Toggle from '@/ui/components/Toggle.svelte'
   import Tooltip from '@/ui/components/Tooltip.svelte'
   import { MAP_PROJECTION_OPTIONS, VIEW_MODE_OPTIONS } from '@/ui/hud/layer-presentation'
@@ -10,22 +11,32 @@
     busy: boolean
     viewMode: MapViewportMode
     projectionId: MapProjectionId
+    onViewStateChange: () => void
     onRandomize: () => void
     onSelectViewMode: (mode: MapViewportMode) => void
     onSelectProjection: (projectionId: MapProjectionId) => void
     onExportScene: () => void
     shareUrl: string
+    graticuleEnabled: boolean
+    cellWireframeEnabled: boolean
+    rotate: boolean
+    rotateSpeedDegreesPerSecond: number
   }
 
-  const {
+  let {
     busy,
     viewMode,
     projectionId,
+    onViewStateChange,
     onRandomize,
     onSelectViewMode,
     onSelectProjection,
     onExportScene,
     shareUrl,
+    graticuleEnabled = $bindable(),
+    cellWireframeEnabled = $bindable(),
+    rotate = $bindable(),
+    rotateSpeedDegreesPerSecond = $bindable(),
   }: Props = $props()
 
   let shareCopied = $state(false)
@@ -267,6 +278,33 @@
           <p class='m-0 px-1 pt-0.5 pb-1.5 text-[10px] font-semibold tracking-wide text-obs-text-dim uppercase'>设置</p>
           <Toggle label='图例显示' checked={appState.legendVisible} oncommit={value => appState.legendVisible = value} />
           <Toggle label='地图导航' checked={appState.mapControlsVisible} oncommit={value => appState.mapControlsVisible = value} />
+          <Toggle label='经纬网格' checked={graticuleEnabled} oncommit={(value) => {
+            graticuleEnabled = value
+            onViewStateChange()
+          }} />
+          <Toggle label='Cell 边界网格' checked={cellWireframeEnabled} oncommit={(value) => {
+            cellWireframeEnabled = value
+            onViewStateChange()
+          }} />
+          <Toggle label='自转' description='仅 3D 星球' checked={rotate} disabled={viewMode !== 'globe'} oncommit={(value) => {
+            rotate = value
+            onViewStateChange()
+          }} />
+          {#if rotate && viewMode === 'globe'}
+            <div class='pl-2'>
+              <Slider
+                label='自转速度'
+                description='地球绕极轴向东转动的角速度。'
+                bind:value={rotateSpeedDegreesPerSecond}
+                min={0.1}
+                max={30}
+                step={0.1}
+                decimals={1}
+                unit='°/秒'
+                onchange={onViewStateChange}
+              />
+            </div>
+          {/if}
         </div>
       {/if}
     </div>

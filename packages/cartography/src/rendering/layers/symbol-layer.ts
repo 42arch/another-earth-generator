@@ -13,6 +13,7 @@ import {
   dotVec3,
   lonLatDegToCartesian,
   normalizeVec3,
+  rotateAroundPolarAxis,
 } from '#projections/spherical-math'
 import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
 import { sampleSpineGlyphAnchors } from '#sources/topology/territory-spine'
@@ -849,7 +850,7 @@ export class SymbolLayer {
    * Evaluates 3D backface culling (`dot(normal, cameraDir) <= 0.12`), left-to-right reading order,
    * and `CollisionGrid` avoidance in priority order for the current camera pose.
    */
-  updatePlacement(camera: THREE.Camera, collisionGrid: CollisionGrid): void {
+  updatePlacement(camera: THREE.Camera, collisionGrid: CollisionGrid, planetSpinRadians = 0): void {
     if (this.disposed)
       return
 
@@ -872,10 +873,12 @@ export class SymbolLayer {
     const tanHalfFov = Math.tan((fovDeg * Math.PI / 180) * 0.5)
     const worldUnitsPerPixelAtSubcamera = (2 * camAltitude * tanHalfFov) / Math.max(1, this.viewportHeight)
 
-    const camDir = this.isGlobe ? normalizeVec3(camPos.x, camPos.y, camPos.z) : ([0, 0, 1] as const)
+    const camDir = this.isGlobe
+      ? rotateAroundPolarAxis(normalizeVec3(camPos.x, camPos.y, camPos.z), -planetSpinRadians)
+      : ([0, 0, 1] as const)
     const camRightVec = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize()
     const globeViewRight: Vec3Tuple | undefined = this.isGlobe
-      ? [camRightVec.x, camRightVec.y, camRightVec.z]
+      ? rotateAroundPolarAxis([camRightVec.x, camRightVec.y, camRightVec.z], -planetSpinRadians)
       : undefined
     const projScratch = new THREE.Vector3()
 

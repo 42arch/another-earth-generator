@@ -6,7 +6,7 @@ import type { LineLayer } from '#rendering/layers/line-layer'
 import type { SymbolLayer } from '#rendering/layers/symbol-layer'
 import type { MapViewportMode } from '#styles/spec'
 import type { WorldMapReader } from '@another-earth/world-core'
-import { cartesianToLonLatDeg, lonLatDegToCartesian, normalizeVec3 } from '#projections/spherical-math'
+import { cartesianToLonLatDeg, lonLatDegToCartesian, normalizeVec3, rotateAroundPolarAxis } from '#projections/spherical-math'
 import * as THREE from 'three'
 
 export const MAX_CLICK_DRAG_PX = 4
@@ -121,6 +121,8 @@ export class MapPicker {
     readonly viewportWidth: number
     readonly viewportHeight: number
     readonly orderedLayers: readonly PickableMapLayer[]
+    /** Eastward planet spin around the polar axis. Screen hits are mapped back before region lookup. */
+    readonly planetSpinRadians?: number
   }): MapPickResult | null {
     const {
       reader,
@@ -131,9 +133,10 @@ export class MapPicker {
       viewportHeight,
       orderedLayers,
     } = params
+    const planetSpinRadians = params.planetSpinRadians ?? 0
 
     camera.updateMatrixWorld()
-    const unitHit = intersectUnitSphereScreenPoint(
+    const screenHit = intersectUnitSphereScreenPoint(
       screenX,
       screenY,
       viewportWidth,
@@ -141,9 +144,10 @@ export class MapPicker {
       camera,
       1.0,
     )
-    if (!unitHit)
+    if (!screenHit)
       return null
 
+    const unitHit = rotateAroundPolarAxis(screenHit, -planetSpinRadians)
     const regionId = reader.mesh.locateRegion(unitHit[0], unitHit[1], unitHit[2])
     const [lon, lat] = cartesianToLonLatDeg(unitHit[0], unitHit[1], unitHit[2])
 
@@ -156,6 +160,7 @@ export class MapPicker {
       camera,
       unitHit,
       [0],
+      planetSpinRadians,
     )
 
     return Object.freeze({
@@ -251,6 +256,7 @@ export class MapPicker {
     camera: THREE.Camera,
     unitHit: Vec3Tuple,
     worldOffsetsX: readonly number[],
+    planetSpinRadians = 0,
   ): MapFeatureHit | undefined {
     // Reverse layer order: visually topmost layer wins
     for (let i = orderedLayers.length - 1; i >= 0; i--) {
@@ -264,6 +270,7 @@ export class MapPicker {
           camera,
           6,
           worldOffsetsX,
+          planetSpinRadians,
         )
         if (hit) {
           return {
@@ -292,6 +299,7 @@ export class MapPicker {
           camera,
           5,
           worldOffsetsX,
+          planetSpinRadians,
         )
         if (hit) {
           return {

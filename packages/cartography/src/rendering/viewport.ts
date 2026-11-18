@@ -271,6 +271,7 @@ export class WorldViewport {
       viewportWidth: this.widthCssPx,
       viewportHeight: this.heightCssPx,
       orderedLayers: this.activeGlobeView.getPickableLayersInStyleOrder(),
+      planetSpinRadians: this.activeGlobeView.getPlanetSpinRadians(),
     })
   }
 
