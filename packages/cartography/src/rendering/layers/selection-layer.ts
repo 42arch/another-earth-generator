@@ -1,9 +1,10 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type { MapProjection } from '#projections/map-projections'
 import type { LonLatTuple, Vec3Tuple } from '#projections/spherical-math'
 import type { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { GeoJsonFeature } from '#sources/types'
-import type { WorldMapReader } from '@another-earth/world-core'
+import * as THREE from 'three'
 import { clipPolylineAtAntimeridian, clipRingToGeographicBox } from '#projections/seam-clipper'
 import {
   cartesianToLonLatDeg,
@@ -13,7 +14,6 @@ import {
   sphericalAngleRad,
   unwrapLongitudeDegNear,
 } from '#projections/spherical-math'
-import * as THREE from 'three'
 
 export interface SelectionState {
   readonly regionId: number | null

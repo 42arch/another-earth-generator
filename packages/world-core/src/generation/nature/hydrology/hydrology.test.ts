@@ -1,7 +1,7 @@
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { TerrainArtifact } from '#generation/nature/geography'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { describe, expect, it } from 'vitest'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { DEFAULT_HYDROLOGY_PARAMETERS, generateCryosphereI0, generateHydrologyH0, queryHydrologyRegion, validateHydrologyArtifact } from './hydrology'
 
 function inputs(ocean = true, cold = false) {

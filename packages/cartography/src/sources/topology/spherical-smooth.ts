@@ -1,5 +1,5 @@
-import type { Vec3Tuple } from '#projections/spherical-math'
 import type { MapMeshReader } from '@another-earth/world-core'
+import type { Vec3Tuple } from '#projections/spherical-math'
 import { crossVec3, dotVec3, normalizeVec3, slerpVec3 } from '#projections/spherical-math'
 
 /**

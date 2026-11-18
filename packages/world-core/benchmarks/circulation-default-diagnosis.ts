@@ -1,4 +1,5 @@
 /* eslint-disable antfu/no-top-level-await -- This diagnostic runs as a standalone jiti entry point. */
+import { testContentPack, testPipelineContent } from '../src/content/test-content'
 import type { ClimateArtifact, GeologyArtifact, SphericalMesh, TerrainArtifact } from '../src/index'
 import process from 'node:process'
 import { aggregateClimateSurface } from '../src/generation/nature/climate/climate'
@@ -80,7 +81,7 @@ const config = {
   terrain: { ...DEFAULT_TERRAIN_PARAMETERS },
   climate: { ...DEFAULT_CLIMATE_PARAMETERS, axialTiltDegrees: 23.5, precipitationScale: 1.8 },
 }
-const result = await createClimatePipeline().execute({ seed, config })
+const result = await createClimatePipeline().execute({ seed, config, ...testPipelineContent([testContentPack]) })
 const mesh = result.getOutput<SphericalMesh>('mesh')
 const reference = result.getOutput<SphericalMesh>('reference-mesh')
 const geology = result.getOutput<GeologyArtifact>('geology')

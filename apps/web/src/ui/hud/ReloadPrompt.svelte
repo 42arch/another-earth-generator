@@ -1,28 +1,37 @@
 <script lang='ts'>
+  import { useRegisterSW } from 'virtual:pwa-register/svelte'
   import { Button, Panel } from '@/ui/components'
 
-  interface Props {
-    needRefresh?: boolean
-    onReload?: () => void
-    onDismiss?: () => void
+  const { needRefresh, updateServiceWorker } = useRegisterSW({
+    onRegisterError(error) {
+      console.error('SW registration error', error)
+    },
+  })
+
+  function reload(): void {
+    updateServiceWorker(true)
   }
 
-  const { needRefresh = false, onReload = () => {}, onDismiss = () => {} }: Props = $props()
+  function dismiss(): void {
+    $needRefresh = false
+  }
 </script>
 
-{#if needRefresh}
-  <div class='fixed bottom-24 right-6 z-50 pointer-events-auto w-[300px]'>
-    <Panel collapsible={false} class='border-obs-primary/30 shadow-[0_8px_32px_rgba(0,0,0,0.6)]'>
-      <div class='flex flex-col gap-4'>
-        <div class='text-sm leading-relaxed'>
-          <span class='font-semibold tracking-wide text-obs-primary'>更新可用</span>
-          <p class='mt-1 text-obs-text-muted'>发现新版本，请刷新以获取最新内容。</p>
+{#if $needRefresh}
+  <div class='pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4'>
+    <div class='pointer-events-auto w-full max-w-xs'>
+      <Panel collapsible={false} class='border-obs-primary/30'>
+        <div class='flex flex-col gap-4'>
+          <div class='text-sm leading-relaxed'>
+            <span class='font-semibold tracking-wide text-obs-primary'>更新可用</span>
+            <p class='mt-1 text-obs-text-muted'>发现新版本，请刷新以获取最新内容。</p>
+          </div>
+          <div class='flex gap-2 justify-end'>
+            <Button variant='ghost' size='sm' onclick={dismiss}>忽略</Button>
+            <Button variant='primary' size='sm' onclick={reload}>立即刷新</Button>
+          </div>
         </div>
-        <div class='flex gap-2 justify-end'>
-          <Button variant='ghost' size='sm' onclick={onDismiss}>忽略</Button>
-          <Button variant='primary' size='sm' onclick={onReload}>立即刷新</Button>
-        </div>
-      </div>
-    </Panel>
+      </Panel>
+    </div>
   </div>
 {/if}

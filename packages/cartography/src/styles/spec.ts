@@ -52,6 +52,8 @@ export interface MapStyleLayerLegendHint {
   readonly unit?: string
   readonly fieldName?: string
   readonly labels?: readonly string[]
+  /** Explicit swatches. When present, the legend does not inherit a color-expression ramp. */
+  readonly categories?: readonly { readonly label: string, readonly color: string }[]
   readonly noDataLabel?: string
   readonly noDataColor?: string
 }

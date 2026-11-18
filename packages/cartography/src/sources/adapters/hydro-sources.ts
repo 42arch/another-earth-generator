@@ -1,3 +1,4 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type { Vec3Tuple } from '#projections/spherical-math'
 import type { DerivedRiverFeature } from '#sources/topology/hydrography-buffer'
 import type {
@@ -7,7 +8,6 @@ import type {
   GeoJsonPolygonGeometry,
   GeoJsonSource,
 } from '#sources/types'
-import type { WorldMapReader } from '@another-earth/world-core'
 import { normalizeVec3 } from '#projections/spherical-math'
 import { buildHydrographyRivers } from '#sources/topology/hydrography-buffer'
 import { assemblePolygonsWithHoles, traceClassificationRings } from '#sources/topology/ring-tracer'

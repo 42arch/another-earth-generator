@@ -1,10 +1,8 @@
 import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, HydrologyArtifact, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact, WorldMapReader } from '@another-earth/world-core'
 import type { GenerationConfig, SerializedError, WorkerRequest, WorkerResponse } from './protocol'
 import { validateClimateArtifact, validateCryosphereArtifact, validateEcologyArtifact, validateGeographicRegions, validateGeologyArtifact, validateHydrologyArtifact, validateStaticLakeArtifact, validateTerrainArtifact, WorldStore } from '@another-earth/world-core'
-import { loadBuiltinGenerationCatalog } from '@another-earth/world-data'
+import { builtinContentPacks, builtinContentPort } from './builtin-content'
 import { hydrateMesh } from './transfer'
-
-const namingPacks = loadBuiltinGenerationCatalog().packs
 
 export type GenerationStatus = 'idle' | 'starting' | 'running' | 'completed' | 'failed' | 'cancelled'
 export interface GenerationState {
@@ -60,7 +58,7 @@ function createWorker(): Worker {
 }
 
 export class GenerationController {
-  #worldStore = new WorldStore()
+  #worldStore = new WorldStore(builtinContentPort)
   #candidateWorldStore?: WorldStore
   #factory: () => Worker
   #worker?: Worker
@@ -99,8 +97,8 @@ export class GenerationController {
   }
 
   restoreWorldArchive(archive: string): void {
-    const next = new WorldStore()
-    next.restore(archive, namingPacks)
+    const next = new WorldStore(builtinContentPort)
+    next.restore(archive, builtinContentPacks)
     this.#worldStore = next
   }
 
@@ -112,7 +110,7 @@ export class GenerationController {
   queryWorldRiver(id: string) { return this.#worldStore.river(id) }
   queryWorldLake(id: string) { return this.#worldStore.lake(id) }
   pickWorld(position: { readonly x: number, readonly y: number, readonly z: number }) { return this.#worldStore.pick(position) }
-  exportWorldArchive() { return this.#worldStore.archive(namingPacks) }
+  exportWorldArchive() { return this.#worldStore.archive(builtinContentPacks) }
 
   #setState(state: GenerationState): void {
     this.#state = state
@@ -240,8 +238,8 @@ export class GenerationController {
         if (active.kind === 'world') {
           if (!message.world || message.world.snapshotId !== active.expectedSnapshotId || message.world.mesh.meshId !== mesh.meshId)
             throw new TypeError('Worker world identity mismatch')
-          const candidate = new WorldStore()
-          candidate.publish(message.world, namingPacks)
+          const candidate = new WorldStore(builtinContentPort)
+          candidate.publish(message.world, builtinContentPacks)
           this.#candidateWorldStore = candidate
         }
         const hydrateMs = performance.now() - hydrating

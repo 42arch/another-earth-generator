@@ -1,6 +1,6 @@
+import type { MapMeshReader } from '@another-earth/world-core'
 import type { LonLatTuple, Vec3Tuple } from '#projections/spherical-math'
 import type { TerritorySpineMetadata } from '#sources/types'
-import type { MapMeshReader } from '@another-earth/world-core'
 import {
   buildTangentBasis,
   cartesianToLonLatDeg,

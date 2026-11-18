@@ -2,24 +2,24 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-A browser project for procedural planets and map exploration, built with TypeScript, Svelte 5, Vite, and a pnpm workspace.
+A browser project for procedural planets and map exploration, built with TypeScript, Svelte 5, Vite, and a Bun workspace.
 
 ## Current capabilities
 
-- Generate regular or perturbed spherical meshes from L0 to L8, reference geology, plates, candidate continents, crust, and base terrain.
-- Use `/mesh-debug` to inspect mesh, geology, terrain themes, region properties, progress, and stage caching.
-- Use content/world contracts, a generation pipeline, Worker copy transfers, and a minimal JSON archive codec.
+- Generate natural worlds on regular or perturbed spherical meshes from L0 to L8, with climate, hydrology, ecology, validated Schema 3 snapshots, and read-only queries.
+- Explore worlds in a 3D globe or 2D atlas with thematic layers, six map styles, region inspection, and Worker-backed generation.
+- Load built-in content and naming profiles; bilingual society packs are available as candidates for future civilization generation.
 
-M1.1 currently produces generation artifacts. The latest terrain version is `terrain-v20`; glacial and hydraulic erosion are deferred. Monthly climate, hydrology, ecology, complete world publication, civilization generation, formal 3D/2D maps, and browser project storage are not implemented yet. See [progress](docs/PROGRESS.md) for the current validation status.
+Initial civilization generation and browser project storage/import/export are not implemented yet. See [progress](docs/PROGRESS.md) for the current scope and validation status.
 
 ## Run locally
 
 ```sh
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
 
-Open the address printed by Vite and visit `/mesh-debug`. The UI offers L4–L8; L8 requires substantial memory. This is a debugging view, not the full product workspace.
+Open the address printed by Vite. The workspace is served from `/`; L8 requires substantial memory.
 
 ## Documentation
 
@@ -28,10 +28,10 @@ The main documents are in Chinese.
 | Document | Contents |
 | --- | --- |
 | [PRD](docs/PRD.md) | Product goals, user journeys, and scope |
-| [Technical design](docs/TECHNICAL_DESIGN.md) | Package boundaries, algorithms, target architecture, and decisions |
-| [World data contracts](docs/WORLD_DATA_CONTRACTS.md) | Fields, units, identity, snapshots, artifacts, and ownership |
+| [Technical design](docs/TECHNICAL_DESIGN.md) | Current package boundaries and durable design decisions |
+| [World data contracts](docs/WORLD_DATA_CONTRACTS.md) | Current snapshot, content, ownership, and archive contracts |
 | [Generation pipeline](docs/GENERATION_PIPELINE.md) | Stages, signatures, randomness, caching, and Workers |
-| [Progress](docs/PROGRESS.md) | Implemented features, pending work, validation, and measured baselines |
+| [Progress](docs/PROGRESS.md) | Current capabilities, pending work, and validation status |
 | [M1 implementation plan](docs/M1_IMPLEMENTATION_PLAN.md) | Climate, hydrology, erosion, ecology, and world publication |
 
-`packages/world-core` owns generation and domain rules, `packages/world-data` owns content, `packages/cartography` defines the mapping boundary, and `apps/web` owns UI and Worker orchestration. `docs/old-src` contains reference code from feat-society and is not part of the new runtime.
+`packages/world-core` owns generation and domain rules, `packages/world-data` owns content, `packages/cartography` owns mapping, and `apps/web` owns UI and Worker orchestration. `docs/old-src` contains reference code from feat-society and is not part of the new runtime. Historical document snapshots are linked from the current progress page and are not current specifications.

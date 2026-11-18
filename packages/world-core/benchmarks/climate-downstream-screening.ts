@@ -1,4 +1,5 @@
 /* eslint-disable antfu/no-top-level-await -- This diagnostic runs as a standalone jiti entry point. */
+import { testContentPack, testPipelineContent } from '../src/content/test-content'
 import type { ClimateArtifact, CryosphereArtifact, EcologyArtifact, HydrologyArtifact, SphericalMesh, TerrainArtifact } from '../src/index'
 import { Buffer } from 'node:buffer'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -28,8 +29,8 @@ const input = {
   },
 }
 const cache = new StageCache(512 * 2 ** 20)
-const hydrology = await createHydrologyPipeline(cache).execute(input)
-const ecology = await createEcologyPipeline(cache).execute({ ...input, config: { ...input.config, ecology: true } })
+const hydrology = await createHydrologyPipeline(cache).execute({ ...input, ...testPipelineContent([testContentPack]) })
+const ecology = await createEcologyPipeline(cache).execute({ ...input, ...testPipelineContent([testContentPack]), config: { ...input.config, ecology: true } })
 const mesh = hydrology.getOutput<SphericalMesh>('mesh')
 const terrain = hydrology.getOutput<TerrainArtifact>('terrain')
 const climate = hydrology.getOutput<ClimateArtifact>('climate-c0')

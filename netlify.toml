@@ -1,0 +1,12 @@
+[build]
+command = "bun install --frozen-lockfile && bun run --cwd apps/web build"
+publish = "apps/web/dist"
+
+[build.environment]
+BUN_VERSION = "1.4.3"
+
+# Existing files are served first. Unknown paths return the app shell.
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200

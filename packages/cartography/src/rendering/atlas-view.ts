@@ -1,3 +1,4 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type { PickableMapLayer } from '#picking/map-picker'
 import type { MapProjection, MapProjectionId } from '#projections/map-projections'
 import type { GlobeLayerFilterState } from '#rendering/globe-view'
@@ -8,7 +9,7 @@ import type { LineLayer } from '#rendering/layers/line-layer'
 import type { SymbolLayer } from '#rendering/layers/symbol-layer'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { CompiledMapStyle, CompiledMapStyleLayer } from '#styles/compiler'
-import type { WorldMapReader } from '@another-earth/world-core'
+import * as THREE from 'three'
 import {
   buildProjectionSilhouettePoints,
   computeAtlasStyleZoom,
@@ -24,7 +25,6 @@ import { RasterLayer } from '#rendering/layers/raster-layer'
 import { SelectionLayer } from '#rendering/layers/selection-layer'
 import { CollisionGrid, createSymbolLayerFromRegistry } from '#rendering/layers/symbol-layer'
 import { readStyleBackgroundColor } from '#styles/spec'
-import * as THREE from 'three'
 
 export type AtlasLayerFilterState = GlobeLayerFilterState
 
@@ -122,8 +122,10 @@ export class AtlasView {
     climateMonth: 0,
     globeEffects: {
       rotate: false,
+      rotateSpeedDegreesPerSecond: 0.6,
       atmosphere: true,
       dayNight: false,
+      polarIce: true,
     },
     selection: {
       regionId: null,
@@ -517,8 +519,8 @@ export class AtlasView {
     if (compiledLayer.type === 'raster') {
       const inst = new RasterLayer(compiledLayer.id, this.reader, {
         renderOrder,
-        polygonOffsetFactor: thematicRaster ? -1 : 2,
-        polygonOffsetUnits: thematicRaster ? -1 : 2,
+        polygonOffsetFactor: 0,
+        polygonOffsetUnits: thematicRaster ? -2 : 4,
         projection: this.projection,
         zOffset: thematicRaster ? LAYER_STACK.thematicRasterOffset : 0,
         tracker: this.tracker,
@@ -542,6 +544,7 @@ export class AtlasView {
         renderOrder,
         surfaceOffset,
         projection: this.projection,
+        reader: this.reader,
         tracker: this.tracker,
       })
       if (!inst)
@@ -642,6 +645,7 @@ export class AtlasView {
           styleZoom,
           state.climateMonth,
           this.compiledStyle!.id,
+          state.globeEffects.polarIce,
         )
         inst.setLighting(false, flatNormalDir, false)
       }

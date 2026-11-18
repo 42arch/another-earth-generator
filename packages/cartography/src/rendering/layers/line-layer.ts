@@ -4,10 +4,10 @@ import type { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { GeoJsonFeature, GeoJsonSource } from '#sources/types'
 import type { CompiledMapStyleLayer } from '#styles/compiler'
-import { clipPolylineAtAntimeridian } from '#projections/seam-clipper'
-import { lonLatDegToCartesian, slerpVec3, sphericalAngleRad } from '#projections/spherical-math'
-import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
 import * as THREE from 'three'
+import { clipPolylineAtAntimeridian } from '#projections/seam-clipper'
+import { lonLatDegToCartesian, rotateAroundPolarAxis, slerpVec3, sphericalAngleRad } from '#projections/spherical-math'
+import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
 
 export type GeoJsonLineCoordinates = readonly LonLatTuple[]
 
@@ -341,6 +341,7 @@ const LINE_VERTEX_SHADER = /* glsl */`
   varying float vSide;
   varying float vLineDistance;
   varying float vHalfWidthPx;
+  varying vec3 vWorldNormal;
   FLAT_VARYING varying float vDashOn;
   FLAT_VARYING varying float vDashOff;
   FLAT_VARYING varying vec4 vLineColor;
@@ -367,6 +368,7 @@ const LINE_VERTEX_SHADER = /* glsl */`
     vLineColor = colorRgba;
     vSide = aSide;
     vLineDistance = aLineDistance;
+    vWorldNormal = normalize((modelMatrix * vec4(position, 0.0)).xyz);
 
     vec4 clipCurr = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vec4 clipPrev = projectionMatrix * modelViewMatrix * vec4(aPrevPosition, 1.0);
@@ -406,12 +408,25 @@ const LINE_FRAGMENT_SHADER = /* glsl */`
   #else
     #define FLAT_VARYING
   #endif
+  uniform float uDayNightEnabled;
+  uniform vec3 uSunDirection;
+
   varying float vSide;
   varying float vLineDistance;
   varying float vHalfWidthPx;
+  varying vec3 vWorldNormal;
   FLAT_VARYING varying float vDashOn;
   FLAT_VARYING varying float vDashOff;
   FLAT_VARYING varying vec4 vLineColor;
+
+  vec3 srgbToLinear(vec3 srgb) {
+    return mix(srgb / 12.92, pow((srgb + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), srgb));
+  }
+
+  vec3 linearToSrgb(vec3 linear) {
+    vec3 clamped = clamp(linear, 0.0, 1.0);
+    return mix(clamped * 12.92, 1.055 * pow(clamped, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), clamped));
+  }
 
   void main() {
     if (vLineColor.a <= 0.002) {
@@ -435,7 +450,16 @@ const LINE_FRAGMENT_SHADER = /* glsl */`
       discard;
     }
 
-    gl_FragColor = vec4(vLineColor.rgb, alpha);
+    vec3 rgb = vLineColor.rgb;
+    if (uDayNightEnabled > 0.5) {
+      float dotNL = max(0.0, dot(normalize(vWorldNormal), normalize(uSunDirection)));
+      vec3 ambientIrradiance = vec3(0.081, 0.130, 0.199) * 1.1;
+      vec3 directIrradiance = vec3(1.0, 0.963, 0.871) * (4.0 * dotNL);
+      vec3 lightFactor = (ambientIrradiance + directIrradiance) * 0.318309886;
+      rgb = linearToSrgb(srgbToLinear(rgb) * lightFactor);
+    }
+
+    gl_FragColor = vec4(rgb, alpha);
   }
 `
 
@@ -587,6 +611,8 @@ export class LineLayer {
         uFeatureStyleTex: { value: this.styleTexture },
         uStyleTexWidth: { value: this.styleTexWidth },
         uStyleTexHeight: { value: this.styleTexHeight },
+        uDayNightEnabled: { value: 0 },
+        uSunDirection: { value: new THREE.Vector3(0.6, 0.35, 0.72).normalize() },
       },
       vertexShader: LINE_VERTEX_SHADER,
       fragmentShader: LINE_FRAGMENT_SHADER,
@@ -600,6 +626,13 @@ export class LineLayer {
     this.mesh = new THREE.Mesh(geometry, material)
     this.mesh.name = `LineLayer:${this.id}`
     this.mesh.renderOrder = options.renderOrder ?? 4
+  }
+
+  setLighting(dayNightEnabled: boolean, sunDirection: THREE.Vector3): void {
+    if (this.disposed)
+      return
+    this.mesh.material.uniforms.uDayNightEnabled.value = dayNightEnabled ? 1 : 0
+    this.mesh.material.uniforms.uSunDirection.value.copy(sunDirection).normalize()
   }
 
   setViewport(widthCssPx: number, heightCssPx: number, pixelRatio = 1): void {
@@ -687,6 +720,7 @@ export class LineLayer {
     camera: THREE.Camera,
     hitTolerancePx = 5,
     worldOffsetsX: readonly number[] = [0],
+    planetSpinRadians = 0,
   ): { layerId: string, sourceId: string, featureId: string, distancePx: number } | null {
     if (this.disposed || !this.mesh.visible)
       return null
@@ -707,8 +741,8 @@ export class LineLayer {
       for (const offsetX of worldOffsetsX) {
         for (const poly of entry.polylines) {
           for (let j = 0; j < poly.length - 1; j++) {
-            const a = poly[j]
-            const b = poly[j + 1]
+            const a = this.isGlobe ? rotateAroundPolarAxis(poly[j], planetSpinRadians) : poly[j]
+            const b = this.isGlobe ? rotateAroundPolarAxis(poly[j + 1], planetSpinRadians) : poly[j + 1]
             if (this.isGlobe
               && a[0] * camPos.x + a[1] * camPos.y + a[2] * camPos.z <= 0.1
               && b[0] * camPos.x + b[1] * camPos.y + b[2] * camPos.z <= 0.1) {

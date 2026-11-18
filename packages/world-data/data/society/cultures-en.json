@@ -1,0 +1,48 @@
+{
+  "format": "another-earth/society-pack",
+  "schemaVersion": 1,
+  "id": "builtin-cultures-en",
+  "version": "1.0.0",
+  "language": "en",
+  "dependencies": [
+    {
+      "id": "builtin:naming-style/western-en",
+      "version": "1.1.0"
+    }
+  ],
+  "cultures": [
+    {
+      "id": "builtin:culture/river-valley-en",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-en",
+      "displayName": "River Valley Settlers",
+      "description": "A settled way of life organized around fertile floodplains, irrigation, and exchange between river communities."
+    },
+    {
+      "id": "builtin:culture/archipelago-en",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-en",
+      "displayName": "Archipelago Seafarers",
+      "description": "A maritime tradition linking island communities through navigation, seaborne trade, and shared ports."
+    },
+    {
+      "id": "builtin:culture/highland-en",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-en",
+      "displayName": "Highland Pastoralists",
+      "description": "A culture adapted to upland pastures, seasonal movement, and cooperation across valleys."
+    },
+    {
+      "id": "builtin:culture/woodland-en",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-en",
+      "displayName": "Woodland Artisans",
+      "description": "A tradition centered on forest stewardship, skilled crafts, and small settlements among wooded lands."
+    }
+  ],
+  "displayName": "Cultures"
+}

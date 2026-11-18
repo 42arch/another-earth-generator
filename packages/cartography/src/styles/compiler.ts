@@ -621,6 +621,22 @@ function extractLegendFromExpression(
   const hint = layer.legend
   const title = hint?.title ?? layer.thematicId ?? layer.id
   const unit = hint?.unit
+  if (hint?.categories && hint.categories.length > 0) {
+    const desc: CategoricalLegendDescriptor = {
+      kind: 'categorical',
+      layerId: layer.id,
+      ...(layer.thematicId ? { thematicId: layer.thematicId } : {}),
+      title,
+      items: Object.freeze(hint.categories.map(category => ({
+        value: category.label,
+        label: category.label,
+        color: category.color,
+      }))),
+      ...(hint.noDataLabel ? { noDataLabel: hint.noDataLabel } : {}),
+      ...(hint.noDataColor ? { noDataColor: hint.noDataColor } : {}),
+    }
+    return Object.freeze(desc)
+  }
 
   const walk = (expr: StyleValue | undefined): LegendDescriptor | null => {
     if (!expr || !Array.isArray(expr))
@@ -848,7 +864,7 @@ export class StyleCompiler {
     const compiledLayers: CompiledMapStyleLayer[] = []
 
     for (let i = 0; i < style.layers.length; i++) {
-      const layer = style.layers[i]
+      const layer: MapStyleLayer = style.layers[i]!
       const layerPath = `style.layers[${i}]`
       if (!layer || typeof layer !== 'object')
         throw new StyleValidationError(layerPath, 'Layer must be an object')
@@ -890,9 +906,10 @@ export class StyleCompiler {
 
       let views: readonly MapViewportMode[] = ['globe', 'atlas']
       if (layer.views !== undefined) {
-        if (!Array.isArray(layer.views) || layer.views.length === 0 || !layer.views.every(v => VALID_VIEWS.has(v)))
+        const layerViews = layer.views
+        if (!Array.isArray(layerViews) || layerViews.length === 0 || !layerViews.every((v: MapViewportMode) => VALID_VIEWS.has(v)))
           throw new StyleValidationError(`${layerPath}.views`, 'Layer views must be a non-empty array of "globe" | "atlas"')
-        views = Object.freeze([...layer.views])
+        views = Object.freeze([...layerViews])
       }
 
       const minzoom = layer.minzoom ?? 0
@@ -908,14 +925,14 @@ export class StyleCompiler {
 
       const compiledLayout: Record<string, CompiledStyleExpression> = {}
       if (layer.layout) {
-        for (const [k, v] of Object.entries(layer.layout))
-          compiledLayout[k] = compileStyleExpression(v, style.tokens, `${layerPath}.layout.${k}`)
+        for (const [k, v] of Object.entries(layer.layout as Readonly<Record<string, StyleValue>>))
+          compiledLayout[k] = compileStyleExpression(v as StyleValue, style.tokens, `${layerPath}.layout.${k}`)
       }
 
       const compiledPaint: Record<string, CompiledStyleExpression> = {}
       if (layer.paint) {
-        for (const [k, v] of Object.entries(layer.paint))
-          compiledPaint[k] = compileStyleExpression(v, style.tokens, `${layerPath}.paint.${k}`)
+        for (const [k, v] of Object.entries(layer.paint as Readonly<Record<string, StyleValue>>))
+          compiledPaint[k] = compileStyleExpression(v as StyleValue, style.tokens, `${layerPath}.paint.${k}`)
       }
 
       const colorPropKey = layer.type === 'raster'
@@ -957,7 +974,17 @@ export class StyleCompiler {
       fonts: Object.freeze(compiledFonts),
       layers: Object.freeze(compiledLayers),
       layersById,
-      getActiveLayers({ viewMode, zoom, activeThematicId, enabledOverlayIds }) {
+      getActiveLayers({
+        viewMode,
+        zoom,
+        activeThematicId,
+        enabledOverlayIds,
+      }: {
+        readonly viewMode: MapViewportMode
+        readonly zoom: number
+        readonly activeThematicId: string | null
+        readonly enabledOverlayIds: readonly string[]
+      }) {
         const overlaySet = new Set(enabledOverlayIds)
         const activeThematic = activeThematicId && activeThematicId !== 'none' ? activeThematicId : null
         return compiledLayers.filter((layer) => {

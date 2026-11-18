@@ -1,11 +1,11 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type { MapPickResult } from '#picking/map-picker'
 import type { MapProjectionId } from '#projections/map-projections'
+import type { GlobeLayerFilterState } from '#rendering/globe-view'
 import type { GpuResourceCounts } from '#rendering/gpu-resource-tracker'
 import type { WorldViewportOptions } from '#rendering/viewport'
 import type { CompiledMapStyle } from '#styles/compiler'
 import type { LegendDescriptor, MapFontFaceDescriptor, MapStyleDocument, MapViewportMode } from '#styles/spec'
-import type { WorldMapReader } from '@another-earth/world-core'
-import type { GlobeLayerFilterState } from '#rendering/globe-view'
 import { AtlasView } from '#rendering/atlas-view'
 import { GlobeView } from '#rendering/globe-view'
 import { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
@@ -34,8 +34,11 @@ export interface CartographyViewState {
   readonly climateMonth: number // 0..11
   readonly globeEffects: Readonly<{
     rotate: boolean
+    /** Eastward spin around the polar axis, in degrees per second. */
+    rotateSpeedDegreesPerSecond: number
     atmosphere: boolean
     dayNight: boolean
+    polarIce: boolean
   }>
   readonly selection: Readonly<{
     regionId: number | null
@@ -53,8 +56,10 @@ export const DEFAULT_CARTOGRAPHY_VIEW_STATE: CartographyViewState = Object.freez
   climateMonth: 0,
   globeEffects: Object.freeze({
     rotate: false,
+    rotateSpeedDegreesPerSecond: 0.6,
     atmosphere: true,
     dayNight: false,
+    polarIce: true,
   }),
   selection: Object.freeze({
     regionId: null,

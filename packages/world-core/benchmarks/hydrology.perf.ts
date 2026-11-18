@@ -1,4 +1,5 @@
 import type { GeologyArtifact, HydrologyArtifact, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '../src/index'
+import { testContentPack, testPipelineContent } from '../src/content/test-content'
 import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -103,7 +104,7 @@ it('records I0/H0 fixed-seed output, cache invalidation and array resource bytes
       const pipeline = createHydrologyPipeline(new StageCache(512 * 2 ** 20))
       const input = { seed, config: { planet: { physicalRadiusKm: 6371 }, mesh: { subdivisionLevel: level, irregularity: 0.5 }, reference: { subdivisionLevel: 6 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS } }
       const coldStarted = performance.now()
-      const cold = await pipeline.execute(input)
+      const cold = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) })
       const coldMs = performance.now() - coldStarted
       const hydrology = cold.getOutput<HydrologyArtifact>('hydrology-h0')
       const lakes = cold.getOutput<StaticLakeArtifact>('static-lakes-l1')
@@ -112,13 +113,13 @@ it('records I0/H0 fixed-seed output, cache invalidation and array resource bytes
       const geology = cold.getOutput<GeologyArtifact>('geology')
       const hashes = { runoff: digest(hydrology.annualRunoffMm), downstream: digest(hydrology.downstreamRegion), rivers: digest(hydrology.riverMask), contributingArea: digest(hydrology.contributingAreaKm2), lakes: digestLakes(lakes) }
       const hitStarted = performance.now()
-      const hit = await pipeline.execute(input)
+      const hit = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) })
       const hitMs = performance.now() - hitStarted
       const changedStarted = performance.now()
-      const changed = await pipeline.execute({ ...input, config: { ...input.config, hydrology: { ...input.config.hydrology, minimumRiverDrainageAreaKm2: input.config.hydrology.minimumRiverDrainageAreaKm2 + 1000 } } })
+      const changed = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]), config: { ...input.config, hydrology: { ...input.config.hydrology, minimumRiverDrainageAreaKm2: input.config.hydrology.minimumRiverDrainageAreaKm2 + 1000 } } })
       const changedMs = performance.now() - changedStarted
       const forceStarted = performance.now()
-      const forced = await pipeline.execute(input, { force: true })
+      const forced = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) }, { force: true })
       const forceMs = performance.now() - forceStarted
       const recomputed = forced.getOutput<HydrologyArtifact>('hydrology-h0')
       const recomputedLakes = forced.getOutput<StaticLakeArtifact>('static-lakes-l1')

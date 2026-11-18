@@ -78,16 +78,15 @@ const hydrologyStage: GenerationStage<HydrologyArtifact> = {
 
 const staticLakesStage: GenerationStage<StaticLakeArtifact> = {
   id: 'static-lakes-l1',
-  version: 'static-lakes-l1-v6',
+  version: 'static-lakes-l1-v10',
   dependencies: ['mesh', 'terrain', 'climate-c0', 'hydrology-h0'],
-  configKeys: ['hydrology.evapotranspirationFactorMmPerCMonth', 'hydrology.minimumLakeAreaKm2', 'climate.orbitalPeriodDays'],
+  configKeys: ['hydrology.minimumLakeAreaKm2', 'climate.orbitalPeriodDays'],
   execute(context) {
     const mesh = copyDependency<SphericalMesh>(context, 'mesh')
     const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask'>>(context, 'terrain', ({ meshId, elevationKm, landMask }) => ({ meshId, elevationKm, landMask }))
-    const climate = copyDependency<ClimateArtifact, Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'koppenClass'>>(context, 'climate-c0', ({ meshId, regionCount, temperatureC, koppenClass }) => ({ meshId, regionCount, temperatureC, koppenClass }))
+    const climate = copyDependency<ClimateArtifact, Pick<ClimateArtifact, 'meshId' | 'regionCount' | 'temperatureC' | 'precipitationMm' | 'koppenClass'>>(context, 'climate-c0', ({ meshId, regionCount, temperatureC, precipitationMm, koppenClass }) => ({ meshId, regionCount, temperatureC, precipitationMm, koppenClass }))
     const hydrology = copyDependency<HydrologyArtifact>(context, 'hydrology-h0')
     const output = generateStaticLakesL1(mesh, terrain, hydrology, climate, {
-      evapotranspirationFactorMmPerCMonth: configNumber(context, 'hydrology.evapotranspirationFactorMmPerCMonth', 0, 100),
       orbitalPeriodDays: configNumber(context, 'climate.orbitalPeriodDays', 1, 1e6),
       minimumLakeAreaKm2: configNumber(context, 'hydrology.minimumLakeAreaKm2', 0, Number.POSITIVE_INFINITY),
     }, (fraction) => {

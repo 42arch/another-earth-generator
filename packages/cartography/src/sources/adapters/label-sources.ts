@@ -1,3 +1,4 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type {
   GeoJsonFeature,
   GeoJsonPointGeometry,
@@ -5,7 +6,6 @@ import type {
   SourceUnavailable,
   TerritorySpineMetadata,
 } from '#sources/types'
-import type { WorldMapReader } from '@another-earth/world-core'
 import { computeTerritorySpine } from '#sources/topology/territory-spine'
 import { BUILTIN_MAP_SOURCE_SCHEMAS } from '#sources/types'
 import { formatContinentDisplayName, formatOceanDisplayName } from './area-sources'

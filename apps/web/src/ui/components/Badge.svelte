@@ -17,7 +17,7 @@
 
   const variantStyles = {
     primary: 'bg-obs-primary/10 text-obs-primary border-obs-primary/30',
-    slate: 'bg-white/[0.05] text-obs-text-muted border-white/[0.08]',
+    slate: 'bg-white/5 text-obs-text-muted border-white/8',
   }
 
   const sizeStyles = {

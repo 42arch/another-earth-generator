@@ -1,7 +1,8 @@
 import type { MonthlyForcing } from './monthly-forcing'
 import type { MonthlySpatialFields } from './monthly-spatial-fields'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { describe, expect, it } from 'vitest'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
+import { TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C } from './climate'
 import { climateMesh } from './climate-mesh'
 import { computeMonthlyTemperature } from './monthly-temperature-generator'
 
@@ -111,5 +112,52 @@ describe('monthly temperature', () => {
     expect(summerWestern[coast] + winterWestern[coast]).toBeCloseTo(summerControl[coast] + winterControl[coast])
     expect(summerWestern[polar]).toBeCloseTo(summerControl[polar])
     expect(winterWestern[polar]).toBeCloseTo(winterControl[polar])
+  })
+
+  it('freezes the warmest tropical ocean at the cold end and clears polar summer at the hot end', () => {
+    const mesh = climateMesh(createSphericalMesh({ subdivisionLevel: 3, physicalRadiusKm: 6371 }))
+    const n = mesh.numRegions
+    const zero = new Float32Array(n)
+    const equator = mesh.regionLatitude.reduce((best, latitude, region) =>
+      Math.abs(latitude) < Math.abs(mesh.regionLatitude[best]) ? region : best, 0)
+    const pole = mesh.regionLatitude.reduce((best, latitude, region) =>
+      Math.abs(latitude) > Math.abs(mesh.regionLatitude[best]) ? region : best, 0)
+    const ocean = { regionCount: n, landMask: new Uint8Array(n), elevationKm: zero }
+    const land = { regionCount: n, landMask: new Uint8Array(n).fill(1), elevationKm: zero }
+    const spatial: MonthlySpatialFields = {
+      coastDistanceKm: zero,
+      continentality: zero,
+      westCoastInfluence: zero,
+      eastMonsoonExposure: zero,
+      elevationGradientEast: zero,
+      elevationGradientNorth: zero,
+      edgeKm: 200,
+    }
+    const oceanWarmth = new Float32Array(n)
+    const oceanEast = new Float32Array(n)
+    oceanWarmth[equator] = 1
+    oceanEast[equator] = 2
+    const summer: MonthlyForcing = {
+      days: 365.25 / 12,
+      solarDeclination: 0,
+      orbitalPhase: Math.PI / 2 + 0.35,
+      itczLatitude: new Float32Array(72),
+      maritimeItczLatitude: 0,
+      pressureHpa: zero,
+      windEast: zero,
+      windNorth: zero,
+      monsoonEast: zero,
+      oceanEast,
+      oceanNorth: zero,
+      oceanWarmth,
+    }
+    const frozenTropics = computeMonthlyTemperature(mesh, ocean, spatial, summer, undefined, TEMPERATURE_OFFSET_MIN_C)[equator]
+    const hotTropics = computeMonthlyTemperature(mesh, ocean, spatial, summer, undefined, TEMPERATURE_OFFSET_MAX_C)[equator]
+    const polarSummer = computeMonthlyTemperature(mesh, land, spatial, summer, undefined, TEMPERATURE_OFFSET_MAX_C)[pole]
+    expect(Math.abs(mesh.regionLatitude[equator] * 180 / Math.PI)).toBeLessThan(5)
+    expect(Math.abs(mesh.regionLatitude[pole] * 180 / Math.PI)).toBeGreaterThan(80)
+    expect(frozenTropics).toBeLessThan(-1.8)
+    expect(hotTropics).toBe(60)
+    expect(polarSummer).toBeGreaterThan(2)
   })
 })

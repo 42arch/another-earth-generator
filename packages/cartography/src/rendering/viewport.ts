@@ -1,10 +1,10 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type { MapPickResult } from '#picking/map-picker'
 import type { AtlasView } from '#rendering/atlas-view'
 import type { GlobeView } from '#rendering/globe-view'
 import type { MapViewportMode } from '#styles/spec'
-import type { WorldMapReader } from '@another-earth/world-core'
-import { isPointerClickGesture, MapPicker } from '#picking/map-picker'
 import * as THREE from 'three'
+import { isPointerClickGesture, MapPicker } from '#picking/map-picker'
 
 export interface WorldViewportOptions {
   readonly host?: HTMLElement | null
@@ -67,6 +67,7 @@ export class WorldViewport {
         canvas: options.canvas ?? undefined,
         antialias: true,
         powerPreference: 'high-performance',
+        preserveDrawingBuffer: true,
       })
       renderer.outputColorSpace = THREE.SRGBColorSpace
       renderer.setClearColor('#030308')
@@ -270,6 +271,7 @@ export class WorldViewport {
       viewportWidth: this.widthCssPx,
       viewportHeight: this.heightCssPx,
       orderedLayers: this.activeGlobeView.getPickableLayersInStyleOrder(),
+      planetSpinRadians: this.activeGlobeView.getPlanetSpinRadians(),
     })
   }
 

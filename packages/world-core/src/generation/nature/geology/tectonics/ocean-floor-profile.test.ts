@@ -1,6 +1,6 @@
 import type { AlgorithmMesh } from '#generation/nature/common/algorithm-mesh'
-import { referenceCellsToAngle } from '#generation/nature/common/distance-field'
 import { expect, it } from 'vitest'
+import { referenceCellsToAngle } from '#generation/nature/common/distance-field'
 import { blendOceanFloorBase, oceanBoundaryRelief, oceanFloorBase, oceanShelfWidth } from './tectonic-elevation-generator'
 
 it('changes shelf width continuously at the end of active-margin influence', () => {

@@ -1,5 +1,5 @@
-import type { LonLatTuple, Vec3Tuple } from '#projections/spherical-math'
 import type { MapMeshReader, WorldMapReader } from '@another-earth/world-core'
+import type { LonLatTuple, Vec3Tuple } from '#projections/spherical-math'
 import {
   cartesianToLonLatDeg,
   crossVec3,

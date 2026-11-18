@@ -31,7 +31,7 @@
     class='bg-obs-surface backdrop-blur-md border border-obs-border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-200 {className}'
   >
     {#if title}
-      <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/[0.02] border-b border-white/[0.06] select-none'>
+      <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/2 border-b border-white/6 select-none'>
         <Collapsible.Trigger
           class='flex items-center justify-between flex-1 gap-2 text-left bg-transparent border-0 p-0 m-0 cursor-pointer group text-inherit font-inherit outline-hidden focus-visible:ring-1 focus-visible:ring-obs-primary/40 rounded-sm'
         >
@@ -78,7 +78,7 @@
 {:else}
   <div class='bg-obs-surface backdrop-blur-md border border-obs-border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.4)] overflow-hidden transition-all duration-200 {className}'>
     {#if title}
-      <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/[0.02] border-b border-white/[0.06] select-none'>
+      <header class='flex items-center justify-between px-3.5 py-2.5 bg-white/2 border-b border-white/6 select-none'>
         <div class='flex items-center gap-2'>
           {#if icon}
             <span class='text-obs-primary text-xs flex items-center'>

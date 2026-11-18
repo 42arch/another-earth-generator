@@ -1,4 +1,5 @@
 import type { TerrainArtifact } from '../src/generation/nature/geography'
+import { testContentPack, testPipelineContent } from '../src/content/test-content'
 import type { SphericalMesh } from '../src/mesh/spherical-mesh'
 import { createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '../src/index'
 import { summarizeHypsometry } from './terrain-hypsometry-summary'
@@ -17,6 +18,7 @@ const results = []
 for (const sample of samples) {
   const generation = await createTerrainPipeline().execute({
     seed: sample.seed,
+    ...testPipelineContent([testContentPack]),
     config: {
       planet: { physicalRadiusKm: 6371, seaLevelDatumKm: 0 },
       mesh: { subdivisionLevel: sample.subdivisionLevel, irregularity: 0.75 },

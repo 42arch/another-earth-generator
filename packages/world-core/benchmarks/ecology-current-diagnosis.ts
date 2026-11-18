@@ -1,9 +1,9 @@
 /* eslint-disable antfu/no-top-level-await -- Standalone fixed-seed diagnostic. */
+import { testContentPack, testEcologyVocabulary, testPipelineContent } from '../src/content/test-content'
 import type { ClimateArtifact, EcologyArtifact, SphericalMesh, TerrainArtifact } from '../src/index'
 import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import process from 'node:process'
-import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
 import {
   createEcologyPipeline,
   DEFAULT_CLIMATE_PARAMETERS,
@@ -31,14 +31,14 @@ const input = {
   },
 }
 const pipeline = createEcologyPipeline()
-const result = await pipeline.execute(input)
+const result = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) })
 const mesh = result.getOutput<SphericalMesh>('mesh')
 const terrain = result.getOutput<TerrainArtifact>('terrain')
 const climate = result.getOutput<ClimateArtifact>('climate-c0')
 const ecology = result.getOutput<EcologyArtifact>('ecology-e0')
 validateEcologyArtifact(ecology, mesh.meshId, mesh.regionCount)
 
-const biome = NATURAL_BIOME_DEFINITIONS.map(definition => ({ code: definition.code, areaKm2: 0, temperatureArea: 0, precipitationArea: 0, latitudeArea: 0, largestComponentKm2: 0, componentCount: 0 }))
+const biome = testEcologyVocabulary.biomes.map(definition => ({ code: definition.code, areaKm2: 0, temperatureArea: 0, precipitationArea: 0, latitudeArea: 0, largestComponentKm2: 0, componentCount: 0 }))
 const forestBiomes = new Set(['TropicalRainforest', 'TropicalSeasonalForest', 'TemperateSeasonalForest', 'TemperateRainforest', 'BorealForest'])
 const visited = new Uint8Array(mesh.regionCount)
 const stack: number[] = []
@@ -55,8 +55,8 @@ for (let region = 0; region < mesh.regionCount; region++) {
   const area = mesh.areaKm2[region]
   const land = terrain.landMask[region] === 1
   const biomeIndex = ecology.potentialBiomeIndex[region]
-  const biomeCode = NATURAL_BIOME_DEFINITIONS[biomeIndex].code
-  const coverCode = NATURAL_LAND_COVER_DEFINITIONS[ecology.landCoverIndex[region]].code
+  const biomeCode = testEcologyVocabulary.biomes[biomeIndex].code
+  const coverCode = testEcologyVocabulary.landCover[ecology.landCoverIndex[region]].code
   if ((biomeCode === 'Ocean') !== !land || (coverCode === 'Ocean') !== !land)
     oceanClassificationErrors++
   if (!land) {

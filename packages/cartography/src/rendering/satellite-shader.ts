@@ -35,6 +35,7 @@ function scaleRgb(
 
 const ROCK_COLOR: readonly [number, number, number] = [0.39, 0.37, 0.33]
 const SNOW_COLOR: readonly [number, number, number] = [0.83, 0.87, 0.90]
+const ICE_SHEET_COLOR: readonly [number, number, number] = [0.74, 0.84, 0.93]
 const DEEP_OCEAN_COLOR: readonly [number, number, number] = [0.018, 0.075, 0.17]
 const SHALLOW_OCEAN_COLOR: readonly [number, number, number] = [0.065, 0.28, 0.34]
 const COLD_DRY_COLOR: readonly [number, number, number] = [0.48, 0.46, 0.39]
@@ -43,6 +44,45 @@ const COLD_VEGETATED_COLOR: readonly [number, number, number] = [0.20, 0.29, 0.2
 const WARM_VEGETATED_COLOR: readonly [number, number, number] = [0.065, 0.27, 0.09]
 
 const SATELLITE_SHALLOW_WATER_LIMIT_KM = 1.0
+const MONTHS_PER_YEAR = 12
+/** Seawater freezes below this temperature. */
+const SEAWATER_FREEZING_C = -1.8
+/** Warmest-month span above freezing where a land ice sheet thins out. */
+const LAND_ICE_CLEAR_C = 2
+/** Warmest month at which sea ice has thinned away. Above this the ocean stays open even if winter is cold. */
+const SEA_ICE_CLEAR_C = 0
+
+export function landIceCover(warmestMonthC: number): number {
+  return 1 - smoothstep(0, LAND_ICE_CLEAR_C, warmestMonthC)
+}
+
+/**
+ * Sea-ice cover from the warmest month only.
+ * A full sheet stays while summer remains below seawater freezing, then thins out by 0°C.
+ * Winter cold does not extend the cap into oceans whose warmest month is above freezing.
+ */
+export function seaIceCover(warmestMonthC: number): number {
+  return 1 - smoothstep(SEAWATER_FREEZING_C, SEA_ICE_CLEAR_C, warmestMonthC)
+}
+
+export function seaIceCoverForMonths(monthlyTemperatureC: readonly number[]): number {
+  let warmestMonthC = -Infinity
+  for (const temperature of monthlyTemperatureC)
+    warmestMonthC = Math.max(warmestMonthC, temperature)
+  return seaIceCover(warmestMonthC)
+}
+
+/** Base opacity of the satellite ocean sheen before sea ice fades it out. */
+export const OCEAN_SPECULAR_ALPHA = 0.55
+
+/**
+ * Ocean sheen opacity. Full sea ice clears the highlight so frozen water uses the same ice color as land.
+ * Hiding polar ice restores the open-water sheen.
+ */
+export function oceanSpecularOpacity(seaIceCoverAmount: number, polarIceEnabled: boolean): number {
+  const cover = polarIceEnabled ? clamp(seaIceCoverAmount, 0, 1) : 0
+  return OCEAN_SPECULAR_ALPHA * (1 - cover)
+}
 
 function linearToSrgbByte(linear: number): number {
   const c = clamp(linear, 0, 1)
@@ -50,15 +90,68 @@ function linearToSrgbByte(linear: number): number {
   return clamp(Math.round(srgb * 255), 0, 255)
 }
 
+function srgbByteToLinear(byte: number): number {
+  const srgb = clamp(byte / 255, 0, 1)
+  return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4
+}
+
+function readMonthlyTemperature(monthlyTemperature: readonly { get: (region: number) => number }[], region: number): number[] {
+  return monthlyTemperature.map(field => field.get(region))
+}
+
+/**
+ * Blends an existing per-cell sRGB buffer toward polar ice.
+ * The satellite preset paints elevation colors first; this pass adds the ice sheet and sea ice on top.
+ */
+export function applyPolarIceToRgba8(
+  reader: WorldMapReader,
+  targetRgba: Uint8Array,
+  regionCount = reader.identity.regionCount,
+): void {
+  const landMask = reader.field('landMask')
+  const monthlyTemperature = Array.from({ length: MONTHS_PER_YEAR }, (_, month) => reader.monthlyField('temperatureC', month))
+
+  for (let region = 0; region < regionCount; region++) {
+    const temperatures = readMonthlyTemperature(monthlyTemperature, region)
+    const warmestMonthC = Math.max(...temperatures)
+    const cover = landMask.get(region) > 0
+      ? landIceCover(warmestMonthC)
+      : seaIceCoverForMonths(temperatures)
+    if (cover <= 0)
+      continue
+
+    const offset = region * 4
+    const rgb = mixRgb(
+      [
+        srgbByteToLinear(targetRgba[offset]),
+        srgbByteToLinear(targetRgba[offset + 1]),
+        srgbByteToLinear(targetRgba[offset + 2]),
+      ],
+      ICE_SHEET_COLOR,
+      cover,
+    )
+    targetRgba[offset] = linearToSrgbByte(rgb[0])
+    targetRgba[offset + 1] = linearToSrgbByte(rgb[1])
+    targetRgba[offset + 2] = linearToSrgbByte(rgb[2])
+  }
+}
+
 export interface SatelliteSurfaceOptions {
   readonly hillshadeStrength?: number
   readonly opacity?: number
+  /** When false, land ice and sea ice are left out of the satellite color. Defaults to on. */
+  readonly polarIce?: boolean
 }
 
 /**
  * Evaluates natural-looking satellite RGBA8 colors for all Voronoi cells from continuous
  * bathymetry (`elevationKm`), climate (`annualMeanTemperatureC`, `annualPrecipitationMm`, `aridityIndex`),
- * alpine/snow lines, deterministic multi-channel `surfaceDetail` micro-texture, and `hillshade` relief.
+ * monthly temperature, alpine/snow lines, land ice sheets, sea ice, deterministic multi-channel
+ * `surfaceDetail` micro-texture, and `hillshade` relief.
+ *
+ * Land ice, sea ice, and the altitude snow line read the published monthly temperatures.
+ * Snow is kept only while the warmest month stays at or below 2°C, so elevation lapse and
+ * `temperatureOffsetC` move them without a separate ice parameter.
  */
 export function writeSatelliteCellColorsRgba8(
   reader: WorldMapReader,
@@ -68,6 +161,7 @@ export function writeSatelliteCellColorsRgba8(
   const count = reader.identity.regionCount
   const hillshadeStrength = clamp(options.hillshadeStrength ?? 1.0, 0, 1)
   const alphaByte = Math.round(clamp(options.opacity ?? 1, 0, 1) * 255)
+  const polarIce = options.polarIce !== false
 
   const landMask = reader.field('landMask')
   const elevationKmField = reader.field('elevationKm')
@@ -76,11 +170,14 @@ export function writeSatelliteCellColorsRgba8(
   const aridityField = reader.field('aridityIndex')
   const surfaceDetailField = reader.field('surfaceDetail')
   const hillshadeField = reader.field('hillshade')
+  const monthlyTemperature = Array.from({ length: MONTHS_PER_YEAR }, (_, month) => reader.monthlyField('temperatureC', month))
 
   for (let r = 0; r < count; r++) {
     const isLand = landMask.get(r) > 0
     const elevationKm = elevationKmField.get(r)
     const detail = surfaceDetailField.get(r)
+    const temperatures = readMonthlyTemperature(monthlyTemperature, r)
+    const warmestMonthC = Math.max(...temperatures)
     let rgb: [number, number, number]
 
     if (!isLand) {
@@ -88,6 +185,14 @@ export function writeSatelliteCellColorsRgba8(
       const shallowWater = 1 - smoothstep(0.015, SATELLITE_SHALLOW_WATER_LIMIT_KM, depthKm)
       rgb = mixRgb(DEEP_OCEAN_COLOR, SHALLOW_OCEAN_COLOR, shallowWater)
       rgb = scaleRgb(rgb, 1 + clamp(detail, -0.025, 0.025))
+      if (polarIce) {
+        const cover = seaIceCoverForMonths(temperatures)
+        rgb = mixRgb(rgb, ICE_SHEET_COLOR, cover)
+        if (hillshadeStrength > 0 && cover > 0) {
+          const rawShade = hillshadeField.get(r)
+          rgb = scaleRgb(rgb, 1 + (rawShade - 1) * hillshadeStrength * cover)
+        }
+      }
     }
     else {
       const annualTempC = annualTempField.get(r)
@@ -108,11 +213,14 @@ export function writeSatelliteCellColorsRgba8(
       const alpineFactor = smoothstep(treeLineKm, treeLineKm + 1.8, Math.max(0, elevationKm)) * 0.82
       rgb = mixRgb(rgb, ROCK_COLOR, alpineFactor)
 
+      const persistsThroughSummer = landIceCover(warmestMonthC)
+      const iceCover = polarIce ? persistsThroughSummer : 0
       const coldness = 1 - smoothstep(-10, 3, annualTempC)
       const snowLineKm = 0.6 + 5.0 * thermal
       const altitudeSnow = smoothstep(snowLineKm, snowLineKm + 1.6, Math.max(0, elevationKm)) * (0.88 - 0.38 * thermal)
-      const snowFactor = clamp(coldness * 0.72 + altitudeSnow, 0, 0.92)
+      const snowFactor = clamp(coldness * 0.72 + altitudeSnow, 0, 0.92) * (1 - iceCover) * persistsThroughSummer
       rgb = mixRgb(rgb, SNOW_COLOR, snowFactor)
+      rgb = mixRgb(rgb, ICE_SHEET_COLOR, iceCover)
 
       if (hillshadeStrength > 0) {
         const rawShade = hillshadeField.get(r)
@@ -132,11 +240,14 @@ export function writeSatelliteCellColorsRgba8(
 /**
  * Applies analytical hillshade modulation to an existing per-cell RGBA8 buffer
  * using the precomputed `hillshade` field from `WorldMapReader`.
+ * The field treats the ocean as the minimum land height. Sea ice can take that same shading,
+ * scaled by its cover, so open water stays unshaded.
  */
 export function applyCellHillshadeRgba8(
   reader: WorldMapReader,
   targetRgba: Uint8Array,
   hillshadeStrength: number,
+  shadeSeaIce = false,
 ): void {
   const strength = clamp(hillshadeStrength, 0, 1)
   if (strength <= 1e-4)
@@ -145,12 +256,22 @@ export function applyCellHillshadeRgba8(
   const count = reader.identity.regionCount
   const landMask = reader.field('landMask')
   const hillshadeField = reader.field('hillshade')
+  const monthlyTemperature = shadeSeaIce
+    ? Array.from({ length: MONTHS_PER_YEAR }, (_, month) => reader.monthlyField('temperatureC', month))
+    : null
 
   for (let r = 0; r < count; r++) {
-    if (landMask.get(r) <= 0)
-      continue
+    const isLand = landMask.get(r) > 0
+    let cover = 1
+    if (!isLand) {
+      if (!monthlyTemperature)
+        continue
+      cover = seaIceCoverForMonths(monthlyTemperature.map(field => field.get(r)))
+      if (cover <= 0)
+        continue
+    }
     const rawShade = hillshadeField.get(r)
-    const shade = 1 + (rawShade - 1) * (strength / 0.35)
+    const shade = 1 + (rawShade - 1) * (strength / 0.35) * cover
     const offset = r * 4
     targetRgba[offset] = clamp(Math.round(targetRgba[offset] * shade), 0, 255)
     targetRgba[offset + 1] = clamp(Math.round(targetRgba[offset + 1] * shade), 0, 255)

@@ -65,7 +65,9 @@ export type { AtlasLayerFilterState } from './rendering/atlas-view'
 export {
   computeGlobeStyleZoom,
   computeSunDirectionForMonth,
+  DEFAULT_PLANET_SPIN_DEGREES_PER_SECOND,
   GlobeView,
+  planetSpinStepRadians,
 } from './rendering/globe-view'
 export type {
   GlobeEffectsConfig,

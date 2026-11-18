@@ -1,6 +1,6 @@
 import type { GeologyArtifact } from '../geology/types'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { describe, expect, it } from 'vitest'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { generateGeographicRegions, validateGeographicRegions } from './geographic-regions'
 
 const mesh = createSphericalMesh({ subdivisionLevel: 1, irregularity: 0, physicalRadiusKm: 6371 })

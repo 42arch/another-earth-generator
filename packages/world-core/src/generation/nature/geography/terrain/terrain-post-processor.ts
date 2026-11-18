@@ -5,8 +5,8 @@ import type { RandomSource } from '#math/random'
 import type { TerrainErosionFields } from './terrain-erosion-processor'
 import type { TerrainFinalizationFields } from './terrain-finalizer'
 import type { TerrainTextureFields } from './terrain-texture-generator'
-import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { createNoise3D } from 'simplex-noise'
+import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { TerrainErosionProcessor } from './terrain-erosion-processor'
 import { TerrainFinalizer } from './terrain-finalizer'
 import { terrainRoughnessScale, TerrainTextureGenerator } from './terrain-texture-generator'
@@ -170,7 +170,7 @@ export class TerrainPostProcessor {
       finalized.fields.topologyDelta,
       finalized.fields.topologyChanged,
     )
-    this.erosionProcessor.rebuildDrainage(mesh, elevation, oceanMask, erosion)
+    this.erosionProcessor.rebuildDrainage(mesh, elevation, this.buildOceanMask(elevation), erosion)
 
     const landMask = new Uint8Array(mesh.numRegions)
     for (let region = 0; region < mesh.numRegions; region++) {

@@ -1,7 +1,8 @@
 import type { WorkerRequest, WorkerResponse } from './protocol'
-import { createSphericalMesh, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
+import { createSphericalMesh, decodeWorldArchive, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
 import { describe, expect, it, vi } from 'vitest'
 import { GenerationWorkerRuntime } from '../../workers/runtime'
+import { builtinContentPacks, builtinContentPort } from './builtin-content'
 import { GenerationCancelledError, GenerationController } from './controller'
 
 class MockWorker extends EventTarget {
@@ -156,12 +157,28 @@ it('commits a validated natural candidate and keeps the old world after a reject
   expect(() => controller.candidateMapReader(publication.snapshotId)).toThrow('No matching validated world candidate')
   const oldRegion = controller.queryWorldRegion(0)
   expect(oldRegion.snapshotId).toBe(publication.snapshotId)
-  expect(controller.exportWorldArchive()).toContain('another-earth-m0-json')
+  const archive = controller.exportWorldArchive()
+  expect(archive).toContain('another-earth-m0-json')
+  const restored = new GenerationController(undefined, () => new MockWorker() as unknown as Worker)
+  restored.restoreWorldArchive(archive)
+  const roundTrip = decodeWorldArchive(restored.exportWorldArchive(), builtinContentPacks, builtinContentPort)
+  expect(roundTrip.nature.geography.regions?.nameStyleId).toBe(completed!.world!.nature.geography.regions?.nameStyleId)
+  expect(roundTrip.nature.geography.regions?.nameStyleSignature).toBe(completed!.world!.nature.geography.regions?.nameStyleSignature)
+
+  restored.dispose()
 
   const next = controller.generate({ seed: input.seed, config, publication: { ...publication, snapshotId: 'snapshot:invalid-successor', revision: 1 } })
   const invalid = structuredClone(completed!)
-  invalid.world!.nature.hydrology.basinIndex.values[0] = 999
-  worker.reply({ ...invalid, requestId: worker.sent[1].requestId, world: { ...invalid.world!, snapshotId: 'snapshot:invalid-successor' } })
+  const invalidWorld = invalid.world!
+  worker.reply({
+    ...invalid,
+    requestId: worker.sent[1].requestId,
+    world: {
+      ...invalidWorld,
+      snapshotId: 'snapshot:invalid-successor',
+      nature: { ...invalidWorld.nature, geography: { ...invalidWorld.nature.geography, regions: { ...invalidWorld.nature.geography.regions!, nameStyleSignature: 'tampered' } } },
+    },
+  })
   await expect(next).rejects.toThrow('Invalid world snapshot')
   expect(controller.publishedWorld?.snapshotId).toBe(publication.snapshotId)
   expect(controller.queryWorldRegion(0)).toEqual(oldRegion)

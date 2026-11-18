@@ -3,6 +3,7 @@ import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/a
 import type { RandomSource } from '#math/random'
 import type { SphericalTectonicData } from '../tectonic-types'
 import type { TectonicSpatialFields } from './tectonic-spatial-fields'
+import { createNoise3D } from 'simplex-noise'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import {
   computeSphericalDistanceField,
@@ -10,7 +11,6 @@ import {
   referenceCellsToAngle,
 } from '#generation/nature/common/distance-field'
 import { clamp, gaussian } from '#math/math'
-import { createNoise3D } from 'simplex-noise'
 import {
   CRUST_TYPE,
   PLATE_BOUNDARY,

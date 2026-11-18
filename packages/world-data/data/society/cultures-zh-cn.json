@@ -1,0 +1,48 @@
+{
+  "format": "another-earth/society-pack",
+  "schemaVersion": 1,
+  "id": "builtin-cultures-zh-cn",
+  "version": "1.0.0",
+  "language": "zh-CN",
+  "dependencies": [
+    {
+      "id": "builtin:naming-style/western-zh-cn",
+      "version": "1.4.0"
+    }
+  ],
+  "cultures": [
+    {
+      "id": "builtin:culture/river-valley-zh-cn",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-zh-cn",
+      "displayName": "河谷定居文化",
+      "description": "围绕肥沃冲积平原、灌溉与河岸社群往来形成的定居生活方式。"
+    },
+    {
+      "id": "builtin:culture/archipelago-zh-cn",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-zh-cn",
+      "displayName": "群岛航海文化",
+      "description": "以航海、海上贸易和共享港口连接岛屿社群的海洋传统。"
+    },
+    {
+      "id": "builtin:culture/highland-zh-cn",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-zh-cn",
+      "displayName": "高原牧行文化",
+      "description": "适应高地牧场、季节迁行与跨山谷协作的文化传统。"
+    },
+    {
+      "id": "builtin:culture/woodland-zh-cn",
+      "tags": [],
+      "traits": [],
+      "namingStyleId": "builtin:naming-style/western-zh-cn",
+      "displayName": "林地工艺文化",
+      "description": "重视森林经营、熟练手工技艺与林地小型聚落的生活传统。"
+    }
+  ],
+  "displayName": "文化原型"
+}

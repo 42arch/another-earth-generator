@@ -1,7 +1,7 @@
 import type { TerrainArtifact } from '#generation/nature/geography'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { describe, expect, it } from 'vitest'
-import { aggregateClimateSurface, DEFAULT_CLIMATE_PARAMETERS, generateClimateC0, projectClimateC0, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, validateClimateArtifact } from './climate'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
+import { aggregateClimateSurface, DEFAULT_CLIMATE_PARAMETERS, generateClimateC0, projectClimateC0, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C, validateClimateArtifact } from './climate'
 import { interpolateMonthlyForcing } from './monthly-forcing'
 
 const mesh = createSphericalMesh({ subdivisionLevel: 0, physicalRadiusKm: 6371 })
@@ -133,6 +133,16 @@ describe('preliminary monthly climate', () => {
     climate.precipitationMm[0] = -1
     expect(() => validateClimateArtifact(climate)).toThrow()
     expect(() => generateClimateC0(mesh, terrain, { ...DEFAULT_CLIMATE_PARAMETERS, axialTiltDegrees: 91 })).toThrow(RangeError)
+    expect(() => generateClimateC0(mesh, terrain, { ...DEFAULT_CLIMATE_PARAMETERS, temperatureOffsetC: TEMPERATURE_OFFSET_MIN_C - 0.1 })).toThrow(RangeError)
+    expect(() => generateClimateC0(mesh, terrain, { ...DEFAULT_CLIMATE_PARAMETERS, temperatureOffsetC: TEMPERATURE_OFFSET_MAX_C + 0.1 })).toThrow(RangeError)
+  })
+
+  it('reaches a frozen ocean at the cold end and the monthly ceiling at the hot end', () => {
+    const frozen = generateClimateC0(mesh, terrain, { ...DEFAULT_CLIMATE_PARAMETERS, temperatureOffsetC: TEMPERATURE_OFFSET_MIN_C })
+    const hot = generateClimateC0(mesh, terrain, { ...DEFAULT_CLIMATE_PARAMETERS, temperatureOffsetC: TEMPERATURE_OFFSET_MAX_C })
+    const warmest = (temperatureC: Float32Array) => temperatureC.reduce((max, value) => Math.max(max, value), -Infinity)
+    expect(warmest(frozen.temperatureC)).toBeLessThan(-1.8)
+    expect(warmest(hot.temperatureC)).toBe(60)
   })
 
   it('rejects malformed circulation and uses twelve equal orbital bins', () => {

@@ -1,3 +1,4 @@
+import type { WorldMapReader } from '@another-earth/world-core'
 import type { LonLatTuple } from '#projections/spherical-math'
 import type {
   GeoJsonFeature,
@@ -6,7 +7,6 @@ import type {
   GeoJsonSource,
   SourceUnavailable,
 } from '#sources/types'
-import type { WorldMapReader } from '@another-earth/world-core'
 import {
   buildTangentBasis,
   cartesianToLonLatDeg,

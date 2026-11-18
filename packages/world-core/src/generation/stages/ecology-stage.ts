@@ -1,9 +1,11 @@
+import type { EcologyVocabulary } from '#content/content-port'
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { EcologyArtifact, EcologyClimateInput } from '#generation/nature/ecology/ecology'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { ClimateGenerationConfig } from './climate-stage'
+import { ecologyVocabularySignature } from '#content/content-port'
 import { generateEcologyE0, validateEcologyArtifact } from '#generation/nature/ecology/ecology'
 import { GenerationPipeline, StageCache } from '#generation/pipeline'
 import { copyDependency } from '#generation/pipeline/copy-dependency'
@@ -27,7 +29,12 @@ export const ecologyStage: GenerationStage<EcologyArtifact> = {
   version: 'ecology-e0-v3',
   dependencies: ['mesh', 'terrain', 'climate-c0'],
   configKeys: ['climate.orbitalPeriodDays'],
+  contentKeys: ['ecology-classes'],
   execute(context) {
+    const vocabulary = context.getContent<EcologyVocabulary>('ecology-classes')
+    const signature = context.getContentSignature('ecology-classes')
+    if (!signature || signature !== ecologyVocabularySignature(vocabulary))
+      throw new Error('Ecology vocabulary signature mismatch')
     const mesh = copyDependency<SphericalMesh, Pick<SphericalMesh, 'meshId' | 'regionCount' | 'centers'>>(
       context,
       'mesh',
@@ -43,7 +50,7 @@ export const ecologyStage: GenerationStage<EcologyArtifact> = {
       'climate-c0',
       ({ meshId, terrainMeshId, monthsPerYear, layout, regionCount, temperatureC, precipitationMm, annualMeanTemperatureC, annualPrecipitationMm, koppenClass }) => ({ meshId, terrainMeshId, monthsPerYear, layout, regionCount, temperatureC, precipitationMm, annualMeanTemperatureC, annualPrecipitationMm, koppenClass }),
     )
-    const output = generateEcologyE0(mesh, terrain, climate, orbitalPeriod(context), (fraction) => {
+    const output = generateEcologyE0(vocabulary, mesh, terrain, climate, orbitalPeriod(context), (fraction) => {
       context.throwIfCancelled()
       context.progress(fraction, '计算自然生物群系与覆盖')
     })

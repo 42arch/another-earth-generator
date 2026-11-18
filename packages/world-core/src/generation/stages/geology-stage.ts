@@ -3,6 +3,7 @@ import type { CandidateLandData, GeologyArtifact, SphericalCrustData, SphericalP
 import type { GenerationStage, StageExecutionContext } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { WorldGenerationConfig } from './mesh-stage'
+import { createNoise3D } from 'simplex-noise'
 import { algorithmMesh, randomFunction, selectAlgorithmMeshInput } from '#generation/nature/common'
 import { CandidateLandGenerator, PlatePropertiesGenerator, SphericalPlateGenerator, SuperPlateGenerator, validateGeologyArtifact } from '#generation/nature/geology'
 import { GenerationPipeline, StageCache, StageRegistry } from '#generation/pipeline'
@@ -12,7 +13,6 @@ import { stableHash } from '#math/random'
 import { SphericalSpatialIndex } from '#mesh/spatial-index'
 import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { validateSphericalMesh } from '#mesh/validation'
-import { createNoise3D } from 'simplex-noise'
 import { meshStage } from './mesh-stage'
 
 export interface GeologyParameters {

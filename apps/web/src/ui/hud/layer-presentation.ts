@@ -51,7 +51,7 @@ export const LAYER_GROUPS = [
   {
     label: '地形与构造',
     items: [
-      { id: 'elevation', label: '高程 (km)', icon: Mountain },
+      { id: 'elevation', label: '高程', icon: Mountain },
       { id: 'plates', label: '构造板块', icon: Workflow },
       { id: 'continents', label: '陆海分区', icon: Globe },
     ],
@@ -59,20 +59,18 @@ export const LAYER_GROUPS = [
   {
     label: '气候与环流',
     items: [
-      { id: 'temperature', label: '月平均气温 (°C)', icon: Thermometer },
-      { id: 'annual-temperature', label: '年平均气温 (°C)', icon: Thermometer },
-      { id: 'precipitation', label: '月降水量 (mm/月)', icon: CloudRain },
-      { id: 'annual-precipitation', label: '年总降水量 (mm/年)', icon: CloudRain },
+      { id: 'temperature', label: '气温', icon: Thermometer },
+      { id: 'precipitation', label: '降水量', icon: CloudRain },
       { id: 'koppen', label: 'Köppen 气候带', icon: Thermometer },
-      { id: 'wind-speed', label: '10m 月均风速 (m/s)', icon: Wind },
-      { id: 'ocean-speed', label: '表层洋流速度 (m/s)', icon: Waves },
+      { id: 'wind-speed', label: '10m 月均风速', icon: Wind },
+      { id: 'ocean-speed', label: '表层洋流速度', icon: Waves },
     ],
   },
   {
     label: '水文与冰雪',
     items: [
-      { id: 'snow', label: '月度积雪水当量 (mm)', icon: Snowflake },
-      { id: 'runoff', label: '年径流深 (mm/年)', icon: Waves },
+      { id: 'snow', label: '月度积雪水当量', icon: Snowflake },
+      { id: 'runoff', label: '年径流深', icon: Waves },
       { id: 'basins', label: '水文流域', icon: Compass },
     ],
   },
@@ -84,6 +82,27 @@ export const LAYER_GROUPS = [
     ],
   },
 ] as const
+
+/** 气温、降水各用一个按钮；默认年统计，图例开关切到月统计。年、月仍是两套专题 id。 */
+export const CLIMATE_PERIOD_LAYERS = [
+  { buttonId: 'temperature', annualId: 'annual-temperature', monthlyId: 'temperature' },
+  { buttonId: 'precipitation', annualId: 'annual-precipitation', monthlyId: 'precipitation' },
+] as const
+
+export type ClimatePeriodLayer = (typeof CLIMATE_PERIOD_LAYERS)[number]
+
+/** 没有年统计对应项、必须按月份读取的专题。 */
+export const MONTHLY_ONLY_THEMATIC_IDS = ['snow', 'wind-speed', 'ocean-speed'] as const
+
+export function climatePeriodByButtonId(id: string): ClimatePeriodLayer | undefined {
+  return CLIMATE_PERIOD_LAYERS.find(layer => layer.buttonId === id)
+}
+
+export function climatePeriodForThematic(id: string | null): ClimatePeriodLayer | undefined {
+  if (!id)
+    return undefined
+  return CLIMATE_PERIOD_LAYERS.find(layer => layer.annualId === id || layer.monthlyId === id)
+}
 
 export const SURFACE_LAYER_ITEM = {
   id: 'world-surface',
@@ -107,7 +126,10 @@ export const OVERLAY_ITEMS: readonly OverlayTogglePresentation[] = [
   { id: 'labels', label: '大陆与大洋地名', description: '沿版图 PCA 脊线弯曲排版的中文地理名称。', requiresCapability: 'hasGeographicNames' },
 ] as const
 
-const THEMATIC_LAYER_IDS = new Set<string>(LAYER_GROUPS.flatMap(group => group.items.map(item => item.id)))
+const THEMATIC_LAYER_IDS = new Set<string>([
+  ...LAYER_GROUPS.flatMap(group => group.items.map(item => item.id)),
+  ...CLIMATE_PERIOD_LAYERS.flatMap(layer => [layer.annualId, layer.monthlyId]),
+])
 const OVERLAY_LAYER_IDS = new Set<string>(OVERLAY_ITEMS.map(item => item.id))
 
 export function splitStyleDefaultLayers(layerIds: readonly string[]): {

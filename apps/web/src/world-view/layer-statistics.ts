@@ -288,13 +288,14 @@ export function buildLayerStatisticsFromReader(
     const landMean = landSummary.mean !== null ? `${landSummary.mean.toFixed(2)} km` : '无陆地'
     const oceanMean = oceanSummary.mean !== null ? `${oceanSummary.mean.toFixed(2)} km` : '无海洋'
 
+    const surfaceNote = options.styleId === 'satellite' ? '地表按气温、降水和干湿度着色。' : ''
     return {
       mode,
       title: legend?.title ?? '底图海陆与高程统计',
       totalCells: count,
       totalAreaKm2,
       rows,
-      description: `陆地面积占比 ${landPct}%；陆地均高 ${landMean}，海洋均深 ${oceanMean}。`,
+      description: `${surfaceNote}陆地面积占比 ${landPct}%；陆地均高 ${landMean}，海洋均深 ${oceanMean}。`,
       measure: 'cells',
       legendKind: legend?.kind ?? 'categorical',
       unit: legend?.kind === 'continuous' ? legend.unit : undefined,

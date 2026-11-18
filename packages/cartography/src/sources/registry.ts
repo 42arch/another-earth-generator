@@ -1,5 +1,5 @@
-import type { DerivedRiverFeature } from '#sources/topology/hydrography-buffer'
 import type { WorldMapReader } from '@another-earth/world-core'
+import type { DerivedRiverFeature } from '#sources/topology/hydrography-buffer'
 import type {
   BuiltinMapSourceId,
   GeoJsonSource,

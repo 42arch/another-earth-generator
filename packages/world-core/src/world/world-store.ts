@@ -1,4 +1,4 @@
-import type { ContentPack } from '@another-earth/world-data'
+import type { ContentPackView, ContentPort } from '#content/content-port'
 import type { FieldView } from './fields'
 import type { WorldMapReader } from './world-map-reader'
 import type { WorldSnapshot } from './world-snapshot'
@@ -17,15 +17,20 @@ export type WorldFieldName = 'plateIndex' | 'crustType' | 'elevationKm' | 'landM
 
 /** Owns the last fully validated world; callers never receive its mutable arrays. */
 export class WorldStore {
+  readonly #content: ContentPort
   #current?: WorldSnapshot
   #reader?: WorldMapReader
+
+  constructor(content: ContentPort) {
+    this.#content = content
+  }
 
   get identity() {
     const world = this.#current
     return world ? Object.freeze({ snapshotId: world.snapshotId, worldId: world.metadata.worldId, revision: world.revision, regionCount: world.mesh.regionCount }) : null
   }
 
-  publish(candidate: WorldSnapshot, packs: readonly ContentPack[]): void {
+  publish(candidate: WorldSnapshot, packs: readonly ContentPackView[]): void {
     const owned = structuredClone(candidate)
     const seen = new Set<object>()
     const rejectSharedBuffers = (value: unknown): void => {
@@ -40,7 +45,7 @@ export class WorldStore {
       for (const child of Object.values(value)) rejectSharedBuffers(child)
     }
     rejectSharedBuffers(owned)
-    const result = validateWorldSnapshot(owned, packs)
+    const result = validateWorldSnapshot(owned, packs, this.#content)
     if (!result.valid)
       throw new Error(`Invalid world snapshot: ${result.issues[0]?.path}: ${result.issues[0]?.message}`)
     if (this.#current?.metadata.worldId === owned.metadata.worldId
@@ -51,14 +56,14 @@ export class WorldStore {
     this.#reader = undefined
   }
 
-  restore(archive: string, packs: readonly ContentPack[]): void {
-    const candidate = decodeWorldArchive(archive, packs)
+  restore(archive: string, packs: readonly ContentPackView[]): void {
+    const candidate = decodeWorldArchive(archive, packs, this.#content)
     this.#current = candidate
     this.#reader = undefined
   }
 
-  archive(packs: readonly ContentPack[]): string {
-    return encodeWorldArchive(this.#require(), packs)
+  archive(packs: readonly ContentPackView[]): string {
+    return encodeWorldArchive(this.#require(), packs, this.#content)
   }
 
   mapReader(): WorldMapReader {

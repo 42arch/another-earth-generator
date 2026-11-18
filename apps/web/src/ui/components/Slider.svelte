@@ -99,7 +99,7 @@
     class='relative flex w-full touch-none select-none items-center py-1 cursor-pointer group'
   >
     <!-- 精细导轨 -->
-    <span class='relative h-1 w-full grow overflow-hidden rounded-full bg-white/[0.08]'>
+    <span class='relative h-1 w-full grow overflow-hidden rounded-full bg-white/8'>
       <!-- 填充部分 -->
       <Slider.Range class='absolute h-full bg-obs-primary group-hover:bg-obs-primary-hover' />
     </span>

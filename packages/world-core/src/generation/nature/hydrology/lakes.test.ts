@@ -1,9 +1,12 @@
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { TerrainArtifact } from '#generation/nature/geography'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { describe, expect, it } from 'vitest'
+import { KOPPEN_CODES } from '#generation/nature/climate/koppen-classifier'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { DEFAULT_HYDROLOGY_PARAMETERS, generateCryosphereI0, generateHydrologyH0 } from './hydrology'
 import { generateStaticLakesL1, queryStaticLakeRegion, validateStaticLakeArtifact } from './lakes'
+
+const lakeParameters = { orbitalPeriodDays: 365.25, minimumLakeAreaKm2: 0 }
 
 function makeInputs(hasOcean = true, multiRegionDepression = false) {
   const mesh = createSphericalMesh({ subdivisionLevel: 0, physicalRadiusKm: 6371, irregularity: 0, seed: 'static-lake-fixture' })
@@ -78,7 +81,7 @@ function makeInputs(hasOcean = true, multiRegionDepression = false) {
 describe('static lakes L1', () => {
   it('identifies a retained connected depression and exposes stable spill facts', () => {
     const { mesh, terrain, climate, hydrology, center } = makeInputs(true, true)
-    const parameters = { evapotranspirationFactorMmPerCMonth: 2, orbitalPeriodDays: 365.25, minimumLakeAreaKm2: 0 }
+    const parameters = lakeParameters
     const first = generateStaticLakesL1(mesh, terrain, hydrology, climate, parameters)
     const second = generateStaticLakesL1(mesh, terrain, hydrology, climate, parameters)
     expect(first.minimumLakeRegionCount).toBe(2)
@@ -101,7 +104,7 @@ describe('static lakes L1', () => {
     const { mesh, terrain, climate, hydrology, center } = makeInputs()
     const filledElevationKm = terrain.elevationKm.slice()
     filledElevationKm[center] = terrain.elevationKm[center] + 0.1
-    const artifact = generateStaticLakesL1(mesh, terrain, { ...hydrology, filledElevationKm }, climate, { evapotranspirationFactorMmPerCMonth: 2, orbitalPeriodDays: 365.25, minimumLakeAreaKm2: 0 })
+    const artifact = generateStaticLakesL1(mesh, terrain, { ...hydrology, filledElevationKm }, climate, lakeParameters)
     expect(artifact.lakes).toHaveLength(0)
     expect(artifact.lakeIndex.every(index => index === -1)).toBe(true)
   })
@@ -123,7 +126,7 @@ describe('static lakes L1', () => {
       riverDensityMultiplier: 1,
       orbitalPeriodDays: 365.25,
     })
-    const lakes = generateStaticLakesL1(mesh, flatTerrain, flatHydrology, climate, { evapotranspirationFactorMmPerCMonth: 2, orbitalPeriodDays: 365.25, minimumLakeAreaKm2: 0 })
+    const lakes = generateStaticLakesL1(mesh, flatTerrain, flatHydrology, climate, lakeParameters)
     expect(lakes.lakes).toHaveLength(0)
     expect(lakes.lakeIndex.every(index => index === -1)).toBe(true)
     expect(queryStaticLakeRegion(lakes, 0)).toBeNull()
@@ -136,14 +139,14 @@ describe('static lakes L1', () => {
     const filledElevationKm = terrain.elevationKm.slice()
     filledElevationKm[center] = terrain.elevationKm[center] + 0.1
     filledElevationKm[neighbor] = terrain.elevationKm[neighbor] + 0.1
-    const artifact = generateStaticLakesL1(mesh, terrain, { ...hydrology, filledElevationKm }, climate, { evapotranspirationFactorMmPerCMonth: 2, orbitalPeriodDays: 365.25, minimumLakeAreaKm2: 0 })
+    const artifact = generateStaticLakesL1(mesh, terrain, { ...hydrology, filledElevationKm }, climate, lakeParameters)
     expect(artifact.lakes.length).toBeGreaterThan(0)
     expect(artifact.lakes.every(lake => lake.endorheic)).toBe(true)
   })
 
   it('rejects invalid indices and non-finite lake levels', () => {
     const { mesh, terrain, climate, hydrology, center } = makeInputs()
-    const artifact = generateStaticLakesL1(mesh, terrain, hydrology, climate, { evapotranspirationFactorMmPerCMonth: 2, orbitalPeriodDays: 365.25, minimumLakeAreaKm2: 0 })
+    const artifact = generateStaticLakesL1(mesh, terrain, hydrology, climate, lakeParameters)
     const invalidIndex = { ...artifact, lakeIndex: artifact.lakeIndex.slice() }
     invalidIndex.lakeIndex[center] = artifact.lakes.length
     expect(() => validateStaticLakeArtifact(invalidIndex, mesh, terrain, hydrology)).toThrow('Invalid lake index')
@@ -151,5 +154,52 @@ describe('static lakes L1', () => {
       const invalidLevel = { ...artifact, lakes: artifact.lakes.map((lake, index) => index ? lake : { ...lake, waterLevelKm: Number.NaN }) }
       expect(() => validateStaticLakeArtifact(invalidLevel, mesh, terrain, hydrology)).toThrow('Invalid static lake')
     }
+  })
+
+  it('drops a sub-meter priority-flood film even when the climate could fill it', () => {
+    const { mesh, terrain, climate, hydrology } = makeInputs(true, true)
+    const filledElevationKm = hydrology.filledElevationKm.slice()
+    for (let region = 0; region < mesh.regionCount; region++) {
+      if (filledElevationKm[region] > terrain.elevationKm[region])
+        filledElevationKm[region] = terrain.elevationKm[region] + 0.0005
+    }
+    const artifact = generateStaticLakesL1(mesh, terrain, { ...hydrology, filledElevationKm }, climate, lakeParameters)
+    expect(artifact.lakes).toHaveLength(0)
+  })
+
+  it('keeps a humid basin only a few meters deep', () => {
+    const { mesh, terrain, climate, hydrology } = makeInputs(true, true)
+    const filledElevationKm = hydrology.filledElevationKm.slice()
+    for (let region = 0; region < mesh.regionCount; region++) {
+      if (filledElevationKm[region] > terrain.elevationKm[region])
+        filledElevationKm[region] = terrain.elevationKm[region] + 0.01
+    }
+    const artifact = generateStaticLakesL1(mesh, terrain, { ...hydrology, filledElevationKm }, climate, lakeParameters)
+    expect(artifact.lakes.length).toBeGreaterThan(0)
+    expect(artifact.lakes.every((lake) => {
+      const depthKm = lake.regions.reduce((sum, region) => sum + (lake.waterLevelKm - terrain.elevationKm[region]) * mesh.areaKm2[region], 0) / lake.areaKm2
+      return depthKm > 0.001 && depthKm < 0.02
+    })).toBe(true)
+  })
+
+  it('drops a deep depression on a desert or year-round frozen surface', () => {
+    const desert = makeInputs(true, true)
+    desert.climate.koppenClass.fill(KOPPEN_CODES.indexOf('BWh'))
+    const desertLakes = generateStaticLakesL1(desert.mesh, desert.terrain, desert.hydrology, desert.climate, lakeParameters)
+    expect(desertLakes.lakes).toHaveLength(0)
+
+    const frozen = makeInputs(true, true)
+    frozen.climate.temperatureC.fill(-15)
+    frozen.climate.koppenClass.fill(KOPPEN_CODES.indexOf('EF'))
+    const frozenLakes = generateStaticLakesL1(frozen.mesh, frozen.terrain, frozen.hydrology, frozen.climate, lakeParameters)
+    expect(frozenLakes.lakes).toHaveLength(0)
+  })
+
+  it('drops a deep humid depression whose rain does not meet open-water evaporation', () => {
+    const { mesh, terrain, climate, hydrology } = makeInputs(true, true)
+    climate.temperatureC.fill(25)
+    climate.precipitationMm.fill(5)
+    const artifact = generateStaticLakesL1(mesh, terrain, hydrology, climate, lakeParameters)
+    expect(artifact.lakes).toHaveLength(0)
   })
 })

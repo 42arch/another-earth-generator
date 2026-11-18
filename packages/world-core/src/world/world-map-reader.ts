@@ -1,8 +1,8 @@
 import type { FieldView, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
+import { createNoise3D } from 'simplex-noise'
 import { clamp, smoothstep } from '#math/math'
 import { DeterministicRandom } from '#math/random'
-import { createNoise3D } from 'simplex-noise'
 import { createFieldView } from './fields'
 
 export type WorldMapFieldName
@@ -606,8 +606,8 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   let slopeDegView: FieldView | undefined
   let hillshadeView: FieldView | undefined
   let surfaceDetailView: FieldView | undefined
-  const windSpeedViews = Array.from({ length: 12 })
-  const oceanSpeedViews = Array.from({ length: 12 })
+  const windSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
+  const oceanSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
 
   let platesCache: readonly { readonly id: string }[] | undefined
   let geoRegionsCache: GeographicMapRegions | null | undefined
@@ -700,7 +700,7 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   const hasGeographicRegions = Boolean(regions)
   const hasGeographicNames = Boolean(
     regions
-    && (Boolean(regions.nameContentSignature)
+    && (Boolean(regions.nameStyleSignature)
       || regions.continents.some(item => Boolean(item.name))
       || regions.oceans.some(item => Boolean(item.name))),
   )

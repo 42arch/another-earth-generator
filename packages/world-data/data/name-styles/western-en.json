@@ -1,0 +1,50 @@
+{
+  "format": "another-earth/naming-style",
+  "schemaVersion": 2,
+  "id": "builtin:naming-style/western-en",
+  "style": "western",
+  "language": "en",
+  "version": "1.1.0",
+  "displayName": { "zh-CN": "西式命名 · 英文", "en": "Western naming · English" },
+  "source": "Small fictional examples for the naming configuration format",
+  "pools": {
+    "family": [{ "value": "Vale", "weight": 1 }, { "value": "Reed", "weight": 1 }],
+    "given": [{ "value": "Ada", "weight": 1 }, { "value": "Rowan", "weight": 1 }],
+    "root": [{ "value": "Ash", "weight": 1 }, { "value": "Raven", "weight": 1 }],
+    "suffix": [{ "value": "ford", "weight": 1 }, { "value": "haven", "weight": 1 }],
+    "continent": [
+      { "value": "Avara", "weight": 1 }, { "value": "Belora", "weight": 1 }, { "value": "Cendria", "weight": 1 }, { "value": "Dorsan", "weight": 1 },
+      { "value": "Elvara", "weight": 1 }, { "value": "Falorin", "weight": 1 }, { "value": "Gavara", "weight": 1 }, { "value": "Helion", "weight": 1 },
+      { "value": "Ilyra", "weight": 1 }, { "value": "Jorath", "weight": 1 }, { "value": "Kelmora", "weight": 1 }, { "value": "Lurea", "weight": 1 },
+      { "value": "Norvane", "weight": 1 }, { "value": "Oradis", "weight": 1 }, { "value": "Peravia", "weight": 1 }, { "value": "Rysora", "weight": 1 },
+      { "value": "Selara", "weight": 1 }, { "value": "Tavaris", "weight": 1 }, { "value": "Ulmora", "weight": 1 }, { "value": "Veyra", "weight": 1 },
+      { "value": "Wyndor", "weight": 1 }, { "value": "Yloria", "weight": 1 }, { "value": "Zaruna", "weight": 1 }, { "value": "Arven", "weight": 1 },
+      { "value": "Bellan", "weight": 1 }, { "value": "Corven", "weight": 1 }, { "value": "Dalen", "weight": 1 }, { "value": "Edrin", "weight": 1 },
+      { "value": "Fenora", "weight": 1 }, { "value": "Galen", "weight": 1 }, { "value": "Halden", "weight": 1 }, { "value": "Ivara", "weight": 1 },
+      { "value": "Jalen", "weight": 1 }, { "value": "Kestrel", "weight": 1 }, { "value": "Lorian", "weight": 1 }, { "value": "Merrow", "weight": 1 },
+      { "value": "Neris", "weight": 1 }, { "value": "Orlan", "weight": 1 }, { "value": "Pellin", "weight": 1 }, { "value": "Quorin", "weight": 1 },
+      { "value": "Rellan", "weight": 1 }, { "value": "Soren", "weight": 1 }, { "value": "Taren", "weight": 1 }, { "value": "Uvella", "weight": 1 },
+      { "value": "Vardon", "weight": 1 }, { "value": "Weller", "weight": 1 }, { "value": "Yarrow", "weight": 1 }, { "value": "Zaren", "weight": 1 }
+    ],
+    "ocean": [
+      { "value": "Aelith", "weight": 1 }, { "value": "Beryn", "weight": 1 }, { "value": "Caelor", "weight": 1 }, { "value": "Delvar", "weight": 1 },
+      { "value": "Edris", "weight": 1 }, { "value": "Falmar", "weight": 1 }, { "value": "Galen", "weight": 1 }, { "value": "Helvar", "weight": 1 },
+      { "value": "Iveron", "weight": 1 }, { "value": "Jorun", "weight": 1 }, { "value": "Kelmar", "weight": 1 }, { "value": "Lorien", "weight": 1 },
+      { "value": "Melvane", "weight": 1 }, { "value": "Nerion", "weight": 1 }, { "value": "Orveth", "weight": 1 }, { "value": "Pelion", "weight": 1 },
+      { "value": "Quaris", "weight": 1 }, { "value": "Rovan", "weight": 1 }, { "value": "Seryn", "weight": 1 }, { "value": "Thalor", "weight": 1 },
+      { "value": "Uvian", "weight": 1 }, { "value": "Velmor", "weight": 1 }, { "value": "Weryn", "weight": 1 }, { "value": "Zalen", "weight": 1 },
+      { "value": "Aster", "weight": 1 }, { "value": "Brine", "weight": 1 }, { "value": "Caldor", "weight": 1 }, { "value": "Davor", "weight": 1 },
+      { "value": "Elaris", "weight": 1 }, { "value": "Faron", "weight": 1 }, { "value": "Gellis", "weight": 1 }, { "value": "Havor", "weight": 1 },
+      { "value": "Isen", "weight": 1 }, { "value": "Jareth", "weight": 1 }, { "value": "Kelor", "weight": 1 }, { "value": "Laven", "weight": 1 },
+      { "value": "Maren", "weight": 1 }, { "value": "Navor", "weight": 1 }, { "value": "Orell", "weight": 1 }, { "value": "Perin", "weight": 1 },
+      { "value": "Quellan", "weight": 1 }, { "value": "Riven", "weight": 1 }, { "value": "Selvor", "weight": 1 }, { "value": "Taren", "weight": 1 },
+      { "value": "Ullen", "weight": 1 }, { "value": "Varen", "weight": 1 }, { "value": "Walen", "weight": 1 }, { "value": "Zorin", "weight": 1 }
+    ]
+  },
+  "rules": {
+    "person": [{ "weight": 1, "parts": [{ "pool": "given" }, { "literal": " " }, { "pool": "family" }] }],
+    "settlement": [{ "weight": 1, "parts": [{ "pool": "root" }, { "pool": "suffix" }] }],
+    "continent": [{ "weight": 1, "parts": [{ "pool": "continent" }] }],
+    "ocean": [{ "weight": 1, "parts": [{ "pool": "ocean" }] }]
+  }
+}

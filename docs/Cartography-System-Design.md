@@ -3,7 +3,7 @@
 > **日期**：2026-11-14
 > **范围**：M3（Cartography 正式制图系统——自然世界 3D Globe & 2D Atlas、数据源适配、类 Mapbox Style JSON、五类批处理渲染管线与 Web 单轨收口）
 > **状态**：已实现（Slice 1–Slice 5 全部落地并补齐单元测试，待用户授权后执行自动化检查与浏览器验收）
-> **上游依据**：[PRD 第 8 章](PRD.md)、[技术设计第 9 章](TECHNICAL_DESIGN.md)、[世界数据契约](WORLD_DATA_CONTRACTS.md)、[当前进度](PROGRESS.md)
+> **上游依据**：[PRD 第 8 章](PRD.md)、[技术设计](TECHNICAL_DESIGN.md#架构边界)、[世界数据契约](WORLD_DATA_CONTRACTS.md)、[当前进度](PROGRESS.md)
 
 ---
 
@@ -185,7 +185,7 @@ export interface WorldMapReader {
 
 ### 4.3 首版内置地图风格 Presets（`cartography/src/styles/presets/`）
 全部以标准 JSON 定义并通过同一 `StyleCompiler` 编译：
-1. `satellite`：**仿真卫星**（默认风格；`raster-mode: 'satellite'` 驱动地表微纹理、浅海 0–1km 水深过渡、雪线/裸岩混合、高程晕渲、海洋镜面水层、大气边缘散射与可选太阳昼夜晨昏光照）。
+1. `satellite`：**仿真卫星**（默认风格；`raster-mode: 'satellite'` 放在 `layout`，渲染时 `paint` 没有该字段就读 `layout`。地表按年均温、年降水和干湿度在裸地与植被之间混合，再加浅海水深过渡、裸岩、微纹理；雪线和陆地冰盖、海冰都按最暖月绘制，最暖月高于 2°C 不再因海拔另铺白雪、高程晕渲、海洋镜面水层随海冰覆盖度淡出、大气边缘散射与可选太阳昼夜晨昏光照）。
 2. `standard-atlas`：**标准地图集**（柔和陆地分级色、清新浅蓝海洋、海岸细描边、河湖一体水系面与深灰高可读中文地名）。
 3. `physical-relief`：**自然地理地形图**（清晰海深与陆高阶梯色带 + 增强法线晕渲 + 流域水系突出）。
 4. `minimal-light`：**极简明亮底图**（低饱和暖白陆地与淡灰蓝海洋，专为高对比度叠加任意气候/生态/地质专题而设计）。
@@ -199,7 +199,7 @@ export interface WorldMapReader {
 ### 5.1 `WorldViewport` 与统一缩放标尺
 - **单一 `THREE.WebGLRenderer`**：输出色彩空间固定为 `SRGBColorSpace`；像素比采用 `Math.min(window.devicePixelRatio, 2)`（兼顾 Retina 清晰度与 L7/L8 填充率稳定性，可通过配置覆盖）。
 - **对等双视图**：
-  - `GlobeView`：单位球（半径 `1.0`）透视相机，自定义球面拖拽旋转、滚轮指数缩放、可选平滑自转，旋转灵敏度随相机离地高度自适应衰减（拉近看局部细节时不漂移）。
+  - `GlobeView`：单位球（半径 `1.0`）透视相机，自定义球面拖拽旋转、滚轮指数缩放、可选平滑自转。自转绕行星极轴转动地球本身，相机、星空和太阳方向保持不动，因此晨昏线不随地表移动；拖拽灵敏度仍随相机离地高度自适应衰减（拉近看局部细节时不漂移）。
   - `AtlasView`：正交相机平面视图，内置三种可实时切换的地图投影：**`equirectangular`（等距圆柱）**、**`equal-earth`（等面积自然地球）**、**`mercator`（墨卡托，纬度截断 `±85.05°`）**。对于支持水平环绕的投影（如等距圆柱），在主地图左右两侧挂载共享材质与缓冲的环绕副本（`[-worldWidth, 0, +worldWidth]`），平移越过 `±180°` 时相机坐标无缝回绕。
 - **统一 `styleZoom`（`0`–`12`）与视角保持**：
   - 定义 `visibleArcRadians` 为当前视口垂直高度所覆盖的行星表面弧度：$\text{styleZoom} = \text{clamp}(\log_2(\pi / \text{visibleArcRadians}), 0, 12)$。
@@ -224,7 +224,7 @@ export interface WorldMapReader {
 - **球面三角化与 2D 投影无裂缝流程**：
   1. 将每个 GeoJSON `Polygon`（含外环与任意数量内孔）投影到以其质心为切点的局部球面心射切平面（Gnomonic Projection；跨大范围要素先按立方体六面分块裁切）。
   2. 使用 `earcut` 执行带孔平面三角剖分，保证复杂曲折湖泊、内陆海与群岛大陆绝不漏孔或缠绕错乱。
-  3. 对球面角距大于 `0.036 rad` 的三角形边递归球面中点细分（`GlobeView` 下严格归一化贴合 `1.0 + layerSurfaceOffset` 球壳，不穿透地表；`AtlasView` 下直接复用 3D 球面 Gnomonic 细分后的微元三角形，以每个微元三角形 3D 质心经度为基准解卷绕并按 `[-180, 180] × [-maxLat, maxLat]` 凸裁剪后投影，彻底消除多进出凹海湾在 `±180°` 平面裁剪下产生的横穿全图拉伸伪影）。
+  3. 对球面角距大于 `0.036 rad` 的三角形边递归球面中点细分（`GlobeView` 下严格归一化贴合 `1.0 + layerSurfaceOffset` 球壳，不穿透地表；`AtlasView` 下直接复用 3D 球面 Gnomonic 细分后的微元三角形，以每个微元三角形 3D 质心经度为基准解卷绕并按 `[-180, 180] × [-maxLat, maxLat]` 凸裁剪后投影，彻底消除多进出凹海湾在 `±180°` 平面裁剪下产生的横穿全图拉伸伪影）。传入 `reader` 时，`continent-areas`、`koppen-areas`、`biome-areas`、`land-cover-areas`、`plate-areas` 直接按每个区域的平滑对偶边界构扇形面，与海岸线共享同一套角点和边中点，避免 Gnomonic 耳切在色块内部留下裂纹。
   4. `clipPolygonAtAntimeridian` 在竖直边界 `±180°` 处按进出焦点排序配对生成独立简单环，避免凹湾多次跨越日界线时沿 `±180°` 形成重叠桥接边。
 - **批处理与无重影绘制**：
   - 同一图层所有要素合并为 **1 个 `BufferGeometry`**，附带 `featureIndex` 属性从样式颜色表取色。
@@ -297,8 +297,10 @@ export interface CartographyViewState {
   readonly climateMonth: number // 0..11
   readonly globeEffects: Readonly<{
     rotate: boolean
+    rotateSpeedDegreesPerSecond: number
     atmosphere: boolean
     dayNight: boolean
+    polarIce: boolean
   }>
   readonly selection: Readonly<{
     regionId: number | null
@@ -338,11 +340,11 @@ export interface CartographySession {
    - 参数面板移除“生成内容（仅网格 / 板块 / 基础地形 / 气候 / 水文 / 生态）”下拉选择器，生成按钮固定执行**完整自然世界（`world`）**生成并发布权威快照；Worker 协议清理不再被 UI 调用的单阶段渲染耦合路径（保留核心包 Stage 单元测试不变）。
    - 彻底删除 `apps/web/src/world-view/` 下旧的调试渲染模块：`world-scene.ts`、`map-render-data.ts`、`map-theme-data.ts`、`map-overlay-data.ts` 及对应的旧单测，替换为针对新 `CartographySession` 与图例统计的测试。
 2. **补齐正式制图交互控件**：
-   - **顶部栏（`TopBanner`）**：3D 星球 / 2D 地图切换、2D 投影切换、重置视角，以及参数、图层、概览、侦测入口。环境开关不放在顶栏。
+   - **左侧工具条（`Sidebar`）**：贴左上方的浮动窄图标条，高度随内容，圆角与其他面板一致，不拉满视口。最上方为随机，其下为视图、参数、图层、概览、侦测，底部为分享与设置。分享弹窗顶部显示当前参数链接和复制按钮，并导出当前视口 PNG。参数链接为 `#w=9.` 加上相对默认值的压缩差值；旧版链接不还原。导入导出世界档案尚未接入。各项均用图标，悬停显示名称。工具条不显示种子。视图在条右侧弹出选择卡，分 3D（星球）与 2D（三种投影）两组。设置弹层包含图例显示、地图导航、经纬网格、Cell 边界网格和自转。自转仅 3D 可用，且不随风格改变；开启后在其下显示角速度滑块，范围 0.1–30°/秒，默认 0.6°/秒。
    - **图层抽屉（`LayerBar`）**分三块：
      1. **风格**：6 套内置预设（仿真卫星 / 标准地图 / 自然地理 / 极简明亮 / 极简暗色 / 古典羊皮纸）。
-     2. **图层**：地表与专题使用同一类图层按钮。地表按当前风格绘制表面，可与一个专题同时选中；专题仍互斥（高程、板块、陆海分区、月均温、年均温、月降水、年降水、Köppen、风速、洋流速度、积雪、年径流、流域、生物群系、自然覆盖）。月份滑块留在这一区。覆盖与注记多选（河网、湖泊、海岸线、板块边界、风向、洋流、大陆与大洋地名）。
-     3. **辅助显示**：经纬网、Cell 边界、自转、大气光晕、昼夜光照。后三项仅 3D 可用。切换风格时大气光晕和昼夜光照按 `defaultGlobeEffects` 重设；自转、经纬网和 Cell 边界保持当前选择。
+     2. **图层**：地表与专题使用同一类图层按钮。地表按当前风格绘制表面，可与一个专题同时选中；专题仍互斥（高程、板块、陆海分区、气温、降水量、Köppen、风速、洋流速度、积雪、年径流、流域、生物群系、自然覆盖）。气温和降水量默认显示年统计；图例内的「按月显示」切到对应月统计并露出月份滑块。积雪、风速、洋流始终显示月份滑块。覆盖与注记多选（河网、湖泊、海岸线、板块边界、风向、洋流、大陆与大洋地名）。
+     3. **辅助显示**：大气光晕、昼夜光照、两极冰盖。大气光晕和昼夜光照仅 3D 可用；两极冰盖仅仿真卫星可切换，默认显示。切换风格时大气光晕和昼夜光照按 `defaultGlobeEffects` 重设；两极冰盖保持当前选择。
    - **概览面板（`OverviewPanel`）**：替换原顶栏「显示」菜单，承载行星自然概览、生成管线缓存和网格与制图性能。
    - **图例与分布统计卡片**：直接消费 `session.activeLegend` 与 `WorldMapReader` 面积加权统计，保证图例色块/色带与画面 100% 同源。
    - **右侧侦测面板（`RegionInspector`）**：点击地图任意位置后，统一通过 `controller.queryWorldRegion(regionId, climateMonth)` 及关联实体查询（河流、湖泊、流域、大陆/大洋）展示权威物理与地理指标。
@@ -397,7 +399,7 @@ packages/cartography/src/
 
 ## 9. 分步实施切片与验收矩阵
 
-按可独立测试、渐进交付的 5 个切片实施（每完成一个切片同步更新 `docs/PROGRESS.md` 及涉及的契约文档）：
+按可独立测试、渐进交付的 5 个切片实施。仅当切片改变当前能力、验证结论或公开契约时，更新 `docs/PROGRESS.md` 及直接受影响的契约文档；普通实现推进不追加文档日志。
 
 | 切片 | 核心交付内容 | 关键单元测试与不变量验收 |
 |---|---|---|

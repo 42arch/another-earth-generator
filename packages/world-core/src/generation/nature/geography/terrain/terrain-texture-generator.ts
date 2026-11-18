@@ -2,10 +2,10 @@ import type { AlgorithmMesh as SphericalMesh } from '#generation/nature/common/a
 import type { TectonicSpatialFields } from '#generation/nature/geology/tectonics/tectonic-spatial-fields'
 import type { TerrainClassificationFields } from '#generation/nature/geology/tectonics/terrain-classifier'
 import type { RandomSource } from '#math/random'
+import { createNoise3D } from 'simplex-noise'
 import { randomFunction } from '#generation/nature/common/algorithm-mesh'
 import { referenceCellsToAngle } from '#generation/nature/common/distance-field'
 import { clamp, smoothstep } from '#math/math'
-import { createNoise3D } from 'simplex-noise'
 
 export interface TerrainTextureFields {
   phasorRidge: Float32Array

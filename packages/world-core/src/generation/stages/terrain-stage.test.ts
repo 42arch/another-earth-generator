@@ -1,12 +1,13 @@
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { GeologyArtifact } from '#generation/nature/geology'
 import type { PipelineEvent } from '#generation/pipeline'
-import { normalizedElevationArrayToKm, normalizedElevationToKm, queryTerrainRegion, validateTerrainArtifact } from '#generation/nature/geography'
 import { describe, expect, it } from 'vitest'
+import { testContentPack, testPipelineContent } from '#content/test-content'
+import { normalizedElevationArrayToKm, normalizedElevationToKm, queryTerrainRegion, validateTerrainArtifact } from '#generation/nature/geography'
 import { DEFAULT_GEOLOGY_PARAMETERS } from './geology-stage'
 import { createTerrainPipeline, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from './terrain-stage'
 
-const input = () => ({ seed: 'M1.1B-fixed', config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm: 0 }, mesh: { subdivisionLevel: 3, irregularity: 0.5 }, reference: { subdivisionLevel: 2 }, geology: { ...DEFAULT_GEOLOGY_PARAMETERS }, landforms: { ...DEFAULT_LANDFORM_PARAMETERS }, terrain: { ...DEFAULT_TERRAIN_PARAMETERS } } })
+const input = () => ({ seed: 'M1.1B-fixed', ...testPipelineContent([testContentPack]), config: { planet: { physicalRadiusKm: 6371, seaLevelDatumKm: 0 }, mesh: { subdivisionLevel: 3, irregularity: 0.5 }, reference: { subdivisionLevel: 2 }, geology: { ...DEFAULT_GEOLOGY_PARAMETERS }, landforms: { ...DEFAULT_LANDFORM_PARAMETERS }, terrain: { ...DEFAULT_TERRAIN_PARAMETERS } } })
 
 describe('terrain stage', () => {
   it('produces finite physical terrain, owned diagnostics and deterministic results', async () => {
@@ -39,7 +40,7 @@ describe('terrain stage', () => {
     const pipeline = createTerrainPipeline()
     const base = input()
     const first = await pipeline.execute(base)
-    expect(pipeline.plan({ ...base, contentSignatures: { 'geographic-names': 'another-catalog' } }).filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['geographic-names'])
+    expect(pipeline.plan({ ...base, contentSignatures: { ...testPipelineContent([testContentPack]).contentSignatures, 'geographic-naming-style': 'another-style' } }).filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['geographic-names'])
     const changed = { ...base, config: { ...base.config, terrain: { ...base.config.terrain, roughness: 0.1 } } }
     const next = await pipeline.execute(changed)
     expect(next.plan.filter(s => s.action === 'execute').map(s => s.stageId)).toEqual(['terrain', 'geographic-regions', 'geographic-names'])
@@ -54,7 +55,7 @@ describe('terrain stage', () => {
 
   it('publishes T0 after configured water and glacial erosion', async () => {
     const terrain = (await createTerrainPipeline().execute(input())).getOutput<TerrainArtifact>('terrain')
-    expect(terrain.algorithmVersion).toBe('terrain-v26')
+    expect(terrain.algorithmVersion).toBe('terrain-v27')
     expect(terrain.erosionCoordinate.some(v => v > 0)).toBe(true)
     expect(terrain.depositionCoordinate.every(Number.isFinite)).toBe(true)
     expect(terrain.roughnessWeight.every(v => v === 1)).toBe(true)

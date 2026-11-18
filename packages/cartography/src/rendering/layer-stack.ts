@@ -5,13 +5,13 @@ import type { MapLayerSlot } from '#styles/spec'
  * Smaller values sit underneath. Overlays stay outside thematic fills.
  */
 export const LAYER_STACK = Object.freeze({
-  baseFillOffset: 0.0002,
-  thematicRasterOffset: 0.00035,
-  thematicFillOffset: 0.00055,
-  symbolOffset: 0.0009,
-  hydroFillOffset: 0.0014,
-  lineOffset: 0.0022,
-  circleOffset: 0.0032,
+  baseFillOffset: 0.0004,
+  thematicRasterOffset: 0.00075,
+  thematicFillOffset: 0.0012,
+  symbolOffset: 0.0018,
+  hydroFillOffset: 0.0023,
+  lineOffset: 0.0031,
+  circleOffset: 0.0039,
   contentRenderOrder: 20,
 })
 

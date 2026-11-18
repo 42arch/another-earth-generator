@@ -1,7 +1,9 @@
 export const packageId = '@another-earth/world-core' as const
-export { loadBuiltinContentPacks } from './content/builtin-packs'
+export { ecologyVocabularySignature } from './content/content-port'
+export type { ContentId, ContentPackView, ContentPort, ContentValidationIssue, ContentValidationResult, EcologyClassView, EcologyVocabulary, NamePoolView, NamingPartView, NamingRuleView, NamingStyleView } from './content/content-port'
 export type * from './generation/civilization/civilization-types'
-export { DEFAULT_CLIMATE_PARAMETERS, extractMonthlyCirculation, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, validateClimateArtifact } from './generation/nature/climate/climate'
+export { generateName, NAMING_ALGORITHM_VERSION } from './generation/names/naming'
+export { DEFAULT_CLIMATE_PARAMETERS, extractMonthlyCirculation, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C, validateClimateArtifact } from './generation/nature/climate/climate'
 export type { ClimateArtifact, ClimateParameters } from './generation/nature/climate/climate'
 export type { SeasonalCirculationData } from './generation/nature/climate/climate-data'
 export { KOPPEN_CODES } from './generation/nature/climate/koppen-classifier'

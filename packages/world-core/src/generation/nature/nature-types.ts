@@ -14,8 +14,9 @@ export interface GeographyState {
   readonly landMask: DenseField<Uint8Array>
   /** Present on newly generated worlds. Older Schema 3 archives remain unnamed and unclassified. */
   readonly regions?: {
-    /** Present when continent and ocean names were generated. */
-    readonly nameContentSignature?: string
+    /** Style identity and generation signature recorded by geographic-names. */
+    readonly nameStyleId?: string
+    readonly nameStyleSignature?: string
     readonly continentIndex: DenseField<Int32Array>
     readonly oceanIndex: DenseField<Int32Array>
     /** Added in geographic-regions-v2; absent in older classified archives. */

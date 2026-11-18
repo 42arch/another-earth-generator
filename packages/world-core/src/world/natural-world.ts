@@ -1,3 +1,4 @@
+import type { ContentPackView, ContentPort } from '#content/content-port'
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { EcologyArtifact } from '#generation/nature/ecology/ecology'
 import type { TerrainArtifact } from '#generation/nature/geography'
@@ -8,12 +9,10 @@ import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import type { GenerationInput, PipelineResult, StageRegistry } from '#generation/pipeline'
 import type { NaturalGenerationConfig } from '#generation/stages/natural-stage'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
-import type { ContentPack } from '@another-earth/world-data'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
 import { extractMonthlyCirculation } from '#generation/nature/climate/climate'
 import { normalizeWorldSeed, stableHash } from '#math/random'
-import { calculateContentSignature } from '@another-earth/world-data'
 import { WORLD_SCHEMA_VERSION } from './world-snapshot'
 import { validateWorldSnapshot } from './world-validator'
 
@@ -31,7 +30,7 @@ function owned<T extends NumericArray>(meshId: string, values: T): DenseField<T>
 }
 
 /** Assemble a candidate from one completed natural DAG, then run full domain validation. */
-export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationConfig>, result: PipelineResult, registry: StageRegistry, identity: NaturalWorldIdentity, packs: readonly ContentPack[]): WorldSnapshot {
+export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationConfig>, result: PipelineResult, registry: StageRegistry, identity: NaturalWorldIdentity, packs: readonly ContentPackView[], content: ContentPort): WorldSnapshot {
   const outputs = new Map(result.plan.map(stage => [stage.stageId, stage]))
   for (const stageId of ['mesh', 'geology', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0']) {
     if (!outputs.has(stageId))
@@ -68,7 +67,7 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
       createdAt: identity.createdAt,
       seed: normalizeWorldSeed(input.seed),
       generatorVersion: 'm1-natural-v1',
-      contentSignature: calculateContentSignature(packs),
+      contentSignature: content.calculateContentSignature(packs),
       contentPacks: packs.map(pack => ({ id: pack.manifest.id, version: pack.manifest.version, contentHash: pack.manifest.contentHash })),
       generationConfig: {
         planet,
@@ -107,7 +106,8 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
         elevationKm: owned(meshId, terrain.elevationKm),
         landMask: owned(meshId, terrain.landMask),
         regions: {
-          nameContentSignature: regions.nameContentSignature,
+          ...(regions.nameStyleId ? { nameStyleId: regions.nameStyleId } : {}),
+          ...(regions.nameStyleSignature ? { nameStyleSignature: regions.nameStyleSignature } : {}),
           continentIndex: owned(meshId, regions.continentIndex),
           oceanIndex: owned(meshId, regions.oceanIndex),
           seaIndex: owned(meshId, regions.seaIndex),
@@ -169,7 +169,7 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
       populationGroups: [],
     },
   }
-  const validation = validateWorldSnapshot(world, packs)
+  const validation = validateWorldSnapshot(world, packs, content)
   if (!validation.valid)
     throw new Error(`Invalid natural world: ${validation.issues[0]?.path}: ${validation.issues[0]?.message}`)
   return world

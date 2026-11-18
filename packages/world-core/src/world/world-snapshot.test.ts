@@ -1,20 +1,9 @@
-import type { ContentPack } from '@another-earth/world-data'
 import type { FieldView, WorldSnapshot } from '../index'
-import { calculateContentHash, calculateContentSignature } from '@another-earth/world-data'
 import { describe, expect, expectTypeOf, it } from 'vitest'
+import { testContentPack, testContentPort, testNamingStyle } from '#content/test-content'
 import { createFieldView, decodeWorldArchive, encodeWorldArchive, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '../index'
 
-const packDraft: ContentPack = {
-  manifest: { id: 'test:core', version: '1.0.0', schemaVersion: 1, nameKey: 'pack', contentHash: '', dependencies: [] },
-  names: [{ id: 'test:names/basic', displayNameKey: 'name', tags: [], entries: [{ value: 'Ada', weight: 1 }] }],
-  cultures: [{ id: 'test:culture/basic', displayNameKey: 'culture', tags: [], namePoolId: 'test:names/basic', traits: [] }],
-  religions: [{ id: 'test:religion/basic', displayNameKey: 'religion', tags: [], organization: 'decentralized', traits: [], tolerance: 0.5, spreadBias: 0.5, weight: 1 }],
-  governments: [{ id: 'test:government/basic', displayNameKey: 'government', tags: [], governance: 'distributed', succession: 'elective', weight: 1 }],
-  resources: [],
-  presets: [],
-  translations: { en: { pack: 'Test', name: 'Names', culture: 'Culture', religion: 'Religion', government: 'Government' } },
-}
-const pack: ContentPack = { ...packDraft, manifest: { ...packDraft.manifest, contentHash: calculateContentHash(packDraft) } }
+const pack = testContentPack
 
 function snapshot(civilized = false): WorldSnapshot {
   const field = <T extends Float32Array | Float64Array | Uint8Array | Uint16Array | Uint32Array | Int32Array>(values: T) => ({ meshId: 'mesh:test', values })
@@ -31,8 +20,8 @@ function snapshot(civilized = false): WorldSnapshot {
       seed: 'fixed-test-seed',
       createdAt: '2026-01-01T00:00:00Z',
       generatorVersion: 'test-1',
-      contentSignature: calculateContentSignature([pack]),
-      contentPacks: [pack.manifest],
+      contentSignature: testContentPort.calculateContentSignature([pack]),
+      contentPacks: [{ id: pack.manifest.id, version: pack.manifest.version, contentHash: pack.manifest.contentHash }],
       generationConfig: {
         planet,
         mesh: { subdivisionLevel: 0, irregularity: 0 },
@@ -44,7 +33,7 @@ function snapshot(civilized = false): WorldSnapshot {
         climate: { rotationPeriodHours: 24, axialTiltDegrees: 23.4, orbitalPeriodDays: 365, temperatureOffsetC: 0, precipitationScale: 0 },
         hydrology: { snowTemperatureMinC: -2, snowTemperatureMaxC: 2, degreeDayMeltFactorMmPerCMonth: 3, evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 5000, riverDensityMultiplier: 1, minimumLakeAreaKm2: 0 },
       },
-      provenance: { stageVersions: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, '1'])), artifactSignatures: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, 'sig:test'])), configSignature: 'config:test' },
+      provenance: { stageVersions: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, id === 'geographic-names' ? 'geographic-names-v3' : '1'])), artifactSignatures: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, 'sig:test'])), configSignature: 'config:test' },
     },
     planet,
     mesh: {
@@ -57,7 +46,7 @@ function snapshot(civilized = false): WorldSnapshot {
     },
     nature: {
       geology: { plates: [{ id: 'plate:test' }], plateIndex: field(new Uint32Array(4)), crustType: field(new Uint8Array(4)) },
-      geography: { elevationKm: field(new Float32Array(4)), landMask: field(new Uint8Array(4)) },
+      geography: { elevationKm: field(new Float32Array(4)), landMask: field(new Uint8Array(4)), regions: { nameStyleId: testNamingStyle.id, nameStyleSignature: testContentPort.calculateNamingStyleSignature(testNamingStyle), continentIndex: field(new Int32Array(4).fill(-1)), oceanIndex: field(new Int32Array(4).fill(-1)), seaIndex: field(new Int32Array(4).fill(-1)), continents: [], oceans: [], seas: [] } },
       climate: { monthsPerYear: 12, layout: 'month-major', temperatureC: field(new Float32Array(48)), precipitationMm: field(new Float32Array(48)), annualMeanTemperatureC: field(new Float32Array(4)), annualPrecipitationMm: field(new Float32Array(4)), koppenClass: field(new Uint8Array(4)) },
       hydrology: { monthlySnowWaterEquivalentMm: field(new Float32Array(48)), monthlySnowfallMm: field(new Float32Array(48)), monthlySnowmeltMm: field(new Float32Array(48)), downstreamRegion: field(new Int32Array(4).fill(-1)), annualRunoffMm: field(new Float32Array(4)), annualRunoffVolumeM3: field(new Float64Array(4)), accumulatedAnnualFlowM3s: field(new Float64Array(4)), contributingAreaKm2: field(new Float64Array(4)), basinIndex: field(new Int32Array(4).fill(-1)), basins: [], riverIndex: field(new Int32Array(4).fill(-1)), rivers: [], lakeIndex: field(new Int32Array(4).fill(-1)), lakes: [] },
       ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: field(new Uint16Array(4)), landCoverIndex: field(new Uint16Array(4)), aridityIndex: field(new Float32Array(4)), growingSeasonMonths: field(new Uint8Array(4)) },
@@ -74,7 +63,7 @@ function snapshot(civilized = false): WorldSnapshot {
     },
   }
 }
-const validate = (s: WorldSnapshot) => validateWorldSnapshot(s, [pack])
+const validate = (s: WorldSnapshot) => validateWorldSnapshot(s, [pack], testContentPort)
 
 describe('worldSnapshot public contract', () => {
   it('accepts a complete natural world', () => expect(validate(snapshot())).toEqual({ valid: true, issues: [] }))
@@ -92,7 +81,7 @@ describe('worldSnapshot public contract', () => {
   it('rejects unresolved world entities and content versions', () => {
     const s = snapshot(true)
     expect(validate({ ...s, civilization: { ...s.civilization, religions: [] } }).issues.some(e => e.code === 'reference')).toBe(true)
-    expect(validateWorldSnapshot(s, []).valid).toBe(false)
+    expect(validateWorldSnapshot(s, [], testContentPort).valid).toBe(false)
   })
   it('rejects duplicate stable IDs across entity kinds', () => {
     const s = snapshot(true)
@@ -102,7 +91,7 @@ describe('worldSnapshot public contract', () => {
     const s = snapshot()
     s.nature.climate.temperatureC.values[0] = Number.NaN
     expect(validate(s).valid).toBe(false)
-    expect(validateWorldSnapshot(s, [pack], { mode: 'structure' }).valid).toBe(true)
+    expect(validateWorldSnapshot(s, [pack], testContentPort, { mode: 'structure' }).valid).toBe(true)
   })
   it('rejects inconsistent monthly layout', () => {
     const s = snapshot()
@@ -144,13 +133,13 @@ describe('worldSnapshot public contract', () => {
   })
   it('round trips a complete world and rejects corruption or missing content', () => {
     const original = snapshot(true)
-    const archive = encodeWorldArchive(original, [pack])
-    const restored = decodeWorldArchive(archive, [pack])
+    const archive = encodeWorldArchive(original, [pack], testContentPort)
+    const restored = decodeWorldArchive(archive, [pack], testContentPort)
     expect(restored).toEqual(original)
     expect(restored.mesh.centers).toBeInstanceOf(Float64Array)
     expect(restored.nature.climate.temperatureC.values).toBeInstanceOf(Float32Array)
-    expect(() => decodeWorldArchive(archive.replace('snapshot:test', 'snapshot:changed'), [pack])).toThrow()
-    expect(() => decodeWorldArchive(archive, [])).toThrow()
+    expect(() => decodeWorldArchive(archive.replace('snapshot:test', 'snapshot:changed'), [pack], testContentPort)).toThrow()
+    expect(() => decodeWorldArchive(archive, [], testContentPort)).toThrow()
   })
   it('requires reproducible mesh input and provenance', () => {
     const s = snapshot()

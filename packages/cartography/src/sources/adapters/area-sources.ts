@@ -1,3 +1,4 @@
+import type { MapMeshReader, WorldMapReader } from '@another-earth/world-core'
 import type {
   GeoJsonFeature,
   GeoJsonMultiPolygonGeometry,
@@ -5,7 +6,6 @@ import type {
   GeoJsonSource,
   SourceUnavailable,
 } from '#sources/types'
-import type { MapMeshReader, WorldMapReader } from '@another-earth/world-core'
 import { cartesianToLonLatDeg } from '#projections/spherical-math'
 import { assemblePolygonsWithHoles, traceClassificationRings } from '#sources/topology/ring-tracer'
 import {

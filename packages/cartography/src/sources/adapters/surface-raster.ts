@@ -1,5 +1,5 @@
-import type { RasterCellSource, RasterFieldDescriptor, SourceUnavailable } from '#sources/types'
 import type { FieldView, WorldMapReader } from '@another-earth/world-core'
+import type { RasterCellSource, RasterFieldDescriptor, SourceUnavailable } from '#sources/types'
 import { BUILTIN_MAP_SOURCE_SCHEMAS } from '#sources/types'
 
 function createConstantSentinelFieldView(meshId: string, length: number, sentinel = -1): FieldView {

@@ -1,7 +1,7 @@
 import type { ClimateMesh } from './climate-mesh'
 import type { MonthlyForcing } from './monthly-forcing'
-import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { describe, expect, it } from 'vitest'
+import { createSphericalMesh } from '#mesh/spherical-mesh'
 import { ITCZ_LONGITUDE_SAMPLES } from './climate-data'
 import { DEG } from './climate-geometry'
 import { climateMesh } from './climate-mesh'

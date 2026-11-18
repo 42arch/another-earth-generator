@@ -4,9 +4,9 @@ import type { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { GeoJsonFeature, GeoJsonSource } from '#sources/types'
 import type { CompiledMapStyleLayer } from '#styles/compiler'
-import { lonLatDegToCartesian } from '#projections/spherical-math'
-import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
 import * as THREE from 'three'
+import { lonLatDegToCartesian, rotateAroundPolarAxis } from '#projections/spherical-math'
+import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
 
 export type CircleSymbolShape = 'circle' | 'double-ring' | 'star' | 'diamond' | 'triangle'
 
@@ -370,6 +370,7 @@ export class CircleLayer {
     camera: THREE.Camera,
     hitTolerancePx = 6,
     worldOffsetsX: readonly number[] = [0],
+    planetSpinRadians = 0,
   ): { layerId: string, sourceId: string, featureId: string, distancePx: number } | null {
     if (this.disposed || !this.mesh.visible)
       return null
@@ -383,12 +384,14 @@ export class CircleLayer {
       if (!this.visibleByInstance[i])
         continue
       const inst = this.instances[i]
+      const spun = this.isGlobe ? rotateAroundPolarAxis(inst.position, planetSpinRadians) : inst.position
+      const spunNormal = this.isGlobe ? rotateAroundPolarAxis(inst.normal, planetSpinRadians) : inst.normal
       if (this.isGlobe) {
-        const toCamX = camPos.x - inst.position[0]
-        const toCamY = camPos.y - inst.position[1]
-        const toCamZ = camPos.z - inst.position[2]
+        const toCamX = camPos.x - spun[0]
+        const toCamY = camPos.y - spun[1]
+        const toCamZ = camPos.z - spun[2]
         const toCamLen = Math.hypot(toCamX, toCamY, toCamZ) || 1
-        const ndotv = (inst.normal[0] * toCamX + inst.normal[1] * toCamY + inst.normal[2] * toCamZ) / toCamLen
+        const ndotv = (spunNormal[0] * toCamX + spunNormal[1] * toCamY + spunNormal[2] * toCamZ) / toCamLen
         if (ndotv <= 0.06)
           continue
       }
@@ -397,7 +400,7 @@ export class CircleLayer {
       const maxDistSq = maxDist * maxDist
 
       for (const offsetX of worldOffsetsX) {
-        proj.set(inst.position[0] + offsetX, inst.position[1], inst.position[2]).project(camera)
+        proj.set(spun[0] + offsetX, spun[1], spun[2]).project(camera)
         if (proj.z < -1 || proj.z > 1)
           continue
 

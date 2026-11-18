@@ -1,9 +1,9 @@
 import type { ClimateArtifact, EcologyArtifact, EcologyGenerationConfig, SphericalMesh, TerrainArtifact } from '../src/index'
+import { testContentPack, testEcologyVocabulary, testPipelineContent } from '../src/content/test-content'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { NATURAL_BIOME_DEFINITIONS } from '@another-earth/world-data'
 import { it } from 'vitest'
 import { createEcologyPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, KOPPEN_CODES, StageCache } from '../src/index'
 
@@ -173,7 +173,7 @@ it('writes a fixed-seed legacy classifier comparison on identical C0 monthly inp
     } satisfies EcologyGenerationConfig,
   }
   const pipeline = createEcologyPipeline(new StageCache(512 * 2 ** 20))
-  const result = await pipeline.execute(input)
+  const result = await pipeline.execute({ ...input, ...testPipelineContent([testContentPack]) })
   const mesh = result.getOutput<SphericalMesh>('mesh')
   const terrain = result.getOutput<TerrainArtifact>('terrain')
   const climate = result.getOutput<ClimateArtifact>('climate-c0')
@@ -206,7 +206,7 @@ it('writes a fixed-seed legacy classifier comparison on identical C0 monthly inp
       currentPotentialEvapotranspirationMm += orbitalPeriodDays / 12 * 0.015 * Math.max(0, temperature[month] + 5) ** 1.45
     }
     const currentBiomeIndex = ecology.potentialBiomeIndex[region]
-    const currentCode = NATURAL_BIOME_DEFINITIONS[currentBiomeIndex].code
+    const currentCode = testEcologyVocabulary.biomes[currentBiomeIndex].code
     const currentAridity = ecology.aridityIndex[region]
     const koppenClass = climate.koppenClass[region]
     const koppenCode = KOPPEN_CODES[koppenClass]

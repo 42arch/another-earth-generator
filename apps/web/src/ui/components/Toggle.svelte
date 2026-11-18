@@ -1,5 +1,7 @@
 <script lang='ts'>
+  import { CircleQuestionMark } from '@lucide/svelte'
   import { Switch } from 'bits-ui'
+  import Tooltip from './Tooltip.svelte'
 
   interface Props {
     label: string
@@ -23,14 +25,16 @@
 </script>
 
 <div class='flex items-center justify-between py-1 text-obs-text-main'>
-  <div class='flex flex-col pr-2'>
+  <div class='flex items-center gap-1.5 pr-2'>
     <span class='font-sans text-[11px] text-obs-text-muted'>
       {label}
     </span>
     {#if description}
-      <span class='text-[10px] text-obs-text-dim leading-tight'>
-        {description}
-      </span>
+      <Tooltip content={description} delayDuration={100}>
+        <span class='inline-flex cursor-help text-obs-text-dim transition-colors hover:text-white' aria-label={`${label} 说明`}>
+          <CircleQuestionMark class='h-3 w-3' />
+        </span>
+      </Tooltip>
     {/if}
   </div>
 
@@ -42,7 +46,7 @@
       onchange?.(val)
       oncommit?.(val)
     }}
-    class='peer inline-flex h-4 w-7.5 shrink-0 cursor-pointer items-center rounded-full border border-white/[0.12] bg-white/[0.05] transition-colors focus-visible:outline-hidden data-[state=checked]:bg-obs-primary/20 data-[state=checked]:border-obs-primary/50'
+    class='peer inline-flex h-4 w-7.5 shrink-0 cursor-pointer items-center rounded-full border border-white/12 bg-white/5 transition-colors focus-visible:outline-hidden data-[state=checked]:bg-obs-primary/20 data-[state=checked]:border-obs-primary/50'
   >
     <Switch.Thumb
       class="pointer-events-none block h-2.5 w-2.5 rounded-full border transition-all duration-150 data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0.5 data-[state=unchecked]:bg-obs-text-dim data-[state=unchecked]:border-transparent {checked ? activeThumbClass : ''}"
