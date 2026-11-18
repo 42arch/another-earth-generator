@@ -1,7 +1,7 @@
 {
   "name": "another-earth",
   "type": "module",
-  "version": "0.0.0",
+  "version": "2.0.0",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -14,11 +14,15 @@
     "typecheck": "bun run --workspaces typecheck",
     "lint": "bun run --workspaces lint",
     "lint:fix": "bun run --workspaces lint:fix",
-    "test": "bun run --workspaces test"
+    "test": "bun run --workspaces test",
+    "changelog": "changelogen --output CHANGELOG.md",
+    "release": "bumpp --all"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.2.0",
     "@types/node": "^25.6.0",
+    "bumpp": "^12.3.0",
+    "changelogen": "^0.6.2",
     "eslint": "^10.2.0",
     "eslint-plugin-svelte": "^3.19.0",
     "svelte-eslint-parser": "^1.8.0",

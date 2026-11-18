@@ -1,5 +1,20 @@
 # another-earth-generator
 
+## v2.0.0
+
+### Refactors
+
+- Adopt a new generation pipeline and a cartography system based on the Style Spec. (采用新的生成流水线和基于Style Spec规范的制图系统)
+
+- Add lakes and other new features, introduce initial theme styles, and support generating and rendering vector feature layers. (增加湖泊等新要素，初步增加多种主题风格，支持矢量元素图层生成和渲染)
+
+- Add a preliminary built-in database as the data foundation for civilization generation. (初步添加内置数据库系统，为文明生成阶段提供数据基础)
+
+- Adjust the UI layout and optimize rendering performance. (调整 UI 布局，优化渲染性能)
+
+- Adopt a monorepo and Bun based build to improve the code structure and build speed. (采用基于 monorepo 和 bun 的构建方式，提升代码结构和构建速度)
+
+
 ## 1.4.1
 
 ### Patch Changes

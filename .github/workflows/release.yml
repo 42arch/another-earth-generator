@@ -2,81 +2,30 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   release:
-    name: Version & Release
+    name: Publish GitHub Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          commit: 'chore(release): version packages'
-          title: 'chore(release): version packages'
-          version: bunx changeset version
-          publish: bunx changeset publish
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get version
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        id: get_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Extract Release Notes
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          node -e "
-          const fs = require('fs');
-          const version = require('./package.json').version;
-          const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
-          const startStr = '## ' + version;
-          const startIndex = changelog.indexOf(startStr);
-          if (startIndex !== -1) {
-            const contentStart = startIndex + startStr.length;
-            const endIndex = changelog.indexOf('\n## ', contentStart);
-            const notes = changelog.substring(contentStart, endIndex === -1 ? changelog.length : endIndex).trim();
-            fs.writeFileSync('RELEASE_NOTES.md', notes);
-          }
-          "
 
       - name: Create GitHub Release
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          name: Release v${{ steps.get_version.outputs.version }}
-          body_path: RELEASE_NOTES.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          awk '
+            /^## / { found++; if (found == 2) exit; next }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "$RELEASE_TAG" > release-notes.md
+          fi
+          gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
