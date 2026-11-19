@@ -2,25 +2,26 @@
   import { Orbit } from '@lucide/svelte'
   import { Progress } from 'bits-ui'
   import { fade } from 'svelte/transition'
+  import { t, type MessageKey } from '@/lib/i18n'
 
-  const pipelineStageLabels: Record<string, string> = {
-    'mesh': '正在构建球面拓扑网格…',
-    'reference-mesh': '正在构建参考球面网格…',
-    'reference-subdivisions': '正在细分参考网格…',
-    'plate-topology': '正在生成构造板块…',
-    'continental-crust': '正在生成大陆地壳…',
-    'plate-dynamics': '正在计算板块运动…',
-    'tectonics': '正在计算构造骨架…',
-    'tectonic-elevation': '正在塑造基础高程…',
-    'geology': '正在完成地质投影…',
-    'terrain': '正在生成地形…',
-    'geographic-regions': '正在划分大陆、洋与海…',
-    'geographic-names': '正在命名大陆与大洋…',
-    'climate-c0': '正在计算初步气候…',
-    'cryosphere-i0': '正在计算积雪与融雪…',
-    'hydrology-h0': '正在生成初步径流与河网…',
-    'static-lakes-l1': '正在识别静态洼地湖泊…',
-    'ecology-e0': '正在生成初步生态分类…',
+  const pipelineStageKeys: Record<string, MessageKey> = {
+    'mesh': 'generation.stages.mesh',
+    'reference-mesh': 'generation.stages.referenceMesh',
+    'reference-subdivisions': 'generation.stages.referenceSubdivisions',
+    'plate-topology': 'generation.stages.plateTopology',
+    'continental-crust': 'generation.stages.continentalCrust',
+    'plate-dynamics': 'generation.stages.plateDynamics',
+    'tectonics': 'generation.stages.tectonics',
+    'tectonic-elevation': 'generation.stages.tectonicElevation',
+    'geology': 'generation.stages.geology',
+    'terrain': 'generation.stages.terrain',
+    'geographic-regions': 'generation.stages.geographicRegions',
+    'geographic-names': 'generation.stages.geographicNames',
+    'climate-c0': 'generation.stages.climateC0',
+    'cryosphere-i0': 'generation.stages.cryosphereI0',
+    'hydrology-h0': 'generation.stages.hydrologyH0',
+    'static-lakes-l1': 'generation.stages.staticLakesL1',
+    'ecology-e0': 'generation.stages.ecologyE0',
   }
 
   type State
@@ -41,7 +42,8 @@
   const { active, state, onCancel, cancelDisabled = false }: Props = $props()
 
   function getPipelineStageLabel(stageId: string): string {
-    return pipelineStageLabels[stageId] ?? `正在执行：${stageId}`
+    const key = pipelineStageKeys[stageId]
+    return key ? t(key) : t('generation.executing', { stageId })
   }
 
   const progress = $derived(
@@ -55,15 +57,18 @@
   const message = $derived.by(() => {
     switch (state.status) {
       case 'starting':
-        return `正在生成 L${state.level} · 扰动 ${state.irregularity.toFixed(2)}…`
+        return t('generation.starting', { level: state.level, irregularity: state.irregularity.toFixed(2) })
       case 'pipeline':
         return `${getPipelineStageLabel(state.stageId ?? 'mesh')} ${Math.round(state.progress * 100)}%`
       case 'completed':
-        return `L${state.level} · 扰动 ${state.irregularity.toFixed(2)} 完整自然世界已就绪`
+        return t('generation.completed', { level: state.level, irregularity: state.irregularity.toFixed(2) })
       case 'cancelled':
-        return `${state.hasPublishedWorld ? '生成已取消，保留当前已发布世界。' : '生成已取消。'}${state.cacheCleared ? 'Worker 缓存已清空。' : ''}`
+        return [
+          t(state.hasPublishedWorld ? 'generation.cancelledWithWorld' : 'generation.cancelled'),
+          state.cacheCleared ? t('generation.cacheCleared') : '',
+        ].filter(Boolean).join(' ')
       case 'failed':
-        return state.hasPublishedWorld ? '生成失败，已保留上一个有效世界。' : '生成失败。'
+        return t(state.hasPublishedWorld ? 'generation.failedWithWorld' : 'generation.failed')
       case 'idle':
         return ''
     }
@@ -78,7 +83,7 @@
     class='pointer-events-auto fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#070a0f]/50 backdrop-blur-lg select-none'
     role='status'
     aria-live='polite'
-    aria-label='正在生成世界'
+    aria-label={t('generation.ariaLabel')}
   >
     <div class='globe-container relative flex items-center justify-center w-32 h-32 mb-8' aria-hidden='true'>
       <div class='globe relative w-full h-full rounded-full'>
@@ -103,7 +108,7 @@
 
     <div class='flex flex-col items-center text-center px-4 max-w-sm z-10'>
       <h2 class='font-heading text-lg font-bold tracking-[0.18em] uppercase text-obs-text-main m-0'>Another Earth Generator</h2>
-      <Progress.Root value={percent} class='relative w-48 h-0.5 bg-white/8 rounded-full my-3 overflow-hidden' aria-label='生成进度'>
+      <Progress.Root value={percent} class='relative w-48 h-0.5 bg-white/8 rounded-full my-3 overflow-hidden' aria-label={t('generation.progress')}>
         <div class='absolute top-0 left-0 h-full bg-obs-primary rounded-full transition-[width] duration-200' style={`width: ${percent}%`}></div>
       </Progress.Root>
       <p class='font-sans text-xs text-obs-text-dim m-0 flex items-center gap-1.5'>
@@ -111,7 +116,7 @@
         <span>{message}</span>
       </p>
       <button type='button' class='mt-5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-obs-text-muted hover:bg-white/10 hover:text-white disabled:opacity-40' onclick={onCancel} disabled={cancelDisabled}>
-        取消生成
+        {t('generation.cancel')}
       </button>
     </div>
   </div>

@@ -80,7 +80,7 @@
 
     <Select.Portal>
       <Select.Content
-        class='z-50 min-w-[var(--bits-select-anchor-width)] max-h-60 overflow-y-auto rounded-lg border border-white/12 bg-[#08120d]/95 p-1 text-obs-text-main shadow-2xl backdrop-blur-xl outline-hidden select-none'
+        class='z-50 min-w-(--bits-select-anchor-width) max-h-60 overflow-y-auto rounded-lg border border-white/12 bg-[#08120d]/95 p-1 text-obs-text-main shadow-2xl backdrop-blur-xl outline-hidden select-none'
         sideOffset={4}
       >
         <Select.Viewport class='p-0.5 flex flex-col gap-0.5'>
@@ -88,7 +88,7 @@
             <Select.Item
               value={String(opt.value)}
               label={opt.label}
-              class='relative flex w-full cursor-pointer select-none items-center justify-between rounded-md px-2.5 py-1.5 text-xs text-obs-text-muted outline-hidden transition-colors data-[highlighted]:bg-obs-primary/15 data-[highlighted]:text-obs-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-40 {String(opt.value) === stringValue ? 'text-obs-primary font-medium bg-obs-primary/10' : ''}'
+              class='relative flex w-full cursor-pointer select-none items-center justify-between rounded-md px-2.5 py-1.5 text-xs text-obs-text-muted outline-hidden transition-colors data-highlighted:bg-obs-primary/15 data-highlighted:text-obs-primary data-disabled:pointer-events-none data-disabled:opacity-40 {String(opt.value) === stringValue ? 'text-obs-primary font-medium bg-obs-primary/10' : ''}'
             >
               <div class='flex flex-col'>
                 <span class='font-sans'>{opt.label}</span>

@@ -18,7 +18,7 @@
     },
     "apps/web": {
       "name": "@another-earth/web",
-      "version": "1.4.1",
+      "version": "2.0.0",
       "dependencies": {
         "@another-earth/cartography": "workspace:*",
         "@another-earth/world-core": "workspace:*",

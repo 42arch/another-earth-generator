@@ -3,12 +3,6 @@
   "type": "module",
   "version": "1.4.1",
   "private": true,
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
-  },
   "imports": {
     "#generation/nature/common": "./src/generation/nature/common/index.ts",
     "#generation/nature/geography": "./src/generation/nature/geography/index.ts",
@@ -17,6 +11,12 @@
     "#content/content-port": "./src/content/content-port.ts",
     "#content/test-content": "./src/content/test-content.ts",
     "#*": "./src/*.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
     "build": "tsc --noEmit",

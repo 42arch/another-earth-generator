@@ -45,14 +45,6 @@ html, body {
   height: 100%;
 }
 
-#globe-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-}
-
-
 /* 精致微细滚动条 */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;

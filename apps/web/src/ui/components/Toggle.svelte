@@ -8,6 +8,7 @@
     checked: boolean
     disabled?: boolean
     description?: string
+    descriptionAriaLabel?: string
     onchange?: (checked: boolean) => void
     oncommit?: (checked: boolean) => void
   }
@@ -17,6 +18,7 @@
     checked = $bindable(false),
     disabled = false,
     description = '',
+    descriptionAriaLabel,
     onchange,
     oncommit,
   }: Props = $props()
@@ -31,7 +33,7 @@
     </span>
     {#if description}
       <Tooltip content={description} delayDuration={100}>
-        <span class='inline-flex cursor-help text-obs-text-dim transition-colors hover:text-white' aria-label={`${label} 说明`}>
+        <span class='inline-flex cursor-help text-obs-text-dim transition-colors hover:text-white' aria-label={descriptionAriaLabel ?? `${label} 说明`}>
           <CircleQuestionMark class='h-3 w-3' />
         </span>
       </Tooltip>

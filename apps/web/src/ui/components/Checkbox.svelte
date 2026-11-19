@@ -11,6 +11,7 @@
     id?: string
     size?: 'sm' | 'md'
     description?: string
+    descriptionAriaLabel?: string
     class?: string
     checkboxClass?: string
     labelClass?: string
@@ -26,6 +27,7 @@
     id,
     size = 'sm',
     description = '',
+    descriptionAriaLabel,
     class: className = '',
     checkboxClass = '',
     labelClass = '',
@@ -81,8 +83,8 @@
           {label}
         {/if}
         {#if description}
-          <Tooltip content={description} delayDuration={100}>
-            <span class='inline-flex cursor-help text-obs-text-dim transition-colors hover:text-white' aria-label={`${label || '选项'} 说明`}>
+              <Tooltip content={description} delayDuration={100}>
+            <span class='inline-flex cursor-help text-obs-text-dim transition-colors hover:text-white' aria-label={descriptionAriaLabel ?? `${label || '选项'} 说明`}>
               <CircleQuestionMark class='h-3 w-3' />
             </span>
           </Tooltip>

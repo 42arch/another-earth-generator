@@ -16,7 +16,7 @@
     "lint:fix": "bun run --workspaces lint:fix",
     "test": "bun run --workspaces test",
     "changelog": "changelogen --output CHANGELOG.md",
-    "release": "bumpp --all"
+    "release": "bumpp --recursive --all"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.2.0",

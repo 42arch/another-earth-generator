@@ -2,7 +2,10 @@ import posthog from 'posthog-js'
 import { mount } from 'svelte'
 
 import App from './App.svelte'
+import { initializeLocale } from './lib/i18n'
 import './style.css'
+
+initializeLocale()
 
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY
 if (typeof posthogKey === 'string' && posthogKey.length > 0) {

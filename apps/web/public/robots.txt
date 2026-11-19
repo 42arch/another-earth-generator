@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://another-earth.starllow.com/sitemap.xml

@@ -2,8 +2,10 @@
   import type { MapProjectionId, MapViewportMode } from '@another-earth/cartography'
   import type { ComponentProps, Snippet } from 'svelte'
   import type { LayerStatistics } from '@/world-view/layer-statistics'
+  import ChangelogPanel from '@/ui/hud/ChangelogPanel.svelte'
   import { AlertTriangle } from '@lucide/svelte'
   import GenerationLoading from '@/ui/hud/GenerationLoading.svelte'
+  import AboutPanel from '@/ui/hud/AboutPanel.svelte'
   import LayerPanel from '@/ui/hud/LayerPanel.svelte'
   import LegendPanel from '@/ui/hud/LegendPanel.svelte'
   import MapControls from '@/ui/hud/MapControls.svelte'
@@ -105,11 +107,6 @@
   }: Props = $props()
 </script>
 
-<svelte:head>
-  <title>Another Earth Generator</title>
-  <meta name='description' content='Another Earth 创世工作台' />
-</svelte:head>
-
 <div class='relative h-dvh w-screen overflow-hidden bg-obs-bg text-obs-text-main'>
   <main class='absolute inset-0 overflow-hidden' aria-label='行星视口' aria-busy={busy}>
     {@render viewport()}
@@ -188,6 +185,8 @@
   <RegionInspector open={appState.inspectorOpen} {inspection} />
   <GenerationLoading active={busy} state={generationLoadingState} onCancel={onCancel} />
   <ReloadPrompt />
+  <AboutPanel open={appState.aboutOpen} onClose={() => appState.aboutOpen = false} />
+  <ChangelogPanel />
 
   {#if error}
     <div class='pointer-events-auto fixed bottom-4 right-4 left-[calc(var(--app-sidebar-inset)+var(--app-sidebar-width)+0.75rem)] z-50 mx-auto max-w-xl rounded-xl border border-red-300/20 bg-[#1e1e20]/95 p-3 text-sm text-red-200 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-md' role='alert'>

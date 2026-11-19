@@ -1,5 +1,6 @@
 <script lang='ts'>
   import { useRegisterSW } from 'virtual:pwa-register/svelte'
+  import { t } from '@/lib/i18n'
   import { Button, Panel } from '@/ui/components'
 
   const { needRefresh, updateServiceWorker } = useRegisterSW({
@@ -23,12 +24,12 @@
       <Panel collapsible={false} class='border-obs-primary/30'>
         <div class='flex flex-col gap-4'>
           <div class='text-sm leading-relaxed'>
-            <span class='font-semibold tracking-wide text-obs-primary'>更新可用</span>
-            <p class='mt-1 text-obs-text-muted'>发现新版本，请刷新以获取最新内容。</p>
+            <span class='font-semibold tracking-wide text-obs-primary'>{t('update.available')}</span>
+            <p class='mt-1 text-obs-text-muted'>{t('update.description')}</p>
           </div>
           <div class='flex gap-2 justify-end'>
-            <Button variant='ghost' size='sm' onclick={dismiss}>忽略</Button>
-            <Button variant='primary' size='sm' onclick={reload}>立即刷新</Button>
+            <Button variant='ghost' size='sm' onclick={dismiss}>{t('update.dismiss')}</Button>
+            <Button variant='primary' size='sm' onclick={reload}>{t('update.reload')}</Button>
           </div>
         </div>
       </Panel>
