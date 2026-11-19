@@ -1,6 +1,6 @@
 # Another Earth — 当前进度
 
-> 更新：2026-11-18。这里仅记录当前能力、未完成事项和最近验证状态。产品目标见 [PRD](PRD.md)；完整历史记录见 [进度历史快照](PROGRESS_HISTORY.md)。
+> 更新：2026-11-20。这里仅记录当前能力、未完成事项和最近验证状态。产品目标见 [PRD](PRD.md)；完整历史记录见 [进度历史快照](PROGRESS_HISTORY.md)。
 
 ## 当前状态
 
@@ -18,7 +18,7 @@
 
 ## 当前自然链
 
-当前阶段基线为 `terrain-v27`、`climate-c0-v21`、`cryosphere-i0-v1`、`hydrology-h0-v4`、`static-lakes-l1-v10`、`ecology-e0-v3`。完整自然请求可组装并发布 Schema 3 快照；M1 已按用户决定收尾，未完成的验收项目保留为延期事项，不视为通过。
+当前阶段基线为 `terrain-v27`、`climate-c0-v22`、`cryosphere-i0-v1`、`hydrology-h0-v4`、`static-lakes-l1-v10`、`ecology-e0-v3`。完整自然请求可组装并发布 Schema 3 快照；M1 已按用户决定收尾，未完成的验收项目保留为延期事项，不视为通过。
 
 当前已知限制：
 
@@ -28,6 +28,8 @@
 - 当前生成结果与约束以源码、测试和 [世界数据契约](WORLD_DATA_CONTRACTS.md) 为准；算法细节和历史对照见 [技术设计参考](TECHNICAL_DESIGN_REFERENCE.md) 与各项 [基准记录](benchmarks/)。
 
 ## 最近工作与验证
+
+2026-11-20，C0 升为 `climate-c0-v22`：风与洋流从参考场多源重采样到输出切平面，洋流保留海陆、同水体与缺测约束；查询和月度快照字段使用同一重采样结果。按固定 Seed 1024/L7、42/L6 的面积加权分布调整风速／流速色阶，月／年、地图／图例／统计共用断点。Schema 3 不变，既有存档不重算环流。实际运行了两组 C0 数据分析及其阶段领域校验；新增测试未执行，未运行 test/typecheck/lint/build 或浏览器验收。新增季节数组内存与 L8 峰值仍需复验。详见 [环流显示分析](benchmarks/M1.2-circulation-display.md)。
 
 2026-11-18，`world-data` 新增六份可独立加载的双语社会候选包及解析、适配、导出契约。国家形态候选各含 20 组中英文配对定义；文化显式依赖同语言 NamingStyle。它们只进入完整 Catalog，不改变当前自然生成内容签名，也不生成文明实体。
 

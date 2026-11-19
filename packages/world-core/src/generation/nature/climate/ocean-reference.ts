@@ -7,7 +7,7 @@ export function mapOceanReference(
   land: Uint8Array,
   referenceLand: Uint8Array,
   nearest: Uint32Array,
-): Int32Array {
+): { mapping: Int32Array, component: Int32Array, owner: Int32Array } {
   const count = output.regionCount
   const component = new Int32Array(count).fill(-1)
   const queue = new Uint32Array(count)
@@ -67,5 +67,5 @@ export function mapOceanReference(
       queue[end++] = neighbor
     }
   }
-  return mapping
+  return { mapping, component, owner }
 }

@@ -27,7 +27,7 @@
   >
     <button type='button' class='absolute inset-0 h-full w-full cursor-default' aria-label={t('about.close')} onclick={onClose}></button>
     <div
-      class='absolute top-[12vh] left-1/2 z-10 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-white/10 bg-[#1e1e20]/95 p-4 text-obs-text-main shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl'
+      class='absolute top-[12vh] left-1/2 z-10 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-white/10 bg-[#1e1e20]/85 p-4 text-obs-text-main shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-md'
       role='dialog'
       aria-modal='true'
       aria-labelledby='about-panel-title'

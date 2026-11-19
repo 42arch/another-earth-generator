@@ -1,8 +1,9 @@
 <script lang='ts'>
+  import type { MessageKey } from '@/lib/i18n'
   import { Orbit } from '@lucide/svelte'
   import { Progress } from 'bits-ui'
   import { fade } from 'svelte/transition'
-  import { t, type MessageKey } from '@/lib/i18n'
+  import { t } from '@/lib/i18n'
 
   const pipelineStageKeys: Record<string, MessageKey> = {
     'mesh': 'generation.stages.mesh',

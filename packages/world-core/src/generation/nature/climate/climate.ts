@@ -1,6 +1,7 @@
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { RandomSource } from '#math/random'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
+import type { ProjectedCirculation } from './circulation-projection'
 import type { ClimateSurfaceData, SeasonalCirculationData } from './climate-data'
 import type { ClimateMesh } from './climate-mesh'
 import type { MonthlyForcing } from './monthly-forcing'
@@ -8,6 +9,7 @@ import type { MonthlySpatialFields } from './monthly-spatial-fields'
 import { estimatePotentialEvapotranspirationMm } from '#generation/nature/common/potential-evapotranspiration'
 import { DeterministicRandom } from '#math/random'
 import { SphericalSpatialIndex } from '#mesh/spatial-index'
+import { projectSeasonalCirculation } from './circulation-projection'
 import { climateMesh } from './climate-mesh'
 import { classifyKoppenSeries } from './koppen-classifier'
 import { interpolateMonthlyForcing } from './monthly-forcing'
@@ -39,7 +41,7 @@ export const DEFAULT_CLIMATE_PARAMETERS: Readonly<ClimateParameters> = Object.fr
 export const TEMPERATURE_OFFSET_MIN_C = -40
 export const TEMPERATURE_OFFSET_MAX_C = 60
 
-export const CLIMATE_C0_VERSION = 'climate-c0-v21'
+export const CLIMATE_C0_VERSION = 'climate-c0-v22'
 
 // Area-weighted fits to monthly latitude-band observations. See M1.2-circulation-speed.md.
 const WIND_MPS_PER_MODEL_UNIT = 0.257
@@ -65,6 +67,8 @@ export interface ClimateArtifact {
   /** Ocean reference source per output region. -1 for land or unrepresented water. */
   readonly oceanReference: Int32Array
   readonly circulation: SeasonalCirculationData
+  /** Present after projection; four anchors in output-local tangent frames. */
+  readonly projectedCirculation?: ProjectedCirculation
 }
 
 export function validateClimateArtifact(value: ClimateArtifact, meshId = value.meshId, regionCount = value.regionCount): void {
@@ -95,6 +99,22 @@ export function validateClimateArtifact(value: ClimateArtifact, meshId = value.m
   }
   if (!c.solarDeclination.every(Number.isFinite) || !c.itczLatitude.every(Number.isFinite))
     throw new Error('Invalid climate seasonal forcing')
+  if (value.projectedCirculation) {
+    for (const key of ['windEast', 'windNorth', 'oceanEast', 'oceanNorth', 'oceanWarmth'] as const) {
+      const array = value.projectedCirculation[key]
+      if (!(array instanceof Float32Array) || array.length !== 4 * n || !array.every(Number.isFinite))
+        throw new Error(`Invalid projected circulation ${key}`)
+      for (let season = 0; season < 4; season++) {
+        for (let r = 0; r < n; r++) {
+          const v = array[season * n + r]
+          if ((key === 'oceanWarmth' && Math.abs(v) > 1)
+            || (key.startsWith('ocean') && value.oceanReference[r] < 0 && v !== 0)) {
+            throw new Error(`Invalid projected circulation mask or warmth at region ${r}`)
+          }
+        }
+      }
+    }
+  }
   for (let r = 0; r < n; r++) {
     let temperature = 0
     let rain = 0
@@ -161,18 +181,19 @@ export function sampleClimateSpeedMps(climate: ClimateArtifact, region: number, 
 export function sampleClimateCirculation(climate: ClimateArtifact, region: number, month: number, field: 'windEast' | 'windNorth' | 'oceanEast' | 'oceanNorth' | 'oceanWarmth'): number {
   if (!Number.isInteger(region) || region < 0 || region >= climate.regionCount || !Number.isInteger(month) || month < 0 || month >= 12)
     throw new RangeError('Invalid climate region or month')
-  const source = field === 'windEast' || field === 'windNorth'
+  const mapped = field === 'windEast' || field === 'windNorth'
     ? climate.geographicReference[region]
     : climate.oceanReference[region]
-  if (source < 0)
+  if (mapped < 0)
     return 0
+  const source = climate.projectedCirculation ? region : mapped
   const phase = ((month + 0.5) / 12 - 79 / 365 + 1) % 1
   const lower = Math.floor(phase * 4)
   const upper = (lower + 1) % 4
   const t = phase * 4 - lower
   const blend = 0.5 - 0.5 * Math.cos(Math.PI * t)
-  const count = climate.referenceRegionCount
-  const values = climate.circulation[field]
+  const count = climate.projectedCirculation ? climate.regionCount : climate.referenceRegionCount
+  const values = (climate.projectedCirculation ?? climate.circulation)[field]
   return values[lower * count + source] * (1 - blend) + values[upper * count + source] * blend
 }
 
@@ -186,7 +207,9 @@ export function extractMonthlyCirculation(climate: ClimateArtifact): {
   readonly oceanAvailable: Uint8Array
 } {
   const n = climate.regionCount
-  const ref = climate.referenceRegionCount
+  const projected = climate.projectedCirculation
+  const fields = projected ?? climate.circulation
+  const ref = projected ? n : climate.referenceRegionCount
   const windEastMps = new Float32Array(12 * n)
   const windNorthMps = new Float32Array(12 * n)
   const oceanEastMps = new Float32Array(12 * n)
@@ -206,15 +229,15 @@ export function extractMonthlyCirculation(climate: ClimateArtifact): {
     const upperBase = upper * ref
     const monthBase = month * n
     for (let r = 0; r < n; r++) {
-      const geoSource = climate.geographicReference[r]
+      const geoSource = projected ? r : climate.geographicReference[r]
       const index = monthBase + r
-      windEastMps[index] = (climate.circulation.windEast[lowerBase + geoSource] * w0 + climate.circulation.windEast[upperBase + geoSource] * blend) * WIND_MPS_PER_MODEL_UNIT
-      windNorthMps[index] = (climate.circulation.windNorth[lowerBase + geoSource] * w0 + climate.circulation.windNorth[upperBase + geoSource] * blend) * WIND_MPS_PER_MODEL_UNIT
-      const oceanSource = climate.oceanReference[r]
-      if (oceanSource >= 0) {
-        oceanEastMps[index] = (climate.circulation.oceanEast[lowerBase + oceanSource] * w0 + climate.circulation.oceanEast[upperBase + oceanSource] * blend) * OCEAN_MPS_PER_MODEL_UNIT
-        oceanNorthMps[index] = (climate.circulation.oceanNorth[lowerBase + oceanSource] * w0 + climate.circulation.oceanNorth[upperBase + oceanSource] * blend) * OCEAN_MPS_PER_MODEL_UNIT
-        oceanWarmth[index] = climate.circulation.oceanWarmth[lowerBase + oceanSource] * w0 + climate.circulation.oceanWarmth[upperBase + oceanSource] * blend
+      windEastMps[index] = (fields.windEast[lowerBase + geoSource] * w0 + fields.windEast[upperBase + geoSource] * blend) * WIND_MPS_PER_MODEL_UNIT
+      windNorthMps[index] = (fields.windNorth[lowerBase + geoSource] * w0 + fields.windNorth[upperBase + geoSource] * blend) * WIND_MPS_PER_MODEL_UNIT
+      const oceanSource = projected ? r : climate.oceanReference[r]
+      if (oceanAvailable[r]) {
+        oceanEastMps[index] = (fields.oceanEast[lowerBase + oceanSource] * w0 + fields.oceanEast[upperBase + oceanSource] * blend) * OCEAN_MPS_PER_MODEL_UNIT
+        oceanNorthMps[index] = (fields.oceanNorth[lowerBase + oceanSource] * w0 + fields.oceanNorth[upperBase + oceanSource] * blend) * OCEAN_MPS_PER_MODEL_UNIT
+        oceanWarmth[index] = fields.oceanWarmth[lowerBase + oceanSource] * w0 + fields.oceanWarmth[upperBase + oceanSource] * blend
       }
     }
   }
@@ -417,9 +440,11 @@ export function projectClimateC0(output: SphericalMesh, reference: SphericalMesh
       annualMeanTemperatureC[r] += temperatureC[index] / 12
       annualPrecipitationMm[r] += precipitationMm[index]
     }
-    check?.((month + 1) / 12)
+    check?.(0.9 * (month + 1) / 12)
   }
   classifyKoppen(terrain.landMask, n, temperatureC, precipitationMm, output.centers, koppenClass)
-  const oceanReference = mapOceanReference(output, reference, terrain.landMask, surface.landMask, nearestReference)
-  return { meshId: output.meshId, terrainMeshId: terrain.meshId, algorithmVersion: CLIMATE_C0_VERSION, monthsPerYear: 12, layout: 'month-major', regionCount: n, temperatureC, precipitationMm, annualMeanTemperatureC, annualPrecipitationMm, koppenClass, referenceMeshId: reference.meshId, referenceRegionCount: reference.regionCount, geographicReference: Uint32Array.from(nearestReference), oceanReference, circulation: source.circulation }
+  const water = mapOceanReference(output, reference, terrain.landMask, surface.landMask, nearestReference)
+  const oceanReference = water.mapping
+  const projectedCirculation = projectSeasonalCirculation(output, reference, terrain.landMask, surface.landMask, nearestReference, water, source.circulation, fraction => check?.(0.9 + 0.1 * fraction))
+  return { meshId: output.meshId, terrainMeshId: terrain.meshId, algorithmVersion: CLIMATE_C0_VERSION, monthsPerYear: 12, layout: 'month-major', regionCount: n, temperatureC, precipitationMm, annualMeanTemperatureC, annualPrecipitationMm, koppenClass, referenceMeshId: reference.meshId, referenceRegionCount: reference.regionCount, geographicReference: Uint32Array.from(nearestReference), oceanReference, circulation: source.circulation, projectedCirculation }
 }

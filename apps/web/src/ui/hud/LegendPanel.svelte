@@ -1,10 +1,11 @@
 <script lang='ts'>
+  import type { MessageKey } from '@/lib/i18n'
   import type { LayerStatistics } from '@/world-view/layer-statistics'
   import { Check, Copy, Map, X } from '@lucide/svelte'
-  import { t, type MessageKey } from '@/lib/i18n'
-  import { appState } from '@/ui/state/app.svelte'
+  import { t } from '@/lib/i18n'
   import Slider from '@/ui/components/Slider.svelte'
   import Toggle from '@/ui/components/Toggle.svelte'
+  import { appState } from '@/ui/state/app.svelte'
   import { climatePeriodForThematic, MONTHLY_ONLY_THEMATIC_IDS } from './layer-presentation'
 
   interface Props {
@@ -31,32 +32,41 @@
     onCopyStatistics,
   }: Props = $props()
 
+  function gradientBackground(stops: NonNullable<LayerStatistics['gradientStops']>): string {
+    const start = stops[0].value
+    const span = stops.at(-1)!.value - start
+    return `linear-gradient(90deg, ${stops.map(stop => `${stop.color} ${span > 0 ? (stop.value - start) / span * 100 : 0}%`).join(', ')})`
+  }
+
   function formatLayerPercentage(value: number): string {
     return value > 0 && value < 0.01 ? '<0.01%' : `${value.toFixed(2)}%`
   }
 
   const titleKeys: Record<string, MessageKey> = {
-    satellite: 'legend.titles.base',
+    'satellite': 'legend.titles.base',
     'standard-atlas': 'legend.titles.base',
     'physical-relief': 'legend.titles.base',
     'minimal-light': 'legend.titles.base',
     'minimal-dark': 'legend.titles.base',
     'historical-parchment': 'legend.titles.base',
-    temperature: 'legend.titles.temperature',
+    'temperature': 'legend.titles.temperature',
     'annual-temperature': 'legend.titles.annualTemperature',
-    precipitation: 'legend.titles.precipitation',
+    'precipitation': 'legend.titles.precipitation',
     'annual-precipitation': 'legend.titles.annualPrecipitation',
     'wind-speed': 'legend.titles.windSpeed',
+    'annual-wind-speed': 'legend.titles.annualWindSpeed',
     'ocean-speed': 'legend.titles.oceanSpeed',
-    koppen: 'legend.titles.koppen',
-    biomes: 'legend.titles.biomes',
+    'annual-ocean-speed': 'legend.titles.annualOceanSpeed',
+    'koppen': 'legend.titles.koppen',
+    'biomes': 'legend.titles.biomes',
     'land-cover': 'legend.titles.landCover',
-    elevation: 'legend.titles.elevation',
-    plates: 'legend.titles.plates',
-    continents: 'legend.titles.continents',
-    runoff: 'legend.titles.runoff',
-    snow: 'legend.titles.snow',
-    basins: 'legend.titles.basins',
+    'elevation': 'legend.titles.elevation',
+    'dem': 'legend.titles.dem',
+    'plates': 'legend.titles.plates',
+    'continents': 'legend.titles.continents',
+    'runoff': 'legend.titles.runoff',
+    'snow': 'legend.titles.snow',
+    'basins': 'legend.titles.basins',
   }
 
   function statisticsTitle(mode: string, title: string, month?: number): string {
@@ -138,7 +148,7 @@
             {/if}
             {#if layerStatistics.gradientStops && layerStatistics.gradientStops.length >= 2}
               <div class='mt-2 flex flex-col gap-1'>
-                <div class='h-2 w-full rounded-full border border-white/10' style:background={`linear-gradient(90deg, ${layerStatistics.gradientStops.map(s => s.color).join(', ')})`}></div>
+                <div class='h-2 w-full rounded-full border border-white/10' style:background={gradientBackground(layerStatistics.gradientStops)}></div>
                 <div class='flex justify-between font-mono text-[9px] text-obs-text-dim'>
                   <span>{layerStatistics.gradientStops[0].value}{layerStatistics.unit ? ` ${layerStatistics.unit}` : ''}</span>
                   <span>{layerStatistics.gradientStops.at(-1)?.value}{layerStatistics.unit ? ` ${layerStatistics.unit}` : ''}</span>

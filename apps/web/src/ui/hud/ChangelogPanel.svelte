@@ -7,14 +7,14 @@
   function categoryTitle(title: string | null): string {
     if (!title)
       return ''
-    switch (title) {
+    switch (title.toLowerCase()) {
       case 'chore': return t('changelog.categories.chore')
       case 'feat': return t('changelog.categories.feat')
       case 'fix': return t('changelog.categories.fix')
-      case 'Patch Changes': return t('changelog.categories.patchChanges')
-      case 'Minor Changes': return t('changelog.categories.minorChanges')
-      case 'Major Changes': return t('changelog.categories.majorChanges')
-      case 'Refactors': return t('changelog.categories.refactors')
+      case 'patch changes': return t('changelog.categories.patchChanges')
+      case 'minor changes': return t('changelog.categories.minorChanges')
+      case 'major changes': return t('changelog.categories.majorChanges')
+      case 'refactors': return t('changelog.categories.refactors')
       default: return title
     }
   }
@@ -31,7 +31,7 @@
   <div class='pointer-events-auto fixed inset-0 z-60 bg-black/40 backdrop-blur-sm'>
     <button type='button' class='absolute inset-0 h-full w-full cursor-default' aria-label={t('changelog.close')} onclick={() => appState.changelogOpen = false}></button>
     <div
-      class='absolute top-[8vh] left-1/2 z-10 flex max-h-[82dvh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e20]/95 text-obs-text-main shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-xl'
+      class='absolute top-[8vh] left-1/2 z-10 flex max-h-[82dvh] w-[min(40rem,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e20]/85 text-obs-text-main shadow-[0_16px_48px_rgba(0,0,0,0.55)] backdrop-blur-md'
       role='dialog'
       aria-modal='true'
       aria-labelledby='changelog-panel-title'

@@ -14,6 +14,8 @@ import {
   KOPPEN_PALETTE_HEX,
   LAND_COVER_LABELS_ZH,
   LAND_COVER_PALETTE_HEX,
+  OCEAN_SPEED_COLOR_STOPS,
+  WIND_SPEED_COLOR_STOPS,
 } from '@another-earth/cartography'
 import { KOPPEN_CODES } from '@another-earth/world-core'
 import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
@@ -56,6 +58,7 @@ interface StatisticBucket {
 }
 
 const numberFormat = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1, useGrouping: false })
+const speedNumberFormat = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 3, useGrouping: false })
 
 function computeWeightedSummary(
   reader: WorldMapReader,
@@ -151,12 +154,13 @@ function buildIntervalBuckets(
   unit: string,
   customLabels?: readonly string[],
 ): StatisticBucket[] {
+  const formatter = unit === 'm/s' ? speedNumberFormat : numberFormat
   return Array.from({ length: thresholds.length + 1 }, (_, index) => {
     const defaultLabel = index === 0
-      ? `< ${numberFormat.format(thresholds[0])}${unit ? ` ${unit}` : ''}`
+      ? `< ${formatter.format(thresholds[0])}${unit ? ` ${unit}` : ''}`
       : index === thresholds.length
-        ? `≥ ${numberFormat.format(thresholds[index - 1])}${unit ? ` ${unit}` : ''}`
-        : `${numberFormat.format(thresholds[index - 1])} 至 < ${numberFormat.format(thresholds[index])}${unit ? ` ${unit}` : ''}`
+        ? `≥ ${formatter.format(thresholds[index - 1])}${unit ? ` ${unit}` : ''}`
+        : `${formatter.format(thresholds[index - 1])} 至 < ${formatter.format(thresholds[index])}${unit ? ` ${unit}` : ''}`
     return {
       key: String(index),
       label: customLabels?.[index] ?? defaultLabel,
@@ -363,34 +367,41 @@ export function buildLayerStatisticsFromReader(
     }
   }
 
-  // 2. Wind speed & ocean speed
-  if (thematicId === 'wind-speed' || thematicId === 'ocean-speed') {
-    const isOcean = thematicId === 'ocean-speed'
+  // 2. Wind speed & ocean speed. Annual speed is the mean of the 12 monthly speeds.
+  if (thematicId === 'wind-speed' || thematicId === 'ocean-speed' || thematicId === 'annual-wind-speed' || thematicId === 'annual-ocean-speed') {
+    const isOcean = thematicId === 'ocean-speed' || thematicId === 'annual-ocean-speed'
+    const isAnnual = thematicId === 'annual-wind-speed' || thematicId === 'annual-ocean-speed'
     if (!reader.capabilities.hasCirculation) {
       return {
         mode: thematicId,
-        title: isOcean ? '表层洋流速度' : '10m 月均风速',
+        title: isOcean ? (isAnnual ? '表层洋流年平均速度' : '表层洋流速度') : (isAnnual ? '10m 年平均风速' : '10m 风速'),
         totalCells: count,
         totalAreaKm2: 0,
         rows: [],
         description: '当前世界快照不包含月度大气/海洋环流场数据。',
         measure: 'cells',
-        month,
+        ...(!isAnnual ? { month } : {}),
       }
     }
 
     const landMask = reader.field('landMask')
     const oceanAvailable = reader.field('oceanAvailable')
-    const eastField = reader.monthlyField(isOcean ? 'oceanEastMps' : 'windEastMps', month)
-    const northField = reader.monthlyField(isOcean ? 'oceanNorthMps' : 'windNorthMps', month)
+    const annualSpeed = isAnnual
+      ? reader.field(isOcean ? 'annualOceanSpeedMps' : 'annualWindSpeedMps')
+      : undefined
+    const eastField = isAnnual ? undefined : reader.monthlyField(isOcean ? 'oceanEastMps' : 'windEastMps', month)
+    const northField = isAnnual ? undefined : reader.monthlyField(isOcean ? 'oceanNorthMps' : 'windNorthMps', month)
 
-    const thresholds = isOcean ? [0.02, 0.05, 0.1, 0.15, 0.2] : [1, 2, 4, 6, 8]
-    const colors = ['#16324f', '#18537a', '#1b7885', '#3b9e6e', '#9ebd46', '#f28f27']
+    const stops = legend?.kind === 'continuous'
+      ? legend.stops
+      : isOcean ? OCEAN_SPEED_COLOR_STOPS : WIND_SPEED_COLOR_STOPS
+    const thresholds = stops.slice(1).map(stop => stop.value)
+    const colors = stops.map(stop => stop.color)
     const buckets = buildIntervalBuckets(thresholds, colors, 'm/s')
     if (isOcean) {
       buckets.push(
-        { key: 'no-data', label: '无流速数据', color: '#475569' },
-        { key: 'land', label: '陆地', color: '#8b9968' },
+        { key: 'no-data', label: '无流速数据', color: '#9aa3ad' },
+        { key: 'land', label: '陆地', color: '#f7f4ef' },
       )
     }
 
@@ -399,7 +410,9 @@ export function buildLayerStatisticsFromReader(
         return 'land'
       if (isOcean && oceanAvailable.get(r) === 0)
         return 'no-data'
-      const speed = Math.hypot(eastField.get(r), northField.get(r))
+      const speed = annualSpeed
+        ? annualSpeed.get(r)
+        : Math.hypot(eastField!.get(r), northField!.get(r))
       if (!Number.isFinite(speed))
         return isOcean ? 'no-data' : null
       const idx = thresholds.findIndex(t => speed < t)
@@ -408,18 +421,20 @@ export function buildLayerStatisticsFromReader(
 
     return {
       mode: thematicId,
-      title: `${isOcean ? '估算表层洋流速度分布' : '估算 10 米风速分布'}（第 ${month + 1} 月）`,
+      title: isOcean
+        ? (isAnnual ? '估算表层洋流年平均速度' : `估算表层洋流速度分布（第 ${month + 1} 月）`)
+        : (isAnnual ? '估算 10 米年平均风速' : `估算 10 米风速分布（第 ${month + 1} 月）`),
       totalCells: count,
       totalAreaKm2,
       rows,
       description: isOcean
-        ? '按估算表层流速分级；可配合“洋流箭头”覆盖层查看流向与冷暖性质。'
-        : '按估算 10 米等效风速分级；可配合“风向箭头”覆盖层查看近地表风向。',
+        ? '按估算表层流速连续着色；可配合“洋流箭头”覆盖层查看流向与冷暖性质。'
+        : '按估算 10 米等效风速连续着色；可配合“风向箭头”覆盖层查看近地表风向。',
       measure: 'cells',
-      month,
+      ...(!isAnnual ? { month } : {}),
       legendKind: 'continuous',
       unit: 'm/s',
-      gradientStops: legend?.kind === 'continuous' ? legend.stops : undefined,
+      gradientStops: stops,
     }
   }
 
@@ -482,11 +497,13 @@ export function buildLayerStatisticsFromReader(
     }
   }
 
-  // 5. Elevation
-  if (thematicId === 'elevation') {
+  // 5. Colored elevation and the grayscale map share the same field and intervals.
+  if (thematicId === 'elevation' || thematicId === 'dem') {
     const elevationKm = reader.field('elevationKm')
     const thresholds = [0, 0.5, 1, 2, 4]
-    const colors = ['#174d81', '#075537', '#27853c', '#9bc75a', '#efd18c', '#ba4033']
+    const colors = thematicId === 'dem'
+      ? ['#000000', '#090909', '#1c1c1c', '#383838', '#707070', '#bababa']
+      : ['#174d81', '#075537', '#27853c', '#9bc75a', '#efd18c', '#ba4033']
     const labels = ['< 0 km（海洋）', '0 至 < 0.5 km', '0.5 至 < 1 km', '1 至 < 2 km', '2 至 < 4 km', '≥ 4 km']
     const buckets = buildIntervalBuckets(thresholds, colors, 'km', labels)
     const { rows, totalAreaKm2 } = accumulateBuckets(reader, buckets, (r) => {
@@ -497,7 +514,7 @@ export function buildLayerStatisticsFromReader(
     const landSummary = computeWeightedSummary(reader, r => elevationKm.get(r), true)
     return {
       mode: thematicId,
-      title: '高程分布',
+      title: thematicId === 'dem' ? '高程灰度图' : '高程分布',
       totalCells: count,
       totalAreaKm2,
       rows,

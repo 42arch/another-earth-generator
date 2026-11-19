@@ -288,7 +288,22 @@ describe('worldMapReader & circulation closure', () => {
     const legacyReader = createWorldMapReader(legacyDecoded)
     expect(legacyReader.capabilities.hasCirculation).toBe(false)
     expect(() => legacyReader.field('oceanAvailable')).toThrow('Climate circulation is unavailable')
+    expect(() => legacyReader.field('annualWindSpeedMps')).toThrow('Climate circulation is unavailable')
+    expect(() => legacyReader.field('annualOceanSpeedMps')).toThrow('Climate circulation is unavailable')
     expect(() => legacyReader.monthlyField('windSpeedMps', 0)).toThrow('Climate circulation is unavailable')
+
+    const annualWind = restoredReader.field('annualWindSpeedMps')
+    const annualOcean = restoredReader.field('annualOceanSpeedMps')
+    for (let r = 0; r < snapshot.mesh.regionCount; r += 17) {
+      let windSum = 0
+      let oceanSum = 0
+      for (let month = 0; month < 12; month++) {
+        windSum += restoredReader.monthlyField('windSpeedMps', month).get(r)
+        oceanSum += restoredReader.monthlyField('oceanSpeedMps', month).get(r)
+      }
+      expect(annualWind.get(r)).toBeCloseTo(windSum / 12, 5)
+      expect(annualOcean.get(r)).toBeCloseTo(oceanSum / 12, 5)
+    }
 
     // Zero mutable TypedArray / ArrayBuffer leakage across all reader surfaces
     expect(hasNoTypedArrayOrBuffer(restoredReader)).toBe(true)

@@ -1,6 +1,6 @@
 # 世界数据与生成产物契约
 
-> 更新：2026-11-18。本页定义跨模块的权威契约。实现以源码和测试为准；逐阶段字段表、单位和模型限制见 [契约参考快照](WORLD_DATA_CONTRACTS_REFERENCE.md)，Stage 执行规则见 [生成管线](GENERATION_PIPELINE.md)。当前 `WorldSnapshot` Schema 为 3。
+> 更新：2026-11-20。本页定义跨模块的权威契约。实现以源码和测试为准；逐阶段字段表、单位和模型限制见 [契约参考快照](WORLD_DATA_CONTRACTS_REFERENCE.md)，Stage 执行规则见 [生成管线](GENERATION_PIPELINE.md)。当前 `WorldSnapshot` Schema 为 3。
 
 ## 数据类别与所有权
 
@@ -28,6 +28,12 @@
 - 图、实体引用和字段索引必须指向同一 Mesh/快照范围内的有效对象；稳定 ID 不依赖数组顺序或显示名称。
 
 具体字段的 dtype、形状、单位、有效范围、来源和失效关系由对应 TypeScript 契约与运行时验证器定义。新增或改变公开字段时，更新源码、校验、消费者及本文件或 [契约参考](WORLD_DATA_CONTRACTS_REFERENCE.md) 中受影响的条目。
+
+## 环流重采样
+
+`climate-c0-v22` 的 C0 阶段产物新增可选 `projectedCirculation`：`windEast`、`windNorth`、`oceanEast`、`oceanNorth`、`oceanWarmth` 各为 Float32/4N，season-major，模型相对单位，向量位于输出格切平面。直接生成的参考场可省略此项；投影产物优先通过它提供查询及月度发布，原 `circulation`、`geographicReference` 和 `oceanReference` 继续保存参考场与来源/可用性。投影字段须有限，暖度在 [-1, 1]，`oceanReference === -1` 的区域所有投影洋流字段为零。
+
+`extractMonthlyCirculation` 与单点查询共同使用重采样值和原标定系数。Schema 3 的 `nature.climate.circulation` 结构、单位与所有权不变；`oceanAvailable` 继续区分陆地/缺测与有效静止水域，年速度为 12 个月向量模长的均值。旧快照读取其已保存数组，不在恢复时套用新生成规则。旧 C0 缓存由 Stage 版本失效。细节及固定 Seed 对照见 [环流显示分析](benchmarks/M1.2-circulation-display.md)。
 
 ## 内容包与命名
 

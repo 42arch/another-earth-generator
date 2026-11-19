@@ -46,7 +46,7 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | terrain | terrain-v27 | mesh、geology、tectonics、tectonic-elevation |
 | geographic-regions | geographic-regions-v3 | mesh、geology、terrain |
 | geographic-names | geographic-names-v4 | geographic-regions；内容键 `geographic-naming-style` |
-| climate-c0 | climate-c0-v21 | mesh、reference-mesh、geology、terrain |
+| climate-c0 | climate-c0-v22 | mesh、reference-mesh、geology、terrain |
 | cryosphere-i0 | cryosphere-i0-v1 | mesh、terrain、climate-c0 |
 | hydrology-h0 | hydrology-h0-v4 | mesh、terrain、climate-c0、cryosphere-i0 |
 | static-lakes-l1 | static-lakes-l1-v10 | mesh、terrain、climate-c0、hydrology-h0 |
@@ -118,7 +118,9 @@ E0 从与水文平行的 DAG 分支运行：读取 C0 的 12 个等时长气候�
 
 T0 v24 小水体连通性已通过 3 Seed × L4/L5/L6 基准：未发现低于四个 L5 网格等效面积的封闭水体残留，海洋连通分量为 1–3。terrain-v20 历史数据仍只代表旧版基线。后续 `hydrology-h0-v2` 河网密度校准将动态汇水面积底线由 8×提高到 16×；L6 固定 Seed 样本河道区域数减少约 39–44%，详见 [河网密度校准基准](benchmarks/M1.3A-river-density-calibration.json)。L1 v4 过滤单网格组件后，3 Seed × L4/L5/L6 的湖泊数量为 L4 0–2、L5 3–7、L6 33–39；统计见 [M1.3B 静态湖泊基准](benchmarks/M1.3B-static-lakes.json)。
 
-当前 C0 使用输出面积聚合到参考 Mesh，空参考格退回最近输出格。在参考格计算四季风、洋流、月温和月雨，先汇总初估年降水与潜在蒸散，再用其比值限制最终月雨求解中的陆地水汽供给。以三个邻近参考格优先同海陆投影温雨，气温直减率仅应用于最终陆地，并按物理面积修正全球月降水体积。洋流查询使用独立的同水体参考映射。`climate-c0-v21` 延续 v20 的东岸中纬温差、冬季离岸气流降雨抑制和 1100 km 陆向传播，并按东岸暴露度平方增强夏季迎风降雨。仍读取原有自转、倾角、公转周期、温度偏移及降水倍率，物理半径来自 Mesh。风噪声沿用 v2 随机流键，产物按 v21 Stage 版本参与缓存签名，I0/H0/L1/E0 通过依赖签名重算。月份选择属于显示状态。 [v21 草原/Dwa 调整](benchmarks/M1.2-Dwa-v21-steppe-adjustment.md) · [v20 Dwa 校准](benchmarks/M1.2-Dwa-v20-adjustment.md) · [v19 Dwa 校准](benchmarks/M1.2-Dwa-v19-adjustment.md) · [v18 Csa/Csb 校准](benchmarks/M1.2-Csa-Csb-v18-adjustment.md) · [v17 Csa 范围校准](benchmarks/M1.2-Csa-v17-adjustment.md) · [v16 陆地水汽再循环对照](benchmarks/M1.2-land-water-limited-recycling.md) · [v15 大陆冬季与背风干燥对照](benchmarks/M1.2-continental-dryness.md) · [v14 副热带沙漠对照](benchmarks/M1.2-subtropical-desert.md) · [v13 西岸与内陆降水对照](benchmarks/M1.2-west-coast-inland-rainfall.md) · [v12 历史校准](benchmarks/M1.2-climate-calibration.md)
+当前 C0 使用输出面积聚合到参考 Mesh，空参考格退回最近输出格。在参考格计算四季风、洋流、月温和月雨，先汇总初估年降水与潜在蒸散，再用其比值限制最终月雨求解中的陆地水汽供给。以三个邻近参考格优先同海陆投影温雨，气温直减率仅应用于最终陆地，并按物理面积修正全球月降水体积。洋流查询使用独立的同水体参考映射。`climate-c0-v21` 延续 v20 的东岸中纬温差、冬季离岸气流降雨抑制和 1100 km 陆向传播，并按东岸暴露度平方增强夏季迎风降雨。仍读取原有自转、倾角、公转周期、温度偏移及降水倍率，物理半径来自 Mesh。风噪声沿用 v2 随机流键，产物按 v22 Stage 版本参与缓存签名，I0/H0/L1/E0 通过依赖签名重算。月份选择属于显示状态。 [v21 草原/Dwa 调整](benchmarks/M1.2-Dwa-v21-steppe-adjustment.md) · [v20 Dwa 校准](benchmarks/M1.2-Dwa-v20-adjustment.md) · [v19 Dwa 校准](benchmarks/M1.2-Dwa-v19-adjustment.md) · [v18 Csa/Csb 校准](benchmarks/M1.2-Csa-Csb-v18-adjustment.md) · [v17 Csa 范围校准](benchmarks/M1.2-Csa-v17-adjustment.md) · [v16 陆地水汽再循环对照](benchmarks/M1.2-land-water-limited-recycling.md) · [v15 大陆冬季与背风干燥对照](benchmarks/M1.2-continental-dryness.md) · [v14 副热带沙漠对照](benchmarks/M1.2-subtropical-desert.md) · [v13 西岸与内陆降水对照](benchmarks/M1.2-west-coast-inland-rainfall.md) · [v12 历史校准](benchmarks/M1.2-climate-calibration.md)
+
+`climate-c0-v22` 在温雨投影后新增输出网格的四季环流重采样：风优先同海陆多源加权，洋流只取同一最终水体所属的相邻参考海水源；向量先沿大圆平行移动到输出切平面再混合。`projectedCirculation` 供查询与月度快照提取共同读取，保留原始参考场与原缺测掩码。参考环流、温雨公式和随机流键不变；C0 版本变化仍使下游依赖缓存失效。固定 Seed 数据分析、色阶依据及未验证范围见 [v22 环流显示分析](benchmarks/M1.2-circulation-display.md)。
 
 T0 复用参考 `TerrainErosionProcessor`，按内部塑形坐标运行水力/冰川侵蚀及锐化、土壤蠕动前的排水重建；当前不把其流量诊断作为正式河网事实，也不读取 C0 降雨。
 

@@ -156,7 +156,7 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
     id: 'world-surface',
     kind: 'raster',
     monthly: false,
-    adapterVersion: 'surface-raster-v1',
+    adapterVersion: 'surface-raster-v2',
     properties: [
       'landMask',
       'elevationKm',
@@ -165,6 +165,8 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
       'plateIndex',
       'annualTemperatureC',
       'annualPrecipitationMm',
+      'annualWindSpeedMps',
+      'annualOceanSpeedMps',
       'koppenClass',
       'biomeIndex',
       'landCoverIndex',

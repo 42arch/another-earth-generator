@@ -120,10 +120,6 @@ const transportWinds = phases.map((_, month) => makeMonthlyWind(
   spatial,
   interpolateMonthlyForcing(fields, month, config.climate.axialTiltDegrees, config.climate.orbitalPeriodDays),
 ))
-function sample(values: Float32Array, source: number, month: number) {
-  const { lower, upper, blend } = phases[month]
-  return values[lower * count + source] * (1 - blend) + values[upper * count + source] * blend
-}
 function addAlignment(key: string, area: number, windE: number, windN: number, currentE: number, currentN: number) {
   const windSpeed = Math.hypot(windE, windN)
   const currentSpeed = Math.hypot(currentE, currentN)
@@ -175,8 +171,8 @@ for (let region = 0; region < mesh.regionCount; region++) {
   let maximumCurrentE = -Infinity
   let hasCurrent = false
   for (let month = 0; month < 12; month++) {
-    const windE = sample(fields.windEast, source, month)
-    const windN = sample(fields.windNorth, source, month)
+    const windE = sampleClimateCirculation(climate, region, month, 'windEast')
+    const windN = sampleClimateCirculation(climate, region, month, 'windNorth')
     const currentE = sampleClimateCirculation(climate, region, month, 'oceanEast')
     const currentN = sampleClimateCirculation(climate, region, month, 'oceanNorth')
     const warmth = sampleClimateCirculation(climate, region, month, 'oceanWarmth')
@@ -239,7 +235,7 @@ process.stdout.write(`${JSON.stringify({
   seed,
   config,
   versions: { terrain: terrain.algorithmVersion, climate: climate.algorithmVersion },
-  scope: 'Wind and current are source-reference model-relative vector components sampled onto the output Mesh; annual vectors are the mean of twelve equal-duration bins, not a published artifact.',
+  scope: 'Wind and current are model-relative vector components resampled into output-local tangent frames; annual vectors are the mean of twelve equal-duration bins, not a published artifact.',
   regionCount: mesh.regionCount,
   referenceRegionCount: count,
   area: { landKm2: outputLandAreaKm2, oceanKm2: outputOceanAreaKm2, coastMaskMismatchShare: coastMismatchAreaKm2 / (outputLandAreaKm2 + outputOceanAreaKm2), oceanZeroCurrentShare: oceanWithZeroCurrentAreaKm2 / outputOceanAreaKm2, oceanWithoutReferenceShare: oceanWithoutReferenceAreaKm2 / outputOceanAreaKm2, landCurrentLeakShare: landWithCurrentAreaKm2 / outputLandAreaKm2 },

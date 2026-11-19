@@ -280,9 +280,11 @@ export {
   LAND_COVER_PALETTE_HEX,
   MINIMAL_DARK_STYLE_PRESET,
   MINIMAL_LIGHT_STYLE_PRESET,
+  OCEAN_SPEED_COLOR_STOPS,
   PHYSICAL_RELIEF_STYLE_PRESET,
   SATELLITE_STYLE_PRESET,
   STANDARD_ATLAS_STYLE_PRESET,
+  WIND_SPEED_COLOR_STOPS,
 } from './styles/presets'
 export type { BuiltinMapStylePresetId } from './styles/presets'
 export { readStyleBackgroundColor, StyleValidationError } from './styles/spec'

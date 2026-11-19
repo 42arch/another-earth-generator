@@ -49,26 +49,21 @@ export const VIEW_MODE_OPTIONS: readonly { readonly id: MapViewportMode, readonl
 
 export const LAYER_GROUPS = [
   {
-    label: '地形与构造',
+    label: '地质',
     items: [
       { id: 'elevation', label: '高程', icon: Mountain },
+      { id: 'dem', label: '高程灰度图', icon: Mountain },
       { id: 'plates', label: '构造板块', icon: Workflow },
       { id: 'continents', label: '陆海分区', icon: Globe },
     ],
   },
   {
-    label: '气候与环流',
+    label: '气候',
     items: [
       { id: 'temperature', label: '气温', icon: Thermometer },
       { id: 'precipitation', label: '降水量', icon: CloudRain },
-      { id: 'koppen', label: 'Köppen 气候带', icon: Thermometer },
-      { id: 'wind-speed', label: '10m 月均风速', icon: Wind },
+      { id: 'wind-speed', label: '10m 风速', icon: Wind },
       { id: 'ocean-speed', label: '表层洋流速度', icon: Waves },
-    ],
-  },
-  {
-    label: '水文与冰雪',
-    items: [
       { id: 'snow', label: '月度积雪水当量', icon: Snowflake },
       { id: 'runoff', label: '年径流深', icon: Waves },
       { id: 'basins', label: '水文流域', icon: Compass },
@@ -77,6 +72,7 @@ export const LAYER_GROUPS = [
   {
     label: '生态与覆盖',
     items: [
+      { id: 'koppen', label: 'Köppen 气候带', icon: Thermometer },
       { id: 'biomes', label: '潜在生物群系', icon: Globe },
       { id: 'land-cover', label: '自然地表覆盖', icon: Layers },
     ],
@@ -87,12 +83,14 @@ export const LAYER_GROUPS = [
 export const CLIMATE_PERIOD_LAYERS = [
   { buttonId: 'temperature', annualId: 'annual-temperature', monthlyId: 'temperature' },
   { buttonId: 'precipitation', annualId: 'annual-precipitation', monthlyId: 'precipitation' },
+  { buttonId: 'wind-speed', annualId: 'annual-wind-speed', monthlyId: 'wind-speed' },
+  { buttonId: 'ocean-speed', annualId: 'annual-ocean-speed', monthlyId: 'ocean-speed' },
 ] as const
 
 export type ClimatePeriodLayer = (typeof CLIMATE_PERIOD_LAYERS)[number]
 
 /** 没有年统计对应项、必须按月份读取的专题。 */
-export const MONTHLY_ONLY_THEMATIC_IDS = ['snow', 'wind-speed', 'ocean-speed'] as const
+export const MONTHLY_ONLY_THEMATIC_IDS = ['snow'] as const
 
 export function climatePeriodByButtonId(id: string): ClimatePeriodLayer | undefined {
   return CLIMATE_PERIOD_LAYERS.find(layer => layer.buttonId === id)

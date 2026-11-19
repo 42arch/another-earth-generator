@@ -1,6 +1,35 @@
 import type { MapStyleDocument, MapStyleLayer, StyleTokenValue } from '../spec'
 import { linearRgbToHex } from '../compiler'
 
+/**
+ * Fixed m/s scales shared by monthly/annual maps, legends and statistics.
+ * Earth Nullschool-inspired dark-blue/cyan/green ramps without a white midpoint.
+ * Wind extends into warm tones; currents retain a predominantly blue/teal character.
+ * Visual reference: https://earth.nullschool.net/ (adapted colors, not an exact palette copy).
+ * Anchors follow area-weighted seed 1024/L7 and 42/L6 distributions; see M1.2-circulation-display.md.
+ */
+export const WIND_SPEED_COLOR_STOPS = Object.freeze([
+  { value: 0, color: '#142b66' },
+  { value: 2, color: '#245c9a' },
+  { value: 5, color: '#268eac' },
+  { value: 8, color: '#35ac93' },
+  { value: 12, color: '#80bd69' },
+  { value: 16, color: '#c4c55c' },
+  { value: 25, color: '#d99549' },
+  { value: 40, color: '#bd5a53' },
+  { value: 65, color: '#a45d9b' },
+].map(stop => Object.freeze(stop)))
+
+export const OCEAN_SPEED_COLOR_STOPS = Object.freeze([
+  { value: 0, color: '#101e52' },
+  { value: 0.03, color: '#194b87' },
+  { value: 0.055, color: '#246da3' },
+  { value: 0.08, color: '#248caa' },
+  { value: 0.10, color: '#3aa99c' },
+  { value: 0.14, color: '#84bb76' },
+  { value: 0.21, color: '#ccbd63' },
+].map(stop => Object.freeze(stop)))
+
 export type BuiltinMapStylePresetId
   = | 'satellite'
     | 'standard-atlas'
@@ -394,6 +423,35 @@ function buildSharedThematicLayers(): readonly MapStyleLayer[] {
       },
     },
     {
+      id: 'thematic-dem',
+      type: 'raster',
+      source: 'world-surface',
+      slot: 'thematic',
+      thematicId: 'dem',
+      legend: {
+        title: '高程灰度图',
+        unit: 'km',
+        fieldName: 'elevationKm',
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['==', ['get', 'landMask'], 0],
+          '#000000',
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'elevationKm'],
+            0,
+            '#000000',
+            6.5,
+            '#f2f2f2',
+          ],
+        ],
+        'raster-opacity': 1,
+      },
+    },
+    {
       id: 'thematic-plates',
       type: 'fill',
       source: 'plate-areas',
@@ -538,19 +596,38 @@ function buildSharedThematicLayers(): readonly MapStyleLayer[] {
           ['!', ['has', 'windSpeedMps']],
           '#374151',
           [
-            'step',
+            'interpolate',
+            ['linear'],
             ['get', 'windSpeedMps'],
-            '#16324f',
-            1,
-            '#18537a',
-            2,
-            '#1b7885',
-            4,
-            '#3b9e6e',
-            6,
-            '#9ebd46',
-            8,
-            '#f28f27',
+            ...WIND_SPEED_COLOR_STOPS.flatMap(stop => [stop.value, stop.color]),
+          ],
+        ],
+        'raster-opacity': 1,
+      },
+    },
+    {
+      id: 'thematic-annual-wind-speed',
+      type: 'raster',
+      source: 'world-surface',
+      slot: 'thematic',
+      thematicId: 'annual-wind-speed',
+      legend: {
+        title: '10m 年平均风速',
+        unit: 'm/s',
+        fieldName: 'annualWindSpeedMps',
+        noDataLabel: '无环流数据',
+        noDataColor: '#374151',
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['!', ['has', 'annualWindSpeedMps']],
+          '#374151',
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'annualWindSpeedMps'],
+            ...WIND_SPEED_COLOR_STOPS.flatMap(stop => [stop.value, stop.color]),
           ],
         ],
         'raster-opacity': 1,
@@ -567,29 +644,50 @@ function buildSharedThematicLayers(): readonly MapStyleLayer[] {
         unit: 'm/s',
         fieldName: 'oceanSpeedMps',
         noDataLabel: '陆地或缺测海域',
-        noDataColor: '#475569',
+        noDataColor: '#9aa3ad',
       },
       paint: {
         'raster-color': [
           'case',
           ['!=', ['get', 'landMask'], 0],
-          '#8b9968',
+          '#f7f4ef',
           ['!', ['has', 'oceanSpeedMps']],
-          '#475569',
+          '#9aa3ad',
           [
-            'step',
+            'interpolate',
+            ['linear'],
             ['get', 'oceanSpeedMps'],
-            '#16324f',
-            0.02,
-            '#18537a',
-            0.05,
-            '#1b7885',
-            0.1,
-            '#3b9e6e',
-            0.15,
-            '#9ebd46',
-            0.2,
-            '#f28f27',
+            ...OCEAN_SPEED_COLOR_STOPS.flatMap(stop => [stop.value, stop.color]),
+          ],
+        ],
+        'raster-opacity': 1,
+      },
+    },
+    {
+      id: 'thematic-annual-ocean-speed',
+      type: 'raster',
+      source: 'world-surface',
+      slot: 'thematic',
+      thematicId: 'annual-ocean-speed',
+      legend: {
+        title: '表层洋流年平均速度',
+        unit: 'm/s',
+        fieldName: 'annualOceanSpeedMps',
+        noDataLabel: '陆地或缺测海域',
+        noDataColor: '#9aa3ad',
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['!=', ['get', 'landMask'], 0],
+          '#f7f4ef',
+          ['!', ['has', 'annualOceanSpeedMps']],
+          '#9aa3ad',
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'annualOceanSpeedMps'],
+            ...OCEAN_SPEED_COLOR_STOPS.flatMap(stop => [stop.value, stop.color]),
           ],
         ],
         'raster-opacity': 1,

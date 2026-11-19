@@ -60,10 +60,17 @@ export function buildWorldSurfaceRasterSource(
   cacheKey: string,
 ): RasterCellSource {
   const { meshId, regionCount } = reader.identity
-  const { hasGeographicRegions, hasSeaClassification } = reader.capabilities
+  const { hasGeographicRegions, hasSeaClassification, hasCirculation } = reader.capabilities
   const sentinelView = (!hasGeographicRegions || !hasSeaClassification)
     ? createConstantSentinelFieldView(meshId, regionCount, -1)
     : undefined
+  const unavailableMask = !hasCirculation
+    ? createConstantSentinelFieldView(meshId, regionCount, 0)
+    : undefined
+  const zeroSlice = !hasCirculation
+    ? createConstantSentinelFieldView(meshId, regionCount, 0)
+    : undefined
+  const oceanAvailableView = hasCirculation ? reader.field('oceanAvailable') : unavailableMask!
 
   const fields: Record<string, RasterFieldDescriptor> = {
     landMask: { name: 'landMask', view: reader.field('landMask') },
@@ -73,6 +80,18 @@ export function buildWorldSurfaceRasterSource(
     plateIndex: { name: 'plateIndex', view: reader.field('plateIndex'), noDataValue: -1 },
     annualTemperatureC: { name: 'annualTemperatureC', view: reader.field('annualMeanTemperatureC'), unit: '°C' },
     annualPrecipitationMm: { name: 'annualPrecipitationMm', view: reader.field('annualPrecipitationMm'), unit: 'mm/年' },
+    annualWindSpeedMps: {
+      name: 'annualWindSpeedMps',
+      view: hasCirculation ? reader.field('annualWindSpeedMps') : zeroSlice!,
+      unit: 'm/s',
+      ...(hasCirculation ? {} : { availableMask: unavailableMask }),
+    },
+    annualOceanSpeedMps: {
+      name: 'annualOceanSpeedMps',
+      view: hasCirculation ? reader.field('annualOceanSpeedMps') : zeroSlice!,
+      unit: 'm/s',
+      availableMask: oceanAvailableView,
+    },
     koppenClass: { name: 'koppenClass', view: reader.field('koppenClass') },
     biomeIndex: { name: 'biomeIndex', view: reader.field('potentialBiomeIndex') },
     landCoverIndex: { name: 'landCoverIndex', view: reader.field('landCoverIndex') },

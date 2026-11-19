@@ -18,6 +18,8 @@ export type WorldMapFieldName
     | 'seaIndex'
     | 'annualMeanTemperatureC'
     | 'annualPrecipitationMm'
+    | 'annualWindSpeedMps'
+    | 'annualOceanSpeedMps'
     | 'koppenClass'
     | 'oceanAvailable'
     | 'downstreamRegion'
@@ -608,6 +610,23 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   let surfaceDetailView: FieldView | undefined
   const windSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
   const oceanSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
+  let annualWindSpeedView: FieldView | undefined
+  let annualOceanSpeedView: FieldView | undefined
+
+  const meanMonthlySpeed = (east: Float32Array, north: Float32Array, available?: Uint8Array): Float32Array => {
+    const speeds = new Float32Array(count)
+    for (let region = 0; region < count; region++) {
+      if (available && available[region] === 0)
+        continue
+      let sum = 0
+      for (let month = 0; month < 12; month++) {
+        const index = month * count + region
+        sum += Math.hypot(east[index], north[index])
+      }
+      speeds[region] = sum / 12
+    }
+    return speeds
+  }
 
   let platesCache: readonly { readonly id: string }[] | undefined
   let geoRegionsCache: GeographicMapRegions | null | undefined
@@ -755,6 +774,26 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
           throw new Error('Sea classification is unavailable in this world')
         case 'annualMeanTemperatureC': return createFieldView(nature.climate.annualMeanTemperatureC)
         case 'annualPrecipitationMm': return createFieldView(nature.climate.annualPrecipitationMm)
+        case 'annualWindSpeedMps': {
+          const circulation = nature.climate.circulation
+          if (!circulation)
+            throw new Error('Climate circulation is unavailable in this world')
+          annualWindSpeedView ??= createFieldView({
+            meshId,
+            values: meanMonthlySpeed(circulation.windEastMps.values, circulation.windNorthMps.values),
+          })
+          return annualWindSpeedView
+        }
+        case 'annualOceanSpeedMps': {
+          const circulation = nature.climate.circulation
+          if (!circulation)
+            throw new Error('Climate circulation is unavailable in this world')
+          annualOceanSpeedView ??= createFieldView({
+            meshId,
+            values: meanMonthlySpeed(circulation.oceanEastMps.values, circulation.oceanNorthMps.values, circulation.oceanAvailable.values),
+          })
+          return annualOceanSpeedView
+        }
         case 'koppenClass': return createFieldView(nature.climate.koppenClass)
         case 'oceanAvailable':
           if (nature.climate.circulation)

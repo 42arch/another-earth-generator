@@ -1,7 +1,7 @@
 import type { TerrainArtifact } from '#generation/nature/geography'
 import { describe, expect, it } from 'vitest'
 import { createSphericalMesh } from '#mesh/spherical-mesh'
-import { aggregateClimateSurface, DEFAULT_CLIMATE_PARAMETERS, generateClimateC0, projectClimateC0, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C, validateClimateArtifact } from './climate'
+import { aggregateClimateSurface, DEFAULT_CLIMATE_PARAMETERS, extractMonthlyCirculation, generateClimateC0, projectClimateC0, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C, validateClimateArtifact } from './climate'
 import { interpolateMonthlyForcing } from './monthly-forcing'
 
 const mesh = createSphericalMesh({ subdivisionLevel: 0, physicalRadiusKm: 6371 })
@@ -87,6 +87,7 @@ describe('preliminary monthly climate', () => {
     const reference = { ...terrain, landMask: new Uint8Array(mesh.regionCount).fill(1) }
     reference.landMask[0] = 0
     const source = generateClimateC0(mesh, reference, DEFAULT_CLIMATE_PARAMETERS)
+    source.circulation.oceanNorth.fill(0)
     for (let season = 0; season < 4; season++)
       source.circulation.oceanEast[season * mesh.regionCount] = 0.75
     const nearest = new Uint32Array(mesh.regionCount)
@@ -94,11 +95,47 @@ describe('preliminary monthly climate', () => {
     const projected = projectClimateC0(mesh, mesh, output, reference, source, nearest)
     const sampled = queryClimateRegion(projected, connected, 0)
     expect(sampled.oceanCurrentAvailable).toBe(true)
-    expect(sampled.oceanEast).toBeCloseTo(0.75)
+    expect(Math.hypot(sampled.oceanEast, sampled.oceanNorth)).toBeCloseTo(0.75)
     expect(queryClimateRegion(projected, isolated, 0)).toMatchObject({ oceanCurrentAvailable: false, oceanEast: 0 })
     const land = output.landMask.findIndex(value => value === 1)
     expect(queryClimateRegion(projected, land, 0)).toMatchObject({ oceanCurrentAvailable: false, oceanEast: 0 })
     expect(() => validateClimateArtifact(projected)).not.toThrow()
+  })
+
+  it('uses the same resampled vectors for point queries and published monthly fields', () => {
+    const outputMesh = createSphericalMesh({ subdivisionLevel: 1, physicalRadiusKm: 6371 })
+    const outputTerrain = { meshId: outputMesh.meshId, elevationKm: new Float32Array(outputMesh.regionCount), landMask: new Uint8Array(outputMesh.regionCount) }
+    const nearest = Uint32Array.from({ length: outputMesh.regionCount }, (_, r) => {
+      let best = 0
+      let distance = Infinity
+      for (let i = 0; i < mesh.regionCount; i++) {
+        const d = Math.hypot(...[0, 1, 2].map(axis => outputMesh.centers[3 * r + axis] - mesh.centers[3 * i + axis]))
+        if (d < distance) {
+          distance = d
+          best = i
+        }
+      }
+      return best
+    })
+    const source = generateClimateC0(mesh, terrain, DEFAULT_CLIMATE_PARAMETERS)
+    const original = source.circulation.windEast.slice()
+    const projected = projectClimateC0(outputMesh, mesh, outputTerrain, terrain, source, nearest)
+    const published = extractMonthlyCirculation(projected)
+    expect(source.circulation.windEast).toEqual(original)
+    expect(() => validateClimateArtifact(projected)).not.toThrow()
+    for (let month = 0; month < 12; month++) {
+      for (let r = 0; r < outputMesh.regionCount; r++) {
+        const index = month * outputMesh.regionCount + r
+        const point = queryClimateRegion(projected, r, month)
+        expect(published.windEastMps[index]).toBeCloseTo(point.windEast * 0.257, 5)
+        expect(published.windNorthMps[index]).toBeCloseTo(point.windNorth * 0.257, 5)
+        expect(published.oceanEastMps[index]).toBeCloseTo(point.oceanEast * 0.097, 6)
+        expect(published.oceanNorthMps[index]).toBeCloseTo(point.oceanNorth * 0.097, 6)
+        expect(published.oceanWarmth[index]).toBeCloseTo(point.oceanWarmth, 6)
+      }
+    }
+    projected.projectedCirculation!.oceanEast[0] = Number.NaN
+    expect(() => validateClimateArtifact(projected)).toThrow('projected circulation')
   })
 
   it('reverses the seasonal temperature signal across hemispheres', () => {

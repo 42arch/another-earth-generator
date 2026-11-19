@@ -4,8 +4,10 @@ import {
   BUILTIN_MAP_STYLE_PRESET_LIST,
   BUILTIN_MAP_STYLE_PRESETS,
   compileStyleExpression,
+  OCEAN_SPEED_COLOR_STOPS,
   StyleCompiler,
   StyleValidationError,
+  WIND_SPEED_COLOR_STOPS,
 } from '../index'
 
 describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', () => {
@@ -42,6 +44,22 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
         expect(String(surface?.layout['raster-mode']?.evaluate({ zoom: 0 }))).toBe('satellite')
       }
 
+      const demLegend = compiled.getActiveLegend('dem')
+      expect(demLegend?.kind).toBe('continuous')
+      if (demLegend?.kind === 'continuous') {
+        expect(demLegend.fieldName).toBe('elevationKm')
+        expect(demLegend.unit).toBe('km')
+        expect(demLegend.stops.map(stop => stop.color)).toEqual(['#000000', '#f2f2f2'])
+        expect(demLegend.stops.map(stop => stop.value)).toEqual([0, 6.5])
+      }
+      const demLayers = compiled.getActiveLayers({
+        viewMode: 'atlas',
+        zoom: 2,
+        activeThematicId: 'dem',
+        enabledOverlayIds: [],
+      })
+      expect(demLayers.map(layer => layer.id)).toContain('thematic-dem')
+
       // Continuous thematic legend
       const tempLegend = compiled.getActiveLegend('temperature')
       expect(tempLegend?.kind).toBe('continuous')
@@ -72,6 +90,32 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
       expect(activeIds).toContain('overlay-river-centerlines')
       expect(activeIds).toContain('overlay-geographic-labels')
       expect(activeIds).not.toContain('overlay-plate-boundaries')
+    }
+  })
+
+  it('shares fixed physical speed scales across months, annual views and all presets', () => {
+    const compiler = new StyleCompiler()
+    for (const preset of BUILTIN_MAP_STYLE_PRESET_LIST) {
+      const compiled = compiler.compile(preset)
+      for (const [kind, stops] of [['wind', WIND_SPEED_COLOR_STOPS], ['ocean', OCEAN_SPEED_COLOR_STOPS]] as const) {
+        for (const annual of [false, true]) {
+          const thematicId = `${annual ? 'annual-' : ''}${kind}-speed`
+          const legend = compiled.getActiveLegend(thematicId)
+          expect(legend?.kind).toBe('continuous')
+          if (legend?.kind !== 'continuous')
+            throw new Error('Expected a continuous speed legend')
+          expect(legend.unit).toBe('m/s')
+          expect(legend.stops).toEqual(stops)
+          const layer = compiled.layers.find(layer => layer.thematicId === thematicId)!
+          const color = layer.paint['raster-color']!
+          const field = legend.fieldName
+          expect(color.evaluate({ properties: { landMask: 0, [field]: stops[0].value } })).toBe(stops[0].color)
+          expect(color.evaluate({ properties: { landMask: 0, [field]: stops.at(-1)!.value } })).toBe(stops.at(-1)!.color)
+          expect(color.evaluate({ properties: { landMask: 0, [field]: 1 }, isNoData: name => name === field })).toBe(kind === 'ocean' ? '#9aa3ad' : '#374151')
+          if (kind === 'ocean')
+            expect(color.evaluate({ properties: { landMask: 1, [field]: 0 } })).toBe('#f7f4ef')
+        }
+      }
     }
   })
 

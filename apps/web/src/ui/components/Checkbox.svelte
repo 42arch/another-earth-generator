@@ -83,7 +83,7 @@
           {label}
         {/if}
         {#if description}
-              <Tooltip content={description} delayDuration={100}>
+          <Tooltip content={description} delayDuration={100}>
             <span class='inline-flex cursor-help text-obs-text-dim transition-colors hover:text-white' aria-label={descriptionAriaLabel ?? `${label || '选项'} 说明`}>
               <CircleQuestionMark class='h-3 w-3' />
             </span>

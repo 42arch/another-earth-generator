@@ -59,6 +59,7 @@
 
   const thematicMessageKeys: Record<string, MessageKey> = {
     'elevation': 'layers.thematic.elevation',
+    'dem': 'layers.thematic.dem',
     'plates': 'layers.thematic.plates',
     'continents': 'layers.thematic.continents',
     'temperature': 'layers.thematic.temperature',
@@ -74,10 +75,9 @@
   }
 
   const groupMessageKeys: Record<string, MessageKey> = {
-    elevation: 'layers.groups.terrainTectonics',
-    temperature: 'layers.groups.climateCirculation',
-    snow: 'layers.groups.hydrologyIce',
-    biomes: 'layers.groups.ecologyCover',
+    elevation: 'layers.groups.geology',
+    temperature: 'layers.groups.climate',
+    koppen: 'layers.groups.ecologyCover',
   }
 
   const overlayMessageKeys: Record<string, { label: MessageKey, description: MessageKey }> = {
