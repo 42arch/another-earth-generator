@@ -1,5 +1,12 @@
 # another-earth-generator
 
+## v2.0.2
+
+### Enhancements
+
+- Add elevation grayscale maps and optimize wind field and ocean current visualization. (添加高程灰度图，优化风场和洋流显示效果。)
+
+
 ## v2.0.1
 
 ### Chore
