@@ -10,9 +10,8 @@ export function calculateContentHash(pack: ContentPackHashInput): string {
     namingStyles: pack.namingStyles,
     cultures: pack.cultures,
     peoples: pack.peoples,
-    states: pack.states,
+    polities: pack.polities,
     religions: pack.religions,
-    governments: pack.governments,
     resources: pack.resources,
     presets: pack.presets,
     translations: pack.translations,
@@ -52,12 +51,11 @@ export function createContentCatalog(input: readonly ContentPack[]): ContentCata
       ...pack.names,
       ...pack.cultures,
       ...pack.religions,
-      ...pack.governments,
       ...pack.resources,
       ...pack.presets,
       ...('namingStyles' in pack ? pack.namingStyles : []),
       ...('peoples' in pack ? pack.peoples : []),
-      ...('states' in pack ? pack.states : []),
+      ...('polities' in pack ? pack.polities : []),
     ]
     for (const entry of entries) {
       if (contentIds.has(entry.id))

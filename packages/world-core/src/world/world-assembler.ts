@@ -1,4 +1,7 @@
 import type { ContentPackView, ContentPort } from '#content/content-port'
+import type { PeoplesCulturesArtifact } from '#generation/civilization/peoples-cultures'
+import type { PolitiesReligionsArtifact } from '#generation/civilization/polities-religions'
+import type { TransportNetworkArtifact } from '#generation/civilization/transport-network'
 import type { ClimateArtifact } from '#generation/nature/climate/climate'
 import type { EcologyArtifact } from '#generation/nature/ecology/ecology'
 import type { TerrainArtifact } from '#generation/nature/geography'
@@ -6,17 +9,20 @@ import type { GeographicRegionsArtifact } from '#generation/nature/geography/geo
 import type { GeologyArtifact } from '#generation/nature/geology'
 import type { CryosphereArtifact, HydrologyArtifact } from '#generation/nature/hydrology/hydrology'
 import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
+import type { ResourcePotentialArtifact } from '#generation/nature/resources/resource-potential'
 import type { GenerationInput, PipelineResult, StageRegistry } from '#generation/pipeline'
 import type { NaturalGenerationConfig } from '#generation/stages/natural-stage'
+import type { WorldGenerationPipelineConfig } from '#generation/stages/world-stage'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
+import { DEFAULT_CIVILIZATION_PARAMETERS } from '#generation/civilization/civilization-types'
 import { extractMonthlyCirculation } from '#generation/nature/climate/climate'
 import { normalizeWorldSeed, stableHash } from '#math/random'
 import { WORLD_SCHEMA_VERSION } from './world-snapshot'
 import { validateWorldSnapshot } from './world-validator'
 
-export interface NaturalWorldIdentity {
+export interface WorldIdentity {
   readonly snapshotId: string
   readonly worldId: string
   readonly name: string
@@ -29,13 +35,35 @@ function owned<T extends NumericArray>(meshId: string, values: T): DenseField<T>
   return { meshId, values: values.slice() as T }
 }
 
-/** Assemble a candidate from one completed natural DAG, then run full domain validation. */
-export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationConfig>, result: PipelineResult, registry: StageRegistry, identity: NaturalWorldIdentity, packs: readonly ContentPackView[], content: ContentPort): WorldSnapshot {
+const CIVILIZATION_STAGES = [
+  'resource-potential',
+  'habitability',
+  'population-settlements',
+  'transport-network',
+  'peoples-cultures',
+  'polities-religions',
+] as const
+
+/** Assemble a candidate WorldSnapshot from a completed DAG, then run full domain validation. */
+export function assembleWorld(
+  input: GenerationInput<NaturalGenerationConfig | WorldGenerationPipelineConfig>,
+  result: PipelineResult,
+  registry: StageRegistry,
+  identity: WorldIdentity,
+  packs: readonly ContentPackView[],
+  content: ContentPort,
+): WorldSnapshot {
   const outputs = new Map(result.plan.map(stage => [stage.stageId, stage]))
   for (const stageId of ['mesh', 'geology', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0']) {
     if (!outputs.has(stageId))
       throw new Error(`Missing natural stage ${stageId}`)
   }
+
+  const hasCivilizationStages = CIVILIZATION_STAGES.every(stageId => outputs.has(stageId))
+  const civInput = 'civilization' in input.config ? input.config.civilization : undefined
+  const civParams = civInput ? { ...civInput } : undefined
+  const civilizationEnabled = hasCivilizationStages && (civParams?.enabled ?? DEFAULT_CIVILIZATION_PARAMETERS.enabled)
+
   const mesh = result.getOutput<SphericalMesh>('mesh')
   const geology = result.getOutput<GeologyArtifact>('geology')
   const terrain = result.getOutput<TerrainArtifact>('terrain')
@@ -46,6 +74,20 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
   const hydrology = result.getOutput<HydrologyArtifact>('hydrology-h0')
   const lakes = result.getOutput<StaticLakeArtifact>('static-lakes-l1')
   const ecology = result.getOutput<EcologyArtifact>('ecology-e0')
+
+  const resources = outputs.has('resource-potential')
+    ? result.getOutput<ResourcePotentialArtifact>('resource-potential')
+    : undefined
+  const transport = hasCivilizationStages
+    ? result.getOutput<TransportNetworkArtifact>('transport-network')
+    : undefined
+  const peoplesCultures = hasCivilizationStages
+    ? result.getOutput<PeoplesCulturesArtifact>('peoples-cultures')
+    : undefined
+  const politiesReligions = hasCivilizationStages
+    ? result.getOutput<PolitiesReligionsArtifact>('polities-religions')
+    : undefined
+
   const meshId = mesh.meshId
   const planet = {
     physicalRadiusKm: input.config.planet.physicalRadiusKm,
@@ -66,14 +108,15 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
       name: identity.name,
       createdAt: identity.createdAt,
       seed: normalizeWorldSeed(input.seed),
-      generatorVersion: 'm1-natural-v1',
+      generatorVersion: hasCivilizationStages ? 'm2-world-v1' : 'm1-natural-v1',
       contentSignature: content.calculateContentSignature(packs),
       contentPacks: packs.map(pack => ({ id: pack.manifest.id, version: pack.manifest.version, contentHash: pack.manifest.contentHash })),
       generationConfig: {
         planet,
         mesh: { ...input.config.mesh },
         regionCount: mesh.regionCount,
-        civilizationEnabled: false,
+        civilizationEnabled,
+        ...(civParams ? { civilization: civParams } : {}),
         ...(input.config.reference ? { reference: { ...input.config.reference } } : {}),
         geology: { ...input.config.geology },
         landforms: { ...input.config.landforms },
@@ -157,20 +200,56 @@ export function assembleNaturalWorld(input: GenerationInput<NaturalGenerationCon
         aridityIndex: owned(meshId, ecology.aridityIndex),
         growingSeasonMonths: owned(meshId, ecology.growingSeasonMonths),
       },
+      resources: resources
+        ? {
+            resourceIds: [...resources.resourceIds],
+            agriculturalPotential: owned(meshId, resources.agriculturalPotential),
+            forestryPotential: owned(meshId, resources.forestryPotential),
+            fisheryPotential: owned(meshId, resources.fisheryPotential),
+            deposits: resources.deposits.map(deposit => ({ ...deposit })),
+          }
+        : {
+            resourceIds: [],
+            agriculturalPotential: { meshId, values: new Float32Array(mesh.regionCount) },
+            forestryPotential: { meshId, values: new Float32Array(mesh.regionCount) },
+            fisheryPotential: { meshId, values: new Float32Array(mesh.regionCount) },
+            deposits: [],
+          },
     },
-    civilization: {
-      meshId,
-      species: [],
-      cultures: [],
-      religions: [],
-      polities: [],
-      settlements: [],
-      population: { meshId, values: new Float64Array(mesh.regionCount) },
-      populationGroups: [],
-    },
+    civilization: hasCivilizationStages && peoplesCultures && politiesReligions && transport
+      ? {
+          meshId,
+          peoples: peoplesCultures.peoples.map(item => ({ ...item })),
+          cultures: peoplesCultures.cultures.map(item => ({ ...item })),
+          religions: politiesReligions.religions.map(item => ({ ...item })),
+          polities: politiesReligions.polities.map(item => ({ ...item })),
+          settlements: politiesReligions.settlements.map(item => ({ ...item })),
+          population: owned(meshId, politiesReligions.population),
+          populationGroups: politiesReligions.populationGroups.map(item => ({ ...item })),
+          transport: {
+            nodes: transport.nodes.map(node => ({ ...node })),
+            routes: transport.routes.map(route => ({ ...route, regions: route.regions.slice() })),
+            accessibility: owned(meshId, transport.accessibility),
+          },
+        }
+      : {
+          meshId,
+          peoples: [],
+          cultures: [],
+          religions: [],
+          polities: [],
+          settlements: [],
+          population: { meshId, values: new Float64Array(mesh.regionCount) },
+          populationGroups: [],
+          transport: {
+            nodes: [],
+            routes: [],
+            accessibility: { meshId, values: new Float32Array(mesh.regionCount) },
+          },
+        },
   }
   const validation = validateWorldSnapshot(world, packs, content)
   if (!validation.valid)
-    throw new Error(`Invalid natural world: ${validation.issues[0]?.path}: ${validation.issues[0]?.message}`)
+    throw new Error(`Invalid world snapshot: ${validation.issues[0]?.path}: ${validation.issues[0]?.message}`)
   return world
 }

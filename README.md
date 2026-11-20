@@ -34,4 +34,4 @@ The main documents are in Chinese.
 | [Progress](docs/PROGRESS.md) | Current capabilities, pending work, and validation status |
 | [M1 implementation plan](docs/M1_IMPLEMENTATION_PLAN.md) | Climate, hydrology, erosion, ecology, and world publication |
 
-`packages/world-core` owns generation and domain rules, `packages/world-data` owns content, `packages/cartography` owns mapping, and `apps/web` owns UI and Worker orchestration. `docs/old-src` contains reference code from feat-society and is not part of the new runtime. Historical document snapshots are linked from the current progress page and are not current specifications.
+`packages/world-core` owns generation and domain rules, `packages/world-data` owns content, `packages/cartography` owns mapping, and `apps/web` owns UI and Worker orchestration. Historical document snapshots are linked from the current progress page and are not current specifications.

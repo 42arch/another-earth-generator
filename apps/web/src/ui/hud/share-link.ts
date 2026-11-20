@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CIVILIZATION_PARAMETERS,
   DEFAULT_CLIMATE_PARAMETERS,
   DEFAULT_GEOLOGY_PARAMETERS,
   DEFAULT_HYDROLOGY_PARAMETERS,
@@ -8,8 +9,8 @@ import {
   TEMPERATURE_OFFSET_MIN_C,
 } from '@another-earth/world-core'
 
-/** Current parameter-link version. v2–v8 belong to the previous field layout and are not applied. */
-const SHARE_VERSION = 9
+/** Current parameter-link version. v2–v9 belong to previous field layouts and are not applied. */
+const SHARE_VERSION = 10
 
 const SHARE_FIELDS = [
   'seed',
@@ -39,11 +40,15 @@ const SHARE_FIELDS = [
   'riverDensityMultiplier',
   'minimumRiverDrainageAreaKm2',
   'minimumLakeAreaKm2',
+  'civilizationEnabled',
+  'populationScale',
+  'settlementDensity',
+  'polityCohesion',
 ] as const
 
 export type ShareField = (typeof SHARE_FIELDS)[number]
 
-export type ShareParameters = Record<ShareField, number | string>
+export type ShareParameters = Record<ShareField, number | string | boolean>
 
 /** Values the workbench starts with. Climate tilt and precipitation follow the UI, not the core defaults. */
 export const SHARE_DEFAULT_PARAMETERS: ShareParameters = {
@@ -74,9 +79,13 @@ export const SHARE_DEFAULT_PARAMETERS: ShareParameters = {
   riverDensityMultiplier: DEFAULT_HYDROLOGY_PARAMETERS.riverDensityMultiplier,
   minimumRiverDrainageAreaKm2: DEFAULT_HYDROLOGY_PARAMETERS.minimumRiverDrainageAreaKm2,
   minimumLakeAreaKm2: DEFAULT_HYDROLOGY_PARAMETERS.minimumLakeAreaKm2,
+  civilizationEnabled: DEFAULT_CIVILIZATION_PARAMETERS.enabled,
+  populationScale: DEFAULT_CIVILIZATION_PARAMETERS.populationScale,
+  settlementDensity: DEFAULT_CIVILIZATION_PARAMETERS.settlementDensity,
+  polityCohesion: DEFAULT_CIVILIZATION_PARAMETERS.polityCohesion,
 }
 
-const NUMBER_RANGES: Record<Exclude<ShareField, 'seed'>, readonly [number, number, boolean?]> = {
+const NUMBER_RANGES: Record<Exclude<ShareField, 'seed' | 'civilizationEnabled'>, readonly [number, number, boolean?]> = {
   level: [4, 8, true],
   irregularity: [0, 1],
   primaryPlateCount: [2, 100, true],
@@ -103,11 +112,16 @@ const NUMBER_RANGES: Record<Exclude<ShareField, 'seed'>, readonly [number, numbe
   riverDensityMultiplier: [0.25, 2],
   minimumRiverDrainageAreaKm2: [0, 10_000_000],
   minimumLakeAreaKm2: [0, 10_000_000],
+  populationScale: [0.1, 4],
+  settlementDensity: [0.25, 4],
+  polityCohesion: [0, 1],
 }
 
 function isValidFieldValue(field: ShareField, value: unknown): boolean {
   if (field === 'seed')
     return typeof value === 'string' && value.trim().length > 0 && value.length <= 64
+  if (field === 'civilizationEnabled')
+    return typeof value === 'boolean'
 
   const range = NUMBER_RANGES[field]
   if (typeof value !== 'number' || !Number.isFinite(value))
@@ -142,9 +156,9 @@ async function pipeBytes(bytes: Uint8Array, stream: CompressionStream | Decompre
   return new Uint8Array(buffer)
 }
 
-/** `#w=9.<payload>` — only fields that differ from the workbench defaults, raw-deflated like the previous share hash. */
+/** `#w=10.<payload>` — only fields that differ from the workbench defaults, raw-deflated like the previous share hash. */
 export async function createShareHash(parameters: ShareParameters): Promise<string> {
-  const changedFields: [number, string | number][] = []
+  const changedFields: [number, string | number | boolean][] = []
   for (let index = 0; index < SHARE_FIELDS.length; index++) {
     const field = SHARE_FIELDS[index]
     const value = parameters[field]
@@ -164,7 +178,7 @@ export async function createShareUrl(parameters: ShareParameters): Promise<strin
 }
 
 export async function applyShareHash(hash: string): Promise<ShareParameters | null> {
-  const match = /^#w=9\.([\w-]+)$/.exec(hash)
+  const match = /^#w=10\.([\w-]+)$/.exec(hash)
   if (!match)
     return null
 
@@ -186,7 +200,7 @@ export async function applyShareHash(hash: string): Promise<ShareParameters | nu
       if (!isValidFieldValue(field, value))
         return null
       seenFields.add(fieldIndex)
-      next[field] = value as string | number
+      next[field] = value as string | number | boolean
     }
 
     if (Number(next.primaryPlateCount) + Number(next.microPlateCount) > 100)

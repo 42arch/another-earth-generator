@@ -23,6 +23,8 @@
     viewMode: MapViewportMode
     hasCirculation: boolean | undefined
     hasGeographicNames: boolean | undefined
+    hasResources: boolean | undefined
+    hasCivilization: boolean | undefined
     styleId: BuiltinMapStylePresetId
     activeThematicId: string | null
     surfaceEnabled: boolean
@@ -39,6 +41,8 @@
     viewMode,
     hasCirculation,
     hasGeographicNames,
+    hasResources,
+    hasCivilization,
     styleId = $bindable(),
     activeThematicId = $bindable(),
     surfaceEnabled = $bindable(),
@@ -52,6 +56,7 @@
     'satellite': { label: 'layers.styles.satellite.label', description: 'layers.styles.satellite.description' },
     'standard-atlas': { label: 'layers.styles.standardAtlas.label', description: 'layers.styles.standardAtlas.description' },
     'physical-relief': { label: 'layers.styles.physicalRelief.label', description: 'layers.styles.physicalRelief.description' },
+    'political-atlas': { label: 'layers.styles.politicalAtlas.label', description: 'layers.styles.politicalAtlas.description' },
     'minimal-light': { label: 'layers.styles.minimalLight.label', description: 'layers.styles.minimalLight.description' },
     'minimal-dark': { label: 'layers.styles.minimalDark.label', description: 'layers.styles.minimalDark.description' },
     'historical-parchment': { label: 'layers.styles.historicalParchment.label', description: 'layers.styles.historicalParchment.description' },
@@ -72,12 +77,19 @@
     'basins': 'layers.thematic.basins',
     'biomes': 'layers.thematic.biomes',
     'land-cover': 'layers.thematic.landCover',
+    'agricultural-potential': 'layers.thematic.agriculturalPotential',
+    'deposit-richness': 'layers.thematic.depositRichness',
+    'population-density': 'layers.thematic.populationDensity',
+    'polity-territory': 'layers.thematic.polityTerritory',
+    'culture-dominant': 'layers.thematic.cultureDominant',
+    'religion-dominant': 'layers.thematic.religionDominant',
   }
 
   const groupMessageKeys: Record<string, MessageKey> = {
-    elevation: 'layers.groups.geology',
-    temperature: 'layers.groups.climate',
-    koppen: 'layers.groups.ecologyCover',
+    'elevation': 'layers.groups.geology',
+    'temperature': 'layers.groups.climate',
+    'koppen': 'layers.groups.ecologyCover',
+    'agricultural-potential': 'layers.groups.resourcesCivilization',
   }
 
   const overlayMessageKeys: Record<string, { label: MessageKey, description: MessageKey }> = {
@@ -88,6 +100,23 @@
     'wind-arrows': { label: 'layers.overlays.windArrows.label', description: 'layers.overlays.windArrows.description' },
     'ocean-arrows': { label: 'layers.overlays.oceanArrows.label', description: 'layers.overlays.oceanArrows.description' },
     'labels': { label: 'layers.overlays.labels.label', description: 'layers.overlays.labels.description' },
+    'polity-borders': { label: 'layers.overlays.polityBorders.label', description: 'layers.overlays.polityBorders.description' },
+    'transport-routes': { label: 'layers.overlays.transportRoutes.label', description: 'layers.overlays.transportRoutes.description' },
+    'settlements': { label: 'layers.overlays.settlements.label', description: 'layers.overlays.settlements.description' },
+    'polity-labels': { label: 'layers.overlays.polityLabels.label', description: 'layers.overlays.polityLabels.description' },
+    'settlement-labels': { label: 'layers.overlays.settlementLabels.label', description: 'layers.overlays.settlementLabels.description' },
+  }
+
+  function isCapabilityDisabled(requiresCapability: 'hasCirculation' | 'hasGeographicNames' | 'hasResources' | 'hasCivilization' | undefined): boolean {
+    if (requiresCapability === 'hasCirculation')
+      return hasCirculation === false
+    if (requiresCapability === 'hasGeographicNames')
+      return hasGeographicNames === false
+    if (requiresCapability === 'hasResources')
+      return hasResources === false
+    if (requiresCapability === 'hasCivilization')
+      return hasCivilization === false
+    return false
   }
 
   function setOverlayEnabled(overlayId: string, enabled: boolean): void {
@@ -197,11 +226,13 @@
               <div class='grid grid-cols-2 gap-1.5'>
                 {#each group.items as item (item.id)}
                   {@const period = climatePeriodByButtonId(item.id)}
+                  {@const itemDisabled = isCapabilityDisabled(item.requiresCapability)}
                   <button
                     type='button'
+                    disabled={itemDisabled}
                     aria-pressed={period ? climatePeriodForThematic(activeThematicId)?.buttonId === item.id : activeThematicId === item.id}
                     onclick={() => selectThematic(item.id)}
-                    class="rounded-lg border px-2 py-1.5 text-left text-[10px] transition-colors cursor-pointer {(period ? climatePeriodForThematic(activeThematicId)?.buttonId === item.id : activeThematicId === item.id) ? 'border-obs-primary/45 bg-obs-primary/15 text-obs-primary font-medium' : 'border-white/6 bg-white/2 text-obs-text-muted hover:bg-white/5'}"
+                    class="rounded-lg border px-2 py-1.5 text-left text-[10px] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed {(period ? climatePeriodForThematic(activeThematicId)?.buttonId === item.id : activeThematicId === item.id) ? 'border-obs-primary/45 bg-obs-primary/15 text-obs-primary font-medium' : 'border-white/6 bg-white/2 text-obs-text-muted hover:bg-white/5'}"
                   >
                     {t(thematicMessageKeys[item.id])}
                   </button>
@@ -218,7 +249,7 @@
                 description={t(overlayMessageKeys[item.id].description)}
                 descriptionAriaLabel={t('layers.descriptionFor', { label: t(overlayMessageKeys[item.id].label) })}
                 checked={enabledOverlayIds.includes(item.id)}
-                disabled={item.requiresCapability === 'hasCirculation' ? hasCirculation === false : item.requiresCapability === 'hasGeographicNames' ? hasGeographicNames === false : false}
+                disabled={isCapabilityDisabled(item.requiresCapability)}
                 onchange={value => setOverlayEnabled(item.id, value)}
               />
             {/each}

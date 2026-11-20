@@ -1,6 +1,6 @@
 # Another Earth — 技术设计
 
-> 更新：2026-11-18。本文记录当前有效的架构边界与设计决策，不复述逐阶段实现日志。产品规则见 [PRD](PRD.md)，实现状态见 [PROGRESS](PROGRESS.md)，历史设计快照见 [TECHNICAL_DESIGN_REFERENCE.md](TECHNICAL_DESIGN_REFERENCE.md)。
+> 更新：2026-11-21。本文记录当前有效的架构边界与设计决策，不复述逐阶段实现日志。产品规则见 [PRD](PRD.md)，实现状态见 [PROGRESS](PROGRESS.md)，历史设计快照见 [TECHNICAL_DESIGN_REFERENCE.md](TECHNICAL_DESIGN_REFERENCE.md)。
 
 ## 架构边界
 
@@ -27,13 +27,16 @@
 
 ## 当前实现范围
 
-当前工作区已实现自然世界生成与 Schema 3 发布、`WorldMapReader`、3D Globe、2D Atlas、多投影、地图样式与图层、Worker 编排和区域查询。当前具体能力、验证结论与延期事项以 [PROGRESS](PROGRESS.md) 为准。历史算法沿革、目标设计草图及过往逐轮决策仅供追溯，收录于 [技术设计参考快照](TECHNICAL_DESIGN_REFERENCE.md)；制图引擎细节见 [Cartography-System-Design.md](Cartography-System-Design.md)。
+当前工作区已实现自然与 M2 初始文明生成及 Schema 4 发布、`WorldMapReader`、3D Globe、2D Atlas、多投影、地图样式与图层、Worker 编排和区域查询。当前具体能力、验证结论与延期事项以 [PROGRESS](PROGRESS.md) 为准。历史算法沿革、目标设计草图及过往逐轮决策仅供追溯，收录于 [技术设计参考快照](TECHNICAL_DESIGN_REFERENCE.md)；制图引擎细节见 [Cartography-System-Design.md](Cartography-System-Design.md)。
 
 尚未实现的主要里程碑：
 
-- **M2**：初始文明、资源空间分布及候选内容到世界实体的映射。
 - **M4**：浏览器项目保存、恢复与完整世界档案导入导出。
 - **M5+**：动态文明、完整编辑器、历史与分支；当前只保留必要的数据边界。
+
+## 已定决策与仍有限制
+
+M2 初始人口的权威值仍按区域实际面积（km²）与承载密度相乘。聚落和政体的社会尺度以旧 L6 类地球默认生成的物理面积为校准基线，约 12,453 km²/参考格；输出 Mesh 只决定表示精度。聚落人口从附近区域转移到聚落所在格，保持人口总量与快照的区域归属契约。交通与文化传播的基准行进速度固定在该参考尺度对应的旧默认值。它们是兼容旧量级的校准选择，不代表历史人口密度或城市腹地的实测值。自然输入的网格差异和低分辨率的亚格信息缺失仍可能改变文明结果；固定 Seed 跨等级统计与高等级性能尚待验证。
 
 ## 验收原则
 

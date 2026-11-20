@@ -1,4 +1,4 @@
-import type { ContentPackV1, NamingStyle, StateArchetype } from '../index'
+import type { ContentPackV1, NamingStyle, PolityArchetype } from '../index'
 import { describe, expect, it } from 'vitest'
 import { calculateContentHash, calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, loadBuiltinCatalog, validateContentPack } from '../index'
 
@@ -22,10 +22,9 @@ function culturePack(dependency: ContentPackV1, namingStyleId = dependency.namin
     names: [],
     namingStyles: [],
     peoples: [],
-    states: [],
+    polities: [],
     cultures: [{ id: 'test:culture/first', displayNameKey: 'culture', tags: [], traits: [], namingStyleId }],
     religions: [],
-    governments: [],
     resources: [],
     presets: [],
     translations: { en: { pack: 'Cultures', culture: 'First' } },
@@ -92,9 +91,9 @@ describe('naming styles in content packs', () => {
   it('uses the current v1 content projection for naming-style packs', () => {
     const original = createNamingStylePack(style())
     expect(original.manifest.schemaVersion).toBe(1)
-    const state = {
-      id: 'test:state/republic',
-      displayNameKey: 'state.republic',
+    const polity = {
+      id: 'test:polity/republic',
+      displayNameKey: 'polity.republic',
       tags: [],
       politicalForm: 'republic',
       governmentOrganization: 'presidential',
@@ -103,8 +102,8 @@ describe('naming styles in content packs', () => {
       legislatureTitle: 'Assembly',
       succession: 'elective',
       weight: 1,
-    } satisfies StateArchetype
-    const changed = { ...original, states: [state] }
+    } satisfies PolityArchetype
+    const changed = { ...original, polities: [polity] }
     expect(calculateContentHash(changed)).not.toBe(original.manifest.contentHash)
   })
 })

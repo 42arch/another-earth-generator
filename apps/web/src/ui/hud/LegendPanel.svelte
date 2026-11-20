@@ -46,6 +46,7 @@
     'satellite': 'legend.titles.base',
     'standard-atlas': 'legend.titles.base',
     'physical-relief': 'legend.titles.base',
+    'political-atlas': 'legend.titles.base',
     'minimal-light': 'legend.titles.base',
     'minimal-dark': 'legend.titles.base',
     'historical-parchment': 'legend.titles.base',
@@ -67,6 +68,12 @@
     'runoff': 'legend.titles.runoff',
     'snow': 'legend.titles.snow',
     'basins': 'legend.titles.basins',
+    'agricultural-potential': 'legend.titles.agriculturalPotential',
+    'deposit-richness': 'legend.titles.depositRichness',
+    'population-density': 'legend.titles.populationDensity',
+    'polity-territory': 'legend.titles.polityTerritory',
+    'culture-dominant': 'legend.titles.cultureDominant',
+    'religion-dominant': 'legend.titles.religionDominant',
   }
 
   function statisticsTitle(mode: string, title: string, month?: number): string {

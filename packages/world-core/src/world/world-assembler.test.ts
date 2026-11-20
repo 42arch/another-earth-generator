@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { testContentPack, testContentPort, testNamingStyle, testPipelineContent } from '#content/test-content'
 import {
-  assembleNaturalWorld,
+  assembleWorld,
   createNaturalPipeline,
   decodeWorldArchive,
   DEFAULT_CLIMATE_PARAMETERS,
@@ -31,12 +31,12 @@ const input = {
 }
 const identity = { snapshotId: 'snapshot:natural-test', worldId: 'world:natural-test', name: 'Natural Test', createdAt: '2026-11-12T00:00:00Z' }
 
-describe('natural world publication', () => {
+describe('world assembly & publication', () => {
   it('assembles all natural facts, validates them and round trips a full archive', async () => {
     const pipeline = createNaturalPipeline()
     const packs = [testContentPack]
     const result = await pipeline.execute({ ...input, ...testPipelineContent(packs) })
-    const candidate = assembleNaturalWorld(input, result, pipeline.registry, identity, packs, testContentPort)
+    const candidate = assembleWorld(input, result, pipeline.registry, identity, packs, testContentPort)
     expect(candidate.schemaVersion).toBe(WORLD_SCHEMA_VERSION)
     expect(candidate.metadata.contentSignature).toBe(testContentPort.calculateContentSignature(packs))
     expect(candidate.metadata.contentPacks.map(pack => pack.id)).toEqual(['test:core'])
@@ -87,7 +87,7 @@ describe('natural world publication', () => {
   it('keeps the last valid world through rejected candidates and hides mutable storage', async () => {
     const pipeline = createNaturalPipeline()
     const packs = [testContentPack]
-    const candidate = assembleNaturalWorld(input, await pipeline.execute({ ...input, ...testPipelineContent(packs) }), pipeline.registry, identity, packs, testContentPort)
+    const candidate = assembleWorld(input, await pipeline.execute({ ...input, ...testPipelineContent(packs) }), pipeline.registry, identity, packs, testContentPort)
     const store = new WorldStore(testContentPort)
     store.publish(candidate, packs)
     const firstContinent = candidate.nature.geography.regions?.continents[0]

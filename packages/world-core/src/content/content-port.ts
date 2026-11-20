@@ -1,6 +1,70 @@
 /** `namespace:domain/name`. Pack validation, not world-core, checks the pattern. */
 export type ContentId = `${string}:${string}/${string}`
 
+export interface PeopleArchetypeView {
+  readonly id: string
+  readonly displayNameKey: string
+  readonly description?: string
+  readonly tags: readonly string[]
+}
+
+export interface CultureArchetypeView {
+  readonly id: string
+  readonly displayNameKey: string
+  readonly description?: string
+  readonly tags: readonly string[]
+  readonly namingStyleId: ContentId
+  readonly traits: readonly string[]
+}
+
+export interface ReligionArchetypeView {
+  readonly id: string
+  readonly displayNameKey: string
+  readonly description?: string
+  readonly tags: readonly string[]
+  readonly organization: 'decentralized' | 'hierarchical'
+  readonly traits: readonly string[]
+  readonly tolerance: number
+  readonly spreadBias: number
+  readonly weight: number
+}
+
+export type PolityPoliticalForm
+  = 'republic' | 'empire' | 'dynastic-monarchy' | 'federation' | 'confederation'
+    | 'chiefdom' | 'emirate' | 'khanate' | 'league' | 'free-territory' | 'kingdom'
+    | 'principality' | 'theocracy' | 'merchant-republic' | 'city-state' | 'sultanate'
+    | 'tribal-confederation' | 'military-junta' | 'protectorate' | 'commune'
+
+export type PolityGovernmentOrganization
+  = 'centralized' | 'parliamentary' | 'presidential' | 'federal-council' | 'confederal-assembly'
+    | 'tribal-council' | 'theocratic-hierarchy' | 'merchant-council' | 'military-command'
+    | 'rotating-delegation' | 'chartered-administration'
+
+export type PolitySuccession = 'hereditary' | 'elective' | 'appointed' | 'rotating' | 'collective' | 'mixed'
+
+export interface PolityArchetypeView {
+  readonly id: string
+  readonly displayNameKey: string
+  readonly description?: string
+  readonly tags: readonly string[]
+  readonly politicalForm: PolityPoliticalForm
+  readonly governmentOrganization: PolityGovernmentOrganization
+  readonly headOfStateTitle: string
+  readonly headOfGovernmentTitle: string | null
+  readonly legislatureTitle: string | null
+  readonly succession: PolitySuccession
+  readonly weight: number
+}
+
+export interface ResourceDefinitionView {
+  readonly id: string
+  readonly displayNameKey: string
+  readonly description?: string
+  readonly tags: readonly string[]
+  readonly category: 'mineral' | 'biological' | 'energy'
+  readonly geologyTags: readonly string[]
+}
+
 /** Structural view of a content pack. world-data owns the real packs; world-core only reads these fields. */
 export interface ContentPackView {
   readonly manifest: {
@@ -11,11 +75,13 @@ export interface ContentPackView {
   }
   readonly names: readonly { readonly id: string }[]
   readonly namingStyles?: readonly NamingStyleView[]
-  readonly cultures: readonly { readonly id: string }[]
-  readonly religions: readonly { readonly id: string }[]
-  readonly governments: readonly { readonly id: string }[]
-  readonly resources: readonly { readonly id: string }[]
+  readonly peoples: readonly PeopleArchetypeView[]
+  readonly cultures: readonly CultureArchetypeView[]
+  readonly religions: readonly ReligionArchetypeView[]
+  readonly polities: readonly PolityArchetypeView[]
+  readonly resources: readonly ResourceDefinitionView[]
   readonly presets: readonly { readonly id: string }[]
+  readonly translations?: Readonly<Record<string, Readonly<Record<string, string>>>>
 }
 
 export interface ContentValidationIssue {
@@ -74,17 +140,49 @@ export interface EcologyVocabulary {
   readonly landCover: readonly EcologyClassView[]
 }
 
+export interface CivilizationContentBundle {
+  readonly peoples: readonly PeopleArchetypeView[]
+  readonly cultures: readonly CultureArchetypeView[]
+  readonly religions: readonly ReligionArchetypeView[]
+  readonly polities: readonly PolityArchetypeView[]
+  readonly namingStyles: readonly NamingStyleView[]
+  readonly translations: Readonly<Record<string, Readonly<Record<string, string>>>>
+}
+
+function fnv1a32(text: string): string {
+  let hash = 0x811C9DC5
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0')
+}
+
 /** Stable identity of the id/code pairs actually used to index an ecology artifact. */
 export function ecologyVocabularySignature(vocabulary: EcologyVocabulary): string {
   const rows = [
     ...vocabulary.biomes.map(item => ['biome', item.id, item.code]),
     ...vocabulary.landCover.map(item => ['land-cover', item.id, item.code]),
   ]
-  let hash = 0x811C9DC5
-  const text = JSON.stringify(rows)
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193)
+  return `ecology-classes:${fnv1a32(JSON.stringify(rows))}`
+}
+
+/** Stable identity of natural resource definitions consumed by resource-potential stage. */
+export function resourceDefinitionsSignature(resources: readonly ResourceDefinitionView[]): string {
+  const rows = [...resources]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(item => [item.id, item.category, [...item.geologyTags].sort()])
+  return `resource-definitions:${fnv1a32(JSON.stringify(rows))}`
+}
+
+/** Stable identity of civilization content archetypes and naming styles consumed by society stages. */
+export function civilizationContentSignature(bundle: CivilizationContentBundle): string {
+  const payload = {
+    peoples: [...bundle.peoples].sort((a, b) => a.id.localeCompare(b.id)).map(p => [p.id, p.tags]),
+    cultures: [...bundle.cultures].sort((a, b) => a.id.localeCompare(b.id)).map(c => [c.id, c.namingStyleId, c.traits]),
+    religions: [...bundle.religions].sort((a, b) => a.id.localeCompare(b.id)).map(r => [r.id, r.organization, r.tolerance, r.spreadBias, r.weight, r.traits]),
+    polities: [...bundle.polities].sort((a, b) => a.id.localeCompare(b.id)).map(s => [s.id, s.politicalForm, s.governmentOrganization, s.headOfStateTitle, s.headOfGovernmentTitle, s.legislatureTitle, s.succession, s.weight]),
+    namingStyles: [...bundle.namingStyles].sort((a, b) => a.id.localeCompare(b.id)).map(n => [n.id, n.version, n.language, n.pools, n.rules]),
   }
-  return `ecology-classes:${(hash >>> 0).toString(16).padStart(8, '0')}`
+  return `civilization-content:${fnv1a32(JSON.stringify(payload))}`
 }

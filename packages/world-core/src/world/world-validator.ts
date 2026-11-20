@@ -57,9 +57,23 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     add('range', 'metadata.generationConfig.mesh', 'Invalid mesh generation parameters')
   if (config.mesh && config.mesh.seed !== undefined && !((typeof config.mesh.seed === 'string' && nonempty(config.mesh.seed)) || (typeof config.mesh.seed === 'number' && Number.isSafeInteger(config.mesh.seed))))
     add('range', 'metadata.generationConfig.mesh.seed', 'Invalid mesh seed override')
+  if (config.civilization !== undefined) {
+    const civ = config.civilization
+    if (typeof civ.enabled !== 'boolean' || civ.enabled !== config.civilizationEnabled
+      || !finite(civ.populationScale) || civ.populationScale < 0.1 || civ.populationScale > 4
+      || !finite(civ.settlementDensity) || civ.settlementDensity < 0.25 || civ.settlementDensity > 4
+      || !finite(civ.polityCohesion) || civ.polityCohesion < 0 || civ.polityCohesion > 1) {
+      add('range', 'metadata.generationConfig.civilization', 'Invalid civilization generation parameters')
+    }
+  }
   const naturalStages = ['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0']
   if (!m.provenance || !nonempty(m.provenance.configSignature) || naturalStages.some(stage => !nonempty(m.provenance.stageVersions?.[stage]) || !nonempty(m.provenance.artifactSignatures?.[stage])))
     add('required', 'metadata.provenance', 'Complete natural stage versions and signatures are required')
+  if (config.civilizationEnabled) {
+    const civilizationStages = ['resource-potential', 'habitability', 'population-settlements', 'transport-network', 'peoples-cultures', 'polities-religions']
+    if (!m.provenance || civilizationStages.some(stage => !nonempty(m.provenance.stageVersions?.[stage]) || !nonempty(m.provenance.artifactSignatures?.[stage])))
+      add('required', 'metadata.provenance', 'Complete civilization stage versions and signatures are required when civilization is enabled')
+  }
   const requiredParameters = { geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS }
   for (const key of ['geology', 'landforms', 'terrain', 'climate', 'hydrology'] as const) {
     const parameters = config[key] as unknown as Record<string, number> | undefined
@@ -110,7 +124,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
   }
   const contentIds = new Set<string>()
   for (const pack of selected) {
-    for (const domain of ['names', 'cultures', 'religions', 'governments', 'resources', 'presets'] as const) {
+    for (const domain of ['names', 'peoples', 'cultures', 'religions', 'polities', 'resources', 'presets'] as const) {
       for (const entry of pack[domain]) {
         if (contentIds.has(entry.id))
           add('duplicate', 'content', `Conflicting ID ${entry.id}`)
@@ -152,9 +166,12 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     }
   }
   const archetypes = {
+    peoples: new Set(selected.flatMap(p => p.peoples.map(a => a.id))),
     cultures: new Set(selected.flatMap(p => p.cultures.map(a => a.id))),
     religions: new Set(selected.flatMap(p => p.religions.map(a => a.id))),
-    governments: new Set(selected.flatMap(p => p.governments.map(a => a.id))),
+    polities: new Set(selected.flatMap(p => p.polities.map(a => a.id))),
+    resources: new Map(selected.flatMap(p => p.resources.map(a => [a.id, a] as const))),
+    namingStyles: new Set(selected.flatMap(p => (p.namingStyles ?? []).map(a => a.id))),
   }
   function field(path: string, f: DenseField<NumericArray>, dtype: string, length: number, valid: (v: number) => boolean) {
     if (f.meshId !== mesh.meshId)
@@ -173,6 +190,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     }
   }
   const nonnegative = (v: number) => v >= 0
+  const unitScalar = (v: number) => v >= 0 && v <= 1
   field('geology.plateIndex', n.geology.plateIndex, 'Uint32Array', count, v => v < n.geology.plates.length)
   field('geology.crustType', n.geology.crustType, 'Uint8Array', count, v => v === 0 || v === 1)
   field('geography.elevationKm', n.geography.elevationKm, 'Float32Array', count, v => v + planet.physicalRadiusKm + planet.seaLevelDatumKm > 0)
@@ -299,7 +317,39 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
   field('ecology.landCoverIndex', n.ecology.landCoverIndex, 'Uint16Array', count, v => v < n.ecology.landCoverIds.length)
   field('ecology.aridityIndex', n.ecology.aridityIndex, 'Float32Array', count, nonnegative)
   field('ecology.growingSeasonMonths', n.ecology.growingSeasonMonths, 'Uint8Array', count, v => v <= 12)
+  if (!n.resources || typeof n.resources !== 'object') {
+    add('required', 'nature.resources', 'Natural resources state is required')
+  }
+  else {
+    field('nature.resources.agriculturalPotential', n.resources.agriculturalPotential, 'Float32Array', count, unitScalar)
+    field('nature.resources.forestryPotential', n.resources.forestryPotential, 'Float32Array', count, unitScalar)
+    field('nature.resources.fisheryPotential', n.resources.fisheryPotential, 'Float32Array', count, unitScalar)
+    if (!Array.isArray(n.resources.resourceIds) || new Set(n.resources.resourceIds).size !== n.resources.resourceIds.length)
+      add('duplicate', 'nature.resources.resourceIds', 'Expected unique resource IDs')
+    const declaredResources = new Set(n.resources.resourceIds ?? [])
+    for (const [i, id] of (n.resources.resourceIds ?? []).entries()) {
+      if (!nonempty(id) || !archetypes.resources.has(id))
+        add('reference', `nature.resources.resourceIds[${i}]`, 'Unresolved resource definition')
+    }
+    const depositIds = new Set<string>()
+    for (const [i, deposit] of (n.resources.deposits ?? []).entries()) {
+      if (!nonempty(deposit.id) || depositIds.has(deposit.id))
+        add('duplicate', `nature.resources.deposits[${i}].id`, 'Duplicate or empty deposit ID')
+      depositIds.add(deposit.id)
+      const def = archetypes.resources.get(deposit.resourceId)
+      if (!declaredResources.has(deposit.resourceId) || !def || def.category !== deposit.category)
+        add('reference', `nature.resources.deposits[${i}].resourceId`, 'Invalid resource reference or category')
+      if (!region(deposit.regionId))
+        add('reference', `nature.resources.deposits[${i}].regionId`, 'Invalid deposit region')
+      if (!finite(deposit.richness) || deposit.richness <= 0 || deposit.richness > 1 || !nonempty(deposit.primaryFactor))
+        add('range', `nature.resources.deposits[${i}]`, 'Invalid deposit richness or primary factor')
+    }
+  }
   field('civilization.population', c.population, 'Float64Array', count, nonnegative)
+  if (!c.transport || typeof c.transport !== 'object')
+    add('required', 'civilization.transport', 'Transport network state is required')
+  else
+    field('civilization.transport.accessibility', c.transport.accessibility, 'Float32Array', count, unitScalar)
   for (const [path, ids] of [['geology.plates', n.geology.plates.map(p => p.id)], ['ecology.potentialBiomeIds', n.ecology.potentialBiomeIds], ['ecology.landCoverIds', n.ecology.landCoverIds]] as const) {
     if (!ids.length || ids.some(id => !nonempty(id)) || new Set(ids).size !== ids.length)
       add('duplicate', path, 'Expected nonempty unique classification IDs')
@@ -533,7 +583,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
   if (c.meshId !== mesh.meshId)
     add('reference', 'civilization.meshId', 'Civilization belongs to another mesh')
   const allIds = new Set<string>()
-  const entities = [c.species, c.cultures, c.religions, c.polities, c.settlements] as const
+  const entities = [c.peoples, c.cultures, c.religions, c.polities, c.settlements] as const
   function checkEntity(entity: WorldEntity) {
     if (!nonempty(entity.id) || !nonempty(entity.name))
       add('required', 'civilization.entities', 'Entity needs stable ID and name')
@@ -544,29 +594,33 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       add('range', `civilization.${entity.id}.foundedAtYear`, 'Entity cannot be founded after snapshot time')
   }
   entities.forEach(list => list.forEach(checkEntity))
-  const species = new Set(c.species.map(e => e.id))
+  const peoples = new Set(c.peoples.map(e => e.id))
   const cultures = new Map(c.cultures.map(e => [e.id, e]))
   const religions = new Set(c.religions.map(e => e.id))
   const polities = new Map(c.polities.map(e => [e.id, e]))
   const settlements = new Map(c.settlements.map(e => [e.id, e]))
+  for (const e of c.peoples) {
+    if (!archetypes.peoples.has(e.archetypeId))
+      add('reference', `peoples.${e.id}`, 'Invalid people archetype')
+  }
   for (const e of c.cultures) {
-    if (!species.has(e.speciesId) || !archetypes.cultures.has(e.archetypeId))
-      add('reference', `cultures.${e.id}`, 'Invalid species or culture archetype')
+    if (!peoples.has(e.peopleId) || !archetypes.cultures.has(e.archetypeId) || !archetypes.namingStyles.has(e.namingStyleId))
+      add('reference', `cultures.${e.id}`, 'Invalid people, culture archetype or naming style')
   }
   for (const e of c.religions) {
     if (!archetypes.religions.has(e.archetypeId))
       add('reference', `religions.${e.id}`, 'Invalid religion archetype')
   }
   for (const e of c.polities) {
-    if (!cultures.has(e.cultureId) || !archetypes.governments.has(e.governmentArchetypeId))
-      add('reference', `polities.${e.id}`, 'Invalid culture or government archetype')
+    if (!cultures.has(e.cultureId) || !archetypes.polities.has(e.archetypeId))
+      add('reference', `polities.${e.id}`, 'Invalid culture or polity archetype')
     if (e.capitalSettlementId !== null && settlements.get(e.capitalSettlementId)?.polityId !== e.id)
       add('reference', `polities.${e.id}.capitalSettlementId`, 'Capital must belong to polity')
   }
   const totals = new Map<number, number>()
   const urban = new Map<number, number>()
   for (const [i, g] of c.populationGroups.entries()) {
-    if (!region(g.regionId) || !species.has(g.speciesId) || cultures.get(g.cultureId)?.speciesId !== g.speciesId || (g.religionId !== null && !religions.has(g.religionId)) || (g.polityId !== null && !polities.has(g.polityId)))
+    if (!region(g.regionId) || !peoples.has(g.peopleId) || cultures.get(g.cultureId)?.peopleId !== g.peopleId || (g.religionId !== null && !religions.has(g.religionId)) || (g.polityId !== null && !polities.has(g.polityId)))
       add('reference', `populationGroups[${i}]`, 'Invalid region or affiliation')
     if (!finite(g.population) || g.population < 0)
       add('population', `populationGroups[${i}]`, 'Invalid population')
@@ -579,7 +633,58 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       add('population', `settlements.${e.id}`, 'Invalid population')
     urban.set(e.regionId, (urban.get(e.regionId) ?? 0) + e.population)
   }
-  if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0))
+  if (c.transport && typeof c.transport === 'object') {
+    const nodeById = new Map<string, number>()
+    for (const [i, node] of (c.transport.nodes ?? []).entries()) {
+      if (!nonempty(node.id) || nodeById.has(node.id))
+        add('duplicate', `civilization.transport.nodes[${i}].id`, 'Duplicate or empty transport node ID')
+      if (!region(node.regionId))
+        add('reference', `civilization.transport.nodes[${i}].regionId`, 'Invalid transport node region')
+      if (node.settlementId !== null && !settlements.has(node.settlementId))
+        add('reference', `civilization.transport.nodes[${i}].settlementId`, 'Invalid transport node settlement')
+      nodeById.set(node.id, node.regionId)
+    }
+    const routeIds = new Set<string>()
+    for (const [i, route] of (c.transport.routes ?? []).entries()) {
+      if (!nonempty(route.id) || routeIds.has(route.id))
+        add('duplicate', `civilization.transport.routes[${i}].id`, 'Duplicate or empty transport route ID')
+      routeIds.add(route.id)
+      if (!['road', 'river', 'sea'].includes(route.mode) || !finite(route.cost) || route.cost <= 0 || !finite(route.trafficScore) || route.trafficScore < 0)
+        add('range', `civilization.transport.routes[${i}]`, 'Invalid transport route mode, cost or traffic score')
+      const fromRegion = nodeById.get(route.fromNodeId)
+      const toRegion = nodeById.get(route.toNodeId)
+      if (fromRegion === undefined || toRegion === undefined || route.fromNodeId === route.toNodeId)
+        add('reference', `civilization.transport.routes[${i}]`, 'Invalid transport route endpoints')
+      if (!(route.regions instanceof Uint32Array) || route.regions.length < 2) {
+        add('topology', `civilization.transport.routes[${i}].regions`, 'Transport route must traverse at least two regions')
+        continue
+      }
+      if (fromRegion !== undefined && toRegion !== undefined && (route.regions[0] !== fromRegion || route.regions[route.regions.length - 1] !== toRegion))
+        add('topology', `civilization.transport.routes[${i}].regions`, 'Transport route endpoints disagree with node regions')
+      for (let k = 0; k < route.regions.length; k++) {
+        const r = route.regions[k]
+        if (!region(r)) {
+          add('topology', `civilization.transport.routes[${i}].regions[${k}]`, 'Invalid transport route region')
+          break
+        }
+        if (full && k > 0) {
+          const prev = route.regions[k - 1]
+          let adjacent = false
+          for (let edge = mesh.neighborOffsets[prev]; edge < mesh.neighborOffsets[prev + 1]; edge++) {
+            if (mesh.neighbors[edge] === r) {
+              adjacent = true
+              break
+            }
+          }
+          if (!adjacent) {
+            add('topology', `civilization.transport.routes[${i}].regions`, 'Transport route steps must be mesh-adjacent')
+            break
+          }
+        }
+      }
+    }
+  }
+  if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0 || (c.transport?.nodes.length ?? 0) > 0 || (c.transport?.routes.length ?? 0) > 0))
     add('population', 'civilization', 'Civilization disabled in generation configuration')
   if (full) {
     for (let r = 0; r < Math.min(count, c.population.values.length); r++) {

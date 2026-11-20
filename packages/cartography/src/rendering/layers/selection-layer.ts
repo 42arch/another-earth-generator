@@ -229,6 +229,12 @@ export class SelectionLayer {
     }
 
     const candidateSources = [
+      'settlements',
+      'transport-routes',
+      'polity-borders',
+      'polity-territory',
+      'culture-dominant',
+      'religion-dominant',
       'river-centerlines',
       'lake-polygons',
       'continent-areas',

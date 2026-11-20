@@ -32,29 +32,24 @@ export interface ReligionArchetype extends ContentDefinition {
   readonly spreadBias: number
   readonly weight: number
 }
-export interface GovernmentArchetype extends ContentDefinition {
-  readonly governance: 'centralized' | 'distributed' | 'federated'
-  readonly succession: 'hereditary' | 'elective' | 'appointed' | 'mixed'
-  readonly weight: number
-}
-export type StatePoliticalForm
+export type PolityPoliticalForm
   = 'republic' | 'empire' | 'dynastic-monarchy' | 'federation' | 'confederation'
     | 'chiefdom' | 'emirate' | 'khanate' | 'league' | 'free-territory' | 'kingdom'
     | 'principality' | 'theocracy' | 'merchant-republic' | 'city-state' | 'sultanate'
     | 'tribal-confederation' | 'military-junta' | 'protectorate' | 'commune'
-export type StateGovernmentOrganization
+export type PolityGovernmentOrganization
   = 'centralized' | 'parliamentary' | 'presidential' | 'federal-council' | 'confederal-assembly'
     | 'tribal-council' | 'theocratic-hierarchy' | 'merchant-council' | 'military-command'
     | 'rotating-delegation' | 'chartered-administration'
-export type StateSuccession = 'hereditary' | 'elective' | 'appointed' | 'rotating' | 'collective' | 'mixed'
-/** Country-level political entity template; this is not an instantiated world polity. */
-export interface StateArchetype extends ContentDefinition {
-  readonly politicalForm: StatePoliticalForm
-  readonly governmentOrganization: StateGovernmentOrganization
+export type PolitySuccession = 'hereditary' | 'elective' | 'appointed' | 'rotating' | 'collective' | 'mixed'
+/** Polity-level institutional archetype; this is not an instantiated world polity. */
+export interface PolityArchetype extends ContentDefinition {
+  readonly politicalForm: PolityPoliticalForm
+  readonly governmentOrganization: PolityGovernmentOrganization
   readonly headOfStateTitle: string
   readonly headOfGovernmentTitle: string | null
   readonly legislatureTitle: string | null
-  readonly succession: StateSuccession
+  readonly succession: PolitySuccession
   readonly weight: number
 }
 export interface ResourceDefinition extends ContentDefinition {
@@ -72,7 +67,6 @@ export interface WorldPreset extends ContentDefinition {
 interface ContentPackBase {
   readonly names: readonly NamePool[]
   readonly religions: readonly ReligionArchetype[]
-  readonly governments: readonly GovernmentArchetype[]
   readonly resources: readonly ResourceDefinition[]
   readonly presets: readonly WorldPreset[]
   /** Locale -> translation key -> nonempty text. Every locale must cover this pack's keys. */
@@ -83,7 +77,7 @@ export interface ContentPackV1 extends ContentPackBase {
   readonly cultures: readonly CultureArchetype[]
   readonly namingStyles: readonly NamingStyle[]
   readonly peoples: readonly PeopleArchetype[]
-  readonly states: readonly StateArchetype[]
+  readonly polities: readonly PolityArchetype[]
 }
 export type ContentPack = ContentPackV1
 export type ContentPackHashInput

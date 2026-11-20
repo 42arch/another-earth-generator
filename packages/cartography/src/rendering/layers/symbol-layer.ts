@@ -24,6 +24,41 @@ export const GLOBE_SYMBOL_BACKFACE_DOT_THRESHOLD = 0.12
 export const DEFAULT_SYMBOL_FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
 export const DEFAULT_SYMBOL_FONT_WEIGHT = '600'
 
+/** 2D labels are screen-sized; this lifts them slightly above the shared style size. */
+const ATLAS_TEXT_SCALE = 1.3
+/** Center spacing as a fraction of the drawn glyph quad. Ink fills about 0.62 of that quad. */
+const ATLAS_GLYPH_TRACKING = 0.8
+
+/** `text-offset` in ems. `+x` is screen-right and `+y` is screen-down, matching Mapbox. */
+export function readTextOffsetEm(value: unknown): readonly [number, number] {
+  if (!Array.isArray(value) || value.length < 2)
+    return [0, 0]
+  const x = Number(value[0])
+  const y = Number(value[1])
+  return [
+    Number.isFinite(x) ? x : 0,
+    Number.isFinite(y) ? y : 0,
+  ]
+}
+
+/** Radians of arc per projected world unit at a label anchor. */
+function atlasRadiansPerWorldUnit(
+  projection: MapProjection,
+  longitudeDegrees: number,
+  latitudeDegrees: number,
+): number {
+  const deltaDeg = 1
+  const [x0, y0] = projection.project(longitudeDegrees, latitudeDegrees)
+  const lon2 = Math.max(-179, Math.min(179, longitudeDegrees + (longitudeDegrees > 0 ? -deltaDeg : deltaDeg)))
+  const lat2 = Math.max(-80, Math.min(80, latitudeDegrees + (latitudeDegrees > 0 ? -deltaDeg : deltaDeg)))
+  const [xLon, yLon] = projection.project(lon2, latitudeDegrees)
+  const [xLat, yLat] = projection.project(longitudeDegrees, lat2)
+  const worldPerDegLon = Math.hypot(xLon - x0, yLon - y0) / Math.max(1e-4, Math.abs(lon2 - longitudeDegrees))
+  const worldPerDegLat = Math.hypot(xLat - x0, yLat - y0) / Math.max(1e-4, Math.abs(lat2 - latitudeDegrees))
+  const worldPerRad = Math.max(worldPerDegLon, worldPerDegLat) * (180 / Math.PI)
+  return worldPerRad > 1e-6 ? 1 / worldPerRad : 1
+}
+
 const registeredFontDescriptors = new Map<string, MapFontFaceDescriptor>()
 const loadedFontPromises = new Map<string, Promise<boolean>>()
 
@@ -480,6 +515,7 @@ const SYMBOL_VERTEX_SHADER = /* glsl */`
   attribute vec4 instanceFillColor;
   attribute vec4 instanceHaloColor;
   attribute vec4 instanceMetrics; // x: sizeWorldOrPx, y: modeFlag (0=2D screen, 1=2D spine, 2=3D surface tangent), z: visibleFlag, w: haloWidthSdf
+  attribute vec2 instanceScreenOffset; // CSS px, +x right, +y down
 
   uniform vec2 uViewportPx;
   uniform float uPixelRatio;
@@ -490,6 +526,13 @@ const SYMBOL_VERTEX_SHADER = /* glsl */`
   varying float vVisible;
   varying float vHorizonFade;
   varying float vHaloWidth;
+
+  vec4 applyScreenOffset(vec4 clip) {
+    vec2 halfViewport = max(uViewportPx * 0.5, vec2(1.0));
+    vec2 devicePx = instanceScreenOffset * uPixelRatio;
+    vec2 ndcOffset = vec2(devicePx.x, -devicePx.y) / halfViewport;
+    return vec4(clip.xy + ndcOffset * clip.w, clip.z, clip.w);
+  }
 
   void main() {
     vFillColor = instanceFillColor;
@@ -524,7 +567,7 @@ const SYMBOL_VERTEX_SHADER = /* glsl */`
       vec3 viewDir = normalize(-viewCenter);
       vHorizonFade = smoothstep(0.14, 0.34, dot(viewNormal, viewDir));
 
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(surfacePos, 1.0);
+      gl_Position = applyScreenOffset(projectionMatrix * modelViewMatrix * vec4(surfacePos, 1.0));
       return;
     }
 
@@ -550,7 +593,7 @@ const SYMBOL_VERTEX_SHADER = /* glsl */`
 
     vec2 offsetPx = (screenRight * localQuad.x + screenUp * localQuad.y) * sizePx;
     vec2 ndcOffset = offsetPx / halfViewport;
-    gl_Position = vec4(clipCenter.xy + ndcOffset * clipCenter.w, clipCenter.z, clipCenter.w);
+    gl_Position = applyScreenOffset(vec4(clipCenter.xy + ndcOffset * clipCenter.w, clipCenter.z, clipCenter.w));
   }
 `
 
@@ -592,6 +635,7 @@ const SYMBOL_FRAGMENT_SHADER = /* glsl */`
 
 export interface SymbolFeaturePlacementState {
   readonly featureId: string
+  readonly entityId?: string
   readonly text: string
   readonly priority: number
   readonly placementMode: 'point' | 'spine'
@@ -624,6 +668,7 @@ interface SymbolEntry {
  * - Enforces left-to-right Chinese reading orientation (`dot(chord, cameraRight) >= 0`).
  * - Evaluates deterministic `CollisionGrid` (`32px × 32px` spatial hash) in descending `priority` order
  *   with 3D globe backface culling (`dot(normal, cameraDir) <= 0.12`) and 2D antimeridian spine split guard.
+ * - `text-offset` is in ems of `text-size` (`+x` right, `+y` down) and shifts the whole label in screen space.
  */
 export class SymbolLayer {
   readonly id: string
@@ -641,6 +686,7 @@ export class SymbolLayer {
   private readonly fillColorAttr: THREE.InstancedBufferAttribute
   private readonly haloColorAttr: THREE.InstancedBufferAttribute
   private readonly metricsAttr: THREE.InstancedBufferAttribute
+  private readonly screenOffsetAttr: THREE.InstancedBufferAttribute
   private readonly placementStates = new Map<string, SymbolFeaturePlacementState>()
   private readonly surfaceOffset: number
   private readonly radius: number
@@ -698,7 +744,13 @@ export class SymbolLayer {
         spine = {
           featureId: feature.id,
           displayName: text,
-          kind: feature.properties.kind === 'ocean' ? 'ocean' : 'continent',
+          kind: feature.properties.kind === 'ocean'
+            ? 'ocean'
+            : feature.properties.kind === 'polity'
+              ? 'polity'
+              : feature.properties.kind === 'settlement'
+                ? 'settlement'
+                : 'continent',
           areaKm2: priority,
           anchorRegion: Number(feature.properties.regionId ?? 0),
           anchorPosition: pos,
@@ -764,6 +816,7 @@ export class SymbolLayer {
     this.fillColorAttr = new THREE.InstancedBufferAttribute(new Float32Array(allocCount * 4), 4)
     this.haloColorAttr = new THREE.InstancedBufferAttribute(new Float32Array(allocCount * 4), 4)
     this.metricsAttr = new THREE.InstancedBufferAttribute(new Float32Array(allocCount * 4), 4)
+    this.screenOffsetAttr = new THREE.InstancedBufferAttribute(new Float32Array(allocCount * 2), 2)
 
     const geometry = new THREE.InstancedBufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(quadPositions, 3))
@@ -775,6 +828,7 @@ export class SymbolLayer {
     geometry.setAttribute('instanceFillColor', this.fillColorAttr)
     geometry.setAttribute('instanceHaloColor', this.haloColorAttr)
     geometry.setAttribute('instanceMetrics', this.metricsAttr)
+    geometry.setAttribute('instanceScreenOffset', this.screenOffsetAttr)
     geometry.instanceCount = totalGlyphInstances
     const boundRadius = options.projection
       ? Math.hypot(options.projection.worldWidth, options.projection.worldHeight)
@@ -872,6 +926,14 @@ export class SymbolLayer {
       : 42
     const tanHalfFov = Math.tan((fovDeg * Math.PI / 180) * 0.5)
     const worldUnitsPerPixelAtSubcamera = (2 * camAltitude * tanHalfFov) / Math.max(1, this.viewportHeight)
+    const orthoTop = 'top' in camera ? Number(camera.top) : Number.NaN
+    const orthoBottom = 'bottom' in camera ? Number(camera.bottom) : Number.NaN
+    const atlasWorldUnitsPerPixel = !this.isGlobe
+      && Number.isFinite(orthoTop)
+      && Number.isFinite(orthoBottom)
+      && orthoTop > orthoBottom
+      ? (orthoTop - orthoBottom) / Math.max(1, this.viewportHeight)
+      : worldUnitsPerPixelAtSubcamera
 
     const camDir = this.isGlobe
       ? rotateAroundPolarAxis(normalizeVec3(camPos.x, camPos.y, camPos.z), -planetSpinRadians)
@@ -884,6 +946,7 @@ export class SymbolLayer {
 
     const placementExpr = compiledLayer.layout['symbol-placement']
     const textSizeExpr = compiledLayer.layout['text-size']
+    const textOffsetExpr = compiledLayer.layout['text-offset']
     const textColorExpr = compiledLayer.paint['text-color']
     const haloColorExpr = compiledLayer.paint['text-halo-color']
     const haloWidthExpr = compiledLayer.paint['text-halo-width']
@@ -893,12 +956,15 @@ export class SymbolLayer {
     for (const entry of this.entries) {
       const { feature, text, spine, glyphStartIndex, glyphCount } = entry
       const props = feature.properties
+      const rawEntityId = props?.entityId
+      const entityId = typeof rawEntityId === 'string' && rawEntityId ? rawEntityId : undefined
       const evalInput = { zoom: styleZoom, properties: props }
 
       if (filterExpr && !filterExpr.evaluate(evalInput)) {
         this.hideEntryGlyphs(glyphStartIndex, glyphCount)
         this.placementStates.set(feature.id, {
           featureId: feature.id,
+          ...(entityId ? { entityId } : {}),
           text,
           priority: entry.priority,
           placementMode: 'point',
@@ -914,6 +980,7 @@ export class SymbolLayer {
       const rawPlacement = String(placementExpr?.evaluate(evalInput) ?? 'spine')
       let useSpine = rawPlacement === 'spine' && spine.isCurved && spine.spinePoints.length >= 3
       const textSizePx = Math.max(8, Number(textSizeExpr?.evaluate(evalInput) ?? 15))
+      const [offsetEmX, offsetEmY] = readTextOffsetEm(textOffsetExpr?.evaluate(evalInput))
       const opacity = opacityExpr ? Number(opacityExpr.evaluate(evalInput) ?? 1) : 1
 
       if (opacity <= 0.01) {
@@ -921,16 +988,30 @@ export class SymbolLayer {
         continue
       }
 
+      // Globe glyphs stay at the requested screen size while zooming in.
+      // Atlas glyphs are slightly larger, and their step is a screen-pixel gap rather than a fixed angle.
       const glyphWorldSize = this.isGlobe
-        ? Math.max(0.014, Math.min(0.075, textSizePx * worldUnitsPerPixelAtSubcamera * 1.15))
-        : textSizePx
+        ? Math.min(0.075, textSizePx * worldUnitsPerPixelAtSubcamera * 1.15)
+        : textSizePx * ATLAS_TEXT_SCALE
+      const renderedTextPx = this.isGlobe
+        ? glyphWorldSize / Math.max(worldUnitsPerPixelAtSubcamera, 1e-6)
+        : glyphWorldSize
       const glyphStepRad = this.isGlobe
-        ? Math.max(0.014, Math.min(0.055, glyphWorldSize * 0.88))
-        : 0.032
+        ? Math.min(0.055, Math.max(1e-4, glyphWorldSize * 0.88))
+        : Math.max(1e-5, renderedTextPx * ATLAS_GLYPH_TRACKING * atlasWorldUnitsPerPixel * (
+          this.projection
+            ? atlasRadiansPerWorldUnit(this.projection, spine.anchorCoordinates[0], spine.anchorCoordinates[1])
+            : 1
+        ))
+      const offsetPxX = offsetEmX * renderedTextPx
+      const offsetPxY = offsetEmY * renderedTextPx
 
       const entryViewRight = globeViewRight ?? buildTangentBasis(spine.anchorPosition).east
       let glyphs = useSpine
-        ? sampleSpineGlyphAnchors(spine, text, entryViewRight, { glyphStepRad })
+        ? sampleSpineGlyphAnchors(spine, text, entryViewRight, {
+          glyphStepRad,
+          layout: this.isGlobe ? 'fitted' : 'tracked',
+        })
         : this.buildPointGlyphAnchors(spine, text, entryViewRight, glyphStepRad)
 
       // In 2D AtlasView, if a curved spine crosses the ±180° antimeridian, fall back to point placement at the interior anchor
@@ -970,6 +1051,7 @@ export class SymbolLayer {
         this.hideEntryGlyphs(glyphStartIndex, glyphCount)
         this.placementStates.set(feature.id, {
           featureId: feature.id,
+          ...(entityId ? { entityId } : {}),
           text,
           priority: entry.priority,
           placementMode,
@@ -1025,7 +1107,7 @@ export class SymbolLayer {
       // Project glyph bounding boxes into screen pixel space and test against CollisionGrid
       const candidateBoxes: ScreenCollisionBox[] = []
       let culledByCollision = false
-      const halfBoxPx = textSizePx * 0.48
+      const halfBoxPx = renderedTextPx * 0.48
 
       for (let i = 0; i < glyphs.length; i++) {
         const wp = glyphWorldPositions[i]
@@ -1036,8 +1118,8 @@ export class SymbolLayer {
           break
         }
 
-        const sx = (projScratch.x + 1) * 0.5 * this.viewportWidth
-        const sy = (1 - projScratch.y) * 0.5 * this.viewportHeight
+        const sx = (projScratch.x + 1) * 0.5 * this.viewportWidth + offsetPxX
+        const sy = (1 - projScratch.y) * 0.5 * this.viewportHeight + offsetPxY
         const box: ScreenCollisionBox = {
           minX: sx - halfBoxPx,
           maxX: sx + halfBoxPx,
@@ -1056,6 +1138,7 @@ export class SymbolLayer {
         this.hideEntryGlyphs(glyphStartIndex, glyphCount)
         this.placementStates.set(feature.id, {
           featureId: feature.id,
+          ...(entityId ? { entityId } : {}),
           text,
           priority: entry.priority,
           placementMode,
@@ -1084,6 +1167,7 @@ export class SymbolLayer {
         const g = glyphs[i]
         if (!g) {
           this.metricsAttr.setXYZW(instIdx, 0, 0, 0, 0)
+          this.screenOffsetAttr.setXY(instIdx, 0, 0)
           continue
         }
         const wp = glyphWorldPositions[i]
@@ -1097,10 +1181,12 @@ export class SymbolLayer {
         this.haloColorAttr.setXYZW(instIdx, hr / 255, hg / 255, hb / 255, (ha / 255) * opacity)
         const modeFlag = this.isGlobe ? 2 : (useSpine ? 1 : 0)
         this.metricsAttr.setXYZW(instIdx, glyphWorldSize, modeFlag, 1, haloWidthSdf)
+        this.screenOffsetAttr.setXY(instIdx, offsetPxX, offsetPxY)
       }
 
       this.placementStates.set(feature.id, {
         featureId: feature.id,
+        ...(entityId ? { entityId } : {}),
         text,
         priority: entry.priority,
         placementMode,
@@ -1119,6 +1205,7 @@ export class SymbolLayer {
     this.fillColorAttr.needsUpdate = true
     this.haloColorAttr.needsUpdate = true
     this.metricsAttr.needsUpdate = true
+    this.screenOffsetAttr.needsUpdate = true
   }
 
   private buildPointGlyphAnchors(
@@ -1178,6 +1265,7 @@ export class SymbolLayer {
   private hideEntryGlyphs(startIndex: number, count: number): void {
     for (let i = 0; i < count; i++) {
       this.metricsAttr.setXYZW(startIndex + i, 0, 0, 0, 0)
+      this.screenOffsetAttr.setXY(startIndex + i, 0, 0)
     }
   }
 
@@ -1193,11 +1281,11 @@ export class SymbolLayer {
     screenX: number,
     screenY: number,
     hitTolerancePx = 6,
-  ): { layerId: string, sourceId: string, featureId: string, distancePx: number } | null {
+  ): { layerId: string, sourceId: string, featureId: string, entityId?: string, distancePx: number } | null {
     if (this.disposed || !this.mesh.visible)
       return null
 
-    let bestHit: { layerId: string, sourceId: string, featureId: string, distancePx: number } | null = null
+    let bestHit: { layerId: string, sourceId: string, featureId: string, entityId?: string, distancePx: number } | null = null
     let bestDist = Infinity
 
     for (const state of this.placementStates.values()) {
@@ -1213,6 +1301,7 @@ export class SymbolLayer {
             layerId: this.id,
             sourceId: this.sourceId,
             featureId: state.featureId,
+            ...(state.entityId ? { entityId: state.entityId } : {}),
             distancePx: dist,
           }
         }

@@ -11,9 +11,9 @@ import {
 } from '../index'
 
 describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', () => {
-  it('compiles all 6 built-in style presets without errors and extracts structured legends', () => {
+  it('compiles all 7 built-in style presets without errors and extracts structured legends', () => {
     const compiler = new StyleCompiler()
-    expect(BUILTIN_MAP_STYLE_PRESET_LIST).toHaveLength(6)
+    expect(BUILTIN_MAP_STYLE_PRESET_LIST).toHaveLength(7)
     expect(Object.keys(BUILTIN_MAP_STYLE_PRESETS)).toEqual([
       'satellite',
       'standard-atlas',
@@ -21,11 +21,15 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
       'minimal-light',
       'minimal-dark',
       'historical-parchment',
+      'political-atlas',
     ])
 
     for (const preset of BUILTIN_MAP_STYLE_PRESET_LIST) {
       expect(preset.tokens.background).toEqual(expect.stringMatching(/^#[\da-f]{6}$/i))
-      expect(preset.defaultEnabledLayerIds).toContain('world-surface')
+      if (preset.id === 'political-atlas')
+        expect(preset.defaultEnabledLayerIds).not.toContain('world-surface')
+      else
+        expect(preset.defaultEnabledLayerIds).toContain('world-surface')
       expect(preset.defaultGlobeEffects).toEqual(
         preset.id === 'satellite'
           ? { atmosphere: true, dayNight: true }
@@ -90,6 +94,28 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
       expect(activeIds).toContain('overlay-river-centerlines')
       expect(activeIds).toContain('overlay-geographic-labels')
       expect(activeIds).not.toContain('overlay-plate-boundaries')
+
+      // Civilization thematic & overlay layers compile cleanly across all presets
+      const polityLegend = compiled.getActiveLegend('polity-territory')
+      expect(polityLegend?.kind).toBe('categorical')
+      const popLegend = compiled.getActiveLegend('population-density')
+      expect(popLegend?.kind).toBe('continuous')
+      if (popLegend?.kind === 'continuous') {
+        expect(popLegend.unit).toBe('人/km²')
+      }
+
+      const civActive = compiled.getActiveLayers({
+        viewMode: 'globe',
+        zoom: 3,
+        activeThematicId: 'polity-territory',
+        enabledOverlayIds: ['polity-borders', 'transport-routes', 'settlements', 'polity-labels', 'settlement-labels'],
+      }).map(l => l.id)
+      expect(civActive).toContain('thematic-polity-territory')
+      expect(civActive).toContain('overlay-polity-borders')
+      expect(civActive).toContain('overlay-transport-routes')
+      expect(civActive).toContain('overlay-settlements')
+      expect(civActive).toContain('overlay-polity-labels')
+      expect(civActive).toContain('overlay-settlement-labels')
     }
   })
 
@@ -242,5 +268,45 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
       ],
     }
     expect(() => compiler.compile(rasterOnGeoJsonDoc)).toThrow('requires a "raster" source, but "land-areas" is "geojson"')
+  })
+
+  it('shrinks settlement symbols and hides minor tiers when the globe is zoomed out', () => {
+    const compiler = new StyleCompiler()
+    const compiled = compiler.compile(BUILTIN_MAP_STYLE_PRESETS['political-atlas'])
+    const symbols = compiled.layersById.get('overlay-settlements')!
+    const labels = compiled.layersById.get('overlay-settlement-labels')!
+    const far = 1.2
+    const near = 6
+
+    const radiusAt = (zoom: number, tier: string) => Number(
+      symbols.paint['circle-radius']!.evaluate({ zoom, properties: { tier } }),
+    )
+    const opacityAt = (zoom: number, tier: string) => Number(
+      symbols.paint['circle-opacity']!.evaluate({ zoom, properties: { tier } }),
+    )
+    const strokeAt = (zoom: number, tier: string) => Number(
+      symbols.paint['circle-stroke-width']!.evaluate({ zoom, properties: { tier } }),
+    )
+    const labelOpacityAt = (zoom: number, tier: string) => Number(
+      labels.paint['text-opacity']!.evaluate({ zoom, properties: { tier } }),
+    )
+
+    expect(radiusAt(far, 'capital')).toBeLessThan(3.2)
+    expect(radiusAt(far, 'capital')).toBeGreaterThan(2)
+    expect(radiusAt(near, 'capital')).toBeGreaterThan(radiusAt(far, 'capital') + 1.5)
+    expect(strokeAt(far, 'capital')).toBeLessThan(0.8)
+    expect(strokeAt(near, 'town')).toBeGreaterThan(strokeAt(far, 'town'))
+
+    expect(opacityAt(far, 'capital')).toBeGreaterThan(0.9)
+    expect(opacityAt(far, 'city')).toBe(0)
+    expect(opacityAt(far, 'town')).toBe(0)
+    expect(opacityAt(2.4, 'city')).toBeGreaterThan(0.9)
+    expect(opacityAt(2.4, 'town')).toBe(0)
+    expect(opacityAt(near, 'town')).toBeGreaterThan(0.9)
+    expect(labelOpacityAt(far, 'city')).toBe(0)
+    expect(labelOpacityAt(far, 'town')).toBe(0)
+    expect(labelOpacityAt(2.4, 'city')).toBeGreaterThan(0.9)
+    expect(labelOpacityAt(near, 'town')).toBeGreaterThan(0.9)
+    expect(labels.layout['text-offset']!.evaluate({ zoom: far, properties: { tier: 'capital' } })).toEqual([0, -0.78])
   })
 })

@@ -466,6 +466,8 @@ const LINE_FRAGMENT_SHADER = /* glsl */`
 export interface LineLayerOptions {
   readonly renderOrder?: number
   readonly surfaceOffset?: number
+  readonly polygonOffsetFactor?: number
+  readonly polygonOffsetUnits?: number
   readonly projection?: MapProjection
   readonly tracker?: GpuResourceTracker
 }
@@ -620,6 +622,9 @@ export class LineLayer {
       depthTest: true,
       depthWrite: false,
       side: THREE.DoubleSide,
+      polygonOffset: options.polygonOffsetFactor !== undefined || options.polygonOffsetUnits !== undefined,
+      polygonOffsetFactor: options.polygonOffsetFactor ?? 0,
+      polygonOffsetUnits: options.polygonOffsetUnits ?? 0,
     })
     options.tracker?.trackMaterial(material)
 
@@ -721,14 +726,14 @@ export class LineLayer {
     hitTolerancePx = 5,
     worldOffsetsX: readonly number[] = [0],
     planetSpinRadians = 0,
-  ): { layerId: string, sourceId: string, featureId: string, distancePx: number } | null {
+  ): { layerId: string, sourceId: string, featureId: string, entityId?: string, distancePx: number } | null {
     if (this.disposed || !this.mesh.visible)
       return null
 
     const projA = new THREE.Vector3()
     const projB = new THREE.Vector3()
     const camPos = camera.position
-    let bestHit: { layerId: string, sourceId: string, featureId: string, distancePx: number } | null = null
+    let bestHit: { layerId: string, sourceId: string, featureId: string, entityId?: string, distancePx: number } | null = null
     let bestDistSq = Infinity
 
     for (let i = 0; i < this.indexedFeatures.length; i++) {
@@ -773,10 +778,13 @@ export class LineLayer {
 
             if (distSq <= maxDistSq && distSq < bestDistSq) {
               bestDistSq = distSq
+              const rawEntityId = entry.feature.properties?.entityId
+              const entityId = typeof rawEntityId === 'string' && rawEntityId ? rawEntityId : undefined
               bestHit = {
                 layerId: this.id,
                 sourceId: this.sourceId,
                 featureId: entry.feature.id,
+                ...(entityId ? { entityId } : {}),
                 distancePx: Math.sqrt(distSq),
               }
             }

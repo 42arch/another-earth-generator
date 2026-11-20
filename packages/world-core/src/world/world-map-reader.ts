@@ -1,6 +1,15 @@
+import type { ContentId } from '#content/content-port'
+import type {
+  PolitySizeClass,
+  SettlementTier,
+  TransportLinkMode,
+  TransportNode,
+} from '#generation/civilization/civilization-types'
+import type { HabitabilityArtifact } from '#generation/civilization/habitability'
 import type { FieldView, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
 import { createNoise3D } from 'simplex-noise'
+import { generateHabitability } from '#generation/civilization/habitability'
 import { clamp, smoothstep } from '#math/math'
 import { DeterministicRandom } from '#math/random'
 import { createFieldView } from './fields'
@@ -34,7 +43,19 @@ export type WorldMapFieldName
     | 'landCoverIndex'
     | 'aridityIndex'
     | 'growingSeasonMonths'
+    | 'agriculturalPotential'
+    | 'forestryPotential'
+    | 'fisheryPotential'
+    | 'depositRichness'
+    | 'habitability'
+    | 'carryingCapacityPerKm2'
     | 'population'
+    | 'populationDensity'
+    | 'transportAccessibility'
+    | 'dominantPeopleIndex'
+    | 'dominantCultureIndex'
+    | 'dominantReligionIndex'
+    | 'dominantPolityIndex'
 
 export type WorldMonthlyFieldName
   = | 'temperatureC'
@@ -86,6 +107,75 @@ export interface LakeMapSummary {
   readonly regionCount: number
 }
 
+export interface PeopleMapSummary {
+  readonly id: string
+  readonly name: string
+  readonly foundedAtYear: number
+  readonly archetypeId: ContentId
+}
+
+export interface CultureMapSummary {
+  readonly id: string
+  readonly name: string
+  readonly foundedAtYear: number
+  readonly archetypeId: ContentId
+  readonly peopleId: string
+  readonly namingStyleId: ContentId
+}
+
+export interface ReligionMapSummary {
+  readonly id: string
+  readonly name: string
+  readonly foundedAtYear: number
+  readonly archetypeId: ContentId
+}
+
+export interface PolityMapSummary {
+  readonly id: string
+  readonly name: string
+  readonly foundedAtYear: number
+  readonly archetypeId: ContentId
+  readonly cultureId: string
+  readonly capitalSettlementId: string | null
+  readonly sizeClass?: PolitySizeClass
+}
+
+export interface SettlementMapSummary {
+  readonly id: string
+  readonly name: string
+  readonly foundedAtYear: number
+  readonly regionId: number
+  readonly polityId: string | null
+  readonly cultureId: string
+  readonly tier?: SettlementTier
+  readonly isPort?: boolean
+  readonly population: number
+}
+
+export interface ResourceDepositMapSummary {
+  readonly id: string
+  readonly resourceId: ContentId
+  readonly regionId: number
+  readonly category: 'mineral' | 'biological' | 'energy'
+  readonly richness: number
+  readonly primaryFactor: string
+}
+
+export interface ResourceMapSummary {
+  readonly resourceIds: readonly ContentId[]
+  readonly deposits: readonly ResourceDepositMapSummary[]
+}
+
+export interface TransportRouteMapSummary {
+  readonly id: string
+  readonly fromNodeId: string
+  readonly toNodeId: string
+  readonly mode: TransportLinkMode
+  readonly regionCount: number
+  readonly cost: number
+  readonly trafficScore: number
+}
+
 export interface MapMeshReader {
   readonly meshId: string
   readonly regionCount: number
@@ -123,6 +213,8 @@ export interface WorldMapReader {
     hasGeographicNames: boolean
     hasSeaClassification: boolean
     hasCirculation: boolean
+    hasResources: boolean
+    hasCivilization: boolean
   }>
   readonly mesh: MapMeshReader
   field: (name: WorldMapFieldName) => FieldView
@@ -138,6 +230,15 @@ export interface WorldMapReader {
     potentialBiomeIds: readonly string[]
     landCoverIds: readonly string[]
   }>
+  resources: () => ResourceMapSummary
+  peoples: () => readonly PeopleMapSummary[]
+  cultures: () => readonly CultureMapSummary[]
+  religions: () => readonly ReligionMapSummary[]
+  polities: () => readonly PolityMapSummary[]
+  settlements: () => readonly SettlementMapSummary[]
+  transportNodes: () => readonly TransportNode[]
+  transportRoutes: () => readonly TransportRouteMapSummary[]
+  forEachTransportRouteRegion: (routeIndex: number, visit: (region: number, stepIndex: number) => void) => void
 }
 
 interface DualTopologyData {
@@ -606,12 +707,165 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   }
 
   let slopeDegView: FieldView | undefined
+  let slopeDegValues: Float32Array | undefined
   let hillshadeView: FieldView | undefined
   let surfaceDetailView: FieldView | undefined
+  let depositRichnessView: FieldView | undefined
+  let habitabilityCache: HabitabilityArtifact | undefined
+  let habitabilityView: FieldView | undefined
+  let carryingCapacityView: FieldView | undefined
+  let populationDensityView: FieldView | undefined
+  let dominantPeopleView: FieldView | undefined
+  let dominantCultureView: FieldView | undefined
+  let dominantReligionView: FieldView | undefined
+  let dominantPolityView: FieldView | undefined
   const windSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
   const oceanSpeedViews: Array<FieldView | undefined> = Array.from({ length: 12 }, () => undefined)
   let annualWindSpeedView: FieldView | undefined
   let annualOceanSpeedView: FieldView | undefined
+
+  const ensureSlopeDegValues = (): Float32Array => {
+    slopeDegValues ??= computeSlopeDeg(world)
+    return slopeDegValues
+  }
+
+  const ensureHabitability = (): HabitabilityArtifact => {
+    if (!habitabilityCache) {
+      const slopeDeg = ensureSlopeDegValues()
+      const slopeRadians = new Float32Array(count)
+      for (let r = 0; r < count; r++)
+        slopeRadians[r] = slopeDeg[r] / RAD_TO_DEG
+      habitabilityCache = generateHabitability(
+        {
+          meshId,
+          regionCount: count,
+          neighborOffsets: mesh.neighborOffsets,
+          neighbors: mesh.neighbors,
+        },
+        {
+          meshId,
+          elevationKm: nature.geography.elevationKm.values,
+          landMask: nature.geography.landMask.values,
+          slopeRadians,
+        },
+        {
+          meshId,
+          annualMeanTemperatureC: nature.climate.annualMeanTemperatureC.values,
+          annualPrecipitationMm: nature.climate.annualPrecipitationMm.values,
+        },
+        {
+          meshId,
+          riverIndex: nature.hydrology.riverIndex.values,
+          accumulatedAnnualFlowM3s: nature.hydrology.accumulatedAnnualFlowM3s.values,
+        },
+        {
+          meshId,
+          lakeIndex: nature.hydrology.lakeIndex.values,
+        },
+        {
+          meshId,
+          potentialBiomeIds: nature.ecology.potentialBiomeIds,
+          landCoverIds: nature.ecology.landCoverIds,
+          potentialBiomeIndex: nature.ecology.potentialBiomeIndex.values,
+          landCoverIndex: nature.ecology.landCoverIndex.values,
+          aridityIndex: nature.ecology.aridityIndex.values,
+          growingSeasonMonths: nature.ecology.growingSeasonMonths.values,
+        },
+        {
+          meshId,
+          agriculturalPotential: nature.resources.agriculturalPotential.values,
+          forestryPotential: nature.resources.forestryPotential.values,
+          fisheryPotential: nature.resources.fisheryPotential.values,
+        },
+      )
+    }
+    return habitabilityCache
+  }
+
+  const ensureDominantViews = (): void => {
+    if (dominantPeopleView && dominantCultureView && dominantReligionView && dominantPolityView)
+      return
+    const peopleDom = new Int32Array(count).fill(-1)
+    const cultureDom = new Int32Array(count).fill(-1)
+    const religionDom = new Int32Array(count).fill(-1)
+    const polityDom = new Int32Array(count).fill(-1)
+    const groups = civilization.populationGroups
+    if (groups.length > 0) {
+      const peopleIdx = new Map(civilization.peoples.map((item, i) => [item.id, i]))
+      const cultureIdx = new Map(civilization.cultures.map((item, i) => [item.id, i]))
+      const religionIdx = new Map(civilization.religions.map((item, i) => [item.id, i]))
+      const polityIdx = new Map(civilization.polities.map((item, i) => [item.id, i]))
+
+      const counts = new Uint32Array(count)
+      for (let i = 0; i < groups.length; i++)
+        counts[groups[i].regionId]++
+      const offsets = new Uint32Array(count + 1)
+      for (let r = 0; r < count; r++)
+        offsets[r + 1] = offsets[r] + counts[r]
+      const cursor = offsets.slice()
+      const order = new Uint32Array(groups.length)
+      for (let i = 0; i < groups.length; i++) {
+        const r = groups[i].regionId
+        order[cursor[r]++] = i
+      }
+
+      const tempIds: number[] = []
+      const tempPops: number[] = []
+      const pickDominant = (
+        start: number,
+        end: number,
+        resolveIndex: (group: (typeof groups)[number]) => number,
+      ): number => {
+        let len = 0
+        for (let k = start; k < end; k++) {
+          const group = groups[order[k]]
+          const idx = resolveIndex(group)
+          if (idx < 0 || !(group.population > 0))
+            continue
+          let found = false
+          for (let j = 0; j < len; j++) {
+            if (tempIds[j] === idx) {
+              tempPops[j] += group.population
+              found = true
+              break
+            }
+          }
+          if (!found) {
+            tempIds[len] = idx
+            tempPops[len] = group.population
+            len++
+          }
+        }
+        let bestIdx = -1
+        let bestPop = 0
+        for (let j = 0; j < len; j++) {
+          const pop = tempPops[j]
+          const idx = tempIds[j]
+          if (pop > bestPop || (pop === bestPop && (bestIdx < 0 || idx < bestIdx))) {
+            bestPop = pop
+            bestIdx = idx
+          }
+        }
+        return bestIdx
+      }
+
+      for (let r = 0; r < count; r++) {
+        const start = offsets[r]
+        const end = offsets[r + 1]
+        if (end <= start)
+          continue
+        peopleDom[r] = pickDominant(start, end, g => peopleIdx.get(g.peopleId) ?? -1)
+        cultureDom[r] = pickDominant(start, end, g => cultureIdx.get(g.cultureId) ?? -1)
+        religionDom[r] = pickDominant(start, end, g => (g.religionId !== null ? (religionIdx.get(g.religionId) ?? -1) : -1))
+        polityDom[r] = pickDominant(start, end, g => (g.polityId !== null ? (polityIdx.get(g.polityId) ?? -1) : -1))
+      }
+    }
+
+    dominantPeopleView = createFieldView({ meshId, values: peopleDom })
+    dominantCultureView = createFieldView({ meshId, values: cultureDom })
+    dominantReligionView = createFieldView({ meshId, values: religionDom })
+    dominantPolityView = createFieldView({ meshId, values: polityDom })
+  }
 
   const meanMonthlySpeed = (east: Float32Array, north: Float32Array, available?: Uint8Array): Float32Array => {
     const speeds = new Float32Array(count)
@@ -634,6 +888,14 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   let riversCache: readonly RiverMapSummary[] | undefined
   let lakesCache: readonly LakeMapSummary[] | undefined
   let ecologyDictCache: Readonly<{ potentialBiomeIds: readonly string[], landCoverIds: readonly string[] }> | undefined
+  let resourcesCache: ResourceMapSummary | undefined
+  let peoplesCache: readonly PeopleMapSummary[] | undefined
+  let culturesCache: readonly CultureMapSummary[] | undefined
+  let religionsCache: readonly ReligionMapSummary[] | undefined
+  let politiesCache: readonly PolityMapSummary[] | undefined
+  let settlementsCache: readonly SettlementMapSummary[] | undefined
+  let transportNodesCache: readonly TransportNode[] | undefined
+  let transportRoutesCache: readonly TransportRouteMapSummary[] | undefined
 
   const checkRegion = (region: number): void => {
     if (!Number.isInteger(region) || region < 0 || region >= count)
@@ -725,6 +987,13 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
   )
   const hasSeaClassification = Boolean(regions?.seaIndex && regions.seas)
   const hasCirculation = Boolean(nature.climate.circulation)
+  const hasResources = nature.resources.resourceIds.length > 0 || nature.resources.deposits.length > 0
+  const hasCivilization = Boolean(metadata.generationConfig.civilizationEnabled)
+    || civilization.peoples.length > 0
+    || civilization.cultures.length > 0
+    || civilization.religions.length > 0
+    || civilization.polities.length > 0
+    || civilization.settlements.length > 0
 
   return Object.freeze({
     identity: Object.freeze({
@@ -743,6 +1012,8 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
       hasGeographicNames,
       hasSeaClassification,
       hasCirculation,
+      hasResources,
+      hasCivilization,
     }),
     mesh: meshReader,
     field(name: WorldMapFieldName): FieldView {
@@ -752,7 +1023,7 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
         case 'elevationKm': return createFieldView(nature.geography.elevationKm)
         case 'landMask': return createFieldView(nature.geography.landMask)
         case 'slopeDeg':
-          slopeDegView ??= createFieldView({ meshId, values: computeSlopeDeg(world) })
+          slopeDegView ??= createFieldView({ meshId, values: ensureSlopeDegValues() })
           return slopeDegView
         case 'surfaceDetail':
           surfaceDetailView ??= createFieldView({ meshId, values: computeSurfaceDetail(world) })
@@ -811,7 +1082,51 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
         case 'landCoverIndex': return createFieldView(nature.ecology.landCoverIndex)
         case 'aridityIndex': return createFieldView(nature.ecology.aridityIndex)
         case 'growingSeasonMonths': return createFieldView(nature.ecology.growingSeasonMonths)
+        case 'agriculturalPotential': return createFieldView(nature.resources.agriculturalPotential)
+        case 'forestryPotential': return createFieldView(nature.resources.forestryPotential)
+        case 'fisheryPotential': return createFieldView(nature.resources.fisheryPotential)
+        case 'depositRichness': {
+          if (!depositRichnessView) {
+            const values = new Float32Array(count)
+            for (const deposit of nature.resources.deposits) {
+              if (deposit.richness > values[deposit.regionId])
+                values[deposit.regionId] = deposit.richness
+            }
+            depositRichnessView = createFieldView({ meshId, values })
+          }
+          return depositRichnessView
+        }
+        case 'habitability':
+          habitabilityView ??= createFieldView({ meshId, values: ensureHabitability().habitability })
+          return habitabilityView
+        case 'carryingCapacityPerKm2':
+          carryingCapacityView ??= createFieldView({ meshId, values: ensureHabitability().carryingCapacityPerKm2 })
+          return carryingCapacityView
         case 'population': return createFieldView(civilization.population)
+        case 'populationDensity': {
+          if (!populationDensityView) {
+            const values = new Float32Array(count)
+            const pop = civilization.population.values
+            const area = mesh.areaKm2
+            for (let r = 0; r < count; r++)
+              values[r] = area[r] > 0 ? pop[r] / area[r] : 0
+            populationDensityView = createFieldView({ meshId, values })
+          }
+          return populationDensityView
+        }
+        case 'transportAccessibility': return createFieldView(civilization.transport.accessibility)
+        case 'dominantPeopleIndex':
+          ensureDominantViews()
+          return dominantPeopleView!
+        case 'dominantCultureIndex':
+          ensureDominantViews()
+          return dominantCultureView!
+        case 'dominantReligionIndex':
+          ensureDominantViews()
+          return dominantReligionView!
+        case 'dominantPolityIndex':
+          ensureDominantViews()
+          return dominantPolityView!
       }
     },
     monthlyField(name: WorldMonthlyFieldName, month: number): FieldView {
@@ -954,6 +1269,57 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
         landCoverIds: Object.freeze([...nature.ecology.landCoverIds]),
       })
       return ecologyDictCache
+    },
+    resources(): ResourceMapSummary {
+      resourcesCache ??= Object.freeze({
+        resourceIds: Object.freeze([...nature.resources.resourceIds]),
+        deposits: Object.freeze(nature.resources.deposits.map(deposit => Object.freeze({ ...deposit }))),
+      })
+      return resourcesCache
+    },
+    peoples(): readonly PeopleMapSummary[] {
+      peoplesCache ??= Object.freeze(civilization.peoples.map(people => Object.freeze({ ...people })))
+      return peoplesCache
+    },
+    cultures(): readonly CultureMapSummary[] {
+      culturesCache ??= Object.freeze(civilization.cultures.map(culture => Object.freeze({ ...culture })))
+      return culturesCache
+    },
+    religions(): readonly ReligionMapSummary[] {
+      religionsCache ??= Object.freeze(civilization.religions.map(religion => Object.freeze({ ...religion })))
+      return religionsCache
+    },
+    polities(): readonly PolityMapSummary[] {
+      politiesCache ??= Object.freeze(civilization.polities.map(polity => Object.freeze({ ...polity })))
+      return politiesCache
+    },
+    settlements(): readonly SettlementMapSummary[] {
+      settlementsCache ??= Object.freeze(civilization.settlements.map(settlement => Object.freeze({ ...settlement })))
+      return settlementsCache
+    },
+    transportNodes(): readonly TransportNode[] {
+      transportNodesCache ??= Object.freeze(civilization.transport.nodes.map(node => Object.freeze({ ...node })))
+      return transportNodesCache
+    },
+    transportRoutes(): readonly TransportRouteMapSummary[] {
+      transportRoutesCache ??= Object.freeze(civilization.transport.routes.map(route => Object.freeze({
+        id: route.id,
+        fromNodeId: route.fromNodeId,
+        toNodeId: route.toNodeId,
+        mode: route.mode,
+        regionCount: route.regions.length,
+        cost: route.cost,
+        trafficScore: route.trafficScore,
+      })))
+      return transportRoutesCache
+    },
+    forEachTransportRouteRegion(routeIndex: number, visit: (region: number, stepIndex: number) => void): void {
+      const routes = civilization.transport.routes
+      if (!Number.isInteger(routeIndex) || routeIndex < 0 || routeIndex >= routes.length)
+        throw new RangeError('Invalid transport route index')
+      const members = routes[routeIndex].regions
+      for (let i = 0; i < members.length; i++)
+        visit(members[i], i)
     },
   })
 }

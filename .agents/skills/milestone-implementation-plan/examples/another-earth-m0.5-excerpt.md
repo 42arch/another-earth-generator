@@ -5,7 +5,6 @@
 ## 项目特定前提
 
 - 新工程：`apps/web`、`packages/world-core`、`packages/world-data`、`packages/cartography`。
-- 旧实现：`docs/old-src/`（只读）。
 - 规划：Icosphere →（可选 Jitter + Delaunator）→ Spherical Voronoi；Mesh、Pipeline、RandomSource、MeshStage。
 - 执行前必须核实这些模块在**实际源码**中的存在和 API，而不是照抄上一轮对话。
 

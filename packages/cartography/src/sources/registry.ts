@@ -16,6 +16,18 @@ import {
   buildPlateAreasSource,
 } from './adapters/area-sources'
 import {
+  buildCultureDominantSource,
+  buildPolityBordersSource,
+  buildPolityLabelsSource,
+  buildPolityTerritorySource,
+  buildPopulationDensityRasterSource,
+  buildReligionDominantSource,
+  buildResourcePotentialRasterSource,
+  buildSettlementLabelsSource,
+  buildSettlementsSource,
+  buildTransportRoutesSource,
+} from './adapters/civilization-sources'
+import {
   buildLakePolygonsSource,
   buildRiverCenterlinesSource,
   buildRiverPolygonsSource,
@@ -216,6 +228,26 @@ export class MapSourceRegistry {
         return buildCirculationVectorsSource(this.#reader, month ?? 0, cacheKey)
       case 'geographic-labels':
         return buildGeographicLabelsSource(this.#reader, cacheKey)
+      case 'population-density':
+        return buildPopulationDensityRasterSource(this.#reader, cacheKey)
+      case 'resource-potential':
+        return buildResourcePotentialRasterSource(this.#reader, cacheKey)
+      case 'polity-territory':
+        return buildPolityTerritorySource(this.#reader, cacheKey, this.#ensureCornerPositions())
+      case 'culture-dominant':
+        return buildCultureDominantSource(this.#reader, cacheKey, this.#ensureCornerPositions())
+      case 'religion-dominant':
+        return buildReligionDominantSource(this.#reader, cacheKey, this.#ensureCornerPositions())
+      case 'polity-borders':
+        return buildPolityBordersSource(this.#reader, cacheKey, this.#ensureCornerPositions())
+      case 'transport-routes':
+        return buildTransportRoutesSource(this.#reader, cacheKey)
+      case 'settlements':
+        return buildSettlementsSource(this.#reader, cacheKey)
+      case 'polity-labels':
+        return buildPolityLabelsSource(this.#reader, cacheKey)
+      case 'settlement-labels':
+        return buildSettlementLabelsSource(this.#reader, cacheKey)
     }
   }
 }

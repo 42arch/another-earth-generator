@@ -23,6 +23,12 @@
     'hydrology-h0': 'generation.stages.hydrologyH0',
     'static-lakes-l1': 'generation.stages.staticLakesL1',
     'ecology-e0': 'generation.stages.ecologyE0',
+    'resource-potential': 'generation.stages.resourcePotential',
+    'habitability': 'generation.stages.habitability',
+    'population-settlements': 'generation.stages.populationSettlements',
+    'transport-network': 'generation.stages.transportNetwork',
+    'peoples-cultures': 'generation.stages.peoplesCultures',
+    'polities-religions': 'generation.stages.politiesReligions',
   }
 
   type State

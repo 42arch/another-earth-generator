@@ -1,8 +1,20 @@
 export const packageId = '@another-earth/world-core' as const
-export { ecologyVocabularySignature } from './content/content-port'
-export type { ContentId, ContentPackView, ContentPort, ContentValidationIssue, ContentValidationResult, EcologyClassView, EcologyVocabulary, NamePoolView, NamingPartView, NamingRuleView, NamingStyleView } from './content/content-port'
+export { civilizationContentSignature, ecologyVocabularySignature, resourceDefinitionsSignature } from './content/content-port'
+export type { CivilizationContentBundle, ContentId, ContentPackView, ContentPort, ContentValidationIssue, ContentValidationResult, CultureArchetypeView, EcologyClassView, EcologyVocabulary, NamePoolView, NamingPartView, NamingRuleView, NamingStyleView, PeopleArchetypeView, PolityArchetypeView, PolityGovernmentOrganization, PolityPoliticalForm, PolitySuccession, ReligionArchetypeView, ResourceDefinitionView } from './content/content-port'
+export { DEFAULT_CIVILIZATION_PARAMETERS } from './generation/civilization/civilization-types'
 export type * from './generation/civilization/civilization-types'
+export { generateHabitability, HABITABILITY_VERSION, validateHabitabilityArtifact } from './generation/civilization/habitability'
+export type { HabitabilityArtifact } from './generation/civilization/habitability'
+export { generatePeoplesCultures, PEOPLES_CULTURES_VERSION, validatePeoplesCulturesArtifact } from './generation/civilization/peoples-cultures'
+export type { PeoplesCulturesArtifact, RegionCultureShare } from './generation/civilization/peoples-cultures'
+export { generatePolitiesReligions, POLITIES_RELIGIONS_VERSION, validatePolitiesReligionsArtifact } from './generation/civilization/polities-religions'
+export type { PolitiesReligionsArtifact } from './generation/civilization/polities-religions'
+export { generatePopulationSettlements, POPULATION_SETTLEMENTS_VERSION, validatePopulationSettlementsArtifact } from './generation/civilization/population-settlements'
+export type { PopulationSettlementsArtifact, SettlementSite } from './generation/civilization/population-settlements'
+export { generateTransportNetwork, TRANSPORT_NETWORK_VERSION, validateTransportNetworkArtifact } from './generation/civilization/transport-network'
+export type { TransportNetworkArtifact } from './generation/civilization/transport-network'
 export { generateName, NAMING_ALGORITHM_VERSION } from './generation/names/naming'
+export { distinctRuleNames, UniqueNameAllocator } from './generation/names/unique-naming'
 export { DEFAULT_CLIMATE_PARAMETERS, extractMonthlyCirculation, queryClimateRegion, sampleClimateCirculation, sampleClimateSpeedMps, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C, validateClimateArtifact } from './generation/nature/climate/climate'
 export type { ClimateArtifact, ClimateParameters } from './generation/nature/climate/climate'
 export type { SeasonalCirculationData } from './generation/nature/climate/climate-data'
@@ -20,6 +32,8 @@ export type { BasinSummary, CryosphereArtifact, HydrologyArtifact, HydrologyPara
 export { generateStaticLakesL1, queryStaticLakeRegion, validateStaticLakeArtifact } from './generation/nature/hydrology/lakes'
 export type { StaticLake, StaticLakeArtifact, StaticLakeClimateParameters, StaticLakeGenerationParameters } from './generation/nature/hydrology/lakes'
 export type * from './generation/nature/nature-types'
+export { generateResourcePotential, RESOURCE_POTENTIAL_VERSION, validateResourcePotentialArtifact } from './generation/nature/resources/resource-potential'
+export type { ResourcePotentialArtifact } from './generation/nature/resources/resource-potential'
 export * from './generation/pipeline'
 export * from './generation/pipeline/errors'
 export { createClimatePipeline } from './generation/stages/climate-stage'
@@ -35,6 +49,8 @@ export { createNaturalPipeline } from './generation/stages/natural-stage'
 export type { NaturalGenerationConfig } from './generation/stages/natural-stage'
 export { createTerrainPipeline, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from './generation/stages/terrain-stage'
 export type { LandformParameters, TerrainGenerationConfig, TerrainParameters } from './generation/stages/terrain-stage'
+export { createWorldPipeline, habitabilityStage, peoplesCulturesStage, politiesReligionsStage, populationSettlementsStage, resourcePotentialStage, transportNetworkStage, validateCivilizationParameters } from './generation/stages/world-stage'
+export type { WorldGenerationPipelineConfig } from './generation/stages/world-stage'
 export * from './math/math'
 export * from './math/random'
 export * from './math/spherical'
@@ -47,17 +63,25 @@ export * from './mesh/spherical-mesh'
 export { validateSphericalMesh } from './mesh/validation'
 export { createFieldView } from './world/fields'
 export type { DenseField, FieldView, NumericArray } from './world/fields'
-export { assembleNaturalWorld } from './world/natural-world'
-export type { NaturalWorldIdentity } from './world/natural-world'
 export type { PlanetParameters } from './world/planet-parameters'
 export { decodeWorldArchive, encodeWorldArchive } from './world/world-archive'
+export { assembleWorld } from './world/world-assembler'
+export type { WorldIdentity } from './world/world-assembler'
 export { createWorldMapReader } from './world/world-map-reader'
 export type {
   BasinMapSummary,
+  CultureMapSummary,
   GeographicMapRegions,
   LakeMapSummary,
   MapMeshReader,
+  PeopleMapSummary,
+  PolityMapSummary,
+  ReligionMapSummary,
+  ResourceDepositMapSummary,
+  ResourceMapSummary,
   RiverMapSummary,
+  SettlementMapSummary,
+  TransportRouteMapSummary,
   WorldMapFieldName,
   WorldMapReader,
   WorldMonthlyFieldName,

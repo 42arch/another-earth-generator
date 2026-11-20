@@ -4,11 +4,11 @@
 
 历史记录（2026-11-13）：`geographic-regions-v3` 依赖 Mesh、Geology 和最终 Terrain，读取候选大陆来源与最终海陆掩码，无独立配置或随机流。阶段输出大陆、洋、海的区域索引和面积表；沿用 v2 的海岸距离/海峡收窄后的洋海等级，并在宽阔洋区内按离岸峰值间的通路收窄程度划分多个大洋，抑制小面积碎区。`geographic-names` 依赖该分区产物，阶段版本为纯 `geographic-names-v2`，不再把内容签名写进版本字符串，也不再调用 `loadBuiltinGenerationCatalog()`。它声明内容键 `geographic-name-pools`；调用方传入大陆/大洋 `NamePoolView`，并提供 `contentSignatures['geographic-name-pools']`。缓存键已经包含该签名，词库变化只使名称阶段失效。命名仍由 Seed、稳定区域 ID、词库 ID 和内容签名决定，同类重名使用中文序号；新产物写入 `namePoolIds`。`apps/web` 注入 `geography-zh` 中文词库。T0/海陆变化使分区与名称阶段重算，不使气候、水文和生态重算。Worker 传输带名称的独立副本，完整自然世界组装时复制入快照。旧 `geography` 词库保留供历史档案解析。`ecology-e0` 另声明内容键 `ecology-classes`，算法版本仍是 `ecology-e0-v3`；调用方传入生物群系与土地覆盖词表，签名必须等于 `ecologyVocabularySignature`。
 
-> 更新：2026-11-18。记录当前执行与缓存契约，不表示完整 M1 已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
+> 更新：2026-11-21。记录当前执行与缓存契约，不表示完整 M1 延期事项或浏览器验收已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
 ## 公开入口
 
-`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、Mesh/Geology/Terrain/C0/Hydrology/Ecology Pipeline，以及 `createNaturalPipeline`、`assembleNaturalWorld` 和 `WorldStore`。Hydrology Pipeline 在 T0/C0 上生成 I0、H0、L1；Ecology Pipeline 从独立的 T0/C0 分支生成 E0 `ecology-e0-v3`。Natural Pipeline 合并两支但保持 E0 的独立直接依赖；只有完整结果经过装配与校验才可发布。E0 v3 的历史专项检查见 [E0 收尾记录](benchmarks/M1.4-E0-closeout.md)；M1.5 新链路测试已添加但本次未运行。
+`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、Mesh/Geology/Terrain/C0/Hydrology/Ecology Pipeline，以及 `createNaturalPipeline`、`createWorldPipeline`、`assembleWorld` 和 `WorldStore`。Hydrology Pipeline 在 T0/C0 上生成 I0、H0、L1；Ecology Pipeline 从独立的 T0/C0 分支生成 E0 `ecology-e0-v3`。Natural Pipeline 合并两支但保持 E0 的独立直接依赖；World Pipeline 在自然链之后串联 `resource-potential`、`habitability`、`population-settlements`、`transport-network`、`peoples-cultures`、`polities-religions`（调整 `civilization` 参数不会使自然 Stage 缓存失效）。只有完整结果经过装配与校验才可发布。E0 v3 的历史专项检查见 [E0 收尾记录](benchmarks/M1.4-E0-closeout.md)；M2 全仓单测与构建已通过。
 
 ```ts
 import { createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS,
@@ -51,6 +51,16 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | hydrology-h0 | hydrology-h0-v4 | mesh、terrain、climate-c0、cryosphere-i0 |
 | static-lakes-l1 | static-lakes-l1-v10 | mesh、terrain、climate-c0、hydrology-h0 |
 | ecology-e0 | ecology-e0-v3 | mesh、terrain、climate-c0；内容键 `ecology-classes` |
+| resource-potential | resource-potential-v1 | mesh、geology、terrain、climate-c0、hydrology-h0、ecology-e0；内容键 `resource-definitions` |
+| habitability | habitability-v1 | mesh、terrain、climate-c0、hydrology-h0、static-lakes-l1、ecology-e0、resource-potential |
+| population-settlements | population-settlements-v2 | mesh、terrain、hydrology-h0、static-lakes-l1、resource-potential、habitability |
+| transport-network | transport-network-v3 | mesh、terrain、hydrology-h0、static-lakes-l1、habitability、population-settlements |
+| peoples-cultures | peoples-cultures-v2 | mesh、habitability、population-settlements、transport-network；内容键 `civilization-content` |
+| polities-religions | polities-religions-v2 | mesh、population-settlements、transport-network、peoples-cultures；内容键 `civilization-content` |
+
+文明社会尺度的参考面积取半径 6371 km 的 L6 等面积格（约 12,453 km²），对应旧版默认量级。人口仍由区域面积乘承载密度决定；聚落数量按可居住总面积换算参考格数，聚落规模按参考支持面积估算，并从固定物理半径内的邻格向聚落格转移人口以保持区域与世界账本一致。交通和文化传播使用该参考面积对应的固定基准行进速度；政体规模使用实际 km²。输出 Mesh 等级变化会使所有相关 Stage 随 Mesh 失效，但不再直接重设上述社会单位。固定 Seed 跨等级对照和高等级性能尚未执行。
+
+`transport-network-v2` 为陆路、海路及多源可达性搜索增加每轮已处理标记，并将候选成本统一到 Float32 精度后再比较、保存和入队；同一目标的旧堆条目不再重复消耗搜索名额。版本变化使交通及下游文化、政体/宗教缓存失效，上游人口聚落与自然链可复用。已有 Schema 4 快照保留已存路线，不在读取时重算。本次补充了确定性合成图回归用例，尚未执行；固定 Seed `m2-civilization-seed` 的 v1/v2 对照与高等级性能/内存复验待执行，历史 M2 验证不覆盖 v2。
 
 前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry，再追加地形、地理分区与地名 Stage。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用该分支并添加 I0/H0/L1；Ecology Pipeline 另建 C0 Registry 并追加 E0。两条调试分支共享 StageCache 的可复用上游产物，但 E0 单独计划不包含任何水文 Stage。Natural Pipeline 在同一 DAG 中包含 I0/H0/L1/E0，E0 仍直接依赖 Mesh/T0/C0，水文参数变化不会使 E0 Stage 失效。
 
@@ -74,6 +84,10 @@ H0 缓存签名包含蒸散系数、基准汇水面积、河网密度倍率和�
 | hydrology.riverDensityMultiplier | [0.25,4]，默认 0.5 | H0 河道汇水面积门槛；高倍率降低门槛、增加候选河道 |
 | hydrology.minimumRiverDrainageAreaKm2 | [0,1e9] km²，默认 5000 | H0 河道汇水面积基准 |
 | hydrology.minimumLakeAreaKm2 | 非负有限 km²，默认 0 | L1 过滤较小洼地候选，不扩展湖泊边界 |
+| civilization.enabled | boolean，默认 true | `population-settlements`、`transport-network`、`peoples-cultures`、`polities-religions`（关闭仍保留自然链与 `resource-potential` / `habitability` 缓存） |
+| civilization.populationScale | [0.1,4]，默认 1 | `population-settlements` 及下游文明 Stage |
+| civilization.settlementDensity | [0.25,4]，默认 1 | `population-settlements` 及下游文明 Stage |
+| civilization.polityCohesion | [0,1]，默认 0.6 | 仅 `polities-religions` |
 | 相机、配色、专题、线框 | ViewState | 不生成 |
 
 roughness 可调纹理强度按 `(roughness/0.4)³` 响应。`terrain.glacialErosion` 与 `terrain.hydraulicErosion` 范围 [0,1]，默认 0.5，阶段内 km 转换前运行；水力参数进入处理器前统一乘以 0.5，冰川参数不缩放。当前不读取气候/降雨。旧 `continentalUpliftKm` 参数即便为零也在计划/执行前报错，包括全缓存命中。
@@ -104,7 +118,7 @@ Registry 拒绝重复 ID、空声明、缺失依赖和循环。Kahn 排序的 re
 
 ## Web Worker 与显示
 
-Worker/Controller 支持 Mesh、Geology、Terrain、C0、水文、E0 调试请求及带 `publication` 身份的完整自然世界请求。完整请求在 Worker 内从同一 DAG 装配 Schema 3 候选；阶段缓存继续拥有原数组，调试产物使用结构化副本，独立快照 Buffer 只转移一次。Controller 复核调试产物和快照身份，使用 `WorldStore` 完整校验候选，地图场景安装成功后才提交。失败、取消和传输错误保留最后已发布世界。M1.5 新测试已添加但本次未运行；当前 E0 历史 Chrome 证据不覆盖这条新链路。
+Worker/Controller 支持 Mesh、Geology、Terrain、C0、水文、E0 调试请求及带 `publication` 身份的完整世界请求（`createWorldPipeline`）。完整请求在 Worker 内从同一 DAG 装配 Schema 4 候选；阶段缓存继续拥有原数组，调试产物使用结构化副本，独立快照 Buffer 只转移一次。Controller 复核调试产物和快照身份，使用 `WorldStore` 完整校验候选，地图场景安装成功后才提交。失败、取消和传输错误保留最后已发布世界。全仓 `typecheck`、单元测试与生产构建均已通过，Playwright 浏览器验收尚未运行。
 
 只接收最新 requestId 的生成/拾取响应。硬取消终止重建 Worker，旧显示保留但缓存丢失；重新成功生成前禁用区域查询，防止旧画面和新 Worker 事实身份错配。失败、取消和传输错误不覆盖最后有效显示。页面销毁终止 Worker 并释放场景资源。
 

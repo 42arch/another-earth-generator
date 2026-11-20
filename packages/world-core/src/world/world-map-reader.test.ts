@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { testContentPack, testContentPort, testPipelineContent } from '#content/test-content'
 import {
-  assembleNaturalWorld,
+  assembleWorld,
   createNaturalPipeline,
   createSphericalMesh,
   createWorldMapReader,
+  createWorldPipeline,
   decodeWorldArchive,
+  DEFAULT_CIVILIZATION_PARAMETERS,
   DEFAULT_CLIMATE_PARAMETERS,
   DEFAULT_GEOLOGY_PARAMETERS,
   DEFAULT_HYDROLOGY_PARAMETERS,
@@ -64,7 +66,7 @@ describe('worldMapReader & circulation closure', () => {
     const pipeline = createNaturalPipeline()
     const packs = [testContentPack]
     const result = await pipeline.execute({ ...naturalInput, ...testPipelineContent(packs) })
-    const snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, packs, testContentPort)
+    const snapshot = assembleWorld(naturalInput, result, pipeline.registry, identity, packs, testContentPort)
     const originalMesh = createSphericalMesh({
       subdivisionLevel: naturalInput.config.mesh.subdivisionLevel,
       irregularity: naturalInput.config.mesh.irregularity,
@@ -158,7 +160,7 @@ describe('worldMapReader & circulation closure', () => {
       physicalRadiusKm: 6371,
     })
     const fakeSnapshot = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       snapshotId: 'snapshot:walk',
       revision: 0,
       time: { year: 0 },
@@ -188,8 +190,9 @@ describe('worldMapReader & circulation closure', () => {
         climate: { monthsPerYear: 12, layout: 'month-major', temperatureC: { meshId: mesh.meshId, values: new Float32Array(12 * mesh.regionCount) }, precipitationMm: { meshId: mesh.meshId, values: new Float32Array(12 * mesh.regionCount) }, annualMeanTemperatureC: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, annualPrecipitationMm: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, koppenClass: { meshId: mesh.meshId, values: new Uint8Array(mesh.regionCount) } },
         hydrology: { monthlySnowWaterEquivalentMm: { meshId: mesh.meshId, values: new Float32Array(12 * mesh.regionCount) }, monthlySnowfallMm: { meshId: mesh.meshId, values: new Float32Array(12 * mesh.regionCount) }, monthlySnowmeltMm: { meshId: mesh.meshId, values: new Float32Array(12 * mesh.regionCount) }, downstreamRegion: { meshId: mesh.meshId, values: new Int32Array(mesh.regionCount).fill(-1) }, annualRunoffMm: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, annualRunoffVolumeM3: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, accumulatedAnnualFlowM3s: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, contributingAreaKm2: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, basinIndex: { meshId: mesh.meshId, values: new Int32Array(mesh.regionCount).fill(-1) }, basins: [], riverIndex: { meshId: mesh.meshId, values: new Int32Array(mesh.regionCount).fill(-1) }, rivers: [], lakeIndex: { meshId: mesh.meshId, values: new Int32Array(mesh.regionCount).fill(-1) }, lakes: [] },
         ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: { meshId: mesh.meshId, values: new Uint16Array(mesh.regionCount) }, landCoverIndex: { meshId: mesh.meshId, values: new Uint16Array(mesh.regionCount) }, aridityIndex: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, growingSeasonMonths: { meshId: mesh.meshId, values: new Uint8Array(mesh.regionCount) } },
+        resources: { resourceIds: [], agriculturalPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, forestryPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, fisheryPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, deposits: [] },
       },
-      civilization: { meshId: mesh.meshId, population: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, species: [], cultures: [], religions: [], polities: [], settlements: [], populationGroups: [] },
+      civilization: { meshId: mesh.meshId, population: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, peoples: [], cultures: [], religions: [], polities: [], settlements: [], populationGroups: [], transport: { nodes: [], routes: [], accessibility: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) } } },
     } as unknown as Parameters<typeof createWorldMapReader>[0]
 
     const reader = createWorldMapReader(fakeSnapshot)
@@ -224,7 +227,7 @@ describe('worldMapReader & circulation closure', () => {
     const packs = [testContentPack]
     const result = await pipeline.execute({ ...naturalInput, ...testPipelineContent(packs) })
     const climateArtifact = result.getOutput<Parameters<typeof queryClimateRegion>[0]>('climate-c0')
-    const snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, packs, testContentPort)
+    const snapshot = assembleWorld(naturalInput, result, pipeline.registry, identity, packs, testContentPort)
 
     expect(snapshot.nature.climate.circulation).toBeDefined()
     const archive = encodeWorldArchive(snapshot, packs, testContentPort)
@@ -240,6 +243,8 @@ describe('worldMapReader & circulation closure', () => {
       hasGeographicNames: true,
       hasSeaClassification: true,
       hasCirculation: true,
+      hasResources: false,
+      hasCivilization: false,
     })
     expect(restoredReader.capabilities).toEqual(freshReader.capabilities)
     const emptyRegions = structuredClone(snapshot)
@@ -316,5 +321,112 @@ describe('worldMapReader & circulation closure', () => {
     expect(hasNoTypedArrayOrBuffer(restoredReader.rivers())).toBe(true)
     expect(hasNoTypedArrayOrBuffer(restoredReader.lakes())).toBe(true)
     expect(hasNoTypedArrayOrBuffer(restoredReader.ecologyDictionaries())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.resources())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.peoples())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.cultures())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.religions())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.polities())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.settlements())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.transportNodes())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(restoredReader.transportRoutes())).toBe(true)
+  })
+
+  it('exposes read-only civilization, resource, habitability, dominant index and transport queries with zero buffer leakage', async () => {
+    const pipeline = createWorldPipeline()
+    const packs = [testContentPack]
+    const worldInput = {
+      ...naturalInput,
+      seed: 'm2-map-reader-civilization',
+      config: {
+        ...naturalInput.config,
+        civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+      },
+    }
+    const result = await pipeline.execute({ ...worldInput, ...testPipelineContent(packs) })
+    const snapshot = assembleWorld(worldInput, result, pipeline.registry, identity, packs, testContentPort)
+
+    const store = new WorldStore(testContentPort)
+    store.publish(snapshot, packs)
+    const reader = store.mapReader()
+
+    expect(reader.capabilities).toEqual({
+      hasGeographicRegions: true,
+      hasGeographicNames: true,
+      hasSeaClassification: true,
+      hasCirculation: true,
+      hasResources: true,
+      hasCivilization: true,
+    })
+
+    const resources = reader.resources()
+    expect(resources.resourceIds.length).toBeGreaterThan(0)
+    expect(resources.deposits.length).toBeGreaterThan(0)
+    expect(reader.peoples().length).toBe(snapshot.civilization.peoples.length)
+    expect(reader.cultures().length).toBe(snapshot.civilization.cultures.length)
+    expect(reader.religions().length).toBe(snapshot.civilization.religions.length)
+    expect(reader.polities().length).toBe(snapshot.civilization.polities.length)
+    expect(reader.settlements().length).toBe(snapshot.civilization.settlements.length)
+    expect(reader.transportNodes().length).toBe(snapshot.civilization.transport.nodes.length)
+    expect(reader.transportRoutes().length).toBe(snapshot.civilization.transport.routes.length)
+
+    const routes = reader.transportRoutes()
+    if (routes.length > 0) {
+      const visited: number[] = []
+      reader.forEachTransportRouteRegion(0, (region, step) => {
+        expect(step).toBe(visited.length)
+        visited.push(region)
+      })
+      expect(visited).toEqual(Array.from(snapshot.civilization.transport.routes[0].regions))
+      expect(() => reader.forEachTransportRouteRegion(-1, () => {})).toThrow(RangeError)
+      expect(() => reader.forEachTransportRouteRegion(routes.length, () => {})).toThrow(RangeError)
+    }
+
+    const hab = reader.field('habitability')
+    const cap = reader.field('carryingCapacityPerKm2')
+    const density = reader.field('populationDensity')
+    const access = reader.field('transportAccessibility')
+    const domPeople = reader.field('dominantPeopleIndex')
+    const domCulture = reader.field('dominantCultureIndex')
+    const domReligion = reader.field('dominantReligionIndex')
+    const domPolity = reader.field('dominantPolityIndex')
+
+    const populatedRegion = snapshot.civilization.settlements[0]?.regionId ?? snapshot.civilization.populationGroups[0].regionId
+    expect(hab.get(populatedRegion)).toBeGreaterThan(0)
+    expect(cap.get(populatedRegion)).toBeGreaterThan(0)
+    expect(density.get(populatedRegion)).toBeCloseTo(
+      Math.fround(snapshot.civilization.population.values[populatedRegion] / snapshot.mesh.areaKm2[populatedRegion]),
+      6,
+    )
+    expect(access.get(populatedRegion)).toBeGreaterThanOrEqual(0)
+    expect(domPeople.get(populatedRegion)).toBeGreaterThanOrEqual(0)
+    expect(domCulture.get(populatedRegion)).toBeGreaterThanOrEqual(0)
+    expect(domReligion.get(populatedRegion)).toBeGreaterThanOrEqual(-1)
+    expect(domPolity.get(populatedRegion)).toBeGreaterThanOrEqual(-1)
+
+    const regionInfo = store.region(populatedRegion, 0)
+    expect(regionInfo.habitability).toBeCloseTo(hab.get(populatedRegion), 6)
+    expect(regionInfo.populationDensity).toBeCloseTo(density.get(populatedRegion), 6)
+    expect(regionInfo.transportAccessibility).toBeCloseTo(access.get(populatedRegion), 6)
+    expect(regionInfo.dominantPeopleId).toBe(snapshot.civilization.peoples[domPeople.get(populatedRegion)].id)
+    expect(regionInfo.dominantCultureId).toBe(snapshot.civilization.cultures[domCulture.get(populatedRegion)].id)
+    expect(regionInfo.populationGroups.length).toBeGreaterThan(0)
+
+    if (snapshot.civilization.polities.length > 0)
+      expect(store.polity(snapshot.civilization.polities[0].id)?.id).toBe(snapshot.civilization.polities[0].id)
+    if (snapshot.civilization.settlements.length > 0)
+      expect(store.settlement(snapshot.civilization.settlements[0].id)?.id).toBe(snapshot.civilization.settlements[0].id)
+    if (snapshot.civilization.transport.routes.length > 0)
+      expect(store.transportRoute(snapshot.civilization.transport.routes[0].id)?.regions.length).toBe(snapshot.civilization.transport.routes[0].regions.length)
+
+    expect(hasNoTypedArrayOrBuffer(reader)).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.resources())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.peoples())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.cultures())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.religions())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.polities())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.settlements())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.transportNodes())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(reader.transportRoutes())).toBe(true)
+    expect(hasNoTypedArrayOrBuffer(regionInfo)).toBe(true)
   })
 })

@@ -41,6 +41,5 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
-    exclude: ['../../docs/old-src/**'],
   },
 })

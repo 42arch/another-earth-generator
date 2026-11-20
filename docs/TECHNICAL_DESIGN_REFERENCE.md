@@ -380,7 +380,7 @@ export interface NatureSnapshot {
 
 ## 7. 自然世界：当前实现与演进
 
-迁移基线为 `42arch/another-earth-generator` 的 `feat-society` 分支，本地 `docs/old-src` 只读参考，不属于新架构运行代码。新网格、随机流和后续曲线修订不保证旧项目同 Seed 逐字节一致。
+早期算法迁自 `feat-society`。新网格、随机流和后续曲线修订不保证旧项目同 Seed 逐字节一致。
 
 ### 7.1 球面网格与空间查询（已实现）
 
@@ -434,7 +434,7 @@ export interface NatureSnapshot {
 - `terrain/`：地形表面纹理（`terrain-texture-generator`）、T0 水力/冰川侵蚀处理器（`terrain-erosion-processor`）、表面后处理编排（`terrain-post-processor`）与拓扑修复/整形（`terrain-finalizer`）。
 - 单位与契约：模型塑形坐标与物理高程换算收敛于 `generation/nature/geography/elevation-units.ts`；产物契约与校验由 `types.ts`、`validation.ts` 和 `queries.ts` 维护。
 
-> 以下 §7.4–§9 为尚未落地的目标设计；算法现状描述特指 docs/old-src 参考实现。当前源码没有这些生成器或正式地图，迁移契约以世界数据契约及 M1 实施计划为准。
+> 以下 §7.4–§9 为尚未落地的目标设计；算法现状描述特指当时尚未迁入的参考实现。当前源码没有这些生成器或正式地图，迁移契约以世界数据契约及 M1 实施计划为准。
 
 ### 7.4 季节环流与月度气候
 
@@ -807,7 +807,7 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 - 2026-11-15：根据当前地图反馈降低默认河网密度：`riverDensityMultiplier` 默认值从 1 调整为 0.5，使 H0 的汇水面积门槛翻倍；河道面与中心线统一按 Strahler 级序 ≥2 显示。旧 Schema 3 档案缺少该参数时仍补历史值 1，不改变存档中已生成的河流事实。默认下河段数与河道覆盖率尚未复测，本次未运行自动化检查或浏览器验收。
 - 2026-11-14：完成 M3 Cartography Slice 2（数据源体系、水系面化、PCA 脊线与 `StyleCompiler`）。`@another-earth/cartography` 新增实例级 `MapSourceRegistry`（按 `${snapshotId}:${adapterVersion}:${sourceId}` 与 `:m${month}` 缓存，缺失快照能力时返回结构化 `SourceUnavailable`）、13 个自然数据源适配器、保拓扑对偶边环追踪与 Chaikin / Catmull-Rom 球面平滑、随流量幂律单调递增的变宽河道多边形与汇流圆片衔接、面积加权切平面 PCA 版图脊线提取（延伸度 `>= 1.35` 提取样条控制点，否则回退内部极点锚点），以及 `StyleCompiler`（静态校验、四级依赖降维预编译、`LegendDescriptor` 自动提取）与 6 套内置 JSON 风格预设（`satellite`、`standard-atlas`、`physical-relief`、`minimal-light`、`minimal-dark`、`historical-parchment`）。本轮未运行 test、build、lint、typecheck 或浏览器检查。
 - 2026-11-13：确认 [M3 Cartography 制图系统设计规范](Cartography-System-Design.md) 并落地 Slice 1（Core 数据闭环与 `WorldMapReader`）。正式制图采用单轨 `WorldSnapshot -> WorldMapReader -> MapSourceRegistry -> StyleCompiler -> WorldViewport`（3D Globe + 2D Atlas），收敛为 `raster / fill / line / circle / symbol` 五类标准图层（变宽河网面化为 `fill`），后续将在 Slice 5 废弃 `apps/web` 前 6 个阶段调试展示。Slice 1 在 Schema 3 向后兼容新增可选 `ClimateState.circulation`（月度风/洋流速度与暖度及 `oceanAvailable` 掩码），并新增 `createWorldMapReader` / `WorldStore.mapReader()`（从 `MeshTopology` 惰性恢复球面对偶 Voronoi 角点与逆时针边界环、邻域爬山 `locateRegion`、坡度 `slopeDeg`、晕渲 `hillshade` 与确定性多尺度球面 Simplex 表面细节 `surfaceDetail`），同时在 Web `GenerationController` 提供 `candidateMapReader(snapshotId)` 与 `publishedMapReader()`。本轮未运行 test、build、lint、typecheck 或浏览器检查。
-- 2026-11-13：卫星场景效果以只读迁移基线 `docs/old-src/core/rendering/globe/{atmosphere,water-layer,stars,view}.ts` 为准：复用相机距离淡入的 BackSide 大气边缘、按海洋单元裁剪的 Phong 水面、归一化地球尺度的星空，以及按月份日序和轴倾角计算的太阳方向。为避免昼夜模式暗面吞掉表面细节，夜侧环境补光改为可见的蓝灰色。卫星表面继续使用径向法线 Lambert 材质，并按旧 `SatelliteSurfaceRenderer` 的 hillshade 算法增加固定方向地形明暗调制。T0 的原始地形纹理计算结果以五个仅供显示的数组由 `terrain-v26` Artifact 传到 Web；配色保留参考的纹理权重和调色顺序，不把显示纹理写入 WorldSnapshot。v26 不改变 terrain-v25 高程和海陆结果，但会使旧 T0 与下游缓存失效。此改动尚未运行自动化检查或浏览器视觉验收。
+- 2026-11-13：卫星场景效果沿用参考地球渲染：复用相机距离淡入的 BackSide 大气边缘、按海洋单元裁剪的 Phong 水面、归一化地球尺度的星空，以及按月份日序和轴倾角计算的太阳方向。为避免昼夜模式暗面吞掉表面细节，夜侧环境补光改为可见的蓝灰色。卫星表面继续使用径向法线 Lambert 材质，并按旧 `SatelliteSurfaceRenderer` 的 hillshade 算法增加固定方向地形明暗调制。T0 的原始地形纹理计算结果以五个仅供显示的数组由 `terrain-v26` Artifact 传到 Web；配色保留参考的纹理权重和调色顺序，不把显示纹理写入 WorldSnapshot。v26 不改变 terrain-v25 高程和海陆结果，但会使旧 T0 与下游缓存失效。此改动尚未运行自动化检查或浏览器视觉验收。
 - 2026-11-13：水文参数面板增加河网密度倍率、基准汇水面积和最小湖泊面积，并显示河段/湖泊数量与面积摘要。密度倍率缩放 H0 面积阈值，最小湖泊面积只过滤 L1 候选，不扩展几何；H0/L1 升级至 v4/v6，参数按实际消费者进入 Stage 签名。Schema 3 档案解码为缺失的新增参数补默认元数据，不修改已保存水文事实。本次未运行测试、类型检查或浏览器验收；参数范围响应和大网格摘要性能待验证。
 - 2026-11-12：用户决定收尾 M1，接受 T0 `terrain-v25` / C0 `climate-c0-v21` / I0/H0/L1 / E0 `ecology-e0-v3` 为本轮自然链基线。快速验证结果：Core 自然快照/档案/发布用例 19/19、Web Controller/Transfer/Worker 用例 24/24、C0 温度/降水/Köppen 用例 11/11；Core/Web typecheck 通过，真实 Chrome 主路径 3/3 通过。全量性能矩阵、T0 v25 自动化矩阵、C0 雨影专项和 L7/L8 峰值内存未完成，作为延期项，不宣称已通过。后续自然模型演进与 M2+ 能力按各自阶段安排。
 - 2026-11-12：C0 v21 在东岸季风强区增加夏季迎风降雨，目标是让半干旱草原按实际月雨、月温转入相应湿润或冬干类别。四 Seed 的 BS 均下降 0.09–0.35 个百分点，Cwa 均增加 0.23–0.34 个百分点；Dwa 三增一微降。默认 Dwa 0.266%→0.291%、Cwa 1.986%→2.323%、BS 23.553%→23.259%，BW 基本稳定。版本变更使缓存与下游失效；四 Seed 和默认 I0/H0/E0 仅完成诊断，本次未运行自动化检查或浏览器验证。见 [v21 对照](benchmarks/M1.2-Dwa-v21-steppe-adjustment.md)。
@@ -821,7 +821,7 @@ M1 后续任务和完成标准见 [实施计划](M1_IMPLEMENTATION_PLAN.md)，�
 - 2026-11-08：M1.4 E0 使用 C0/T0 作为分类输入；H0 河道和 L1 湖泊不改变群系/自然覆盖分类。用户反馈湖泊曾被 E0 直接编码为淡水并导致分类依赖 H0/L1，因此升级到 `ecology-e0-v2`，从 DAG 和 Artifact 契约移除水文输入；水文专题保持独立。此阶段不隐式实现最终 C1/H1 或完整快照。
 - 2026-11-08：E0 类别字典由 `world-data` 公开稳定 ID 管理，`world-core` 负责分类算法和生成产物；生态和自然覆盖不进入快照，直到 M1.5 完整自然状态契约组装。E0 整体实现/Worker 尚未验收，固定输入旧分类器对照仅覆盖分类输出。
 - 2026-11-08：将 E0 和两张专题明确标为实验。E0 分类输入限制为 C0/T0，水文参数与 H0/L1 成员不进入其依赖或掩码；固定 Seed 同输入旧分类器回放覆盖全部陆地区域。该对照不代表旧/新气候场一致或地图形态验收通过。
-- 2026-11-09：按用户决定，封存当前 M1 实现轮次并先迁移 UI；不宣称 M1 技术验收通过。UI 迁移完成后，以 `docs/old-src` 的 `feat-society` 为算法与流程基线重新审查和迁移 M1，现有实现作为比较材料，届时另定范围和验收证据。
+- 2026-11-09：按用户决定，封存当前 M1 实现轮次并先迁移 UI；不宣称 M1 技术验收通过。UI 迁移完成后重新审查和迁移 M1，现有实现作为比较材料，届时另定范围和验收证据。
 - 2026-11-10：参考 UI 按 Svelte 5/Vite/Bits UI/Tailwind 技术栈与 `ui/components`、`ui/hud`、`ui/state` 结构迁入 Web；`AppUI` 组合工作台 HUD，现有 `MeshDebug` 提供当前数据和渲染能力。首次打开自动生成当前 E0 链，界面默认 Seed 1024、L7、扰动 0.75，并沿用旧 UI 气候默认倾角 23.5°/降水倍率 1.8。Chrome Worker/UI 回归 10/10 通过。UI 迁移现已完成，下一步重开 M1 算法与流程迁移；此决策不改变 M1 的验收状态，也不代表正式 Atlas、文明、完整自然快照已实现。
 - 2026-11-10：按 UI 反馈把 Cell 区域网格线设为默认关闭，并将开关放入图层面板；增加合并在当前专题图例中的区域数量、总区域占比、逐类陆地区域占比、总体陆地区域占比、颜色条、复制 TSV，以及河网段和湖泊面积摘要。类别按陆地比例降序、同值按总区域比例降序。统计仅为显示派生值，不进入生成或缓存。本次未运行检查。
 

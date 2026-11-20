@@ -1,0 +1,77 @@
+{
+  "format": "another-earth/society-pack",
+  "schemaVersion": 1,
+  "id": "builtin-religions-zh-cn",
+  "version": "1.0.0",
+  "language": "zh-CN",
+  "displayName": "宗教传统",
+  "dependencies": [],
+  "religions": [
+    {
+      "id": "builtin:religion/local-zh-cn",
+      "displayName": "地方山川信仰",
+      "description": "围绕山川、泉眼与先祖记忆形成的地域性崇拜传统。",
+      "tags": ["animist", "local"],
+      "organization": "decentralized",
+      "traits": ["nature-veneration", "ancestor-memory"],
+      "tolerance": 0.75,
+      "spreadBias": 0.3,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/solar-covenant-zh-cn",
+      "displayName": "晨曦圣约教",
+      "description": "尊奉光明秩序与成文圣约的层级化一神信仰。",
+      "tags": ["monotheistic", "civic"],
+      "organization": "hierarchical",
+      "traits": ["scriptural-law", "missionary"],
+      "tolerance": 0.35,
+      "spreadBias": 0.8,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/ocean-pantheon-zh-cn",
+      "displayName": "潮汐诸神宗",
+      "description": "由航海与沿海社群共尊潮汐、季风与星象诸神的多神传统。",
+      "tags": ["polytheistic", "maritime"],
+      "organization": "decentralized",
+      "traits": ["seafaring-rites", "syncretic"],
+      "tolerance": 0.7,
+      "spreadBias": 0.65,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/hearth-ancestors-zh-cn",
+      "displayName": "宗祠敬祖礼",
+      "description": "以宗族祠堂、历法礼制与先人谱系为核心的敬祖传统。",
+      "tags": ["ancestral", "agrarian"],
+      "organization": "hierarchical",
+      "traits": ["kinship-rites", "civic-harmony"],
+      "tolerance": 0.6,
+      "spreadBias": 0.45,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/astral-order-zh-cn",
+      "displayName": "星穹理序派",
+      "description": "将天文历算、自然理性与城邦伦理结合的哲理教团。",
+      "tags": ["philosophical", "scholarly"],
+      "organization": "hierarchical",
+      "traits": ["rational-inquiry", "monastic-academies"],
+      "tolerance": 0.65,
+      "spreadBias": 0.55,
+      "weight": 0.8
+    },
+    {
+      "id": "builtin:religion/steppe-sky-zh-cn",
+      "displayName": "苍天盟誓教",
+      "description": "敬畏长天、山口神灵与部族盟誓的高原牧行信仰。",
+      "tags": ["sky-worship", "pastoral"],
+      "organization": "decentralized",
+      "traits": ["oath-bound", "nomadic-shrines"],
+      "tolerance": 0.65,
+      "spreadBias": 0.5,
+      "weight": 0.9
+    }
+  ]
+}

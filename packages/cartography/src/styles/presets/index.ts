@@ -37,6 +37,7 @@ export type BuiltinMapStylePresetId
     | 'minimal-light'
     | 'minimal-dark'
     | 'historical-parchment'
+    | 'political-atlas'
 
 export const KOPPEN_CLASS_LABELS_ZH: readonly string[] = Object.freeze([
   '海洋',
@@ -193,7 +194,21 @@ function buildGoldenAnglePalette(count: number): readonly string[] {
 
 export const CATEGORICAL_GROUP_PALETTE_HEX: readonly string[] = buildGoldenAnglePalette(64)
 
+const SHARED_CIVILIZATION_TOKENS: Readonly<Record<string, StyleTokenValue>> = Object.freeze({
+  polityBorder: '#1e293b',
+  transportLand: '#a16207',
+  transportRiver: '#0284c7',
+  transportSea: '#0e7490',
+  settlementCapital: '#dc2626',
+  settlementCity: '#f59e0b',
+  settlementTown: '#e2e8f0',
+  settlementStroke: '#0f172a',
+  polityLabel: '#0f172a',
+  settlementLabel: '#1e293b',
+})
+
 const SHARED_THEMATIC_TOKENS: Readonly<Record<string, StyleTokenValue>> = Object.freeze({
+  ...SHARED_CIVILIZATION_TOKENS,
   koppenPalette: KOPPEN_PALETTE_HEX,
   biomePalette: BIOME_PALETTE_HEX,
   landCoverPalette: LAND_COVER_PALETTE_HEX,
@@ -693,6 +708,171 @@ function buildSharedThematicLayers(): readonly MapStyleLayer[] {
         'raster-opacity': 1,
       },
     },
+    {
+      id: 'thematic-polity-territory',
+      type: 'fill',
+      source: 'polity-territory',
+      slot: 'thematic',
+      thematicId: 'polity-territory',
+      interactive: true,
+      legend: {
+        title: '国家领土政区',
+        fieldName: 'polityIndex',
+        noDataLabel: '无归属地',
+        noDataColor: '#6f6a64',
+      },
+      paint: {
+        'fill-color': ['palette', ['get', 'groupIndex'], ['token', 'groupPalette'], '#6f6a64'],
+        'fill-opacity': 1,
+      },
+    },
+    {
+      id: 'thematic-culture-dominant',
+      type: 'fill',
+      source: 'culture-dominant',
+      slot: 'thematic',
+      thematicId: 'culture-dominant',
+      interactive: true,
+      legend: {
+        title: '主导文化分布',
+        fieldName: 'cultureIndex',
+        noDataLabel: '无人文化区 / 海洋',
+        noDataColor: '#94a3b8',
+      },
+      paint: {
+        'fill-color': ['palette', ['get', 'groupIndex'], ['token', 'groupPalette'], '#cbd5e1'],
+        'fill-opacity': 0.86,
+      },
+    },
+    {
+      id: 'thematic-religion-dominant',
+      type: 'fill',
+      source: 'religion-dominant',
+      slot: 'thematic',
+      thematicId: 'religion-dominant',
+      interactive: true,
+      legend: {
+        title: '主导宗教分布',
+        fieldName: 'religionIndex',
+        noDataLabel: '无主导宗教 / 海洋',
+        noDataColor: '#94a3b8',
+      },
+      paint: {
+        'fill-color': ['palette', ['get', 'groupIndex'], ['token', 'groupPalette'], '#cbd5e1'],
+        'fill-opacity': 0.86,
+      },
+    },
+    {
+      id: 'thematic-population-density',
+      type: 'raster',
+      source: 'population-density',
+      slot: 'thematic',
+      thematicId: 'population-density',
+      legend: {
+        title: '人口密度',
+        unit: '人/km²',
+        fieldName: 'populationDensity',
+        noDataLabel: '海洋',
+        noDataColor: '#0f2744',
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['==', ['get', 'landMask'], 0],
+          '#0f2744',
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'populationDensity'],
+            0,
+            '#e9ecef',
+            2,
+            '#fde09d',
+            10,
+            '#f4a261',
+            35,
+            '#e76f51',
+            100,
+            '#b52b3b',
+            250,
+            '#6c122a',
+          ],
+        ],
+        'raster-opacity': 1,
+      },
+    },
+    {
+      id: 'thematic-agricultural-potential',
+      type: 'raster',
+      source: 'resource-potential',
+      slot: 'thematic',
+      thematicId: 'agricultural-potential',
+      legend: {
+        title: '农业自然潜力',
+        fieldName: 'agriculturalPotential',
+        noDataLabel: '海洋',
+        noDataColor: '#0e243b',
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['==', ['get', 'landMask'], 0],
+          '#0e243b',
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'agriculturalPotential'],
+            0,
+            '#b89c78',
+            0.25,
+            '#d9cf7e',
+            0.5,
+            '#8bc366',
+            0.75,
+            '#3d9b4f',
+            1,
+            '#135e34',
+          ],
+        ],
+        'raster-opacity': 1,
+      },
+    },
+    {
+      id: 'thematic-deposit-richness',
+      type: 'raster',
+      source: 'resource-potential',
+      slot: 'thematic',
+      thematicId: 'deposit-richness',
+      legend: {
+        title: '矿产能源富集度',
+        fieldName: 'depositRichness',
+        noDataLabel: '海洋',
+        noDataColor: '#0d1b2a',
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['==', ['get', 'landMask'], 0],
+          '#0d1b2a',
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'depositRichness'],
+            0,
+            '#2b3442',
+            0.25,
+            '#5c6b73',
+            0.5,
+            '#d4a347',
+            0.75,
+            '#e06d38',
+            1,
+            '#b8262b',
+          ],
+        ],
+        'raster-opacity': 1,
+      },
+    },
   ]
 }
 
@@ -926,6 +1106,218 @@ function buildSharedOverlayLayers(): readonly MapStyleLayer[] {
         'line-width': 0.75,
       },
     },
+    {
+      id: 'overlay-polity-borders',
+      type: 'line',
+      source: 'polity-borders',
+      slot: 'overlay',
+      overlayId: 'polity-borders',
+      interactive: true,
+      layout: {
+        'visibility': 'visible',
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      paint: {
+        'line-color': ['token', 'polityBorder'],
+        'line-opacity': [
+          'case',
+          ['==', ['get', 'isFrontier'], true],
+          0.55,
+          0.92,
+        ],
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          1.15,
+          6,
+          1.8,
+          12,
+          2.6,
+        ],
+        'line-dasharray': [
+          'case',
+          ['==', ['get', 'isFrontier'], true],
+          [3, 2],
+          [1, 0],
+        ],
+      },
+    },
+    {
+      id: 'overlay-transport-routes',
+      type: 'line',
+      source: 'transport-routes',
+      slot: 'overlay',
+      overlayId: 'transport-routes',
+      interactive: true,
+      layout: {
+        'visibility': 'visible',
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      paint: {
+        'line-color': [
+          'match',
+          ['get', 'mode'],
+          'sea',
+          ['token', 'transportSea'],
+          'river',
+          ['token', 'transportRiver'],
+          ['token', 'transportLand'],
+        ],
+        'line-opacity': 0.85,
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          ['match', ['get', 'mode'], 'road', 1.15, 'river', 1.35, 1.25],
+          6,
+          ['match', ['get', 'mode'], 'road', 1.9, 'river', 2.2, 2.0],
+        ],
+        'line-dasharray': [
+          'match',
+          ['get', 'mode'],
+          'sea',
+          [4, 3],
+          [1, 0],
+        ],
+      },
+    },
+    {
+      id: 'overlay-settlements',
+      type: 'circle',
+      source: 'settlements',
+      slot: 'overlay',
+      overlayId: 'settlements',
+      interactive: true,
+      layout: {
+        'visibility': 'visible',
+        'symbol-shape': ['get', 'symbolShape'],
+      },
+      paint: {
+        'circle-color': [
+          'match',
+          ['get', 'tier'],
+          'capital',
+          ['token', 'settlementCapital'],
+          'city',
+          ['token', 'settlementCity'],
+          ['token', 'settlementTown'],
+        ],
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          ['match', ['get', 'tier'], 'capital', 2.1, 'city', 1.45, 1.05],
+          2,
+          ['match', ['get', 'tier'], 'capital', 3.0, 'city', 2.05, 1.35],
+          5,
+          ['match', ['get', 'tier'], 'capital', 4.6, 'city', 3.3, 2.15],
+          9,
+          ['match', ['get', 'tier'], 'capital', 6.6, 'city', 4.6, 3.1],
+        ],
+        'circle-stroke-color': ['token', 'settlementStroke'],
+        'circle-stroke-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          ['match', ['get', 'tier'], 'capital', 0.45, 'city', 0.35, 0.3],
+          2,
+          ['match', ['get', 'tier'], 'capital', 0.6, 'city', 0.45, 0.35],
+          6,
+          ['match', ['get', 'tier'], 'capital', 1.05, 'city', 0.8, 0.65],
+        ],
+        'circle-opacity': [
+          'step',
+          ['zoom'],
+          ['match', ['get', 'tier'], 'capital', 0.96, 0],
+          2,
+          ['match', ['get', 'tier'], 'capital', 0.96, 'city', 0.96, 0],
+          3.6,
+          0.96,
+        ],
+      },
+    },
+    {
+      id: 'overlay-polity-labels',
+      type: 'symbol',
+      source: 'polity-labels',
+      slot: 'overlay',
+      overlayId: 'polity-labels',
+      interactive: true,
+      layout: {
+        'visibility': 'visible',
+        'text-field': ['get', 'displayName'],
+        'text-font': ['token', 'labelFontFamily'],
+        'text-weight': ['token', 'labelFontWeight'],
+        'symbol-placement': [
+          'case',
+          ['==', ['get', 'curved'], true],
+          'spine',
+          'point',
+        ],
+        'text-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          14,
+          6,
+          20,
+        ],
+      },
+      paint: {
+        'text-color': ['token', 'polityLabel'],
+        'text-halo-color': ['token', 'labelHalo'],
+        'text-halo-width': 2.0,
+        'text-opacity': 0.95,
+      },
+    },
+    {
+      id: 'overlay-settlement-labels',
+      type: 'symbol',
+      source: 'settlement-labels',
+      slot: 'overlay',
+      overlayId: 'settlement-labels',
+      interactive: true,
+      layout: {
+        'visibility': 'visible',
+        'text-field': ['get', 'displayName'],
+        'text-font': ['token', 'labelFontFamily'],
+        'text-weight': ['token', 'labelFontWeight'],
+        'symbol-placement': 'point',
+        // ems; +x right, +y down. Negative y sits the name just above the settlement symbol.
+        'text-offset': [0, -0.78],
+        'text-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          0,
+          ['match', ['get', 'tier'], 'capital', 11, 'city', 10, 9],
+          6,
+          ['match', ['get', 'tier'], 'capital', 15, 'city', 13, 11.5],
+        ],
+      },
+      paint: {
+        'text-color': ['token', 'settlementLabel'],
+        'text-halo-color': ['token', 'labelHalo'],
+        'text-halo-width': 1.4,
+        'text-opacity': [
+          'step',
+          ['zoom'],
+          ['match', ['get', 'tier'], 'capital', 0.95, 0],
+          2,
+          ['match', ['get', 'tier'], 'capital', 0.95, 'city', 0.95, 0],
+          3.6,
+          0.95,
+        ],
+      },
+    },
   ]
 }
 
@@ -937,6 +1329,16 @@ const STANDARD_ATLAS_DEFAULT_LAYERS = ['world-surface', 'rivers', 'lakes', 'coas
 const PHYSICAL_RELIEF_DEFAULT_LAYERS = ['world-surface', 'rivers', 'lakes'] as const
 const MINIMAL_DEFAULT_LAYERS = ['world-surface'] as const
 const PARCHMENT_DEFAULT_LAYERS = ['world-surface', 'coastlines', 'labels'] as const
+const POLITICAL_ATLAS_DEFAULT_LAYERS = [
+  'polity-territory',
+  'polity-borders',
+  'coastlines',
+  'rivers',
+  'lakes',
+  'settlements',
+  'polity-labels',
+  'settlement-labels',
+] as const
 
 function composePresetLayers(
   baseLayers: readonly MapStyleLayer[],
@@ -1336,6 +1738,67 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
   ]),
 })
 
+export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
+  version: 1,
+  id: 'political-atlas',
+  name: '政治政区图',
+  description: '国家领土填色、国界线、聚落层级符号及政体与城市标注专题地图集',
+  defaultEnabledLayerIds: POLITICAL_ATLAS_DEFAULT_LAYERS,
+  defaultGlobeEffects: ATLAS_GLOBE_EFFECTS,
+  tokens: {
+    ...SHARED_THEMATIC_TOKENS,
+    background: '#b8d7e8',
+    oceanDeep: '#9bc4da',
+    oceanShallow: '#c2dfee',
+    coastline: '#335d75',
+    waterBody: '#488cb0',
+    plateBoundary: '#dc2626',
+    graticule: '#64748b',
+    windArrow: '#0f766e',
+    continentLabel: '#334155',
+    oceanLabel: '#1d4ed8',
+    labelHalo: '#f8fafc',
+    polityBorder: '#1e293b',
+    polityLabel: '#0f172a',
+    settlementLabel: '#1e293b',
+    settlementCapital: '#dc2626',
+    settlementCity: '#d97706',
+    settlementTown: '#f8fafc',
+    settlementStroke: '#0f172a',
+  },
+  layers: composePresetLayers([
+    {
+      id: 'base-political-atlas-surface',
+      type: 'raster',
+      source: 'world-surface',
+      slot: 'base',
+      legend: {
+        title: '政区海陆底图',
+        fieldName: 'landMask',
+        labels: ['海洋', '无归属陆地'],
+      },
+      paint: {
+        'raster-color': [
+          'case',
+          ['==', ['get', 'landMask'], 0],
+          [
+            'interpolate',
+            ['linear'],
+            ['get', 'elevationKm'],
+            -8,
+            '#9bc4da',
+            0,
+            '#c2dfee',
+          ],
+          '#e7e5df',
+        ],
+        'raster-opacity': 1,
+        'raster-hillshade': 0.25,
+      },
+    },
+  ]),
+})
+
 export const BUILTIN_MAP_STYLE_PRESETS: Readonly<Record<BuiltinMapStylePresetId, MapStyleDocument>> = Object.freeze({
   'satellite': SATELLITE_STYLE_PRESET,
   'standard-atlas': STANDARD_ATLAS_STYLE_PRESET,
@@ -1343,6 +1806,7 @@ export const BUILTIN_MAP_STYLE_PRESETS: Readonly<Record<BuiltinMapStylePresetId,
   'minimal-light': MINIMAL_LIGHT_STYLE_PRESET,
   'minimal-dark': MINIMAL_DARK_STYLE_PRESET,
   'historical-parchment': HISTORICAL_PARCHMENT_STYLE_PRESET,
+  'political-atlas': POLITICAL_ATLAS_STYLE_PRESET,
 })
 
 export const BUILTIN_MAP_STYLE_PRESET_LIST: readonly MapStyleDocument[] = Object.freeze([
@@ -1352,6 +1816,7 @@ export const BUILTIN_MAP_STYLE_PRESET_LIST: readonly MapStyleDocument[] = Object
   MINIMAL_LIGHT_STYLE_PRESET,
   MINIMAL_DARK_STYLE_PRESET,
   HISTORICAL_PARCHMENT_STYLE_PRESET,
+  POLITICAL_ATLAS_STYLE_PRESET,
 ])
 
 export function getBuiltinMapStylePreset(styleId: string): MapStyleDocument {

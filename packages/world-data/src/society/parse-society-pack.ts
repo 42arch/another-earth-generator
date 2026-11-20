@@ -13,6 +13,7 @@ const locale = (value: unknown): value is string => typeof value === 'string' &&
 const politicalForms = ['republic', 'empire', 'dynastic-monarchy', 'federation', 'confederation', 'chiefdom', 'emirate', 'khanate', 'league', 'free-territory', 'kingdom', 'principality', 'theocracy', 'merchant-republic', 'city-state', 'sultanate', 'tribal-confederation', 'military-junta', 'protectorate', 'commune']
 const governmentOrganizations = ['centralized', 'parliamentary', 'presidential', 'federal-council', 'confederal-assembly', 'tribal-council', 'theocratic-hierarchy', 'merchant-council', 'military-command', 'rotating-delegation', 'chartered-administration']
 const successions = ['hereditary', 'elective', 'appointed', 'rotating', 'collective', 'mixed']
+const religionOrganizations = ['decentralized', 'hierarchical']
 
 /** Parse an independent, language-specific society pack author document. */
 export function parseSocietyPack(value: unknown): SocietyPackParseResult {
@@ -37,7 +38,7 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
   if (!record(value))
     return { valid: false, issues: [{ code: 'dtype', path: '$', message: 'Expected a society pack object' }] }
 
-  keys(value, ['format', 'schemaVersion', 'id', 'version', 'language', 'displayName', 'dependencies', 'peoples', 'cultures', 'states'], '$')
+  keys(value, ['format', 'schemaVersion', 'id', 'version', 'language', 'displayName', 'dependencies', 'peoples', 'cultures', 'polities', 'religions'], '$')
   if (value.format !== 'another-earth/society-pack')
     add('version', 'format', 'Unsupported society pack format')
   if (value.schemaVersion !== 1)
@@ -77,7 +78,7 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
     })
   }
 
-  const domains = ['peoples', 'cultures', 'states'] as const
+  const domains = ['peoples', 'cultures', 'polities', 'religions'] as const
   const selected = domains.filter(domain => Object.hasOwn(value, domain))
   if (selected.length !== 1)
     add('required', 'definitions', 'Expected exactly one society definition domain')
@@ -98,9 +99,11 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
         ? ['id', 'displayName', 'description', 'tags']
         : domain === 'cultures'
           ? ['id', 'displayName', 'description', 'tags', 'traits', 'namingStyleId']
-          : ['id', 'displayName', 'description', 'tags', 'politicalForm', 'governmentOrganization', 'headOfStateTitle', 'headOfGovernmentTitle', 'legislatureTitle', 'succession', 'weight']
+          : domain === 'polities'
+            ? ['id', 'displayName', 'description', 'tags', 'politicalForm', 'governmentOrganization', 'headOfStateTitle', 'headOfGovernmentTitle', 'legislatureTitle', 'succession', 'weight']
+            : ['id', 'displayName', 'description', 'tags', 'organization', 'traits', 'tolerance', 'spreadBias', 'weight']
       keys(entry, allowed, path)
-      const expectedDomain = domain === 'peoples' ? 'people' : domain === 'cultures' ? 'culture' : 'state'
+      const expectedDomain = domain === 'peoples' ? 'people' : domain === 'cultures' ? 'culture' : domain === 'polities' ? 'polity' : 'religion'
       if (!contentId(entry.id) || !entry.id.includes(`:${expectedDomain}/`) || !entry.id.endsWith(`-${languageSuffix}`))
         add('required', `${path}.id`, `Expected a language-specific ID in the ${expectedDomain} definition domain`)
       else if (ids.has(entry.id))
@@ -119,7 +122,7 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
         else if (!Array.isArray(value.dependencies) || !value.dependencies.some((dependency: unknown) => record(dependency) && dependency.id === entry.namingStyleId))
           add('reference', `${path}.namingStyleId`, 'Naming style must be a declared dependency')
       }
-      if (domain === 'states') {
+      if (domain === 'polities') {
         if (!politicalForms.includes(entry.politicalForm as string))
           add('range', `${path}.politicalForm`, 'Invalid political form')
         if (!governmentOrganizations.includes(entry.governmentOrganization as string))
@@ -132,6 +135,17 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
         }
         if (!successions.includes(entry.succession as string))
           add('range', `${path}.succession`, 'Invalid succession')
+        if (typeof entry.weight !== 'number' || !Number.isFinite(entry.weight) || entry.weight < 0)
+          add('range', `${path}.weight`, 'Weight must be finite and nonnegative')
+      }
+      if (domain === 'religions') {
+        if (!religionOrganizations.includes(entry.organization as string))
+          add('range', `${path}.organization`, 'Invalid organization')
+        strings(entry.traits, `${path}.traits`)
+        if (typeof entry.tolerance !== 'number' || !Number.isFinite(entry.tolerance) || entry.tolerance < 0 || entry.tolerance > 1)
+          add('range', `${path}.tolerance`, 'Tolerance must be in [0, 1]')
+        if (typeof entry.spreadBias !== 'number' || !Number.isFinite(entry.spreadBias) || entry.spreadBias < 0 || entry.spreadBias > 1)
+          add('range', `${path}.spreadBias`, 'Spread bias must be in [0, 1]')
         if (typeof entry.weight !== 'number' || !Number.isFinite(entry.weight) || entry.weight < 0)
           add('range', `${path}.weight`, 'Weight must be finite and nonnegative')
       }

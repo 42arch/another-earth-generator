@@ -17,7 +17,7 @@
   import { appState } from '@/ui/state/app.svelte'
 
   type OverviewPanelData = Pick<ComponentProps<typeof OverviewPanel>, 'worldSummary' | 'stages' | 'stats' | 'gpuCounts'>
-  type ParameterPanelData = Pick<ComponentProps<typeof ParameterPanel>, 'level' | 'seed' | 'irregularity' | 'geologyParameters' | 'terrainParameters' | 'landformParameters' | 'climateParameters' | 'hydrologyParameters'>
+  type ParameterPanelData = Pick<ComponentProps<typeof ParameterPanel>, 'level' | 'seed' | 'irregularity' | 'geologyParameters' | 'terrainParameters' | 'landformParameters' | 'climateParameters' | 'hydrologyParameters' | 'civilizationParameters'>
   type LayerPanelState = Pick<ComponentProps<typeof LayerPanel>, 'styleId' | 'activeThematicId' | 'surfaceEnabled' | 'enabledOverlayIds' | 'showAtmosphere' | 'showDayNight' | 'showPolarIce'>
   type SettingsDisplayState = Pick<ComponentProps<typeof Sidebar>, 'graticuleEnabled' | 'cellWireframeEnabled' | 'rotate' | 'rotateSpeedDegreesPerSecond'>
   type GenerationLoadingState = ComponentProps<typeof GenerationLoading>['state']
@@ -41,6 +41,8 @@
     onViewStateChange: () => void
     hasCirculation: boolean | undefined
     hasGeographicNames: boolean | undefined
+    hasResources: boolean | undefined
+    hasCivilization: boolean | undefined
     onZoom: (delta: number) => void
     onResetCamera: () => void
     onExportScene: () => void
@@ -73,6 +75,8 @@
     onViewStateChange,
     hasCirculation,
     hasGeographicNames,
+    hasResources,
+    hasCivilization,
     onZoom,
     onResetCamera,
     onExportScene,
@@ -93,6 +97,7 @@
     landformParameters = $bindable(),
     climateParameters = $bindable(),
     hydrologyParameters = $bindable(),
+    civilizationParameters = $bindable(),
     styleId = $bindable(),
     activeThematicId = $bindable(),
     surfaceEnabled = $bindable(),
@@ -144,6 +149,7 @@
     bind:landformParameters
     bind:climateParameters
     bind:hydrologyParameters
+    bind:civilizationParameters
   />
   <LayerPanel
     open={appState.layerDrawerOpen}
@@ -152,6 +158,8 @@
     {viewMode}
     {hasCirculation}
     {hasGeographicNames}
+    {hasResources}
+    {hasCivilization}
     bind:styleId
     bind:activeThematicId
     bind:surfaceEnabled

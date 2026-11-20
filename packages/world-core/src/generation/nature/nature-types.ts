@@ -1,3 +1,4 @@
+import type { ContentId } from '#content/content-port'
 import type { DenseField } from '#world/fields'
 
 export interface GeologyState {
@@ -12,14 +13,13 @@ export interface GeographyState {
   readonly elevationKm: DenseField<Float32Array>
   /** 0 ocean, 1 land (elevation > 0), length N. */
   readonly landMask: DenseField<Uint8Array>
-  /** Present on newly generated worlds. Older Schema 3 archives remain unnamed and unclassified. */
+  /** Present on newly generated worlds. */
   readonly regions?: {
     /** Style identity and generation signature recorded by geographic-names. */
     readonly nameStyleId?: string
     readonly nameStyleSignature?: string
     readonly continentIndex: DenseField<Int32Array>
     readonly oceanIndex: DenseField<Int32Array>
-    /** Added in geographic-regions-v2; absent in older classified archives. */
     readonly seaIndex?: DenseField<Int32Array>
     readonly continents: readonly { readonly id: string, readonly areaKm2: number, readonly name?: string }[]
     readonly oceans: readonly { readonly id: string, readonly areaKm2: number, readonly name?: string, readonly definingContinentIds?: readonly string[] }[]
@@ -51,7 +51,6 @@ export interface ClimateState {
   readonly annualMeanTemperatureC: DenseField<Float32Array>
   readonly annualPrecipitationMm: DenseField<Float32Array>
   readonly koppenClass: DenseField<Uint8Array>
-  /** Present on newly generated worlds; absent in older Schema 3 archives. */
   readonly circulation?: ClimateCirculationState
 }
 export interface HydrologyState {
@@ -84,10 +83,30 @@ export interface EcologyState {
   readonly aridityIndex: DenseField<Float32Array>
   readonly growingSeasonMonths: DenseField<Uint8Array>
 }
+export interface ResourceDeposit {
+  readonly id: string
+  readonly resourceId: ContentId
+  readonly regionId: number
+  readonly category: 'mineral' | 'biological' | 'energy'
+  /** Normalized deposit richness in (0, 1]. */
+  readonly richness: number
+  readonly primaryFactor: string
+}
+export interface NatureResourcesState {
+  readonly resourceIds: readonly ContentId[]
+  /** Normalized agricultural potential in [0, 1], length N (0 on ocean). */
+  readonly agriculturalPotential: DenseField<Float32Array>
+  /** Normalized timber/forestry potential in [0, 1], length N (0 on ocean). */
+  readonly forestryPotential: DenseField<Float32Array>
+  /** Normalized coastal/marine fisheries potential in [0, 1], length N. */
+  readonly fisheryPotential: DenseField<Float32Array>
+  readonly deposits: readonly ResourceDeposit[]
+}
 export interface NatureState {
   readonly geology: GeologyState
   readonly geography: GeographyState
   readonly climate: ClimateState
   readonly hydrology: HydrologyState
   readonly ecology: EcologyState
+  readonly resources: NatureResourcesState
 }

@@ -9,9 +9,8 @@ function pack(): ContentPackV1 {
     namingStyles: [],
     cultures: [],
     peoples: [],
-    states: [],
+    polities: [],
     religions: [],
-    governments: [],
     resources: [],
     presets: [],
     translations: { en: { pack: 'Test', names: 'Names' } },
@@ -25,7 +24,7 @@ describe('content pack validation', () => {
     const current = pack()
     expect(validateContentPack({ ...current, namingStyles: undefined as unknown as ContentPackV1['namingStyles'] }).issues).toContainEqual(expect.objectContaining({ path: 'namingStyles', code: 'required' }))
     expect(validateContentPack({ ...current, peoples: undefined as unknown as ContentPackV1['peoples'] }).issues).toContainEqual(expect.objectContaining({ path: 'peoples', code: 'required' }))
-    expect(validateContentPack({ ...current, states: undefined as unknown as ContentPackV1['states'] }).issues).toContainEqual(expect.objectContaining({ path: 'states', code: 'required' }))
+    expect(validateContentPack({ ...current, polities: undefined as unknown as ContentPackV1['polities'] }).issues).toContainEqual(expect.objectContaining({ path: 'polities', code: 'required' }))
     expect(validateContentPack({ ...current, manifest: { ...current.manifest, schemaVersion: 2 as unknown as 1 } }).issues).toContainEqual(expect.objectContaining({ path: 'manifest', code: 'version' }))
   })
 
@@ -52,11 +51,11 @@ describe('content pack validation', () => {
     expect(validateContentPack({ ...current, manifest: { ...current.manifest, version: 'invalid' } }).valid).toBe(false)
   })
 
-  it('validates state archetype fields as part of the current v1 contract', () => {
-    const statePack = loadBuiltinCatalog().get('builtin-states-en')!
-    expect(statePack.manifest.schemaVersion).toBe(1)
-    expect(validateContentPack(statePack).valid).toBe(true)
-    expect(validateContentPack({ ...statePack, states: [{ ...statePack.states[0], governmentOrganization: 'invalid' as typeof statePack.states[number]['governmentOrganization'] }, ...statePack.states.slice(1)] }).issues).toContainEqual(expect.objectContaining({ path: 'states[0].governmentOrganization', code: 'range' }))
+  it('validates polity archetype fields as part of the current v1 contract', () => {
+    const polityPack = loadBuiltinCatalog().get('builtin-polities-en')!
+    expect(polityPack.manifest.schemaVersion).toBe(1)
+    expect(validateContentPack(polityPack).valid).toBe(true)
+    expect(validateContentPack({ ...polityPack, polities: [{ ...polityPack.polities[0], governmentOrganization: 'invalid' as typeof polityPack.polities[number]['governmentOrganization'] }, ...polityPack.polities.slice(1)] }).issues).toContainEqual(expect.objectContaining({ path: 'polities[0].governmentOrganization', code: 'range' }))
   })
 
   it('resolves dependencies only through exact declared versions', () => {

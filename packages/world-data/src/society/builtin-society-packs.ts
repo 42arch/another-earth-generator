@@ -3,14 +3,25 @@ import culturesEnglish from '../../data/society/cultures-en.json'
 import culturesChinese from '../../data/society/cultures-zh-cn.json'
 import peoplesEnglish from '../../data/society/peoples-en.json'
 import peoplesChinese from '../../data/society/peoples-zh-cn.json'
-import statesEnglish from '../../data/society/states-en.json'
-import statesChinese from '../../data/society/states-zh-cn.json'
+import politiesEnglish from '../../data/society/polities-en.json'
+import politiesChinese from '../../data/society/polities-zh-cn.json'
+import religionsEnglish from '../../data/society/religions-en.json'
+import religionsChinese from '../../data/society/religions-zh-cn.json'
 import { parseSocietyPack } from './parse-society-pack'
 import { createSocietyPack } from './society-pack'
 
 /** Candidate definitions only; world generation decides their actual population and identity. */
 export function loadBuiltinSocietyPacks(namingStylePacks: readonly ContentPackV1[]): readonly ContentPackV1[] {
-  const sources = [peoplesEnglish, peoplesChinese, culturesEnglish, culturesChinese, statesEnglish, statesChinese]
+  const sources = [
+    peoplesEnglish,
+    peoplesChinese,
+    culturesEnglish,
+    culturesChinese,
+    politiesEnglish,
+    politiesChinese,
+    religionsEnglish,
+    religionsChinese,
+  ]
   return sources.map((source) => {
     const parsed = parseSocietyPack(source)
     if (!parsed.valid)

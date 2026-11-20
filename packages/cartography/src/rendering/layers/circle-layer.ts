@@ -119,8 +119,10 @@ const CIRCLE_FRAGMENT_SHADER = /* glsl */`
     float sdfPx = length(pxCoord) - vRadiusPx;
 
     if (shape == 1) {
-      float outerRing = abs(length(pxCoord) - vRadiusPx * 0.92) - max(1.0, vRadiusPx * 0.16);
-      float innerDisk = length(pxCoord) - vRadiusPx * 0.45;
+      // Ring thickness tracks the symbol. A hard 1px floor used to turn small cities into black doughnuts.
+      float ringHalf = clamp(vRadiusPx * 0.15, 0.35, 1.15);
+      float outerRing = abs(length(pxCoord) - vRadiusPx * 0.78) - ringHalf;
+      float innerDisk = length(pxCoord) - vRadiusPx * 0.34;
       sdfPx = min(outerRing, innerDisk);
     } else if (shape == 2) {
       sdfPx = sdStar5(pxCoord, vRadiusPx, 0.44);
@@ -130,13 +132,20 @@ const CIRCLE_FRAGMENT_SHADER = /* glsl */`
       sdfPx = sdEquilateralTriangle(pxCoord, vRadiusPx * 0.85);
     }
 
-    float aa = 1.1;
+    float aa = max(0.65, fwidth(sdfPx));
     float fillMask = 1.0 - smoothstep(-aa, aa, sdfPx);
     float strokeMask = vStrokeWidthPx > 0.05
       ? (1.0 - smoothstep(vStrokeWidthPx - aa, vStrokeWidthPx + aa, abs(sdfPx)))
       : 0.0;
 
-    vec4 combined = mix(vFillColor * vec4(1.0, 1.0, 1.0, fillMask), vStrokeColor, strokeMask);
+    // Fill covers the interior. The dark stroke stays a rim, so small symbols keep their tier color.
+    vec4 fill = vec4(vFillColor.rgb, vFillColor.a * fillMask);
+    vec4 stroke = vec4(vStrokeColor.rgb, vStrokeColor.a * strokeMask);
+    float outA = fill.a + stroke.a * (1.0 - fill.a);
+    vec3 outRgb = outA > 0.001
+      ? (fill.rgb * fill.a + stroke.rgb * stroke.a * (1.0 - fill.a)) / outA
+      : fill.rgb;
+    vec4 combined = vec4(outRgb, outA);
     combined.a *= vHorizonAlpha;
     if (combined.a <= 0.01) {
       discard;
@@ -371,13 +380,13 @@ export class CircleLayer {
     hitTolerancePx = 6,
     worldOffsetsX: readonly number[] = [0],
     planetSpinRadians = 0,
-  ): { layerId: string, sourceId: string, featureId: string, distancePx: number } | null {
+  ): { layerId: string, sourceId: string, featureId: string, entityId?: string, distancePx: number } | null {
     if (this.disposed || !this.mesh.visible)
       return null
 
     const proj = new THREE.Vector3()
     const camPos = camera.position
-    let bestHit: { layerId: string, sourceId: string, featureId: string, distancePx: number } | null = null
+    let bestHit: { layerId: string, sourceId: string, featureId: string, entityId?: string, distancePx: number } | null = null
     let bestDistSq = Infinity
 
     for (let i = 0; i < this.instanceCount; i++) {
@@ -411,10 +420,13 @@ export class CircleLayer {
         const distSq = dx * dx + dy * dy
         if (distSq <= maxDistSq && distSq < bestDistSq) {
           bestDistSq = distSq
+          const rawEntityId = inst.feature.properties?.entityId
+          const entityId = typeof rawEntityId === 'string' && rawEntityId ? rawEntityId : undefined
           bestHit = {
             layerId: this.id,
             sourceId: this.sourceId,
             featureId: inst.feature.id,
+            ...(entityId ? { entityId } : {}),
             distancePx: Math.sqrt(distSq),
           }
         }

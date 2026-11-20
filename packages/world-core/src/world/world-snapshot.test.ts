@@ -1,7 +1,7 @@
-import type { FieldView, WorldSnapshot } from '../index'
+import type { ContentId, FieldView, WorldSnapshot } from '../index'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import { testContentPack, testContentPort, testNamingStyle } from '#content/test-content'
-import { createFieldView, decodeWorldArchive, encodeWorldArchive, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '../index'
+import { createFieldView, decodeWorldArchive, DEFAULT_CIVILIZATION_PARAMETERS, encodeWorldArchive, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '../index'
 
 const pack = testContentPack
 
@@ -9,6 +9,27 @@ function snapshot(civilized = false): WorldSnapshot {
   const field = <T extends Float32Array | Float64Array | Uint8Array | Uint16Array | Uint32Array | Int32Array>(values: T) => ({ meshId: 'mesh:test', values })
   const planet = { physicalRadiusKm: 1, rotationPeriodHours: 24, orbitalPeriodDays: 365, axialTiltDegrees: 23.4, seaLevelDatumKm: 0 }
   const s = 1 / Math.sqrt(3)
+  const stageIds = [
+    'mesh',
+    'reference-mesh',
+    'reference-subdivisions',
+    'plate-topology',
+    'continental-crust',
+    'geological-mapping',
+    'geology',
+    'plate-dynamics',
+    'tectonics',
+    'tectonic-elevation',
+    'terrain',
+    'geographic-regions',
+    'geographic-names',
+    'climate-c0',
+    'cryosphere-i0',
+    'hydrology-h0',
+    'static-lakes-l1',
+    'ecology-e0',
+    ...(civilized ? ['resource-potential', 'habitability', 'population-settlements', 'transport-network', 'peoples-cultures', 'polities-religions'] : []),
+  ]
   return {
     schemaVersion: WORLD_SCHEMA_VERSION,
     snapshotId: 'snapshot:test',
@@ -27,13 +48,18 @@ function snapshot(civilized = false): WorldSnapshot {
         mesh: { subdivisionLevel: 0, irregularity: 0 },
         regionCount: 4,
         civilizationEnabled: civilized,
+        ...(civilized ? { civilization: DEFAULT_CIVILIZATION_PARAMETERS } : {}),
         geology: { primaryPlateCount: 1, microPlateCount: 0, plateSizeVariety: 0, continentCount: 0, continentSizeVariety: 0, candidateLandCoverage: 0 },
         landforms: { islandArcCount: 0, islandDensity: 0, hotspotCount: 0 },
         terrain: { roughness: 0, terrainWarp: 0, smoothing: 0, glacialErosion: 0, hydraulicErosion: 0, ridgeSharpening: 0 },
         climate: { rotationPeriodHours: 24, axialTiltDegrees: 23.4, orbitalPeriodDays: 365, temperatureOffsetC: 0, precipitationScale: 0 },
         hydrology: { snowTemperatureMinC: -2, snowTemperatureMaxC: 2, degreeDayMeltFactorMmPerCMonth: 3, evapotranspirationFactorMmPerCMonth: 2, minimumRiverDrainageAreaKm2: 5000, riverDensityMultiplier: 1, minimumLakeAreaKm2: 0 },
       },
-      provenance: { stageVersions: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, id === 'geographic-names' ? 'geographic-names-v3' : '1'])), artifactSignatures: Object.fromEntries(['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-regions', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0'].map(id => [id, 'sig:test'])), configSignature: 'config:test' },
+      provenance: {
+        stageVersions: Object.fromEntries(stageIds.map(id => [id, id === 'geographic-names' ? 'geographic-names-v3' : '1'])),
+        artifactSignatures: Object.fromEntries(stageIds.map(id => [id, 'sig:test'])),
+        configSignature: 'config:test',
+      },
     },
     planet,
     mesh: {
@@ -50,16 +76,37 @@ function snapshot(civilized = false): WorldSnapshot {
       climate: { monthsPerYear: 12, layout: 'month-major', temperatureC: field(new Float32Array(48)), precipitationMm: field(new Float32Array(48)), annualMeanTemperatureC: field(new Float32Array(4)), annualPrecipitationMm: field(new Float32Array(4)), koppenClass: field(new Uint8Array(4)) },
       hydrology: { monthlySnowWaterEquivalentMm: field(new Float32Array(48)), monthlySnowfallMm: field(new Float32Array(48)), monthlySnowmeltMm: field(new Float32Array(48)), downstreamRegion: field(new Int32Array(4).fill(-1)), annualRunoffMm: field(new Float32Array(4)), annualRunoffVolumeM3: field(new Float64Array(4)), accumulatedAnnualFlowM3s: field(new Float64Array(4)), contributingAreaKm2: field(new Float64Array(4)), basinIndex: field(new Int32Array(4).fill(-1)), basins: [], riverIndex: field(new Int32Array(4).fill(-1)), rivers: [], lakeIndex: field(new Int32Array(4).fill(-1)), lakes: [] },
       ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: field(new Uint16Array(4)), landCoverIndex: field(new Uint16Array(4)), aridityIndex: field(new Float32Array(4)), growingSeasonMonths: field(new Uint8Array(4)) },
+      resources: {
+        resourceIds: civilized ? ['test:resource/iron'] : [],
+        agriculturalPotential: field(new Float32Array([civilized ? 0.7 : 0, 0, 0, 0])),
+        forestryPotential: field(new Float32Array([civilized ? 0.4 : 0, 0, 0, 0])),
+        fisheryPotential: field(new Float32Array([0, 0.5, 0, 0])),
+        deposits: civilized ? [{ id: 'deposit:0', resourceId: 'test:resource/iron', regionId: 0, category: 'mineral', richness: 0.8, primaryFactor: 'orogen' }] : [],
+      },
     },
     civilization: {
       meshId: 'mesh:test',
       population: field(new Float64Array([civilized ? 100 : 0, 0, 0, 0])),
-      species: civilized ? [{ id: 'species:a', name: 'People', foundedAtYear: -100 }] : [],
-      cultures: civilized ? [{ id: 'culture:a', name: 'Culture', foundedAtYear: -10, archetypeId: 'test:culture/basic', speciesId: 'species:a' }] : [],
-      religions: civilized ? [{ id: 'religion:a', name: 'Religion', foundedAtYear: -10, archetypeId: 'test:religion/basic' }] : [],
-      polities: civilized ? [{ id: 'polity:a', name: 'Polity', foundedAtYear: -5, cultureId: 'culture:a', governmentArchetypeId: 'test:government/basic', capitalSettlementId: 'settlement:a' }] : [],
-      settlements: civilized ? [{ id: 'settlement:a', name: 'Town', foundedAtYear: -5, regionId: 0, polityId: 'polity:a', cultureId: 'culture:a', population: 60 }] : [],
-      populationGroups: civilized ? [{ regionId: 0, speciesId: 'species:a', cultureId: 'culture:a', religionId: 'religion:a', polityId: 'polity:a', population: 100 }] : [],
+      peoples: civilized ? [{ id: 'people:a', name: '山民', foundedAtYear: -100, archetypeId: 'test:people/basic' }] : [],
+      cultures: civilized ? [{ id: 'culture:a', name: '星辉文脉', foundedAtYear: -10, archetypeId: 'test:culture/basic', peopleId: 'people:a', namingStyleId: testNamingStyle.id as ContentId }] : [],
+      religions: civilized ? [{ id: 'religion:a', name: '晨曦圣宗', foundedAtYear: -10, archetypeId: 'test:religion/basic' }] : [],
+      polities: civilized ? [{ id: 'polity:a', name: '海风合众', foundedAtYear: -5, cultureId: 'culture:a', archetypeId: 'test:polity/basic', capitalSettlementId: 'settlement:a' }] : [],
+      settlements: civilized ? [{ id: 'settlement:a', name: '新港', foundedAtYear: -5, regionId: 0, polityId: 'polity:a', cultureId: 'culture:a', population: 60 }] : [],
+      populationGroups: civilized ? [{ regionId: 0, peopleId: 'people:a', cultureId: 'culture:a', religionId: 'religion:a', polityId: 'polity:a', population: 100 }] : [],
+      transport: {
+        nodes: civilized
+          ? [
+              { id: 'node:0', regionId: 0, settlementId: 'settlement:a', kind: 'settlement' },
+              { id: 'node:1', regionId: 1, settlementId: null, kind: 'junction' },
+            ]
+          : [],
+        routes: civilized
+          ? [
+              { id: 'route:0', fromNodeId: 'node:0', toNodeId: 'node:1', mode: 'road', regions: new Uint32Array([0, 1]), cost: 1.5, trafficScore: 10 },
+            ]
+          : [],
+        accessibility: field(new Float32Array([civilized ? 0.85 : 0, 0, 0, 0])),
+      },
     },
   }
 }
@@ -72,20 +119,31 @@ describe('worldSnapshot public contract', () => {
     const s = snapshot()
     expect(validate({ ...s, nature: { ...s.nature, geography: { ...s.nature.geography, elevationKm: { meshId: 'wrong', values: new Float32Array(3) } } } }).issues.map(e => e.code)).toEqual(expect.arrayContaining(['length', 'reference']))
   })
-  it('rejects invalid physics and schema', () => {
+  it('rejects invalid physics and legacy schemas', () => {
     const s = snapshot()
     expect(validate({ ...s, planet: { ...s.planet, physicalRadiusKm: -1 } }).valid).toBe(false)
-    // @ts-expect-error unsupported schema is also forbidden by the public type
-    expect(validate({ ...s, schemaVersion: 2 }).valid).toBe(false)
+    // @ts-expect-error Schema 3 and earlier are rejected without migration
+    expect(validate({ ...s, schemaVersion: 3 }).valid).toBe(false)
   })
-  it('rejects unresolved world entities and content versions', () => {
+  it('rejects unresolved world entities, resources, transport routes, and content versions', () => {
     const s = snapshot(true)
     expect(validate({ ...s, civilization: { ...s.civilization, religions: [] } }).issues.some(e => e.code === 'reference')).toBe(true)
+    expect(validate({ ...s, nature: { ...s.nature, resources: { ...s.nature.resources, resourceIds: ['test:resource/missing'] } } }).issues.some(e => e.code === 'reference')).toBe(true)
+    expect(validate({
+      ...s,
+      civilization: {
+        ...s.civilization,
+        transport: {
+          ...s.civilization.transport,
+          routes: [{ id: 'route:bad', fromNodeId: 'node:0', toNodeId: 'node:1', mode: 'road', regions: new Uint32Array([1, 0]), cost: 1, trafficScore: 1 }],
+        },
+      },
+    }).issues.some(e => e.code === 'topology')).toBe(true)
     expect(validateWorldSnapshot(s, [], testContentPort).valid).toBe(false)
   })
   it('rejects duplicate stable IDs across entity kinds', () => {
     const s = snapshot(true)
-    expect(validate({ ...s, civilization: { ...s.civilization, species: [...s.civilization.species, ...s.civilization.species] } }).issues.some(e => e.code === 'duplicate')).toBe(true)
+    expect(validate({ ...s, civilization: { ...s.civilization, peoples: [...s.civilization.peoples, ...s.civilization.peoples] } }).issues.some(e => e.code === 'duplicate')).toBe(true)
   })
   it('rejects nonfinite climate and documents structure-only validation', () => {
     const s = snapshot()
@@ -122,7 +180,7 @@ describe('worldSnapshot public contract', () => {
     const s = snapshot()
     expect(validate({ ...s, metadata: { ...s.metadata, seed: '', createdAt: 'yesterday' } }).valid).toBe(false)
   })
-  it('requires complete natural provenance and parameters in Schema 3', () => {
+  it('requires complete natural provenance and parameters in Schema 4', () => {
     const s = snapshot()
     const missingHydrology = { ...s.metadata.generationConfig.hydrology }
     delete (missingHydrology as Partial<typeof missingHydrology>).minimumRiverDrainageAreaKm2
@@ -131,13 +189,14 @@ describe('worldSnapshot public contract', () => {
     s.nature.hydrology.basinIndex.values[0] = -2
     expect(validate(s).issues.some(issue => issue.path === 'hydrology.basinIndex[0]')).toBe(true)
   })
-  it('round trips a complete world and rejects corruption or missing content', () => {
+  it('round trips a complete world and rejects corruption, legacy Schema 3 archives, or missing content', () => {
     const original = snapshot(true)
     const archive = encodeWorldArchive(original, [pack], testContentPort)
     const restored = decodeWorldArchive(archive, [pack], testContentPort)
     expect(restored).toEqual(original)
     expect(restored.mesh.centers).toBeInstanceOf(Float64Array)
     expect(restored.nature.climate.temperatureC.values).toBeInstanceOf(Float32Array)
+    expect(restored.civilization.transport.routes[0]?.regions).toBeInstanceOf(Uint32Array)
     expect(() => decodeWorldArchive(archive.replace('snapshot:test', 'snapshot:changed'), [pack], testContentPort)).toThrow()
     expect(() => decodeWorldArchive(archive, [], testContentPort)).toThrow()
   })

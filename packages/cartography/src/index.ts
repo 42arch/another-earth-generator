@@ -137,6 +137,7 @@ export {
   GLOBE_SYMBOL_BACKFACE_DOT_THRESHOLD,
   loadMapFontFaces,
   normalizeFontFaceSource,
+  readTextOffsetEm,
   registerCustomMapFont,
   SymbolLayer,
 } from './rendering/layers/symbol-layer'
@@ -176,6 +177,18 @@ export {
   formatContinentDisplayName,
   formatOceanDisplayName,
 } from './sources/adapters/area-sources'
+export {
+  buildCultureDominantSource,
+  buildPolityBordersSource,
+  buildPolityLabelsSource,
+  buildPolityTerritorySource,
+  buildPopulationDensityRasterSource,
+  buildReligionDominantSource,
+  buildResourcePotentialRasterSource,
+  buildSettlementLabelsSource,
+  buildSettlementsSource,
+  buildTransportRoutesSource,
+} from './sources/adapters/civilization-sources'
 export {
   buildLakePolygonsSource,
   buildRiverCenterlinesSource,
@@ -282,6 +295,7 @@ export {
   MINIMAL_LIGHT_STYLE_PRESET,
   OCEAN_SPEED_COLOR_STOPS,
   PHYSICAL_RELIEF_STYLE_PRESET,
+  POLITICAL_ATLAS_STYLE_PRESET,
   SATELLITE_STYLE_PRESET,
   STANDARD_ATLAS_STYLE_PRESET,
   WIND_SPEED_COLOR_STOPS,

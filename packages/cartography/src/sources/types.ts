@@ -19,6 +19,16 @@ export type BuiltinMapSourceId
     | 'cell-wireframe'
     | 'circulation-vectors'
     | 'geographic-labels'
+    | 'population-density'
+    | 'resource-potential'
+    | 'polity-territory'
+    | 'culture-dominant'
+    | 'religion-dominant'
+    | 'polity-borders'
+    | 'transport-routes'
+    | 'settlements'
+    | 'polity-labels'
+    | 'settlement-labels'
 
 export type GeoJsonGeometryKind = 'point' | 'line' | 'polygon'
 
@@ -77,7 +87,7 @@ export interface GeoJsonFeatureCollection<
 export interface TerritorySpineMetadata {
   readonly featureId: string
   readonly displayName: string
-  readonly kind: 'continent' | 'ocean'
+  readonly kind: 'continent' | 'ocean' | 'polity' | 'settlement'
   readonly areaKm2: number
   readonly anchorRegion: number
   readonly anchorPosition: Vec3Tuple
@@ -252,7 +262,7 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
     kind: 'geojson',
     geometryKind: 'polygon',
     monthly: false,
-    adapterVersion: 'lake-polygons-v1',
+    adapterVersion: 'lake-polygons-v2',
     properties: ['id', 'areaKm2', 'waterLevelKm', 'endorheic'],
   },
   'river-polygons': {
@@ -318,5 +328,83 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
     monthly: false,
     adapterVersion: 'geographic-labels-v1',
     properties: ['id', 'kind', 'displayName', 'areaKm2', 'elongation', 'curved'],
+  },
+  'population-density': {
+    id: 'population-density',
+    kind: 'raster',
+    monthly: false,
+    adapterVersion: 'population-density-v1',
+    properties: ['landMask', 'population', 'populationDensity', 'habitability', 'carryingCapacityPerKm2', 'transportAccessibility'],
+  },
+  'resource-potential': {
+    id: 'resource-potential',
+    kind: 'raster',
+    monthly: false,
+    adapterVersion: 'resource-potential-v1',
+    properties: ['landMask', 'agriculturalPotential', 'forestryPotential', 'fisheryPotential', 'depositRichness'],
+  },
+  'polity-territory': {
+    id: 'polity-territory',
+    kind: 'geojson',
+    geometryKind: 'polygon',
+    monthly: false,
+    adapterVersion: 'polity-territory-v3',
+    properties: ['id', 'entityId', 'groupIndex', 'polityIndex', 'areaKm2', 'name', 'sizeClass', 'archetypeId', 'unassigned'],
+  },
+  'culture-dominant': {
+    id: 'culture-dominant',
+    kind: 'geojson',
+    geometryKind: 'polygon',
+    monthly: false,
+    adapterVersion: 'culture-dominant-v1',
+    properties: ['id', 'entityId', 'groupIndex', 'cultureIndex', 'areaKm2', 'name', 'peopleId'],
+  },
+  'religion-dominant': {
+    id: 'religion-dominant',
+    kind: 'geojson',
+    geometryKind: 'polygon',
+    monthly: false,
+    adapterVersion: 'religion-dominant-v1',
+    properties: ['id', 'entityId', 'groupIndex', 'religionIndex', 'areaKm2', 'name', 'archetypeId'],
+  },
+  'polity-borders': {
+    id: 'polity-borders',
+    kind: 'geojson',
+    geometryKind: 'line',
+    monthly: false,
+    adapterVersion: 'polity-borders-v2',
+    properties: ['id', 'entityId', 'polityA', 'polityB', 'polityIndexA', 'polityIndexB', 'isFrontier'],
+  },
+  'transport-routes': {
+    id: 'transport-routes',
+    kind: 'geojson',
+    geometryKind: 'line',
+    monthly: false,
+    adapterVersion: 'transport-routes-v1',
+    properties: ['id', 'entityId', 'mode', 'fromNodeId', 'toNodeId', 'cost', 'trafficScore'],
+  },
+  'settlements': {
+    id: 'settlements',
+    kind: 'geojson',
+    geometryKind: 'point',
+    monthly: false,
+    adapterVersion: 'settlements-v1',
+    properties: ['id', 'entityId', 'name', 'tier', 'isPort', 'population', 'polityId', 'cultureId', 'regionId', 'symbolShape'],
+  },
+  'polity-labels': {
+    id: 'polity-labels',
+    kind: 'geojson',
+    geometryKind: 'point',
+    monthly: false,
+    adapterVersion: 'polity-labels-v1',
+    properties: ['id', 'entityId', 'kind', 'displayName', 'areaKm2', 'priority', 'elongation', 'curved'],
+  },
+  'settlement-labels': {
+    id: 'settlement-labels',
+    kind: 'geojson',
+    geometryKind: 'point',
+    monthly: false,
+    adapterVersion: 'settlement-labels-v1',
+    properties: ['id', 'entityId', 'kind', 'displayName', 'tier', 'isPort', 'population', 'priority', 'curved'],
   },
 })

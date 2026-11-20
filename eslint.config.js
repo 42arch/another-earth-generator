@@ -1,13 +1,12 @@
 import antfu from '@antfu/eslint-config'
 
-const crossPackagePaths = ['**/world-data/**', '**/world-core/**', '**/cartography/**', '**/old-src/**']
+const crossPackagePaths = ['**/world-data/**', '**/world-core/**', '**/cartography/**']
 
 export default antfu({
   svelte: true,
   stylistic: true,
   typescript: true,
   ignores: [
-    'docs/old-src/**',
     'public/**',
     'dist/**',
     'dev-dist/**',
@@ -20,7 +19,7 @@ export default antfu({
     'no-restricted-imports': ['error', {
       patterns: [{
         group: [...crossPackagePaths, '@another-earth/*/*'],
-        message: 'Import through a workspace package public export; legacy code is read-only.',
+        message: 'Import through a workspace package public export.',
       }],
     }],
   },
@@ -28,7 +27,7 @@ export default antfu({
   files: ['packages/world-data/src/**/*.ts'],
   rules: {
     'no-restricted-imports': ['error', {
-      patterns: [{ group: [...crossPackagePaths, '@another-earth/*', 'three', 'three/*', 'svelte', 'svelte/*', 'bits-ui', '@sveltejs/*'], message: 'world-data cannot import another project package, UI, rendering, or legacy code.' }],
+      patterns: [{ group: [...crossPackagePaths, '@another-earth/*', 'three', 'three/*', 'svelte', 'svelte/*', 'bits-ui', '@sveltejs/*'], message: 'world-data cannot import another project package, UI, or rendering.' }],
     }],
   },
 }, {

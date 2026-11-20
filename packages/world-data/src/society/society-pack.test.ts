@@ -3,11 +3,22 @@ import culturesEnglish from '../../data/society/cultures-en.json'
 import culturesChinese from '../../data/society/cultures-zh-cn.json'
 import peoplesEnglish from '../../data/society/peoples-en.json'
 import peoplesChinese from '../../data/society/peoples-zh-cn.json'
-import statesEnglish from '../../data/society/states-en.json'
-import statesChinese from '../../data/society/states-zh-cn.json'
+import politiesEnglish from '../../data/society/polities-en.json'
+import politiesChinese from '../../data/society/polities-zh-cn.json'
+import religionsEnglish from '../../data/society/religions-en.json'
+import religionsChinese from '../../data/society/religions-zh-cn.json'
 import { createSocietyPack, decodeSocietyPackJson, encodeSocietyPackJson, loadBuiltinCatalog, parseSocietyPack, societyPackDocumentFromPack } from '../index'
 
-const samples = [peoplesEnglish, peoplesChinese, culturesEnglish, culturesChinese, statesEnglish, statesChinese] as const
+const samples = [
+  peoplesEnglish,
+  peoplesChinese,
+  culturesEnglish,
+  culturesChinese,
+  politiesEnglish,
+  politiesChinese,
+  religionsEnglish,
+  religionsChinese,
+] as const
 
 function hasIssue(parse: (value: unknown) => { valid: boolean, issues: readonly { path: string }[] }, value: unknown, suffix: string): boolean {
   const result = parse(value)
@@ -28,7 +39,7 @@ describe('society pack JSON', () => {
       const pack = createSocietyPack(parsed.value, dependencies)
       expect(pack).toEqual(catalog.get(source.id))
       expect('translations' in parsed.value).toBe(false)
-      const definitions = [...pack.cultures, ...('peoples' in pack ? pack.peoples : []), ...('states' in pack ? pack.states : [])]
+      const definitions = [...pack.cultures, ...pack.peoples, ...pack.polities, ...pack.religions]
       expect(definitions.every(definition => !!definition.description)).toBe(true)
       expect(societyPackDocumentFromPack(pack, dependencies)).toEqual(parsed.value)
       const encoded = encodeSocietyPackJson(parsed.value)
@@ -37,13 +48,12 @@ describe('society pack JSON', () => {
     }
   })
 
-  it('adapts state author documents to the current v1 content contract', () => {
+  it('adapts polity author documents to the current v1 content contract', () => {
     const catalog = loadBuiltinCatalog()
-    const pack = catalog.get('builtin-states-en')!
+    const pack = catalog.get('builtin-polities-en')!
     expect(pack.manifest.schemaVersion).toBe(1)
-    expect('states' in pack ? pack.states : []).toHaveLength(20)
-    expect(pack.governments).toEqual([])
-    expect(catalog.get('core')?.governments.map(government => government.id)).toContain('core:government/council')
+    expect(pack.polities).toHaveLength(20)
+    expect(pack.polities[0]?.id).toMatch(/^builtin:polity\/.+-en$/)
   })
 
   it('imports independent documents with separate language-specific IDs', () => {
@@ -54,7 +64,7 @@ describe('society pack JSON', () => {
       throw new Error('Expected an importable society document')
     const pack = createSocietyPack(parsed.value)
     expect(pack.manifest.id).toBe('custom-peoples-en')
-    expect('peoples' in pack ? pack.peoples[0].id : undefined).toBe('custom:people/first-en')
+    expect(pack.peoples[0]?.id).toBe('custom:people/first-en')
   })
 
   it('detaches parsed values and preserves definition order', () => {
@@ -76,18 +86,23 @@ describe('society pack JSON', () => {
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, translations: {} }, 'translations')).toBe(true)
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, peoples: 'invalid' }, 'peoples')).toBe(true)
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, governments: [] }, 'governments')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, states: [] }, 'states')).toBe(true)
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, peoples: [{ ...peoplesEnglish.peoples[0], tags: 'invalid' }] }, 'peoples[0].tags')).toBe(true)
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, id: 'builtin-peoples' }, 'id')).toBe(true)
   })
 
-  it('requires localized descriptions and validates state fields and IDs', () => {
+  it('requires localized descriptions and validates polity fields and IDs', () => {
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, peoples: [...peoplesEnglish.peoples, peoplesEnglish.peoples[0]] }, 'peoples[4].id')).toBe(true)
     expect(hasIssue(parseSocietyPack, { ...peoplesEnglish, peoples: [{ ...peoplesEnglish.peoples[0], description: '' }, ...peoplesEnglish.peoples.slice(1)] }, 'peoples[0].description')).toBe(true)
-    expect(hasIssue(parseSocietyPack, { ...statesEnglish, states: [{ ...statesEnglish.states[0], weight: -1 }] }, 'states[0].weight')).toBe(true)
-    expect(hasIssue(parseSocietyPack, { ...statesEnglish, states: [{ ...statesEnglish.states[0], politicalForm: 'invalid' }] }, 'states[0].politicalForm')).toBe(true)
-    expect(hasIssue(parseSocietyPack, { ...statesEnglish, states: [{ ...statesEnglish.states[0], headOfStateTitle: '' }] }, 'states[0].headOfStateTitle')).toBe(true)
-    expect(hasIssue(parseSocietyPack, { ...statesEnglish, states: [{ ...statesEnglish.states[0], headOfGovernmentTitle: '' }] }, 'states[0].headOfGovernmentTitle')).toBe(true)
-    expect(hasIssue(parseSocietyPack, { ...statesEnglish, states: [{ ...statesEnglish.states[0], id: 'builtin:government/republic-en' }] }, 'states[0].id')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...politiesEnglish, polities: [{ ...politiesEnglish.polities[0], weight: -1 }] }, 'polities[0].weight')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...politiesEnglish, polities: [{ ...politiesEnglish.polities[0], politicalForm: 'invalid' }] }, 'polities[0].politicalForm')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...politiesEnglish, polities: [{ ...politiesEnglish.polities[0], headOfStateTitle: '' }] }, 'polities[0].headOfStateTitle')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...politiesEnglish, polities: [{ ...politiesEnglish.polities[0], headOfGovernmentTitle: '' }] }, 'polities[0].headOfGovernmentTitle')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...politiesEnglish, polities: [{ ...politiesEnglish.polities[0], id: 'builtin:government/republic-en' }] }, 'polities[0].id')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...religionsEnglish, religions: [{ ...religionsEnglish.religions[0], tolerance: 1.5 }] }, 'religions[0].tolerance')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...religionsEnglish, religions: [{ ...religionsEnglish.religions[0], spreadBias: -0.1 }] }, 'religions[0].spreadBias')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...religionsEnglish, religions: [{ ...religionsEnglish.religions[0], organization: 'invalid' }] }, 'religions[0].organization')).toBe(true)
+    expect(hasIssue(parseSocietyPack, { ...religionsEnglish, religions: [{ ...religionsEnglish.religions[0], id: 'builtin:polity/local-en' }] }, 'religions[0].id')).toBe(true)
   })
 
   it('requires matching language-specific naming dependencies for cultures', () => {

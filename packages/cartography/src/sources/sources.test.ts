@@ -1,17 +1,33 @@
 import type { ContentPort, WorldMapReader, WorldSnapshot } from '@another-earth/world-core'
 import type { ContentPack, ContentPackV1, NamingStyle } from '@another-earth/world-data'
 import {
-  assembleNaturalWorld,
+  assembleWorld,
+  civilizationContentSignature,
   createNaturalPipeline,
   createWorldMapReader,
+  createWorldPipeline,
+  DEFAULT_CIVILIZATION_PARAMETERS,
   DEFAULT_CLIMATE_PARAMETERS,
   DEFAULT_GEOLOGY_PARAMETERS,
   DEFAULT_HYDROLOGY_PARAMETERS,
   DEFAULT_LANDFORM_PARAMETERS,
   DEFAULT_TERRAIN_PARAMETERS,
   ecologyVocabularySignature,
+  resourceDefinitionsSignature,
 } from '@another-earth/world-core'
-import { calculateContentHash, calculateContentSignature, calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, loadBuiltinCatalog, loadBuiltinNamingStyles, NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS, validateContentPack } from '@another-earth/world-data'
+import {
+  calculateContentHash,
+  calculateContentSignature,
+  calculateNamingStyleSignature,
+  createContentCatalog,
+  createNamingStylePack,
+  loadBuiltinCatalog,
+  loadBuiltinGenerationCatalog,
+  loadBuiltinNamingStyles,
+  NATURAL_BIOME_DEFINITIONS,
+  NATURAL_LAND_COVER_DEFINITIONS,
+  validateContentPack,
+} from '@another-earth/world-data'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
   BUILTIN_MAP_SOURCE_SCHEMAS,
@@ -114,14 +130,14 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
   beforeAll(async () => {
     const pipeline = createNaturalPipeline()
     const result = await pipeline.execute({ ...naturalInput, ...builtinPipelineContent })
-    snapshot = assembleNaturalWorld(naturalInput, result, pipeline.registry, identity, builtinContentPacks, builtinContentPort)
+    snapshot = assembleWorld(naturalInput, result, pipeline.registry, identity, builtinContentPacks, builtinContentPort)
     reader = createWorldMapReader(snapshot)
   })
 
-  it('registers all 17 built-in natural sources and enforces instance-scoped caching & monthly invalidation', () => {
+  it('registers all 27 built-in sources and enforces instance-scoped caching & monthly invalidation', () => {
     const registry = new MapSourceRegistry(reader)
     const allIds = Object.keys(BUILTIN_MAP_SOURCE_SCHEMAS)
-    expect(allIds).toHaveLength(17)
+    expect(allIds).toHaveLength(27)
 
     const land1 = registry.getGeoJsonSource('land-areas')
     const land2 = registry.getGeoJsonSource('land-areas')
@@ -397,5 +413,245 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
 
     const labels = registry.getSource('geographic-labels')
     expect(labels.unavailable).toBe(true)
+
+    // Civilization sources return SourceUnavailable when civilization/resources are absent
+    for (const civSourceId of [
+      'population-density',
+      'resource-potential',
+      'polity-territory',
+      'culture-dominant',
+      'religion-dominant',
+      'polity-borders',
+      'transport-routes',
+      'settlements',
+      'polity-labels',
+      'settlement-labels',
+    ] as const) {
+      const resolved = registry.getSource(civSourceId)
+      expect(resolved.unavailable, civSourceId).toBe(true)
+    }
+  })
+
+  it('builds all 10 civilization and resource cartography sources with valid borders, territories, routes, settlements and labels', async () => {
+    const genCatalog = loadBuiltinGenerationCatalog()
+    const genPacks = genCatalog.packs
+    const genNamingStyle = genPacks.flatMap(pack => pack.namingStyles ?? []).find(s => s.id === styleId) ?? builtinNamingStyle
+    const translations: Record<string, Record<string, string>> = {}
+    for (const pack of genPacks) {
+      if (!pack.translations)
+        continue
+      for (const [locale, texts] of Object.entries(pack.translations)) {
+        translations[locale] ??= {}
+        Object.assign(translations[locale], texts)
+      }
+    }
+    const resources = genPacks.flatMap(pack => pack.resources)
+    const civContent = {
+      peoples: genPacks.flatMap(pack => pack.peoples),
+      cultures: genPacks.flatMap(pack => pack.cultures),
+      religions: genPacks.flatMap(pack => pack.religions),
+      polities: genPacks.flatMap(pack => pack.polities),
+      namingStyles: genPacks.flatMap(pack => pack.namingStyles ?? []),
+      translations,
+    }
+    const worldInput = {
+      seed: 'slice3-civ-cartography',
+      config: {
+        ...naturalInput.config,
+        civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+      },
+      content: {
+        'geographic-naming-style': genNamingStyle,
+        'ecology-classes': builtinEcologyVocabulary,
+        'resource-definitions': resources,
+        'civilization-content': civContent,
+      },
+      contentSignatures: {
+        'geographic-naming-style': calculateNamingStyleSignature(genNamingStyle),
+        'ecology-classes': ecologyVocabularySignature(builtinEcologyVocabulary),
+        'resource-definitions': resourceDefinitionsSignature(resources),
+        'civilization-content': civilizationContentSignature(civContent),
+      },
+    }
+
+    const civPipeline = createWorldPipeline()
+    const civResult = await civPipeline.execute(worldInput)
+    const civSnapshot = assembleWorld(
+      worldInput,
+      civResult,
+      civPipeline.registry,
+      { ...identity, snapshotId: 'snapshot:slice3-civ' },
+      genPacks,
+      builtinContentPort,
+    )
+    const civReader = createWorldMapReader(civSnapshot)
+    const registry = new MapSourceRegistry(civReader)
+
+    const popRaster = registry.getRasterSource('population-density')
+    expect(popRaster.regionCount).toBe(civReader.identity.regionCount)
+    expect(popRaster.fields.populationDensity).toBeDefined()
+
+    const resRaster = registry.getRasterSource('resource-potential')
+    expect(resRaster.fields.agriculturalPotential).toBeDefined()
+    expect(resRaster.fields.depositRichness).toBeDefined()
+
+    for (const polySourceId of ['polity-territory', 'culture-dominant', 'religion-dominant'] as const) {
+      const polySource = registry.getGeoJsonSource(polySourceId)
+      expect(polySource.geometryKind).toBe('polygon')
+      expect(polySource.data.features.length).toBeGreaterThan(0)
+      for (const feature of polySource.data.features) {
+        if (feature.properties.unassigned === true)
+          expect(feature.properties.entityId).toBeUndefined()
+        else
+          expect(typeof feature.properties.entityId).toBe('string')
+        if (feature.geometry.type === 'Polygon') {
+          assertPolygonRingsValid(feature.geometry.coordinates)
+        }
+        else {
+          expect(feature.geometry.type).toBe('MultiPolygon')
+          for (const poly of feature.geometry.coordinates as readonly (readonly (readonly (readonly [number, number])[])[])[])
+            assertPolygonRingsValid(poly)
+        }
+      }
+    }
+
+    const borders = registry.getGeoJsonSource('polity-borders')
+    expect(borders.geometryKind).toBe('line')
+    expect(borders.data.features.length).toBeGreaterThan(0)
+    const coastPoints = new Set<string>()
+    const coastCoords: [number, number][] = []
+    const coasts = registry.getGeoJsonSource('coastlines')
+    for (const feature of coasts.data.features) {
+      const lines = feature.geometry.type === 'MultiLineString'
+        ? feature.geometry.coordinates
+        : [feature.geometry.coordinates]
+      for (const line of lines) {
+        for (const coord of line) {
+          const point: [number, number] = [coord[0], coord[1]]
+          coastCoords.push(point)
+          coastPoints.add(`${point[0].toFixed(6)},${point[1].toFixed(6)}`)
+        }
+      }
+    }
+    let coastTouching = 0
+    let pinned = 0
+    for (const border of borders.data.features) {
+      expect(border.geometry.type).toBe('LineString')
+      const coords = border.geometry.coordinates as readonly (readonly [number, number])[]
+      expect(coords.length).toBeGreaterThanOrEqual(2)
+      for (const endpoint of [coords[0], coords.at(-1)!]) {
+        let nearest = Infinity
+        for (const coast of coastCoords) {
+          const dLon = endpoint[0] - coast[0]
+          const dLat = endpoint[1] - coast[1]
+          nearest = Math.min(nearest, dLon * dLon + dLat * dLat)
+        }
+        if (nearest > 1)
+          continue
+        coastTouching++
+        const key = `${endpoint[0].toFixed(6)},${endpoint[1].toFixed(6)}`
+        if (coastPoints.has(key))
+          pinned++
+      }
+    }
+    expect(coastTouching).toBeGreaterThan(0)
+    expect(pinned).toBe(coastTouching)
+
+    const landMask = civReader.field('landMask')
+    const polityField = civReader.field('dominantPolityIndex')
+    let lakeRegion = -1
+    for (let region = 0; region < civReader.mesh.regionCount && lakeRegion < 0; region++) {
+      if (landMask.get(region) === 0)
+        continue
+      civReader.mesh.forEachRegionNeighbor(region, (neighbor) => {
+        if (lakeRegion >= 0 || landMask.get(neighbor) === 0 || polityField.get(neighbor) < 0)
+          return
+        if (polityField.get(region) !== polityField.get(neighbor))
+          lakeRegion = region
+      })
+    }
+    expect(lakeRegion).toBeGreaterThanOrEqual(0)
+    const lakeIndexValues = Int32Array.from(civSnapshot.nature.hydrology.lakeIndex.values)
+    lakeIndexValues.fill(-1)
+    lakeIndexValues[lakeRegion] = 0
+    const lakeReader = createWorldMapReader({
+      ...civSnapshot,
+      nature: {
+        ...civSnapshot.nature,
+        hydrology: {
+          ...civSnapshot.nature.hydrology,
+          lakeIndex: { ...civSnapshot.nature.hydrology.lakeIndex, values: lakeIndexValues },
+          lakes: [{
+            id: 'lake:alignment',
+            basinId: 'basin:alignment',
+            endorheic: true,
+            areaKm2: 1,
+            waterLevelKm: 0,
+            spillRegion: null,
+            downstreamRegion: null,
+            regions: Uint32Array.from([lakeRegion]),
+          }],
+        },
+      },
+      civilization: {
+        ...civSnapshot.civilization,
+        populationGroups: civSnapshot.civilization.populationGroups.filter(group => group.regionId !== lakeRegion),
+      },
+    })
+    const alignedRegistry = new MapSourceRegistry(lakeReader)
+    const alignedBorders = alignedRegistry.getGeoJsonSource('polity-borders')
+    const alignedLakes = alignedRegistry.getGeoJsonSource('lake-polygons')
+    const alignedBorderPoints = new Set<string>()
+    for (const border of alignedBorders.data.features) {
+      const coords = border.geometry.coordinates as readonly (readonly [number, number])[]
+      for (const coord of coords)
+        alignedBorderPoints.add(`${coord[0].toFixed(6)},${coord[1].toFixed(6)}`)
+    }
+    const alignedLakePoints: [number, number][] = []
+    for (const feature of alignedLakes.data.features) {
+      const polygons = feature.geometry.type === 'Polygon'
+        ? [feature.geometry.coordinates]
+        : feature.geometry.coordinates
+      for (const polygon of polygons) {
+        for (const ring of polygon)
+          alignedLakePoints.push(...ring.map(coord => [coord[0], coord[1]] as [number, number]))
+      }
+    }
+    let sharedVertices = 0
+    for (const point of alignedLakePoints) {
+      if (alignedBorderPoints.has(`${point[0].toFixed(6)},${point[1].toFixed(6)}`))
+        sharedVertices++
+    }
+    expect(alignedLakes.data.features.length).toBeGreaterThan(0)
+    expect(sharedVertices).toBeGreaterThan(0)
+
+    const unassignedTerritory = alignedRegistry.getGeoJsonSource('polity-territory')
+      .data.features.find(feature => feature.properties.unassigned === true)
+    expect(unassignedTerritory).toBeDefined()
+    expect(unassignedTerritory?.properties.groupIndex).toBe(-1)
+    expect(unassignedTerritory?.properties.name).toBe('无归属地')
+    expect(Number(unassignedTerritory?.properties.areaKm2)).toBeGreaterThan(0)
+
+    const routes = registry.getGeoJsonSource('transport-routes')
+    expect(routes.geometryKind).toBe('line')
+    expect(routes.data.features.length).toBeGreaterThan(0)
+    for (const route of routes.data.features) {
+      expect(typeof route.properties.entityId).toBe('string')
+      expect(['road', 'river', 'sea']).toContain(route.properties.mode)
+    }
+
+    const settlements = registry.getGeoJsonSource('settlements')
+    expect(settlements.geometryKind).toBe('point')
+    expect(settlements.data.features.length).toBe(civReader.settlements().length)
+    expect(settlements.data.features.some(f => f.properties.symbolShape === 'star')).toBe(true)
+
+    const polityLabels = registry.getGeoJsonSource('polity-labels')
+    expect(polityLabels.geometryKind).toBe('point')
+    expect(polityLabels.data.features.length).toBeGreaterThan(0)
+    expect(polityLabels.spines?.size).toBe(polityLabels.data.features.length)
+
+    const settlementLabels = registry.getGeoJsonSource('settlement-labels')
+    expect(settlementLabels.geometryKind).toBe('point')
+    expect(settlementLabels.data.features.length).toBe(civReader.settlements().length)
   })
 })

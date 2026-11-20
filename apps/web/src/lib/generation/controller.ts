@@ -109,6 +109,12 @@ export class GenerationController {
   queryWorldSea(id: string) { return this.#worldStore.sea(id) }
   queryWorldRiver(id: string) { return this.#worldStore.river(id) }
   queryWorldLake(id: string) { return this.#worldStore.lake(id) }
+  queryWorldPeople(id: string) { return this.#worldStore.people(id) }
+  queryWorldCulture(id: string) { return this.#worldStore.culture(id) }
+  queryWorldReligion(id: string) { return this.#worldStore.religion(id) }
+  queryWorldPolity(id: string) { return this.#worldStore.polity(id) }
+  queryWorldSettlement(id: string) { return this.#worldStore.settlement(id) }
+  queryWorldTransportRoute(id: string) { return this.#worldStore.transportRoute(id) }
   pickWorld(position: { readonly x: number, readonly y: number, readonly z: number }) { return this.#worldStore.pick(position) }
   exportWorldArchive() { return this.#worldStore.archive(builtinContentPacks) }
 

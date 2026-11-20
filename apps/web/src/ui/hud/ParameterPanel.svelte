@@ -1,11 +1,12 @@
 <script lang='ts'>
-  import type { ClimateParameters, GeologyParameters, HydrologyParameters, LandformParameters, TerrainParameters } from '@another-earth/world-core'
+  import type { CivilizationParameters, ClimateParameters, GeologyParameters, HydrologyParameters, LandformParameters, TerrainParameters } from '@another-earth/world-core'
   import type { Mutable } from '@/lib/mutable'
   import { TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C } from '@another-earth/world-core'
   import { CircleQuestionMark, Play, SlidersHorizontal, X } from '@lucide/svelte'
   import { t } from '@/lib/i18n'
   import Slider from '@/ui/components/Slider.svelte'
   import Tabs from '@/ui/components/Tabs.svelte'
+  import Toggle from '@/ui/components/Toggle.svelte'
   import Tooltip from '@/ui/components/Tooltip.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
@@ -25,6 +26,7 @@
     landformParameters: Mutable<LandformParameters>
     climateParameters: Mutable<ClimateParameters>
     hydrologyParameters: Mutable<HydrologyParameters>
+    civilizationParameters: Mutable<CivilizationParameters>
   }
 
   let {
@@ -43,6 +45,7 @@
     landformParameters = $bindable(),
     climateParameters = $bindable(),
     hydrologyParameters = $bindable(),
+    civilizationParameters = $bindable(),
   }: Props = $props()
 
   type ParameterTab = 'nature' | 'civilization'
@@ -166,16 +169,53 @@
           </div>
         {:else}
           <div class='flex flex-col gap-3'>
-            <div class='flex items-center gap-2'><span class='font-sans text-[11px] uppercase tracking-wide text-obs-text-muted font-bold'>{t('parameters.civilization.populationAndSettlement')}</span><div class='flex-1 h-px bg-white/5'></div></div>
-            <div class='rounded-lg border border-white/6 bg-white/2 p-3 text-[11px] leading-relaxed text-obs-text-dim'>{t('parameters.civilization.notAvailable')}</div>
-            <div class='flex flex-col gap-2 opacity-35' aria-disabled='true'>
-              <div class='flex items-center justify-between py-1 text-[11px] text-obs-text-muted'><span>{t('parameters.civilization.population')}</span><span>{t('parameters.civilization.pendingM2')}</span></div>
-              <div class='h-1 rounded-full bg-white/8'></div>
-              <div class='flex items-center justify-between py-1 text-[11px] text-obs-text-muted'><span>{t('parameters.civilization.settlementDensity')}</span><span>{t('parameters.civilization.pendingM2')}</span></div>
-              <div class='h-1 rounded-full bg-white/8'></div>
-              <div class='flex items-center justify-between py-1 text-[11px] text-obs-text-muted'><span>{t('parameters.civilization.roadConnectivity')}</span><span>{t('parameters.civilization.pendingM2')}</span></div>
-              <div class='h-1 rounded-full bg-white/8'></div>
-            </div>
+            <section class='flex flex-col gap-2' aria-label={t('parameters.civilization.sectionTitle')}>
+              <div class='flex items-center gap-2 mb-1'>
+                <span class='font-sans text-[11px] uppercase tracking-wide text-obs-text-muted font-bold'>{t('parameters.civilization.sectionTitle')}</span>
+                <div class='flex-1 h-px bg-white/5'></div>
+              </div>
+              <Toggle
+                label={t('parameters.civilization.enabled')}
+                description={t('parameters.civilization.enabledDescription')}
+                bind:checked={civilizationParameters.enabled}
+              />
+            </section>
+
+            {#if civilizationParameters.enabled}
+              <section class='flex flex-col gap-2 border-t border-white/6 pt-3'>
+                <Slider
+                  label={t('parameters.civilization.populationScale')}
+                  description={t('parameters.civilization.populationScaleDescription')}
+                  bind:value={civilizationParameters.populationScale}
+                  min={0.1}
+                  max={4}
+                  step={0.05}
+                  decimals={2}
+                  formatValue={value => `${value.toFixed(2)}×`}
+                />
+                <Slider
+                  label={t('parameters.civilization.settlementDensity')}
+                  description={t('parameters.civilization.settlementDensityDescription')}
+                  bind:value={civilizationParameters.settlementDensity}
+                  min={0.25}
+                  max={4}
+                  step={0.05}
+                  decimals={2}
+                  formatValue={value => `${value.toFixed(2)}×`}
+                />
+                <Slider
+                  label={t('parameters.civilization.polityCohesion')}
+                  description={t('parameters.civilization.polityCohesionDescription')}
+                  bind:value={civilizationParameters.polityCohesion}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  decimals={2}
+                />
+              </section>
+            {:else}
+              <div class='rounded-lg border border-white/6 bg-white/2 p-3 text-[11px] leading-relaxed text-obs-text-dim'>{t('parameters.civilization.disabledHint')}</div>
+            {/if}
           </div>
         {/if}
       {/snippet}

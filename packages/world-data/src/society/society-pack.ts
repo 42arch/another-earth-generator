@@ -57,9 +57,8 @@ function contentPackBase(
     namingStyles: [],
     cultures: [],
     peoples: [],
-    states: [],
+    polities: [],
     religions: [],
-    governments: [],
     resources: [],
     presets: [],
     translations,
@@ -82,9 +81,13 @@ export function createSocietyPack(document: SocietyPackDocument, dependencies: r
     const base = contentPackBase(source, source.cultures)
     pack = { ...base, manifest: { ...base.manifest, schemaVersion: 1 }, cultures: source.cultures.map(addDisplayNameKey) }
   }
+  else if (source.polities) {
+    const base = contentPackBase(source, source.polities)
+    pack = { ...base, manifest: { ...base.manifest, schemaVersion: 1 }, polities: source.polities.map(addDisplayNameKey) }
+  }
   else {
-    const base = contentPackBase(source, source.states)
-    pack = { ...base, manifest: { ...base.manifest, schemaVersion: 1 }, states: source.states.map(addDisplayNameKey) }
+    const base = contentPackBase(source, source.religions)
+    pack = { ...base, manifest: { ...base.manifest, schemaVersion: 1 }, religions: source.religions.map(addDisplayNameKey) }
   }
   const signed = { ...pack, manifest: { ...pack.manifest, contentHash: calculateContentHash(pack) } } as ContentPackV1
   const validation = validateContentPack(signed, dependencies)
@@ -95,18 +98,19 @@ export function createSocietyPack(document: SocietyPackDocument, dependencies: r
 
 /** Export only packs that the author format can represent without dropping definitions. */
 export function societyPackDocumentFromPack(pack: ContentPack, dependencies: readonly ContentPack[] = []): SocietyPackDocument {
-  const fields = ['manifest', 'names', 'namingStyles', 'cultures', 'peoples', 'states', 'religions', 'governments', 'resources', 'presets', 'translations']
+  const fields = ['manifest', 'names', 'namingStyles', 'cultures', 'peoples', 'polities', 'religions', 'resources', 'presets', 'translations']
   const manifestFields = ['id', 'version', 'schemaVersion', 'nameKey', 'contentHash', 'dependencies']
   if (Object.keys(pack).some(key => !fields.includes(key)) || Object.keys(pack.manifest).some(key => !manifestFields.includes(key)))
     throw new TypeError('Content pack cannot be represented as a society document')
   const entries = {
-    peoples: 'peoples' in pack ? pack.peoples : [],
+    peoples: pack.peoples,
     cultures: pack.cultures,
-    states: 'states' in pack ? pack.states : [],
+    polities: pack.polities,
+    religions: pack.religions,
   }
   const active = (Object.keys(entries) as (keyof typeof entries)[]).filter(domain => entries[domain].length > 0)
-  if (active.length !== 1 || pack.names.length || ('namingStyles' in pack && pack.namingStyles.length)
-    || pack.religions.length || pack.governments.length || pack.resources.length || pack.presets.length
+  if (active.length !== 1 || pack.names.length || pack.namingStyles.length
+    || pack.resources.length || pack.presets.length
     || pack.manifest.schemaVersion !== 1) {
     throw new TypeError('Content pack cannot be represented as a society document')
   }

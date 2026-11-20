@@ -63,7 +63,13 @@
       "cryosphereI0": "正在计算积雪与融雪…",
       "hydrologyH0": "正在生成初步径流与河网…",
       "staticLakesL1": "正在识别静态洼地湖泊…",
-      "ecologyE0": "正在生成初步生态分类…"
+      "ecologyE0": "正在生成初步生态分类…",
+      "resourcePotential": "正在评估自然资源潜力与矿藏…",
+      "habitability": "正在评估区域宜居性与通行成本…",
+      "populationSettlements": "正在分配区域人口与聚落…",
+      "transportNetwork": "正在构建陆海交通航路网…",
+      "peoplesCultures": "正在生成族群、文化与地名…",
+      "politiesReligions": "正在划分政体领土与宗教…"
     }
   },
   "layers": {
@@ -81,6 +87,7 @@
       "satellite": { "label": "仿真卫星", "description": "地表微纹理 · 晕渲 · 水面" },
       "standardAtlas": { "label": "标准地图", "description": "柔和分级 · 清晰河湖与地名" },
       "physicalRelief": { "label": "自然地理", "description": "海深陆高色阶 · 地形晕渲" },
+      "politicalAtlas": { "label": "政区地图", "description": "国家疆域 · 国界 · 聚落注记" },
       "minimalLight": { "label": "极简明亮", "description": "低饱和浅底 · 突出科学专题" },
       "minimalDark": { "label": "极简暗色", "description": "深岩灰暗底 · 契合环流高亮" },
       "historicalParchment": { "label": "古典羊皮纸", "description": "暖羊皮纸色调 · 墨棕海岸" }
@@ -88,7 +95,8 @@
     "groups": {
       "geology": "地质",
       "climate": "气候",
-      "ecologyCover": "生态与覆盖"
+      "ecologyCover": "生态与覆盖",
+      "resourcesCivilization": "资源与文明"
     },
     "thematic": {
       "elevation": "高程",
@@ -104,7 +112,13 @@
       "runoff": "年径流深",
       "basins": "水文流域",
       "biomes": "潜在生物群系",
-      "landCover": "自然地表覆盖"
+      "landCover": "自然地表覆盖",
+      "agriculturalPotential": "农业潜力",
+      "depositRichness": "矿产富集度",
+      "populationDensity": "人口密度",
+      "polityTerritory": "国家政区",
+      "cultureDominant": "主导文化",
+      "religionDominant": "主导宗教"
     },
     "overlays": {
       "rivers": { "label": "河网水系", "description": "平滑中心线与按流量变宽的河道水体多边形。" },
@@ -113,7 +127,12 @@
       "plateBoundaries": { "label": "板块边界", "description": "相邻构造板块之间的对偶边界虚线。" },
       "windArrows": { "label": "风向箭头", "description": "当月 10m 近地表盛行风向矢量箭头。" },
       "oceanArrows": { "label": "洋流箭头", "description": "当月表层洋流方向与冷暖流配色箭头。" },
-      "labels": { "label": "大陆与大洋地名", "description": "沿版图 PCA 脊线弯曲排版的中文地理名称。" }
+      "labels": { "label": "大陆与大洋地名", "description": "沿版图 PCA 脊线弯曲排版的中文地理名称。" },
+      "polityBorders": { "label": "国家边界线", "description": "国家领土与无归属边疆边界轮廓线。" },
+      "transportRoutes": { "label": "交通航路网", "description": "连接聚落的陆路、沿河与近海航线网络。" },
+      "settlements": { "label": "聚落点位", "description": "按首都、城市与城镇等级分级符号渲染。" },
+      "polityLabels": { "label": "国家名称注记", "description": "沿国家疆域核心轴线排版的政体名称。" },
+      "settlementLabels": { "label": "聚落名称注记", "description": "伴随聚落点位的避让分级地名注记。" }
     },
     "atmosphere": "大气光晕",
     "dayNight": "昼夜效果",
@@ -171,12 +190,16 @@
     "highLevelWarning": "高等级网格包含大量区域，显存和内存占用较高。",
     "forceRegenerate": "强制重算",
     "civilization": {
-      "populationAndSettlement": "人口与聚落",
-      "notAvailable": "文明生成将在 M2 阶段接入。当前 M3 制图系统专注于完整自然世界快照的 3D 星球与 2D 地图集渲染。",
-      "population": "人口规模",
-      "settlementDensity": "聚落密度",
-      "roadConnectivity": "道路连通度",
-      "pendingM2": "待 M2 接入"
+      "sectionTitle": "初始文明开关与规模",
+      "enabled": "生成初始文明",
+      "enabledDescription": "开启后在自然世界之上生成人口、聚落、交通网络、族群、文化、宗教与国家政体。仅调整文明参数可复用全部自然链缓存。",
+      "disabledHint": "当前仅生成自然世界及自然资源潜力，跳过人口、聚落与国家构建。",
+      "populationScale": "人口规模倍率",
+      "populationScaleDescription": "按环境承载力整体缩放初始总人口规模（0.1–4.0）。",
+      "settlementDensity": "聚落密度倍率",
+      "settlementDensityDescription": "调节聚落数量与分布密度倍率（0.25–4.0）。",
+      "polityCohesion": "国家凝聚度",
+      "polityCohesionDescription": "越高则大帝国与王国越容易跨越边疆扩张并整合周边聚落；较低时保留更多城邦与边疆。"
     },
     "footer": {
       "busy": "生成进行中…",
@@ -224,7 +247,13 @@
       "continents": "陆海分区",
       "runoff": "年径流深分布",
       "snow": "月度积雪水当量（第 {month} 月）",
-      "basins": "水文流域分布"
+      "basins": "水文流域分布",
+      "agriculturalPotential": "农业自然潜力",
+      "depositRichness": "矿产能源富集度",
+      "populationDensity": "人口密度分布",
+      "polityTerritory": "国家领土政区",
+      "cultureDominant": "主导文化分布",
+      "religionDominant": "主导宗教分布"
     },
     "rows": {
       "land": "陆地",

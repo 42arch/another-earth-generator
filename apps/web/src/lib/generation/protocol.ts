@@ -1,10 +1,10 @@
-import type { ClimateArtifact, ClimateParameters, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, GeologyGenerationConfig, GeologyParameters, HydrologyArtifact, HydrologyParameters, NaturalWorldIdentity, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact, TerrainGenerationConfig, WorldGenerationConfig, WorldSnapshot } from '@another-earth/world-core'
+import type { CivilizationParameters, ClimateArtifact, ClimateParameters, CryosphereArtifact, EcologyArtifact, GeographicRegionsArtifact, GeologyArtifact, GeologyGenerationConfig, GeologyParameters, HydrologyArtifact, HydrologyParameters, SphericalMesh, StagePlan, StaticLakeArtifact, TerrainArtifact, TerrainGenerationConfig, WorldGenerationConfig, WorldIdentity, WorldSnapshot } from '@another-earth/world-core'
 
 export interface GenerationConfig {
   readonly seed: string
-  /** Present only for a complete natural-world publication request. */
-  readonly publication?: NaturalWorldIdentity
-  readonly config: Omit<WorldGenerationConfig, 'planet'> & { readonly planet: WorldGenerationConfig['planet'] & { readonly seaLevelDatumKm?: number }, readonly geology?: GeologyParameters, readonly reference?: GeologyGenerationConfig['reference'], readonly terrain?: TerrainGenerationConfig['terrain'], readonly landforms?: TerrainGenerationConfig['landforms'], readonly climate?: ClimateParameters, readonly hydrology?: HydrologyParameters, readonly ecology?: true }
+  /** Present only for a complete world publication request. */
+  readonly publication?: WorldIdentity
+  readonly config: Omit<WorldGenerationConfig, 'planet'> & { readonly planet: WorldGenerationConfig['planet'] & { readonly seaLevelDatumKm?: number }, readonly geology?: GeologyParameters, readonly reference?: GeologyGenerationConfig['reference'], readonly terrain?: TerrainGenerationConfig['terrain'], readonly landforms?: TerrainGenerationConfig['landforms'], readonly climate?: ClimateParameters, readonly hydrology?: HydrologyParameters, readonly ecology?: true, readonly civilization?: CivilizationParameters }
   readonly force?: boolean
 }
 

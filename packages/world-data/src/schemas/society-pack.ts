@@ -1,4 +1,4 @@
-import type { ContentId, ContentPackManifest, CultureArchetype, PeopleArchetype, StateArchetype, ValidationIssue } from './content'
+import type { ContentId, ContentPackManifest, CultureArchetype, PeopleArchetype, PolityArchetype, ReligionArchetype, ValidationIssue } from './content'
 
 interface SocietyDefinitionBase {
   readonly id: ContentId
@@ -9,7 +9,8 @@ interface SocietyDefinitionBase {
 
 export type SocietyPeopleDefinition = SocietyDefinitionBase & Omit<PeopleArchetype, 'id' | 'displayNameKey' | 'description' | 'tags'>
 export type SocietyCultureDefinition = SocietyDefinitionBase & Omit<CultureArchetype, 'id' | 'displayNameKey' | 'description' | 'tags'>
-export type SocietyStateDefinition = SocietyDefinitionBase & Omit<StateArchetype, 'id' | 'displayNameKey' | 'description' | 'tags'>
+export type SocietyPolityDefinition = SocietyDefinitionBase & Omit<PolityArchetype, 'id' | 'displayNameKey' | 'description' | 'tags'>
+export type SocietyReligionDefinition = SocietyDefinitionBase & Omit<ReligionArchetype, 'id' | 'displayNameKey' | 'description' | 'tags'>
 
 interface SocietyPackBase {
   readonly format: 'another-earth/society-pack'
@@ -23,9 +24,10 @@ interface SocietyPackBase {
 }
 
 export type SocietyPackDocument
-  = (SocietyPackBase & { readonly peoples: readonly SocietyPeopleDefinition[], readonly cultures?: never, readonly states?: never })
-    | (SocietyPackBase & { readonly cultures: readonly SocietyCultureDefinition[], readonly peoples?: never, readonly states?: never })
-    | (SocietyPackBase & { readonly states: readonly SocietyStateDefinition[], readonly peoples?: never, readonly cultures?: never })
+  = (SocietyPackBase & { readonly peoples: readonly SocietyPeopleDefinition[], readonly cultures?: never, readonly polities?: never, readonly religions?: never })
+    | (SocietyPackBase & { readonly cultures: readonly SocietyCultureDefinition[], readonly peoples?: never, readonly polities?: never, readonly religions?: never })
+    | (SocietyPackBase & { readonly polities: readonly SocietyPolityDefinition[], readonly peoples?: never, readonly cultures?: never, readonly religions?: never })
+    | (SocietyPackBase & { readonly religions: readonly SocietyReligionDefinition[], readonly peoples?: never, readonly cultures?: never, readonly polities?: never })
 
 export type SocietyPackParseResult
   = { readonly valid: true, readonly value: SocietyPackDocument, readonly issues: readonly [] }

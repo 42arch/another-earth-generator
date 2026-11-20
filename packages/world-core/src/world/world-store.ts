@@ -13,7 +13,11 @@ export type WorldFieldName = 'plateIndex' | 'crustType' | 'elevationKm' | 'landM
   | 'monthlySnowWaterEquivalentMm' | 'monthlySnowfallMm' | 'monthlySnowmeltMm'
   | 'downstreamRegion' | 'annualRunoffMm' | 'annualRunoffVolumeM3' | 'accumulatedAnnualFlowM3s' | 'contributingAreaKm2'
   | 'basinIndex' | 'riverIndex' | 'lakeIndex'
-  | 'potentialBiomeIndex' | 'landCoverIndex' | 'aridityIndex' | 'growingSeasonMonths' | 'population'
+  | 'potentialBiomeIndex' | 'landCoverIndex' | 'aridityIndex' | 'growingSeasonMonths'
+  | 'agriculturalPotential' | 'forestryPotential' | 'fisheryPotential' | 'depositRichness'
+  | 'habitability' | 'carryingCapacityPerKm2'
+  | 'population' | 'populationDensity' | 'transportAccessibility'
+  | 'dominantPeopleIndex' | 'dominantCultureIndex' | 'dominantReligionIndex' | 'dominantPolityIndex'
 
 /** Owns the last fully validated world; callers never receive its mutable arrays. */
 export class WorldStore {
@@ -122,7 +126,20 @@ export class WorldStore {
       case 'landCoverIndex': return createFieldView(world.nature.ecology.landCoverIndex)
       case 'aridityIndex': return createFieldView(world.nature.ecology.aridityIndex)
       case 'growingSeasonMonths': return createFieldView(world.nature.ecology.growingSeasonMonths)
+      case 'agriculturalPotential': return createFieldView(world.nature.resources.agriculturalPotential)
+      case 'forestryPotential': return createFieldView(world.nature.resources.forestryPotential)
+      case 'fisheryPotential': return createFieldView(world.nature.resources.fisheryPotential)
+      case 'depositRichness':
+      case 'habitability':
+      case 'carryingCapacityPerKm2':
+      case 'populationDensity':
+      case 'dominantPeopleIndex':
+      case 'dominantCultureIndex':
+      case 'dominantReligionIndex':
+      case 'dominantPolityIndex':
+        return this.mapReader().field(name)
       case 'population': return createFieldView(world.civilization.population)
+      case 'transportAccessibility': return createFieldView(world.civilization.transport.accessibility)
     }
     throw new Error('Geographic regions are unavailable in this world')
   }
@@ -132,10 +149,16 @@ export class WorldStore {
     const count = world.mesh.regionCount
     if (!Number.isInteger(region) || region < 0 || region >= count || !Number.isInteger(month) || month < 0 || month >= 12)
       throw new RangeError('Invalid world region or month')
-    const { geology, geography, climate, hydrology, ecology } = world.nature
+    const reader = this.mapReader()
+    const { geology, geography, climate, hydrology, ecology, resources } = world.nature
+    const { civilization } = world
     const basin = hydrology.basins[hydrology.basinIndex.values[region]]
     const river = hydrology.rivers[hydrology.riverIndex.values[region]]
     const lake = hydrology.lakes[hydrology.lakeIndex.values[region]]
+    const dominantPeopleIndex = reader.field('dominantPeopleIndex').get(region)
+    const dominantCultureIndex = reader.field('dominantCultureIndex').get(region)
+    const dominantReligionIndex = reader.field('dominantReligionIndex').get(region)
+    const dominantPolityIndex = reader.field('dominantPolityIndex').get(region)
     return Object.freeze({
       snapshotId: world.snapshotId,
       region,
@@ -165,7 +188,21 @@ export class WorldStore {
       landCoverId: ecology.landCoverIds[ecology.landCoverIndex.values[region]],
       aridityIndex: ecology.aridityIndex.values[region],
       growingSeasonMonths: ecology.growingSeasonMonths.values[region],
-      population: world.civilization.population.values[region],
+      agriculturalPotential: resources.agriculturalPotential.values[region],
+      forestryPotential: resources.forestryPotential.values[region],
+      fisheryPotential: resources.fisheryPotential.values[region],
+      deposits: Object.freeze(resources.deposits.filter(d => d.regionId === region).map(d => Object.freeze({ ...d }))),
+      habitability: reader.field('habitability').get(region),
+      carryingCapacityPerKm2: reader.field('carryingCapacityPerKm2').get(region),
+      population: civilization.population.values[region],
+      populationDensity: reader.field('populationDensity').get(region),
+      transportAccessibility: civilization.transport.accessibility.values[region],
+      dominantPeopleId: dominantPeopleIndex >= 0 ? civilization.peoples[dominantPeopleIndex].id : null,
+      dominantCultureId: dominantCultureIndex >= 0 ? civilization.cultures[dominantCultureIndex].id : null,
+      dominantReligionId: dominantReligionIndex >= 0 ? civilization.religions[dominantReligionIndex].id : null,
+      dominantPolityId: dominantPolityIndex >= 0 ? civilization.polities[dominantPolityIndex].id : null,
+      settlements: Object.freeze(civilization.settlements.filter(s => s.regionId === region).map(s => Object.freeze({ ...s }))),
+      populationGroups: Object.freeze(civilization.populationGroups.filter(g => g.regionId === region).map(g => Object.freeze({ ...g }))),
     })
   }
 
@@ -197,6 +234,36 @@ export class WorldStore {
   lake(id: string) {
     const lake = this.#require().nature.hydrology.lakes.find(lake => lake.id === id)
     return lake ? Object.freeze({ ...lake, regions: Object.freeze(Array.from(lake.regions)) }) : null
+  }
+
+  people(id: string) {
+    const people = this.#require().civilization.peoples.find(item => item.id === id)
+    return people ? Object.freeze({ ...people }) : null
+  }
+
+  culture(id: string) {
+    const culture = this.#require().civilization.cultures.find(item => item.id === id)
+    return culture ? Object.freeze({ ...culture }) : null
+  }
+
+  religion(id: string) {
+    const religion = this.#require().civilization.religions.find(item => item.id === id)
+    return religion ? Object.freeze({ ...religion }) : null
+  }
+
+  polity(id: string) {
+    const polity = this.#require().civilization.polities.find(item => item.id === id)
+    return polity ? Object.freeze({ ...polity }) : null
+  }
+
+  settlement(id: string) {
+    const settlement = this.#require().civilization.settlements.find(item => item.id === id)
+    return settlement ? Object.freeze({ ...settlement }) : null
+  }
+
+  transportRoute(id: string) {
+    const route = this.#require().civilization.transport.routes.find(item => item.id === id)
+    return route ? Object.freeze({ ...route, regions: Object.freeze(Array.from(route.regions)) }) : null
   }
 
   pick(position: { readonly x: number, readonly y: number, readonly z: number }): number {

@@ -1,10 +1,7 @@
 import type { ContentPackView, ContentPort } from '#content/content-port'
 import type { NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
-import { DEFAULT_HYDROLOGY_PARAMETERS } from '#generation/nature/hydrology/hydrology'
 import { validateWorldSnapshot } from './world-validator'
-
-const LEGACY_RIVER_DENSITY_MULTIPLIER = 1
 
 const ARRAY_TYPES = {
   Float32Array,
@@ -31,34 +28,7 @@ function assertValid(snapshot: WorldSnapshot, packs: readonly ContentPackView[],
     throw new Error(`Invalid world snapshot: ${result.issues[0]?.path}: ${result.issues[0]?.message}`)
 }
 
-function applyHydrologyConfigDefaults(snapshot: WorldSnapshot): WorldSnapshot {
-  const metadata = snapshot?.metadata as WorldSnapshot['metadata'] | undefined
-  const generationConfig = metadata?.generationConfig
-  const hydrology = generationConfig?.hydrology as (WorldSnapshot['metadata']['generationConfig']['hydrology'] & Record<string, unknown>) | undefined
-  if (!metadata || !generationConfig || !hydrology)
-    return snapshot
-
-  const additions: Record<string, number> = {}
-  if (!Object.hasOwn(hydrology, 'riverDensityMultiplier'))
-    additions.riverDensityMultiplier = LEGACY_RIVER_DENSITY_MULTIPLIER
-  if (!Object.hasOwn(hydrology, 'minimumLakeAreaKm2'))
-    additions.minimumLakeAreaKm2 = DEFAULT_HYDROLOGY_PARAMETERS.minimumLakeAreaKm2
-  if (!Object.keys(additions).length)
-    return snapshot
-
-  return {
-    ...snapshot,
-    metadata: {
-      ...metadata,
-      generationConfig: {
-        ...generationConfig,
-        hydrology: { ...hydrology, ...additions },
-      },
-    },
-  }
-}
-
-/** M0 JSON round trip. The format is versioned and checked, but is not the M4 binary .aearth format. */
+/** Schema 4 JSON round trip. Legacy Schema 1-3 archives are rejected without migration. */
 export function encodeWorldArchive(snapshot: WorldSnapshot, packs: readonly ContentPackView[], content: ContentPort): string {
   assertValid(snapshot, packs, content)
   const payload = JSON.stringify(snapshot, (_, value: unknown) => {
@@ -91,9 +61,8 @@ export function decodeWorldArchive(archive: string, packs: readonly ContentPackV
         throw new Error('Invalid typed array')
       return new ArrayConstructor(marker.values)
     }) as WorldSnapshot
-    const migratedSnapshot = applyHydrologyConfigDefaults(snapshot)
-    assertValid(migratedSnapshot, packs, content)
-    return migratedSnapshot
+    assertValid(snapshot, packs, content)
+    return snapshot
   }
   catch (error) {
     throw new Error('Cannot decode world archive', { cause: error })

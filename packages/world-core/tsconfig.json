@@ -16,7 +16,6 @@
     "vitest.bench.config.ts"
   ],
   "exclude": [
-    "../../docs/old-src",
     "node_modules"
   ]
 }

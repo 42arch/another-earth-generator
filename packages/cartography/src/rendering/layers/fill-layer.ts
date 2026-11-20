@@ -19,7 +19,7 @@ import {
   unwrapLongitudeDegNear,
 } from '#projections/spherical-math'
 import { parseCssColorToRgba8 } from '#rendering/satellite-shader'
-import { evaluateSphericalCatmullRom, smoothBoundaryCornerPositions } from '#sources/topology/spherical-smooth'
+import { alignInlandBoundariesToCoastline, evaluateSphericalCatmullRom, smoothBoundaryCornerPositions } from '#sources/topology/spherical-smooth'
 
 export type GeoJsonRingCoordinates = readonly LonLatTuple[]
 export type GeoJsonPolygonCoordinates = GeoJsonPolygonGeometry['coordinates']
@@ -748,6 +748,34 @@ function buildCategoricalCellFillGeometry(
       regionFeatureIndices[r] = featureIndexByGroup.get(val) ?? -1
     }
   }
+  else if (sourceId === 'polity-territory' || sourceId === 'culture-dominant' || sourceId === 'religion-dominant') {
+    if (!capabilities.hasCivilization)
+      return null
+    const fieldName = sourceId === 'polity-territory'
+      ? 'dominantPolityIndex'
+      : sourceId === 'culture-dominant'
+        ? 'dominantCultureIndex'
+        : 'dominantReligionIndex'
+    const landMask = reader.field('landMask')
+    const field = reader.field(fieldName)
+    const featureIndexByGroup = new Map<number, number>()
+    for (let i = 0; i < source.data.features.length; i++) {
+      const props = source.data.features[i].properties
+      const key = props?.unassigned === true ? -2 : Number(props?.groupIndex ?? -1)
+      featureIndexByGroup.set(key, i)
+    }
+    for (let r = 0; r < count; r++) {
+      if (landMask.get(r) === 0)
+        continue
+      const val = Math.floor(field.get(r))
+      const key = val >= 0 ? val : -2
+      const featureIndex = featureIndexByGroup.get(key)
+      if (featureIndex === undefined)
+        continue
+      groupIds[r] = key
+      regionFeatureIndices[r] = featureIndex
+    }
+  }
   else if (sourceId === 'land-areas') {
     const landMask = reader.field('landMask')
     for (let r = 0; r < count; r++) {
@@ -776,11 +804,38 @@ function buildCategoricalCellFillGeometry(
       boundaryEdgeIds.push(edgeId)
   })
 
-  const { corners, edgeMidpoints } = buildRelaxedClassificationBoundaryGeometry(
-    mesh,
-    rawCorners,
-    Uint32Array.from(boundaryEdgeIds),
-  )
+  let corners: Float64Array
+  let edgeMidpoints: Map<number, Vec3Tuple>
+  if (sourceId === 'polity-territory') {
+    const landMask = reader.field('landMask')
+    const coastlineEdgeIds: number[] = []
+    const inlandEdgeIds: number[] = []
+    mesh.forEachEdge((edgeId, regionA, regionB) => {
+      if (groupIds[regionA] === groupIds[regionB])
+        return
+      if ((landMask.get(regionA) === 0) !== (landMask.get(regionB) === 0))
+        coastlineEdgeIds.push(edgeId)
+      else
+        inlandEdgeIds.push(edgeId)
+    })
+    const aligned = alignInlandBoundariesToCoastline(
+      mesh,
+      rawCorners,
+      Uint32Array.from(coastlineEdgeIds),
+      Uint32Array.from(inlandEdgeIds),
+    )
+    corners = aligned.corners
+    edgeMidpoints = aligned.edgeMidpoints
+  }
+  else {
+    const relaxed = buildRelaxedClassificationBoundaryGeometry(
+      mesh,
+      rawCorners,
+      Uint32Array.from(boundaryEdgeIds),
+    )
+    corners = relaxed.corners
+    edgeMidpoints = relaxed.edgeMidpoints
+  }
 
   const positions: number[] = []
   const normals: number[] = []
@@ -1340,7 +1395,12 @@ export class FillLayer {
     this.colorTexture.needsUpdate = true
   }
 
-  pickSphericalPoint(unitPoint: Vec3Tuple): { layerId: string, sourceId: string, featureId: string } | null {
+  private resolveFeatureEntityId(feature: GeoJsonFeature): string | undefined {
+    const raw = feature.properties?.entityId
+    return typeof raw === 'string' && raw ? raw : undefined
+  }
+
+  pickSphericalPoint(unitPoint: Vec3Tuple): { layerId: string, sourceId: string, featureId: string, entityId?: string } | null {
     if (this.disposed || !this.mesh.visible || !this.interactive)
       return null
 
@@ -1348,10 +1408,13 @@ export class FillLayer {
       const regionId = this.pickupMesh.locateRegion(unitPoint[0], unitPoint[1], unitPoint[2])
       const fIdx = this.regionFeatureIndices[regionId] ?? -1
       if (fIdx >= 0 && this.visibleByFeature[fIdx]) {
+        const feature = this.indexedFeatures[fIdx].feature
+        const entityId = this.resolveFeatureEntityId(feature)
         return {
           layerId: this.id,
           sourceId: this.sourceId,
-          featureId: this.indexedFeatures[fIdx].feature.id,
+          featureId: feature.id,
+          ...(entityId ? { entityId } : {}),
         }
       }
       return null
@@ -1362,10 +1425,12 @@ export class FillLayer {
         continue
       const entry = this.indexedFeatures[i]
       if (containsSphericalPointInPatches(unitPoint, entry.patches)) {
+        const entityId = this.resolveFeatureEntityId(entry.feature)
         return {
           layerId: this.id,
           sourceId: this.sourceId,
           featureId: entry.feature.id,
+          ...(entityId ? { entityId } : {}),
         }
       }
     }

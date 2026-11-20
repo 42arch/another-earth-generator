@@ -19,3 +19,26 @@ export const LAYER_STACK = Object.freeze({
 export function layerRenderOrder(slot: MapLayerSlot, orderIndex: number): number {
   return slot === 'base' ? orderIndex : LAYER_STACK.contentRenderOrder + orderIndex
 }
+
+/**
+ * Globe lines that trace a territory or shoreline share the thematic fill shell.
+ * A radial lift shows up as a gap at the limb; depth bias keeps the stroke in front.
+ */
+export function globeLinePlacement(sourceId: string, orderIndex: number): {
+  readonly surfaceOffset: number
+  readonly polygonOffsetFactor: number
+  readonly polygonOffsetUnits: number
+} {
+  if (sourceId === 'polity-borders' || sourceId === 'coastlines') {
+    return {
+      surfaceOffset: LAYER_STACK.thematicFillOffset,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -8,
+    }
+  }
+  return {
+    surfaceOffset: LAYER_STACK.lineOffset + orderIndex * 0.00002,
+    polygonOffsetFactor: 0,
+    polygonOffsetUnits: 0,
+  }
+}

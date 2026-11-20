@@ -42,7 +42,7 @@ function computeRegionSphericalTileId(mesh: MapMeshReader, region: number, cente
  * - True boundaries between different categories are smoothed once globally via `buildSmoothedSharedBoundaryRings`
  *   with `smoothEdgeMask`, so adjacent categories (and `coastlines`) match vertex-for-vertex.
  */
-function buildTiledSmoothedGroupPolygons(
+export function buildTiledSmoothedGroupPolygons(
   mesh: MapMeshReader,
   groupIds: Int32Array,
   sharedCornerPositions?: Float64Array,
@@ -99,7 +99,7 @@ function buildTiledSmoothedGroupPolygons(
   return polygonsByGroup
 }
 
-function makePolygonGeometry(
+export function makePolygonGeometry(
   polygons: readonly (readonly (readonly (readonly [number, number])[])[])[],
 ): PolygonOrMultiPolygon | null {
   if (polygons.length === 0)

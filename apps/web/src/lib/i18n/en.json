@@ -63,7 +63,13 @@
       "cryosphereI0": "Calculating snowfall and snowmelt…",
       "hydrologyH0": "Generating initial runoff and rivers…",
       "staticLakesL1": "Identifying static lakes…",
-      "ecologyE0": "Generating initial ecological classification…"
+      "ecologyE0": "Generating initial ecological classification…",
+      "resourcePotential": "Evaluating natural resource potential and deposits…",
+      "habitability": "Evaluating regional habitability and movement cost…",
+      "populationSettlements": "Allocating regional population and settlements…",
+      "transportNetwork": "Building land, river, and sea transport network…",
+      "peoplesCultures": "Generating peoples, cultures, and settlement names…",
+      "politiesReligions": "Forming polities, territories, and religions…"
     }
   },
   "layers": {
@@ -81,6 +87,7 @@
       "satellite": { "label": "Satellite imagery", "description": "Surface texture · hillshade · water" },
       "standardAtlas": { "label": "Standard atlas", "description": "Soft color steps · clear rivers, lakes, and labels" },
       "physicalRelief": { "label": "Physical relief", "description": "Ocean depth and land elevation · hillshade" },
+      "politicalAtlas": { "label": "Political atlas", "description": "Polity territories · borders · settlements" },
       "minimalLight": { "label": "Minimal light", "description": "Soft, low-saturation background · thematic data stands out" },
       "minimalDark": { "label": "Minimal dark", "description": "Dark slate background · highlights ocean circulation" },
       "historicalParchment": { "label": "Historical parchment", "description": "Warm parchment tones · dark brown coasts" }
@@ -88,7 +95,8 @@
     "groups": {
       "geology": "Geology",
       "climate": "Climate",
-      "ecologyCover": "Ecology and land cover"
+      "ecologyCover": "Ecology and land cover",
+      "resourcesCivilization": "Resources and civilization"
     },
     "thematic": {
       "elevation": "Elevation",
@@ -104,7 +112,13 @@
       "runoff": "Annual runoff depth",
       "basins": "Drainage basins",
       "biomes": "Potential biomes",
-      "landCover": "Natural land cover"
+      "landCover": "Natural land cover",
+      "agriculturalPotential": "Agricultural potential",
+      "depositRichness": "Mineral & energy deposits",
+      "populationDensity": "Population density",
+      "polityTerritory": "Polity territory",
+      "cultureDominant": "Dominant culture",
+      "religionDominant": "Dominant religion"
     },
     "overlays": {
       "rivers": { "label": "River network", "description": "Smoothed centerlines and river polygons widened by flow." },
@@ -113,7 +127,12 @@
       "plateBoundaries": { "label": "Plate boundaries", "description": "Dashed dual boundaries between neighboring tectonic plates." },
       "windArrows": { "label": "Wind arrows", "description": "This month’s prevailing near-surface 10 m wind vectors." },
       "oceanArrows": { "label": "Ocean current arrows", "description": "This month’s surface current vectors, colored by warm and cold flow." },
-      "labels": { "label": "Continent and ocean names", "description": "Chinese geographic names curved along each landmass PCA ridge." }
+      "labels": { "label": "Continent and ocean names", "description": "Chinese geographic names curved along each landmass PCA ridge." },
+      "polityBorders": { "label": "Polity borders", "description": "Smoothed territorial boundaries and frontier outlines." },
+      "transportRoutes": { "label": "Transport routes", "description": "Land roads, riverways, and coastal shipping links." },
+      "settlements": { "label": "Settlements", "description": "Capital stars, city rings, and town markers." },
+      "polityLabels": { "label": "Polity names", "description": "Polity labels curved along each territory axis." },
+      "settlementLabels": { "label": "Settlement names", "description": "Collision-culled settlement name labels." }
     },
     "atmosphere": "Atmospheric glow",
     "dayNight": "Day and night",
@@ -171,12 +190,16 @@
     "highLevelWarning": "High-level meshes contain many regions and use more GPU and system memory.",
     "forceRegenerate": "Force regeneration",
     "civilization": {
-      "populationAndSettlement": "Population and settlements",
-      "notAvailable": "Civilization generation will be added in M2. The current M3 cartography system focuses on rendering complete natural world snapshots as 3D globes and 2D atlases.",
-      "population": "Population",
+      "sectionTitle": "Initial civilization",
+      "enabled": "Generate initial civilization",
+      "enabledDescription": "Generates population, settlements, transport routes, peoples, cultures, religions, and polities on top of the natural world without invalidating natural caches.",
+      "disabledHint": "Only the natural world and resource potential are generated; population, settlements, and polities are skipped.",
+      "populationScale": "Population scale",
+      "populationScaleDescription": "Scales initial carrying capacity and total population (0.1–4.0).",
       "settlementDensity": "Settlement density",
-      "roadConnectivity": "Road connectivity",
-      "pendingM2": "Planned for M2"
+      "settlementDensityDescription": "Adjusts settlement seeding density multiplier (0.25–4.0).",
+      "polityCohesion": "Polity cohesion",
+      "polityCohesionDescription": "Higher values favor larger kingdoms and empires; lower values preserve more city-states and frontiers."
     },
     "footer": {
       "busy": "Generation in progress…",
@@ -224,7 +247,13 @@
       "continents": "Land and sea regions",
       "runoff": "Annual runoff depth",
       "snow": "Monthly snow water equivalent (month {month})",
-      "basins": "Drainage basin distribution"
+      "basins": "Drainage basin distribution",
+      "agriculturalPotential": "Agricultural potential",
+      "depositRichness": "Mineral & energy deposits",
+      "populationDensity": "Population density",
+      "polityTerritory": "Polity territories",
+      "cultureDominant": "Dominant cultures",
+      "religionDominant": "Dominant religions"
     },
     "rows": {
       "land": "Land",

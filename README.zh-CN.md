@@ -32,4 +32,4 @@ bun dev
 | [当前进度](docs/PROGRESS.md) | 当前能力、待办与验证状态 |
 | [M1 实施计划](docs/M1_IMPLEMENTATION_PLAN.md) | 气候、水文、侵蚀、生态与世界发布任务 |
 
-`packages/world-core` 拥有生成与领域规则，`packages/world-data` 拥有内容，`packages/cartography` 负责制图，`apps/web` 负责 UI 和 Worker。`docs/old-src` 是 feat-society 参考源码，不参与新项目运行。历史文档快照由当前进度页链接，不作为当前规范。
+`packages/world-core` 拥有生成与领域规则，`packages/world-data` 拥有内容，`packages/cartography` 负责制图，`apps/web` 负责 UI 和 Worker。历史文档快照由当前进度页链接，不作为当前规范。

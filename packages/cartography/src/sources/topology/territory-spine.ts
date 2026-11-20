@@ -15,7 +15,7 @@ export const SPINE_ELONGATION_THRESHOLD = 1.35
 export interface TerritoryInput {
   readonly featureId: string
   readonly displayName: string
-  readonly kind: 'continent' | 'ocean'
+  readonly kind: 'continent' | 'ocean' | 'polity' | 'settlement'
   readonly areaKm2: number
   readonly memberRegions: readonly number[]
 }
@@ -342,6 +342,11 @@ export interface SampleSpineGlyphOptions {
    * When omitted, defaults to `0.036` radians (`~2.06°`).
    */
   readonly glyphStepRad?: number
+  /**
+   * `fitted` stretches the label across 12–72% of the spine.
+   * `tracked` keeps the requested step and only compresses the run when it would leave the spine.
+   */
+  readonly layout?: 'fitted' | 'tracked'
 }
 
 /**
@@ -359,7 +364,9 @@ export function sampleSpineGlyphAnchors(
   if (chars.length === 0)
     return []
 
-  const stepRad = Math.max(0.008, options.glyphStepRad ?? 0.036)
+  const stepRad = options.glyphStepRad === undefined
+    ? 0.036
+    : Math.max(1e-5, options.glyphStepRad)
 
   if (!spine.isCurved || spine.spinePoints.length < 3) {
     const { east } = buildTangentBasis(spine.anchorPosition)
@@ -388,12 +395,16 @@ export function sampleSpineGlyphAnchors(
   }
 
   const count = chars.length
-  const desiredSpanRad = Math.max(stepRad, (count - 1) * stepRad)
-  const uSpan = totalSpineArcRad > 1e-4
-    ? Math.min(0.72, Math.max(0.12, desiredSpanRad / totalSpineArcRad))
-    : 0.5
-  const uStart = 0.5 - uSpan * 0.5
-  const uEnd = 0.5 + uSpan * 0.5
+  let uStart = 0.5
+  let uEnd = 0.5
+  if (count > 1 && totalSpineArcRad > 1e-4) {
+    const naturalSpan = (count - 1) * stepRad
+    const uSpan = options.layout === 'tracked'
+      ? Math.min(0.86, naturalSpan / totalSpineArcRad)
+      : Math.min(0.72, Math.max(0.12, naturalSpan / totalSpineArcRad))
+    uStart = 0.5 - uSpan * 0.5
+    uEnd = 0.5 + uSpan * 0.5
+  }
   const out: SampledSpineGlyphAnchor[] = []
 
   for (let i = 0; i < count; i++) {

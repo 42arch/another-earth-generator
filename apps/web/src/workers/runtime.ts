@@ -1,6 +1,6 @@
-import type { ClimateArtifact, ClimateGenerationConfig, CryosphereArtifact, EcologyArtifact, EcologyGenerationConfig, GeographicRegionsArtifact, GeologyArtifact, HydrologyArtifact, HydrologyGenerationConfig, NaturalGenerationConfig, SphericalMesh, StaticLakeArtifact, TerrainArtifact } from '@another-earth/world-core'
+import type { ClimateArtifact, ClimateGenerationConfig, CryosphereArtifact, EcologyArtifact, EcologyGenerationConfig, GeographicRegionsArtifact, GeologyArtifact, HydrologyArtifact, HydrologyGenerationConfig, SphericalMesh, StaticLakeArtifact, TerrainArtifact, WorldGenerationPipelineConfig } from '@another-earth/world-core'
 import type { WorkerRequest, WorkerResponse } from '../lib/generation/protocol'
-import { assembleNaturalWorld, createClimatePipeline, createEcologyPipeline, createGeologyPipeline, createHydrologyPipeline, createMeshPipeline, createNaturalPipeline, createTerrainPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
+import { assembleWorld, createClimatePipeline, createEcologyPipeline, createGeologyPipeline, createHydrologyPipeline, createMeshPipeline, createTerrainPipeline, createWorldPipeline, PipelineCancelledError, SphericalSpatialIndex } from '@another-earth/world-core'
 import { builtinContentPacks, builtinContentPort, builtinPipelineContent } from '../lib/generation/builtin-content'
 import { serializeError } from '../lib/generation/protocol'
 import { transferSnapshot } from '../lib/generation/transfer'
@@ -12,7 +12,7 @@ export class GenerationWorkerRuntime {
   readonly climatePipeline = createClimatePipeline(this.pipeline.cache)
   readonly hydrologyPipeline = createHydrologyPipeline(this.pipeline.cache)
   readonly ecologyPipeline = createEcologyPipeline(this.pipeline.cache)
-  readonly naturalPipeline = createNaturalPipeline(this.pipeline.cache)
+  readonly worldPipeline = createWorldPipeline(this.pipeline.cache)
   #active?: { id: string, abort: AbortController }
   #mesh?: SphericalMesh
   #index?: SphericalSpatialIndex
@@ -88,8 +88,8 @@ export class GenerationWorkerRuntime {
         throw new Error('Climate generation requires terrain parameters')
       if (terrainRequested && (!request.input.config.geology || !request.input.config.landforms))
         throw new Error('Terrain generation requires geology and landform parameters')
-      const pipeline = worldRequested ? this.naturalPipeline : ecologyRequested ? this.ecologyPipeline : hydrologyRequested ? this.hydrologyPipeline : climateRequested ? this.climatePipeline : terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
-      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as NaturalGenerationConfig & EcologyGenerationConfig & HydrologyGenerationConfig & ClimateGenerationConfig, ...builtinPipelineContent }, {
+      const pipeline = worldRequested ? this.worldPipeline : ecologyRequested ? this.ecologyPipeline : hydrologyRequested ? this.hydrologyPipeline : climateRequested ? this.climatePipeline : terrainRequested ? this.terrainPipeline : request.input.config.geology ? this.geologyPipeline : this.pipeline
+      const result = await pipeline.execute({ seed: request.input.seed, config: request.input.config as WorldGenerationPipelineConfig & EcologyGenerationConfig & HydrologyGenerationConfig & ClimateGenerationConfig, ...builtinPipelineContent }, {
         runId: task.id,
         signal: task.abort.signal,
         force: request.input.force,
@@ -108,7 +108,7 @@ export class GenerationWorkerRuntime {
       const hydrology = hydrologyRequested ? result.getOutput<HydrologyArtifact>('hydrology-h0') : undefined
       const lakes = hydrologyRequested ? result.getOutput<StaticLakeArtifact>('static-lakes-l1') : undefined
       const ecology = ecologyRequested ? result.getOutput<EcologyArtifact>('ecology-e0') : undefined
-      const world = worldRequested ? assembleNaturalWorld({ seed: request.input.seed, config: request.input.config as NaturalGenerationConfig }, result, this.naturalPipeline.registry, request.input.publication!, builtinContentPacks, builtinContentPort) : undefined
+      const world = worldRequested ? assembleWorld({ seed: request.input.seed, config: request.input.config as WorldGenerationPipelineConfig }, result, this.worldPipeline.registry, request.input.publication!, builtinContentPacks, builtinContentPort) : undefined
       const snapshot = transferSnapshot(mesh, geology, terrain, climate, cryosphere, hydrology, lakes, ecology, world, regions)
       const copyMs = performance.now() - copying
       const posting = performance.now()

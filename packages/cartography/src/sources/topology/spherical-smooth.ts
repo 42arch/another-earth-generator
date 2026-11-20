@@ -87,47 +87,42 @@ export function smoothBoundaryCornerPositions(
   return positions
 }
 
+export interface SharedBoundaryRelaxation {
+  readonly corners: Float64Array
+  readonly edgeMidpoints: Map<number, Vec3Tuple>
+}
+
+export interface SharedBoundaryRelaxationOptions {
+  readonly cornerRelaxIterations?: number
+  readonly cornerRelaxStrength?: number
+  readonly edgeRelaxIterations?: number
+  readonly edgeRelaxStrength?: number
+  /** When set, only edges with `smoothEdgeMask[edgeId] === 1` are subdivided and relaxed. */
+  readonly smoothEdgeMask?: Uint8Array
+  /** Corners forced to stay at their input positions. Used to pin a border onto an already smoothed coastline. */
+  readonly lockedCorners?: Uint8Array
+}
+
 /**
- * Topology-preserving subdivision and relaxation of shared classification boundary rings.
- *
- * - Triple junctions (`valence != 2` across all boundary edges) remain strictly locked.
- * - Optional `smoothEdgeMask`: if provided (`smoothEdgeMask[edgeId] === 1`), only true classification
- *   boundary edges are subdivided with spline midpoints and relaxed; internal tile-partition edges
- *   remain un-relaxed straight dual segments so internal tile seams are 100% invisible and conformal.
- * - Because both adjacent groups share the exact same corner and edge IDs (traversed in
- *   opposite directions), their smoothed boundaries remain 100% conformal with zero gaps or overlaps.
+ * Topology-preserving subdivision and relaxation of a shared boundary graph.
+ * Triple junctions stay locked. The returned corner buffer does not alias `cornerPositions`.
  */
-export function buildSmoothedSharedBoundaryRings(
+export function relaxSharedBoundaryGraph(
   mesh: MapMeshReader,
   cornerPositions: Float64Array,
   boundaryEdgeIds: Uint32Array,
-  rings: readonly {
-    readonly corners: Uint32Array
-    readonly edgeIds: Uint32Array
-    readonly interiorRegions?: Uint32Array
-    readonly sampleInteriorRegion: number
-  }[],
-  options: {
-    readonly cornerRelaxIterations?: number
-    readonly cornerRelaxStrength?: number
-    readonly edgeRelaxIterations?: number
-    readonly edgeRelaxStrength?: number
-    readonly smoothEdgeMask?: Uint8Array
-  } = {},
-): { points: Vec3Tuple[], interiorRegions?: Uint32Array, sampleInteriorRegion: number }[] {
+  options: SharedBoundaryRelaxationOptions = {},
+): SharedBoundaryRelaxation {
   const cornerRelaxIterations = options.cornerRelaxIterations ?? 3
   const cornerRelaxStrength = options.cornerRelaxStrength ?? 0.34
   const edgeRelaxIterations = options.edgeRelaxIterations ?? 2
   const edgeRelaxStrength = options.edgeRelaxStrength ?? 0.36
   const smoothEdgeMask = options.smoothEdgeMask
 
-  // Filter boundaryEdgeIds to only true classification boundary edges if smoothEdgeMask is provided
   const activeBoundaryEdgeIds = smoothEdgeMask
     ? boundaryEdgeIds.filter(edgeId => smoothEdgeMask[edgeId] !== 0)
     : boundaryEdgeIds
 
-  // 1. Relax valence-2 corners while keeping triple junctions (valence != 2) locked
-  // Notice: corners touched by internal tile-seam edges must also be locked so 3-way junctions between a seam and a true boundary never pull apart!
   const seamLockedCorners = new Uint8Array(mesh.cornerCount)
   const edgeCorners = new Uint32Array(2 * mesh.edgeCount)
   mesh.forEachEdge((edgeId, _rA, _rB, cornerA, cornerB) => {
@@ -143,11 +138,19 @@ export function buildSmoothedSharedBoundaryRings(
       }
     }
   }
+  const lockedCorners = options.lockedCorners
+  if (lockedCorners) {
+    const count = Math.min(lockedCorners.length, seamLockedCorners.length)
+    for (let corner = 0; corner < count; corner++) {
+      if (lockedCorners[corner])
+        seamLockedCorners[corner] = 1
+    }
+  }
 
   const relaxedCorners = smoothBoundaryCornerPositions(
     mesh,
     cornerPositions,
-    activeBoundaryEdgeIds,
+    Uint32Array.from(activeBoundaryEdgeIds),
     cornerRelaxIterations,
     cornerRelaxStrength,
     seamLockedCorners,
@@ -280,23 +283,74 @@ export function buildSmoothedSharedBoundaryRings(
     }
   }
 
-  // 5. Assemble each ring's vertex sequence: [corner_0, midpoint(edge_0)?, corner_1, midpoint(edge_1)?, ...]
+  return {
+    corners: currentCorners,
+    edgeMidpoints,
+  }
+}
+
+/**
+ * Smooths inland boundaries with the coastline recipe and pins every shared coastal corner
+ * to the coastline graph so a border meets the shore on the same vertex.
+ */
+export function alignInlandBoundariesToCoastline(
+  mesh: MapMeshReader,
+  cornerPositions: Float64Array,
+  coastlineEdgeIds: Uint32Array,
+  inlandEdgeIds: Uint32Array,
+): SharedBoundaryRelaxation {
+  const coast = relaxSharedBoundaryGraph(mesh, cornerPositions, coastlineEdgeIds)
+  const locked = new Uint8Array(mesh.cornerCount)
+  const edgeCorners = new Uint32Array(2 * mesh.edgeCount)
+  mesh.forEachEdge((edgeId, _regionA, _regionB, cornerA, cornerB) => {
+    edgeCorners[2 * edgeId] = cornerA
+    edgeCorners[2 * edgeId + 1] = cornerB
+  })
+  for (let i = 0; i < coastlineEdgeIds.length; i++) {
+    const edgeId = coastlineEdgeIds[i]
+    locked[edgeCorners[2 * edgeId]] = 1
+    locked[edgeCorners[2 * edgeId + 1]] = 1
+  }
+  const inland = relaxSharedBoundaryGraph(mesh, coast.corners, inlandEdgeIds, { lockedCorners: locked })
+  const edgeMidpoints = new Map(coast.edgeMidpoints)
+  for (const [edgeId, midpoint] of inland.edgeMidpoints)
+    edgeMidpoints.set(edgeId, midpoint)
+  return { corners: inland.corners, edgeMidpoints }
+}
+
+/**
+ * Topology-preserving subdivision and relaxation of shared classification boundary rings.
+ *
+ * - Triple junctions (`valence != 2` across all boundary edges) remain strictly locked.
+ * - Optional `smoothEdgeMask`: if provided (`smoothEdgeMask[edgeId] === 1`), only true classification
+ *   boundary edges are subdivided with spline midpoints and relaxed; internal tile-partition edges
+ *   remain un-relaxed straight dual segments so internal tile seams are 100% invisible and conformal.
+ * - Because both adjacent groups share the exact same corner and edge IDs (traversed in
+ *   opposite directions), their smoothed boundaries remain 100% conformal with zero gaps or overlaps.
+ */
+export function buildSmoothedSharedBoundaryRings(
+  mesh: MapMeshReader,
+  cornerPositions: Float64Array,
+  boundaryEdgeIds: Uint32Array,
+  rings: readonly {
+    readonly corners: Uint32Array
+    readonly edgeIds: Uint32Array
+    readonly interiorRegions?: Uint32Array
+    readonly sampleInteriorRegion: number
+  }[],
+  options: SharedBoundaryRelaxationOptions = {},
+): { points: Vec3Tuple[], interiorRegions?: Uint32Array, sampleInteriorRegion: number }[] {
+  const { corners, edgeMidpoints } = relaxSharedBoundaryGraph(mesh, cornerPositions, boundaryEdgeIds, options)
   return rings.map((ring) => {
     const points: Vec3Tuple[] = []
     const len = ring.corners.length
     for (let i = 0; i < len; i++) {
       const c = ring.corners[i]
       const cOff = 3 * c
-      points.push(normalizeVec3(
-        currentCorners[cOff],
-        currentCorners[cOff + 1],
-        currentCorners[cOff + 2],
-      ))
-      const edgeId = ring.edgeIds[i]
-      const mid = edgeMidpoints.get(edgeId)
-      if (mid) {
+      points.push(normalizeVec3(corners[cOff], corners[cOff + 1], corners[cOff + 2]))
+      const mid = edgeMidpoints.get(ring.edgeIds[i])
+      if (mid)
         points.push(mid)
-      }
     }
     return {
       points,

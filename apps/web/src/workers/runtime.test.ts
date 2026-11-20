@@ -1,6 +1,6 @@
 import type { SphericalMesh } from '@another-earth/world-core'
 import type { WorkerResponse } from '../lib/generation/protocol'
-import { createMeshPipeline, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateStaticLakeArtifact, validateTerrainArtifact, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '@another-earth/world-core'
+import { createMeshPipeline, DEFAULT_CIVILIZATION_PARAMETERS, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS, MeshQueries, validateClimateArtifact, validateCryosphereArtifact, validateGeologyArtifact, validateHydrologyArtifact, validateSphericalMesh, validateStaticLakeArtifact, validateTerrainArtifact, validateWorldSnapshot, WORLD_SCHEMA_VERSION } from '@another-earth/world-core'
 import { describe, expect, it } from 'vitest'
 import { builtinContentPacks, builtinContentPort, builtinGeographicNamingProfile, builtinPipelineContent } from '../lib/generation/builtin-content'
 import { hydrateMesh } from '../lib/generation/transfer'
@@ -197,7 +197,15 @@ it('publishes one complete natural world without detaching cached stage outputs'
   const first = messages.find((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')!
   expect(first.world?.schemaVersion).toBe(WORLD_SCHEMA_VERSION)
   expect(first.world && validateWorldSnapshot(first.world, builtinContentPacks, builtinContentPort).valid).toBe(true)
-  expect(first.world?.metadata.contentPacks.map(pack => pack.id).sort()).toEqual(['builtin:naming-style/western-zh-cn', 'core', 'earthlike'])
+  expect(first.world?.metadata.contentPacks.map(pack => pack.id).sort()).toEqual([
+    'builtin-cultures-zh-cn',
+    'builtin-peoples-zh-cn',
+    'builtin-polities-zh-cn',
+    'builtin-religions-zh-cn',
+    'builtin:naming-style/western-zh-cn',
+    'core',
+    'earthlike',
+  ].sort())
   expect(first.world?.nature.geography.regions?.nameStyleId).toBe(builtinGeographicNamingProfile.id)
   expect(first.world?.nature.geography.regions?.nameStyleSignature).toBe(builtinPipelineContent.contentSignatures['geographic-naming-style'])
   expect(first.ecology).toBeDefined()
@@ -208,4 +216,64 @@ it('publishes one complete natural world without detaching cached stage outputs'
   expect(second.stages?.every(stage => stage.action === 'cache-hit')).toBe(true)
   expect(second.world?.snapshotId).toBe('snapshot:web-world-2')
   expect(second.world?.nature.geography.elevationKm.values[0]).toBe(first.world?.nature.geography.elevationKm.values[0])
+})
+
+it('preserves natural and resource caches when only civilization parameters change, and skips civilization when disabled', async () => {
+  const messages: WorkerResponse[] = []
+  const runtime = new GenerationWorkerRuntime((message, transfer = []) => messages.push(structuredClone(message, { transfer })))
+  const base = input(1, 0.5)
+  const request = {
+    type: 'GENERATE' as const,
+    requestId: 'civ-first',
+    input: {
+      ...base,
+      publication: { snapshotId: 'snapshot:web-civ-1', worldId: 'world:web-civ', name: 'Civ World', createdAt: '2026-11-20T00:00:00Z' },
+      config: {
+        ...base.config,
+        reference: { subdivisionLevel: 2 },
+        geology: DEFAULT_GEOLOGY_PARAMETERS,
+        landforms: DEFAULT_LANDFORM_PARAMETERS,
+        terrain: DEFAULT_TERRAIN_PARAMETERS,
+        climate: DEFAULT_CLIMATE_PARAMETERS,
+        hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
+        ecology: true as const,
+        civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+      },
+    },
+  }
+  await runtime.handle(request)
+  const first = messages.find((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')!
+  expect(first.world && validateWorldSnapshot(first.world, builtinContentPacks, builtinContentPort).valid).toBe(true)
+  expect(first.world?.nature.resources.resourceIds.length).toBeGreaterThan(0)
+  expect(first.stages?.some(stage => stage.stageId === 'polities-religions' && stage.action === 'execute')).toBe(true)
+
+  await runtime.handle({
+    ...request,
+    requestId: 'civ-cohesion-changed',
+    input: {
+      ...request.input,
+      publication: { ...request.input.publication, snapshotId: 'snapshot:web-civ-2' },
+      config: { ...request.input.config, civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCohesion: 0.9 } },
+    },
+  })
+  const second = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[1]
+  expect(second.stages?.filter(stage => stage.action === 'execute').map(stage => stage.stageId)).toEqual(['polities-religions'])
+
+  await runtime.handle({
+    ...request,
+    requestId: 'civ-disabled',
+    input: {
+      ...request.input,
+      publication: { ...request.input.publication, snapshotId: 'snapshot:web-civ-3' },
+      config: { ...request.input.config, civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, enabled: false } },
+    },
+  })
+  const third = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[2]
+  expect(third.world && validateWorldSnapshot(third.world, builtinContentPacks, builtinContentPort).valid).toBe(true)
+  expect(third.world?.metadata.generationConfig.civilizationEnabled).toBe(false)
+  expect(third.world?.civilization.settlements).toHaveLength(0)
+  expect(third.world?.civilization.polities).toHaveLength(0)
+  expect(third.world?.nature.resources.resourceIds.length).toBeGreaterThan(0)
+  expect(third.stages?.find(stage => stage.stageId === 'resource-potential')?.action).toBe('cache-hit')
+  expect(third.stages?.find(stage => stage.stageId === 'habitability')?.action).toBe('cache-hit')
 })

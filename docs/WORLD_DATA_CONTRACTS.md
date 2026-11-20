@@ -1,6 +1,6 @@
 # 世界数据与生成产物契约
 
-> 更新：2026-11-20。本页定义跨模块的权威契约。实现以源码和测试为准；逐阶段字段表、单位和模型限制见 [契约参考快照](WORLD_DATA_CONTRACTS_REFERENCE.md)，Stage 执行规则见 [生成管线](GENERATION_PIPELINE.md)。当前 `WorldSnapshot` Schema 为 3。
+> 更新：2026-11-20。本页定义跨模块的权威契约。实现以源码和测试为准；逐阶段字段表、单位和模型限制见 [契约参考快照](WORLD_DATA_CONTRACTS_REFERENCE.md)，Stage 执行规则见 [生成管线](GENERATION_PIPELINE.md)。当前 `WorldSnapshot` Schema 为 4。
 
 ## 数据类别与所有权
 
@@ -13,7 +13,7 @@
 
 ## 快照与身份
 
-`WorldSnapshot` 顶层包含 `schemaVersion`、`snapshotId`、`revision`、`time`、`metadata`、`planet`、`mesh`、`nature` 与 `civilization`。当前 Schema 为 3；`nature` 包含 geology、geography、climate、hydrology、ecology 五个完整状态。阶段产物不能填零后冒充完整快照。
+`WorldSnapshot` 顶层包含 `schemaVersion`、`snapshotId`、`revision`、`time`、`metadata`、`planet`、`mesh`、`nature` 与 `civilization`。当前 Schema 为 4；`nature` 包含 geology、geography、climate、hydrology、ecology、resources 六个完整状态，`civilization` 包含 peoples、cultures、religions、polities、settlements、population、populationGroups 与 transport。阶段产物不能填零后冒充完整快照。
 
 `metadata` 保存世界 ID、名称、调用方提供的 UTC 创建时间、字符串 Seed、生成器版本、内容签名/包清单、生成配置和 provenance。名称、创建时间不参与随机身份；对象 ID 不从展示名称、数组序号或当前时间隐式生成。revision 为非负安全整数；同一世界发布新快照须使用新 `snapshotId` 并递增 revision。
 
@@ -39,15 +39,15 @@
 
 `world-data` 拥有内容定义、Catalog、依赖解析、校验、哈希与命名 JSON 格式；`world-core` 编译期不依赖 `world-data`，内容通过调用方注入的结构化视图和 `ContentPort` 消费。
 
-当前 ContentPack 使用 schemaVersion 1，包含 `names`、`namingStyles`、`cultures`、`peoples`、`states` 等当前契约字段。内容 ID 与显示文本分离；依赖使用精确版本，Catalog 校验重复 ID、依赖、翻译和内容哈希。当前 `fnv1a32` 用于确定性身份与意外变更检测，不是安全摘要。
+当前 ContentPack 使用 schemaVersion 1，包含 `names`、`namingStyles`、`cultures`、`peoples`、`polities`、`religions`、`resources`、`presets` 与 `translations` 等当前契约字段（已移除 `governments` 与 `states`）。内容 ID 与显示文本分离；依赖使用精确版本，Catalog 校验重复 ID、依赖、翻译和内容哈希。当前 `fnv1a32` 用于确定性身份与意外变更检测，不是安全摘要。
 
-NamingStyle 是独立的风格-语言档案，格式为 `another-earth/naming-style`、schemaVersion 2。文化通过完整 `namingStyleId` 引用档案。社会作者 JSON 使用 `another-earth/society-pack`、schemaVersion 1，每份文件自包含单一语言领域定义，并由适配器转换为完整 ContentPack。内置六份社会候选包只供内容选择，当前未接入文明生成。
+NamingStyle 是独立的风格-语言档案，格式为 `another-earth/naming-style`、schemaVersion 2。文化通过完整 `namingStyleId` 引用档案。社会作者 JSON 使用 `another-earth/society-pack`、schemaVersion 1（支持 `peoples` / `cultures` / `polities` / `religions` 四个互斥域），每份文件自包含单一语言领域定义，并由适配器转换为完整 ContentPack。内置默认生成目录加载中文内容包（`western-zh-cn`、`builtin-peoples-zh-cn`、`builtin-cultures-zh-cn`、`builtin-polities-zh-cn`、`builtin-religions-zh-cn` 与 `core` / `earthlike`）。
 
 ## 校验与档案
 
-`validateWorldSnapshot` 的完整模式执行发布/恢复所需的领域校验；结构模式只用于结构检查，不能用于发布或存档验收。输入为已解码对象，校验器不是任意 JSON 的安全解析器。
+`validateWorldSnapshot` 的完整模式执行发布/恢复所需的领域校验；结构模式只用于结构检查，不能用于发布或存档验收。输入为已解码对象，校验器不是任意 JSON 的安全解析器。当 `civilizationEnabled` 为 `true` 时，校验器额外要求完整的文明阶段 provenance、族群/文化/政体/宗教/资源引用、交通拓扑连通性与人口守恒约束。
 
-当前档案实现为 `another-earth-m0-json` v1，内部世界为 Schema 3；编码与解码均校验快照、内容身份和校验和。Schema 1/2 尚无迁移器，当前拒绝旧档案。该 JSON 档案不是 M4 `.aearth` 格式，也不包含浏览器项目存储流程。
+当前档案实现为 `another-earth-m0-json` v1，内部世界为 Schema 4；编码与解码均校验快照、内容身份和校验和，不保留对 Schema 1–3 旧档案的迁移或兼容。该 JSON 档案不是 M4 `.aearth` 格式，也不包含浏览器项目存储流程。
 
 地名阶段的新生成版本是 `geographic-names-v4`。发布与恢复同时接受该版本和 `geographic-names-v3`；v3 档案保留已经写入的名称。v1/v2 以及缺少地名阶段的档案仍然拒绝。
 

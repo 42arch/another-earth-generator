@@ -11,8 +11,9 @@ import type {
 import { normalizeVec3 } from '#projections/spherical-math'
 import { buildHydrographyRivers } from '#sources/topology/hydrography-buffer'
 import { assemblePolygonsWithHoles, traceClassificationRings } from '#sources/topology/ring-tracer'
-import { catmullRomSmoothClosedRing } from '#sources/topology/spherical-smooth'
+import { relaxSharedBoundaryGraph } from '#sources/topology/spherical-smooth'
 import { BUILTIN_MAP_SOURCE_SCHEMAS } from '#sources/types'
+import { relaxPolityBorderBoundaries } from './civilization-sources'
 
 type PolygonOrMultiPolygon = GeoJsonPolygonGeometry | GeoJsonMultiPolygonGeometry
 
@@ -46,6 +47,44 @@ export function buildLakePolygonsSource(
     groupIds[r] = lakeIndexField.get(r)
 
   const traced = traceClassificationRings(mesh, groupIds, sharedCornerPositions)
+  const aligned = relaxPolityBorderBoundaries(reader, traced.cornerPositions)
+  const locked = new Uint8Array(mesh.cornerCount)
+  const seed = traced.cornerPositions.slice()
+  if (aligned) {
+    const edgeCorners = new Uint32Array(2 * mesh.edgeCount)
+    mesh.forEachEdge((edgeId, _regionA, _regionB, cornerA, cornerB) => {
+      edgeCorners[2 * edgeId] = cornerA
+      edgeCorners[2 * edgeId + 1] = cornerB
+    })
+    for (let i = 0; i < traced.boundaryEdgeIds.length; i++) {
+      const edgeId = traced.boundaryEdgeIds[i]
+      if (!aligned.edgeMidpoints.has(edgeId))
+        continue
+      locked[edgeCorners[2 * edgeId]] = 1
+      locked[edgeCorners[2 * edgeId + 1]] = 1
+    }
+    for (let corner = 0; corner < mesh.cornerCount; corner++) {
+      if (!locked[corner])
+        continue
+      const offset = 3 * corner
+      seed[offset] = aligned.corners[offset]
+      seed[offset + 1] = aligned.corners[offset + 1]
+      seed[offset + 2] = aligned.corners[offset + 2]
+    }
+  }
+  const smoothed = relaxSharedBoundaryGraph(
+    mesh,
+    seed,
+    traced.boundaryEdgeIds,
+    aligned ? { lockedCorners: locked } : undefined,
+  )
+  if (aligned) {
+    for (const [edgeId, midpoint] of aligned.edgeMidpoints) {
+      if (smoothed.edgeMidpoints.has(edgeId))
+        smoothed.edgeMidpoints.set(edgeId, midpoint)
+    }
+  }
+
   const features: GeoJsonFeature<PolygonOrMultiPolygon>[] = []
 
   for (const group of traced.groups) {
@@ -53,20 +92,21 @@ export function buildLakePolygonsSource(
     if (!lakeSummary)
       continue
     const smoothedRings = group.rings.map((ring) => {
-      const raw: Vec3Tuple[] = []
+      const points: Vec3Tuple[] = []
       for (let i = 0; i < ring.corners.length; i++) {
-        const c = ring.corners[i]
-        raw.push(normalizeVec3(
-          traced.cornerPositions[3 * c],
-          traced.cornerPositions[3 * c + 1],
-          traced.cornerPositions[3 * c + 2],
+        const offset = 3 * ring.corners[i]
+        points.push(normalizeVec3(
+          smoothed.corners[offset],
+          smoothed.corners[offset + 1],
+          smoothed.corners[offset + 2],
         ))
+        const midpoint = smoothed.edgeMidpoints.get(ring.edgeIds[i])
+        if (midpoint)
+          points.push(midpoint)
       }
-      const points = raw.length >= 3
-        ? catmullRomSmoothClosedRing(raw, 4)
-        : raw
       return {
         points,
+        interiorRegions: ring.interiorRegions,
         sampleInteriorRegion: ring.sampleInteriorRegion,
       }
     })

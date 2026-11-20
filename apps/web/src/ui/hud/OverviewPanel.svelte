@@ -17,6 +17,16 @@
     readonly lakeCount: number
     readonly totalLakeAreaKm2: number
     readonly medianLakeAreaKm2: number | null
+    readonly hasResources: boolean
+    readonly hasCivilization: boolean
+    readonly depositCount: number
+    readonly totalPopulation: number
+    readonly settlementCount: number
+    readonly polityCount: number
+    readonly cultureCount: number
+    readonly peopleCount: number
+    readonly religionCount: number
+    readonly transportRouteCount: number
   }
 
   interface WorldPerformanceStats {
@@ -93,6 +103,25 @@
               <dt>湖泊中位面积</dt><dd>{worldSummary.medianLakeAreaKm2 === null ? '—' : `${worldSummary.medianLakeAreaKm2.toLocaleString(undefined, { maximumFractionDigits: 0 })} km²`}</dd>
             </dl>
           </section>
+          {#if worldSummary.hasResources || worldSummary.hasCivilization}
+            <section class='flex flex-col gap-2 border-t border-white/6 pt-2.5 text-[10px]' aria-label='资源与初始文明概览'>
+              <div class='flex items-center justify-between'><span class='font-bold tracking-wider uppercase text-obs-primary/90'>资源与初始文明</span></div>
+              <dl class='grid grid-cols-2 gap-y-1.5'>
+                {#if worldSummary.hasResources}
+                  <dt>资源矿点数</dt><dd>{worldSummary.depositCount.toLocaleString()}</dd>
+                {/if}
+                {#if worldSummary.hasCivilization}
+                  <dt>全球总人口</dt><dd>{Math.round(worldSummary.totalPopulation).toLocaleString()}</dd>
+                  <dt>聚落数</dt><dd>{worldSummary.settlementCount.toLocaleString()}</dd>
+                  <dt>国家政体数</dt><dd>{worldSummary.polityCount.toLocaleString()}</dd>
+                  <dt>族群 / 文化 / 宗教</dt><dd>{worldSummary.peopleCount} / {worldSummary.cultureCount} / {worldSummary.religionCount}</dd>
+                  <dt>交通航路数</dt><dd>{worldSummary.transportRouteCount.toLocaleString()}</dd>
+                {:else}
+                  <dt>初始文明</dt><dd class='text-obs-text-dim'>已跳过（仅自然与资源）</dd>
+                {/if}
+              </dl>
+            </section>
+          {/if}
         {/if}
         {#if debugInfoVisible && stats}
           <section class='flex flex-col gap-2 border-t border-white/6 pt-2.5 text-[10px] text-obs-text-dim' aria-label='网格与性能统计'>

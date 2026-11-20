@@ -142,7 +142,7 @@ export interface WorldMapReader {
 | `climate-monthly` | `raster` | Cell 月切片 | 当前月（0–11）`temperatureC`、`precipitationMm`、`snowWaterEquivalentMm`、`snowfallMm`、`snowmeltMm`、`windSpeedMps`、`oceanSpeedMps`（带 `oceanAvailable` 掩码）、`oceanWarmth` |
 | `land-areas` | `geojson` | `Polygon` / `MultiPolygon` | 从 `landMask` 追踪海陆共享对偶边闭合外环与内陆海孔洞，经球面角落平滑（Chaikin 保拓扑平滑）输出平滑大陆与岛屿轮廓 |
 | `continent-areas` / `plate-areas` / `koppen-areas` / `biome-areas` / `land-cover-areas` | `geojson` | `Polygon` / `MultiPolygon` | 按分类 ID 提取连通区域边界环与孔洞，经三岔口锁定的共享边界中点细分与四点球面样条松弛（`buildSmoothedSharedBoundaryRings`）生成零裂缝平滑多边形面片（其中 `continent-areas` 同时覆盖大陆、大洋与海三类分区） |
-| `lake-polygons` | `geojson` | `Polygon` / `MultiPolygon` | 从静态湖泊成员区域追踪外环与湖心岛孔洞，经球面 Catmull-Rom 闭合平滑生成自然湖岸多边形，属性含 `id`、`areaKm2`、`waterLevelKm`、`endorheic` |
+| `lake-polygons` | `geojson` | `Polygon` / `MultiPolygon` | 从静态湖泊成员区域追踪外环与湖心岛孔洞，用与国界线相同的共享边界松弛；与国界或海岸重合的边直接采用那条边的顶点。属性含 `id`、`areaKm2`、`waterLevelKm`、`endorheic` |
 | `river-polygons` | `geojson` | `Polygon` / `MultiPolygon` | **变宽河网面化源**：对每条河段中心路径做球面 Catmull-Rom 平滑，按节点累积年均流量 `accumulatedAnnualFlowM3s` 的幂律映射计算球面弧度半宽，向两侧切向法线偏移构建封闭多边形带；支流汇流节点补圆形衔接盖片（Confluence Cap），入湖端与入海端延伸至湖岸/海陆共享对偶边中点，确保水体无缝一体 |
 | `river-centerlines` | `geojson` | `LineString` | 与 `river-polygons` 同源平滑中心线，携带 `id`、`strahlerOrder`、`annualMeanDischargeM3s`，专供全球远景最小像素线保底与线要素拾取 |
 | `coastlines` | `geojson` | `LineString` / `MultiLineString` | 海陆交界平滑对偶边链，每条物理海岸边全局唯一输出一次 |
@@ -160,7 +160,7 @@ export interface WorldMapReader {
 
 - **顶层字段**：`version: 1`、`id`、`name`、`tokens: Record<string, StylePrimitive | StylePrimitive[]>`、`layers: readonly MapStyleLayer[]`。
 - **不透明垫底色**：每个风格在 `tokens.background` 提供一个 `#rgb` / `#rrggbb` 颜色。3D 用与地表同拓扑、半径 `0.996` 的不透明壳体绘制，2D 用投影剪影面绘制。未铺满的海洋或孔洞落到这层；壳体写深度，挡住另一侧的河湖。栅格专题 `raster-opacity` 为 `1`。缺省或非法颜色回退 `#0a2342`。
-- **默认图层**：`defaultEnabledLayerIds` 列出选中该风格时点亮的图层。`world-surface` 是「地表」图层，绘制该风格的 `slot: 'base'` 表面，可与专题同时显示；关掉后只留垫底色。地表始终画在最下层：底图栅格贴在半径 `1`，底图陆地填充略高出垫底壳体；专题栅格和专题填充在其外侧。河湖、线、圆和注记再向外。专题未铺满的海洋仍露出地表。
+- **默认图层**：`defaultEnabledLayerIds` 列出选中该风格时点亮的图层。`world-surface` 是「地表」图层，绘制该风格的 `slot: 'base'` 表面，可与专题同时显示；关掉后只留垫底色。政区图默认不点亮地表，无归属陆地由政区填充画成不透明暖灰 `#6f6a64`，与风格垫底的浅蓝海洋区分。地表始终画在最下层：底图栅格贴在半径 `1`，底图陆地填充略高出垫底壳体；专题栅格和专题填充在其外侧。河湖、线、圆和注记再向外。专题未铺满的海洋仍露出地表。
 - **默认三维效果**：`defaultGlobeEffects` 在选中风格时设置大气光晕和昼夜光照。仿真卫星两者都开，其余风格都关。自转、经纬网和 Cell 边界不随风格改变。2D 地图不绘制大气光晕和昼夜光照。
 - **5 种标准图层 `type`**：`'raster' | 'fill' | 'line' | 'circle' | 'symbol'`。
 - **三层制图槽位（MAP-02 对齐）**：
@@ -248,7 +248,7 @@ export interface WorldMapReader {
   - 采用零外部依赖的 `GlyphAtlasBuilder` + 线性时间二维欧氏距离变换（2D Euclidean Distance Transform，`computeGlyphSdf`）将 Canvas2D 栅格化字形（Node/无头环境自动回退程序化矢量笔画）实时转换为 8-bit 有符号距离场（SDF，`128` 对应 `0.5` 等值线），Fragment Shader 通过 `fwidth(sdf)` + `smoothstep` 实现高分屏任意缩放下的矢量级锐利边缘与动态 `text-halo-width` / `text-halo-color` 描边。
   - 每个 `SymbolLayer` 使用单个 4 顶点 `InstancedBufferGeometry` 合批绘制整层所有可见字符，单次 Draw Call 完成渲染。
 - **双排版模式（`symbol-placement`）与 3D 球面贴地投影**：
-  1. `'point'`：点状注记；在 3D `GlobeView` 下同样投影至锚点局部球面切平面贴合球面，2D 下水平排列，支持相对点图标偏移 `text-offset`。
+  1. `'point'`：点状注记；在 3D `GlobeView` 下同样投影至锚点局部球面切平面贴合球面，2D 下水平排列，支持相对点图标的屏幕偏移 `text-offset`（单位为 em，`+x` 向右、`+y` 向下）。
   2. `'spine'`（大陆、大洋及未来国家/山脉名）：读取 Source 提供的版图主轴样条曲线，按随相机距离自适应的角步长 `glyphStepRad`（3D）或屏幕像素字距（2D）沿弧线等距采样每个汉字的锚点与局部切线方向；3D Vertex Shader 沿单位球局部切线 $\mathbf{T}$ 与副切线 $\mathbf{B} = \text{normalize}(\mathbf{N} \times \mathbf{T})$ 在球面切平面上展开字符四角并归一化贴合 `1.0005` 球壳（随球面曲率自然透视压缩并在地平线边缘 `smoothstep(0.14, 0.34, dot(N, V))` 淡出，彻底消除屏幕 Billboard 悬浮感）；当相机旋转或地图朝向导致文字倒置时，自动反转字符排列方向，确保用户永远**从左向右正读中文**。
 - **确定性屏幕空间避让（`CollisionGrid`）**：
   - 视口划分为 `32px × 32px` 空间哈希桶。当相机旋转、平移、缩放或视口尺寸改变时，按 `priority`（如 `areaKm2` 降序）依次将候选注记投影至屏幕像素矩形（水平 AABB 或弯曲文字逐字包围盒序列）：

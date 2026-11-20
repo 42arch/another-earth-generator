@@ -26,7 +26,7 @@ type LineOrMultiLine = GeoJsonLineStringGeometry | GeoJsonMultiLineStringGeometr
 const MAX_WIND_VECTORS = 2200
 const MAX_OCEAN_VECTORS = 2400
 
-function chainCornerEdgesIntoLineStrings(
+export function chainCornerEdgesIntoLineStrings(
   cornerPositions: Float64Array,
   edges: readonly (readonly [cornerA: number, cornerB: number])[],
 ): LonLatTuple[][] {

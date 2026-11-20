@@ -1,5 +1,5 @@
-import type { ContentPackView, ContentPort, EcologyClassView, EcologyVocabulary, NamePoolView, NamingStyleView } from './content-port'
-import { ecologyVocabularySignature } from './content-port'
+import type { CivilizationContentBundle, ContentId, ContentPackView, ContentPort, EcologyClassView, EcologyVocabulary, NamePoolView, NamingStyleView, ResourceDefinitionView } from './content-port'
+import { civilizationContentSignature, ecologyVocabularySignature, resourceDefinitionsSignature } from './content-port'
 
 function hash(value: string): string {
   let h = 0x811C9DC5
@@ -28,12 +28,30 @@ export const testNamingStyle: NamingStyleView = {
   language: 'zh-CN',
   version: '1.0.0',
   displayName: { en: 'Test geography' },
-  pools: { continent: entries('苍岚', 8), ocean: entries('沧溟', 8) },
+  pools: {
+    continent: entries('苍岚', 8),
+    ocean: entries('沧溟', 8),
+    settlement: entries('新港', 16),
+    people: entries('山民', 8),
+    culture: entries('星辉文脉', 8),
+    religion: entries('晨曦圣宗', 8),
+    polity: entries('海风合众', 8),
+  },
   rules: {
     continent: [{ weight: 1, parts: [{ pool: 'continent' }] }],
     ocean: [{ weight: 1, parts: [{ pool: 'ocean' }] }],
+    settlement: [{ weight: 1, parts: [{ pool: 'settlement' }] }],
+    people: [{ weight: 1, parts: [{ pool: 'people' }] }],
+    culture: [{ weight: 1, parts: [{ pool: 'culture' }] }],
+    religion: [{ weight: 1, parts: [{ pool: 'religion' }] }],
+    polity: [{ weight: 1, parts: [{ pool: 'polity' }] }],
   },
 }
+
+export const testResources: readonly ResourceDefinitionView[] = [
+  { id: 'test:resource/grain', displayNameKey: 'resource.grain', tags: ['agriculture'], category: 'biological', geologyTags: ['alluvial', 'grassland'] },
+  { id: 'test:resource/iron', displayNameKey: 'resource.iron', tags: ['metallurgy'], category: 'mineral', geologyTags: ['orogen', 'continental-shield'] },
+]
 
 export const testContentPack: ContentPackView = {
   manifest: { id: 'test:core', version: '1.0.0', contentHash: hash(JSON.stringify(['test:core', '1.0.0'])), dependencies: [] },
@@ -42,11 +60,22 @@ export const testContentPack: ContentPackView = {
     { id: 'test:names/ocean' },
   ],
   namingStyles: [testNamingStyle],
-  cultures: [{ id: 'test:culture/basic' }],
-  religions: [{ id: 'test:religion/basic' }],
-  governments: [{ id: 'test:government/basic' }],
-  resources: [],
+  peoples: [{ id: 'test:people/basic', displayNameKey: 'people.basic', tags: ['generalist'] }],
+  cultures: [{ id: 'test:culture/basic', displayNameKey: 'culture.basic', tags: ['river'], namingStyleId: testNamingStyle.id as ContentId, traits: ['agrarian'] }],
+  religions: [{ id: 'test:religion/basic', displayNameKey: 'religion.basic', tags: ['local'], organization: 'decentralized', traits: ['nature-veneration'], tolerance: 0.7, spreadBias: 0.4, weight: 1 }],
+  polities: [{ id: 'test:polity/basic', displayNameKey: 'polity.basic', tags: [], politicalForm: 'republic', governmentOrganization: 'presidential', headOfStateTitle: '总统', headOfGovernmentTitle: '总理', legislatureTitle: '议会', succession: 'elective', weight: 1 }],
+  resources: testResources,
   presets: [],
+  translations: {
+    'zh-CN': {
+      'people.basic': '基础族群',
+      'culture.basic': '基础文化',
+      'religion.basic': '地方山川信仰',
+      'polity.basic': '共和国',
+      'resource.grain': '良田谷物',
+      'resource.iron': '铁矿',
+    },
+  },
 }
 
 export const testNamePools: { readonly continent: NamePoolView, readonly ocean: NamePoolView } = {
@@ -63,17 +92,43 @@ export const testEcologyVocabulary: EcologyVocabulary = {
   landCover: ['Ocean', 'SnowIce', 'Forest', 'Savanna', 'Desert', 'Grassland', 'Shrubland', 'Tundra'].map(cover),
 }
 
+export function extractCivilizationContent(packs: readonly ContentPackView[]): CivilizationContentBundle {
+  const translations: Record<string, Record<string, string>> = {}
+  for (const pack of packs) {
+    if (!pack.translations)
+      continue
+    for (const [locale, texts] of Object.entries(pack.translations)) {
+      translations[locale] ??= {}
+      Object.assign(translations[locale], texts)
+    }
+  }
+  return {
+    peoples: packs.flatMap(pack => pack.peoples),
+    cultures: packs.flatMap(pack => pack.cultures),
+    religions: packs.flatMap(pack => pack.religions),
+    polities: packs.flatMap(pack => pack.polities),
+    namingStyles: packs.flatMap(pack => pack.namingStyles ?? []),
+    translations,
+  }
+}
+
 /** Generation and validation use the same style from the selected packs. */
 export function testPipelineContent(packs: readonly ContentPackView[] = [testContentPack]) {
   const style = packs.flatMap(pack => pack.namingStyles ?? []).find(item => item.id === testNamingStyle.id) ?? testNamingStyle
+  const resources = packs.flatMap(pack => pack.resources)
+  const civilizationContent = extractCivilizationContent(packs)
   return {
     content: {
       'geographic-naming-style': style,
       'ecology-classes': testEcologyVocabulary,
+      'resource-definitions': resources,
+      'civilization-content': civilizationContent,
     },
     contentSignatures: {
       'geographic-naming-style': testContentPort.calculateNamingStyleSignature(style),
       'ecology-classes': ecologyVocabularySignature(testEcologyVocabulary),
+      'resource-definitions': resourceDefinitionsSignature(resources),
+      'civilization-content': civilizationContentSignature(civilizationContent),
     },
   }
 }

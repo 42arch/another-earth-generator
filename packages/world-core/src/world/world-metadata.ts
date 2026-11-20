@@ -1,3 +1,4 @@
+import type { CivilizationParameters } from '#generation/civilization/civilization-types'
 import type { ClimateParameters } from '#generation/nature/climate/climate'
 import type { HydrologyParameters } from '#generation/nature/hydrology/hydrology'
 import type { GeologyParameters } from '#generation/stages/geology-stage'
@@ -13,7 +14,7 @@ export interface WorldMetadata {
   readonly generatorVersion: string
   readonly contentSignature: string
   readonly contentPacks: readonly { readonly id: string, readonly version: string, readonly contentHash: string }[]
-  /** Complete snapshot-local natural generation inputs. */
+  /** Complete snapshot-local natural & initial civilization generation inputs. */
   readonly generationConfig: {
     readonly planet: PlanetParameters
     readonly mesh: {
@@ -23,6 +24,7 @@ export interface WorldMetadata {
     }
     readonly regionCount: number
     readonly civilizationEnabled: boolean
+    readonly civilization?: CivilizationParameters
     readonly reference?: { readonly subdivisionLevel: number }
     readonly geology: GeologyParameters
     readonly landforms: LandformParameters

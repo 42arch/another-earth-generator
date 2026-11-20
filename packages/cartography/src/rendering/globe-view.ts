@@ -11,7 +11,7 @@ import type { CompiledMapStyle, CompiledMapStyleLayer } from '#styles/compiler'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { cartesianToLonLatDeg, lonLatDegToCartesian, normalizeVec3, rotateAroundPolarAxis } from '#projections/spherical-math'
-import { LAYER_STACK, layerRenderOrder } from '#rendering/layer-stack'
+import { globeLinePlacement, LAYER_STACK, layerRenderOrder } from '#rendering/layer-stack'
 import { createCircleLayerFromRegistry } from '#rendering/layers/circle-layer'
 import { createFillLayerFromRegistry } from '#rendering/layers/fill-layer'
 import { createLineLayerFromRegistry } from '#rendering/layers/line-layer'
@@ -635,9 +635,12 @@ export class GlobeView {
     }
 
     if (compiledLayer.type === 'line') {
+      const placement = globeLinePlacement(compiledLayer.source, orderIndex)
       const inst = createLineLayerFromRegistry(compiledLayer, this.registry, state.climateMonth, {
         renderOrder,
-        surfaceOffset: LAYER_STACK.lineOffset + orderIndex * 0.00002,
+        surfaceOffset: placement.surfaceOffset,
+        polygonOffsetFactor: placement.polygonOffsetFactor,
+        polygonOffsetUnits: placement.polygonOffsetUnits,
         tracker: this.tracker,
       })
       if (!inst)

@@ -1,5 +1,5 @@
 import type { WorkerRequest, WorkerResponse } from './protocol'
-import { createSphericalMesh, decodeWorldArchive, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
+import { createSphericalMesh, decodeWorldArchive, DEFAULT_CIVILIZATION_PARAMETERS, DEFAULT_CLIMATE_PARAMETERS, DEFAULT_GEOLOGY_PARAMETERS, DEFAULT_HYDROLOGY_PARAMETERS, DEFAULT_LANDFORM_PARAMETERS, DEFAULT_TERRAIN_PARAMETERS } from '@another-earth/world-core'
 import { describe, expect, it, vi } from 'vitest'
 import { GenerationWorkerRuntime } from '../../workers/runtime'
 import { builtinContentPacks, builtinContentPort } from './builtin-content'
@@ -182,5 +182,58 @@ it('commits a validated natural candidate and keeps the old world after a reject
   await expect(next).rejects.toThrow('Invalid world snapshot')
   expect(controller.publishedWorld?.snapshotId).toBe(publication.snapshotId)
   expect(controller.queryWorldRegion(0)).toEqual(oldRegion)
+  controller.dispose()
+})
+
+it('queries published civilization entities and resources via GenerationController', async () => {
+  const worker = new MockWorker()
+  const runtime = new GenerationWorkerRuntime((message, transfer = []) => {
+    worker.reply(structuredClone(message, { transfer }))
+  })
+  const controller = new GenerationController(undefined, () => worker as unknown as Worker)
+  const config = {
+    ...input.config,
+    mesh: { subdivisionLevel: 2, irregularity: 0.25 },
+    reference: { subdivisionLevel: 2 },
+    geology: DEFAULT_GEOLOGY_PARAMETERS,
+    landforms: DEFAULT_LANDFORM_PARAMETERS,
+    terrain: DEFAULT_TERRAIN_PARAMETERS,
+    climate: DEFAULT_CLIMATE_PARAMETERS,
+    hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
+    ecology: true as const,
+    civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+  }
+  const publication = { snapshotId: 'snapshot:controller-civ', worldId: 'world:controller-civ', name: 'Civ Controller World', createdAt: '2026-11-20T00:00:00Z' }
+  const pending = controller.generate({ seed: '1024', config, publication })
+  await runtime.handle(worker.sent[0])
+  await pending
+
+  const candidateReader = controller.candidateMapReader(publication.snapshotId)
+  expect(candidateReader.capabilities.hasResources).toBe(true)
+  expect(candidateReader.capabilities.hasCivilization).toBe(true)
+
+  controller.commitWorld(publication.snapshotId)
+  const reader = controller.publishedMapReader()
+  const firstSettlement = reader.settlements()[0]
+  if (firstSettlement) {
+    expect(controller.queryWorldSettlement(firstSettlement.id)?.name).toBe(firstSettlement.name)
+    expect(controller.queryWorldRegion(firstSettlement.regionId).settlements.some(s => s.id === firstSettlement.id)).toBe(true)
+  }
+  const firstPolity = reader.polities()[0]
+  if (firstPolity)
+    expect(controller.queryWorldPolity(firstPolity.id)?.name).toBe(firstPolity.name)
+  const firstCulture = reader.cultures()[0]
+  if (firstCulture)
+    expect(controller.queryWorldCulture(firstCulture.id)?.name).toBe(firstCulture.name)
+  const firstPeople = reader.peoples()[0]
+  if (firstPeople)
+    expect(controller.queryWorldPeople(firstPeople.id)?.name).toBe(firstPeople.name)
+  const firstReligion = reader.religions()[0]
+  if (firstReligion)
+    expect(controller.queryWorldReligion(firstReligion.id)?.name).toBe(firstReligion.name)
+  const firstRoute = reader.transportRoutes()[0]
+  if (firstRoute)
+    expect(controller.queryWorldTransportRoute(firstRoute.id)?.id).toBe(firstRoute.id)
+
   controller.dispose()
 })

@@ -5,13 +5,30 @@
   import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
   import { Satellite, X } from '@lucide/svelte'
   import { fly } from 'svelte/transition'
+  import {
+    findCultureArchetype,
+    findPeopleArchetype,
+    findPolityArchetype,
+    findReligionArchetype,
+    findResourceDefinition,
+    translateContentKey,
+  } from '@/lib/generation/builtin-content'
   import Badge from '@/ui/components/Badge.svelte'
   import { appState } from '@/ui/state/app.svelte'
+
+  interface RegionPopulationGroupSummary {
+    readonly population: number
+    readonly peopleName: string
+    readonly cultureName: string
+    readonly religionName: string | null
+    readonly polityName: string | null
+  }
 
   interface RegionInspection {
     readonly regionId: number
     readonly coordinates: { readonly longitudeDegrees: number, readonly latitudeDegrees: number }
-    readonly featureHit?: { readonly layerId: string, readonly sourceId: string, readonly featureId: string }
+    readonly entityId?: string
+    readonly featureHit?: { readonly layerId: string, readonly sourceId: string, readonly featureId: string, readonly entityId?: string }
     readonly neighbors: readonly number[]
     readonly slopeDeg: number
     readonly regionFacts: ReturnType<GenerationController['queryWorldRegion']>
@@ -23,6 +40,20 @@
     readonly ocean: { readonly east: number, readonly north: number, readonly warmth: number } | null
     readonly contributingAreaKm2: number
     readonly accumulatedFlowM3s: number
+    readonly hasResources: boolean
+    readonly hasCivilization: boolean
+    readonly dominantPeople: ReturnType<GenerationController['queryWorldPeople']>
+    readonly dominantCulture: ReturnType<GenerationController['queryWorldCulture']>
+    readonly dominantReligion: ReturnType<GenerationController['queryWorldReligion']>
+    readonly dominantPolity: ReturnType<GenerationController['queryWorldPolity']>
+    readonly dominantPolityCapitalName: string | null
+    readonly pickedPolity: ReturnType<GenerationController['queryWorldPolity']>
+    readonly pickedPolityCapitalName: string | null
+    readonly pickedSettlement: ReturnType<GenerationController['queryWorldSettlement']>
+    readonly pickedTransportRoute: ReturnType<GenerationController['queryWorldTransportRoute']>
+    readonly pickedCulture: ReturnType<GenerationController['queryWorldCulture']>
+    readonly pickedReligion: ReturnType<GenerationController['queryWorldReligion']>
+    readonly regionPopulationGroups: readonly RegionPopulationGroupSummary[]
   }
 
   interface Props {
@@ -33,6 +64,41 @@
   const { open, inspection }: Props = $props()
   const compassDirections = ['北', '东北', '东', '东南', '南', '西南', '西', '西北'] as const
 
+  const settlementTierLabels: Record<string, string> = {
+    capital: '首都',
+    city: '城市',
+    town: '城镇',
+    village: '村落',
+  }
+
+  const politySizeLabels: Record<string, string> = {
+    'city-state': '城邦',
+    'regional': '区域政权',
+    'kingdom': '王国',
+    'empire': '帝国',
+  }
+
+  const transportModeLabels: Record<string, string> = {
+    road: '陆路驿道',
+    river: '内河航道',
+    sea: '近海航线',
+  }
+
+  const resourceCategoryLabels: Record<string, string> = {
+    mineral: '矿产',
+    energy: '能源',
+    biological: '生物',
+  }
+
+  const successionLabels: Record<string, string> = {
+    hereditary: '世袭制',
+    elective: '选举制',
+    appointed: '任命制',
+    rotating: '轮值制',
+    collective: '集体执政',
+    mixed: '混合制',
+  }
+
   function formatCirculationVector(east: number, north: number, digits: number): string {
     const speedMps = Math.hypot(east, north)
     if (!Number.isFinite(speedMps))
@@ -42,6 +108,39 @@
       return speed
     const sector = Math.round(Math.atan2(east, north) / (Math.PI / 4))
     return `${speed} · 向${compassDirections[(sector + 8) % 8]}`
+  }
+
+  function formatPopulation(value: number): string {
+    if (!Number.isFinite(value) || value <= 0)
+      return '0'
+    return Math.round(value).toLocaleString(appState.locale)
+  }
+
+  function formatResourceName(resourceId: string): string {
+    const def = findResourceDefinition(resourceId)
+    if (!def)
+      return resourceId
+    const label = translateContentKey(def.displayNameKey, appState.locale)
+    return `${label} (${resourceCategoryLabels[def.category] ?? def.category})`
+  }
+
+  function formatPolityArchetypeSummary(archetypeId: string): {
+    name: string
+    headOfStateTitle: string
+    headOfGovernmentTitle: string | null
+    legislatureTitle: string | null
+    succession: string
+  } | null {
+    const archetype = findPolityArchetype(archetypeId)
+    if (!archetype)
+      return null
+    return {
+      name: translateContentKey(archetype.displayNameKey, appState.locale),
+      headOfStateTitle: archetype.headOfStateTitle,
+      headOfGovernmentTitle: archetype.headOfGovernmentTitle,
+      legislatureTitle: archetype.legislatureTitle,
+      succession: successionLabels[archetype.succession] ?? archetype.succession,
+    }
   }
 </script>
 
@@ -79,6 +178,59 @@
                 <p class='mt-0.5 rounded bg-obs-primary/15 px-1.5 py-0.5 font-mono text-[10px] text-obs-primary'>
                   命中要素：{info.featureHit.featureId} ({info.featureHit.sourceId})
                 </p>
+              {/if}
+              {#if info.pickedSettlement}
+                <div class='mt-1 rounded border border-amber-400/25 bg-amber-400/8 p-1.5 text-[10px]'>
+                  <div class='font-semibold text-amber-200'>
+                    聚落：{info.pickedSettlement.name} · {settlementTierLabels[info.pickedSettlement.tier ?? 'town'] ?? '城镇'}{info.pickedSettlement.isPort ? ' · 港口' : ''}
+                  </div>
+                  <div class='text-obs-text-muted'>人口约 {formatPopulation(info.pickedSettlement.population)} · 建城于第 {info.pickedSettlement.foundedAtYear} 年</div>
+                </div>
+              {/if}
+              {#if info.pickedPolity}
+                {@const pickedArch = formatPolityArchetypeSummary(info.pickedPolity.archetypeId)}
+                <div class='mt-1 rounded border border-sky-400/25 bg-sky-400/8 p-1.5 text-[10px]'>
+                  <div class='font-semibold text-sky-200'>
+                    政体：{info.pickedPolity.name}{info.pickedPolity.sizeClass ? ` · ${politySizeLabels[info.pickedPolity.sizeClass] ?? info.pickedPolity.sizeClass}` : ''}
+                  </div>
+                  {#if pickedArch}
+                    <div class='text-obs-text-muted'>政体类型：{pickedArch.name} · {pickedArch.succession}</div>
+                    <div class='text-obs-text-dim'>
+                      元首：{pickedArch.headOfStateTitle}{pickedArch.headOfGovernmentTitle ? ` · 政府首脑：${pickedArch.headOfGovernmentTitle}` : ''}{pickedArch.legislatureTitle ? ` · 立法：${pickedArch.legislatureTitle}` : ''}
+                    </div>
+                  {/if}
+                  {#if info.pickedPolityCapitalName}
+                    <div class='text-obs-text-dim'>首都：{info.pickedPolityCapitalName} · 立国第 {info.pickedPolity.foundedAtYear} 年</div>
+                  {/if}
+                </div>
+              {/if}
+              {#if info.pickedTransportRoute}
+                <div class='mt-1 rounded border border-emerald-400/25 bg-emerald-400/8 p-1.5 text-[10px]'>
+                  <div class='font-semibold text-emerald-200'>
+                    交通线路：{transportModeLabels[info.pickedTransportRoute.mode] ?? info.pickedTransportRoute.mode} ({info.pickedTransportRoute.id})
+                  </div>
+                  <div class='text-obs-text-muted'>
+                    通行成本 {info.pickedTransportRoute.cost.toFixed(2)} · 流量指数 {info.pickedTransportRoute.trafficScore.toFixed(2)} · 途经 {info.pickedTransportRoute.regions.length} 个区域
+                  </div>
+                </div>
+              {/if}
+              {#if info.pickedCulture}
+                {@const cultureArch = findCultureArchetype(info.pickedCulture.archetypeId)}
+                <div class='mt-1 rounded border border-violet-400/25 bg-violet-400/8 p-1.5 text-[10px]'>
+                  <div class='font-semibold text-violet-200'>文化：{info.pickedCulture.name}</div>
+                  {#if cultureArch}
+                    <div class='text-obs-text-muted'>原型：{translateContentKey(cultureArch.displayNameKey, appState.locale)}</div>
+                  {/if}
+                </div>
+              {/if}
+              {#if info.pickedReligion}
+                {@const religionArch = findReligionArchetype(info.pickedReligion.archetypeId)}
+                <div class='mt-1 rounded border border-rose-400/25 bg-rose-400/8 p-1.5 text-[10px]'>
+                  <div class='font-semibold text-rose-200'>宗教：{info.pickedReligion.name}</div>
+                  {#if religionArch}
+                    <div class='text-obs-text-muted'>原型：{translateContentKey(religionArch.displayNameKey, appState.locale)} · 宽容度 {(religionArch.tolerance * 100).toFixed(0)}%</div>
+                  {/if}
+                </div>
               {/if}
             </div>
 
@@ -135,6 +287,94 @@
                 <dd>{info.lake.id} · {info.lake.endorheic ? '内流湖' : '外流湖'} · 面积 {info.lake.areaKm2.toLocaleString(undefined, { maximumFractionDigits: 0 })} km²</dd>
               {/if}
             </dl>
+
+            {#if info.hasResources}
+              <dl class='grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-2 gap-y-1.5 border-t border-white/6 pt-2' aria-label='自然资源潜力'>
+                <dt class='text-obs-text-dim'>农 / 林 / 渔潜力</dt>
+                <dd>{(info.regionFacts.agriculturalPotential * 100).toFixed(0)}% / {(info.regionFacts.forestryPotential * 100).toFixed(0)}% / {(info.regionFacts.fisheryPotential * 100).toFixed(0)}%</dd>
+                {#if info.regionFacts.deposits.length > 0}
+                  <dt class='text-obs-text-dim'>矿产与能源点</dt>
+                  <dd class='flex flex-col gap-1'>
+                    {#each info.regionFacts.deposits as deposit (deposit.id)}
+                      <span>{formatResourceName(deposit.resourceId)} · 富集 {(deposit.richness * 100).toFixed(0)}%</span>
+                    {/each}
+                  </dd>
+                {/if}
+              </dl>
+            {/if}
+
+            {#if info.hasCivilization}
+              {@const polityArch = info.dominantPolity ? formatPolityArchetypeSummary(info.dominantPolity.archetypeId) : null}
+              {@const peopleArch = info.dominantPeople ? findPeopleArchetype(info.dominantPeople.archetypeId) : null}
+              {@const cultureArch = info.dominantCulture ? findCultureArchetype(info.dominantCulture.archetypeId) : null}
+              {@const religionArch = info.dominantReligion ? findReligionArchetype(info.dominantReligion.archetypeId) : null}
+              <dl class='grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-2 gap-y-1.5 border-t border-white/6 pt-2' aria-label='宜居与初始文明'>
+                <dt class='text-obs-text-dim'>宜居度 / 承载力</dt>
+                <dd>{(info.regionFacts.habitability * 100).toFixed(0)}% · {info.regionFacts.carryingCapacityPerKm2.toFixed(1)} 人/km²</dd>
+                <dt class='text-obs-text-dim'>区域人口 / 密度</dt>
+                <dd>{formatPopulation(info.regionFacts.population)} 人 · {info.regionFacts.populationDensity.toFixed(1)} 人/km²</dd>
+                <dt class='text-obs-text-dim'>交通可达性</dt>
+                <dd>{(info.regionFacts.transportAccessibility * 100).toFixed(0)}%</dd>
+                <dt class='text-obs-text-dim'>主导族群 / 文化</dt>
+                <dd>
+                  {#if info.dominantPeople || info.dominantCulture}
+                    {info.dominantPeople?.name ?? '无'}{peopleArch ? ` (${translateContentKey(peopleArch.displayNameKey, appState.locale)})` : ''}
+                    ·
+                    {info.dominantCulture?.name ?? '无'}{cultureArch ? ` (${translateContentKey(cultureArch.displayNameKey, appState.locale)})` : ''}
+                  {:else}
+                    无人定居
+                  {/if}
+                </dd>
+                <dt class='text-obs-text-dim'>主导宗教</dt>
+                <dd>
+                  {#if info.dominantReligion}
+                    {info.dominantReligion.name}{religionArch ? ` (${translateContentKey(religionArch.displayNameKey, appState.locale)})` : ''}
+                  {:else}
+                    无主导宗教
+                  {/if}
+                </dd>
+                <dt class='text-obs-text-dim'>所属政体</dt>
+                <dd>
+                  {#if info.dominantPolity}
+                    <div class='flex flex-col gap-0.5'>
+                      <span>
+                        {info.dominantPolity.name}{info.dominantPolity.sizeClass ? ` · ${politySizeLabels[info.dominantPolity.sizeClass] ?? info.dominantPolity.sizeClass}` : ''}
+                      </span>
+                      {#if polityArch}
+                        <span class='text-[10px] text-obs-text-muted'>
+                          {polityArch.name} · {polityArch.succession} · 元首：{polityArch.headOfStateTitle}
+                        </span>
+                      {/if}
+                      {#if info.dominantPolityCapitalName}
+                        <span class='text-[10px] text-obs-text-dim'>首都：{info.dominantPolityCapitalName}</span>
+                      {/if}
+                    </div>
+                  {:else}
+                    无归属边疆
+                  {/if}
+                </dd>
+                {#if info.regionFacts.settlements.length > 0}
+                  <dt class='text-obs-text-dim'>本地聚落</dt>
+                  <dd class='flex flex-col gap-1'>
+                    {#each info.regionFacts.settlements as settlement (settlement.id)}
+                      <span>
+                        {settlement.name} · {settlementTierLabels[settlement.tier ?? 'town'] ?? '城镇'}{settlement.isPort ? ' · 港口' : ''} ({formatPopulation(settlement.population)} 人)
+                      </span>
+                    {/each}
+                  </dd>
+                {/if}
+                {#if info.regionPopulationGroups.length > 0}
+                  <dt class='text-obs-text-dim'>人口构成</dt>
+                  <dd class='flex flex-col gap-1 text-[10px]'>
+                    {#each info.regionPopulationGroups.slice(0, 4) as group, index (`${group.peopleName}-${group.cultureName}-${index}`)}
+                      <span class='text-obs-text-muted'>
+                        {group.peopleName} / {group.cultureName}{group.religionName ? ` / ${group.religionName}` : ''} · {formatPopulation(group.population)} 人
+                      </span>
+                    {/each}
+                  </dd>
+                {/if}
+              </dl>
+            {/if}
           </div>
         </section>
       {:else}

@@ -695,6 +695,163 @@ export function buildLayerStatisticsFromReader(
     }
   }
 
+  // 8. Resources & Civilization
+  if (thematicId === 'agricultural-potential' || thematicId === 'deposit-richness') {
+    const isDeposit = thematicId === 'deposit-richness'
+    if (!reader.capabilities.hasResources) {
+      return {
+        mode: thematicId,
+        title: isDeposit ? '矿产能源富集度' : '农业自然潜力',
+        totalCells: count,
+        totalAreaKm2: 0,
+        rows: [],
+        description: '当前世界快照不包含自然资源潜力数据。',
+        measure: 'cells',
+      }
+    }
+    const landMask = reader.field('landMask')
+    const fieldView = reader.field(isDeposit ? 'depositRichness' : 'agriculturalPotential')
+    const thresholds = [0.15, 0.35, 0.55, 0.75]
+    const colors = isDeposit
+      ? ['#2b3442', '#5c6b73', '#d4a347', '#e06d38', '#b8262b']
+      : ['#b89c78', '#d9cf7e', '#8bc366', '#3d9b4f', '#135e34']
+    const labels = isDeposit
+      ? ['极低 (< 0.15)', '较低 (0.15–0.35)', '中等 (0.35–0.55)', '较高 (0.55–0.75)', '富集 (≥ 0.75)']
+      : ['贫瘠 (< 0.15)', '一般 (0.15–0.35)', '适宜 (0.35–0.55)', '良田 (0.55–0.75)', '肥沃 (≥ 0.75)']
+    const buckets: StatisticBucket[] = [
+      ...buildIntervalBuckets(thresholds, colors, '', labels),
+      { key: 'ocean', label: '海洋', color: isDeposit ? '#0d1b2a' : '#0e243b' },
+    ]
+    const { rows, totalAreaKm2 } = accumulateBuckets(reader, buckets, (r) => {
+      if (landMask.get(r) === 0)
+        return 'ocean'
+      const val = fieldView.get(r)
+      const idx = thresholds.findIndex(t => val < t)
+      return String(idx < 0 ? thresholds.length : idx)
+    })
+    const landSummary = computeWeightedSummary(reader, r => fieldView.get(r), true)
+    return {
+      mode: thematicId,
+      title: isDeposit ? '矿产能源富集度' : '农业自然潜力',
+      totalCells: count,
+      totalAreaKm2,
+      rows,
+      description: isDeposit
+        ? `共发现 ${reader.resources().deposits.length.toLocaleString()} 处资源矿点；陆地加权均值 ${landSummary.mean !== null ? landSummary.mean.toFixed(2) : '0.00'}。`
+        : `陆地面积加权农业潜力均值 ${landSummary.mean !== null ? landSummary.mean.toFixed(2) : '0.00'}（0–1 归一化）。`,
+      measure: 'cells',
+      legendKind: 'continuous',
+      gradientStops: legend?.kind === 'continuous' ? legend.stops : undefined,
+    }
+  }
+
+  if (thematicId === 'population-density') {
+    if (!reader.capabilities.hasCivilization) {
+      return {
+        mode: thematicId,
+        title: '人口密度分布',
+        totalCells: count,
+        totalAreaKm2: 0,
+        rows: [],
+        description: '当前世界未启用初始文明生成。',
+        measure: 'cells',
+      }
+    }
+    const landMask = reader.field('landMask')
+    const densityField = reader.field('populationDensity')
+    const populationField = reader.field('population')
+    const thresholds = [2, 10, 35, 100, 250]
+    const colors = ['#e9ecef', '#fde09d', '#f4a261', '#e76f51', '#b52b3b', '#6c122a']
+    const buckets: StatisticBucket[] = [
+      ...buildIntervalBuckets(thresholds, colors, '人/km²'),
+      { key: 'ocean', label: '海洋', color: '#0f2744' },
+    ]
+    let totalPop = 0
+    for (let r = 0; r < count; r++) {
+      totalPop += populationField.get(r)
+    }
+    const { rows, totalAreaKm2 } = accumulateBuckets(reader, buckets, (r) => {
+      if (landMask.get(r) === 0)
+        return 'ocean'
+      const val = densityField.get(r)
+      const idx = thresholds.findIndex(t => val < t)
+      return String(idx < 0 ? thresholds.length : idx)
+    })
+    return {
+      mode: thematicId,
+      title: '人口密度分布',
+      totalCells: count,
+      totalAreaKm2,
+      rows,
+      description: `全球总人口约 ${Math.round(totalPop).toLocaleString('zh-CN')} 人，聚落 ${reader.settlements().length} 座。`,
+      measure: 'cells',
+      legendKind: 'continuous',
+      unit: '人/km²',
+      gradientStops: legend?.kind === 'continuous' ? legend.stops : undefined,
+    }
+  }
+
+  if (thematicId === 'polity-territory' || thematicId === 'culture-dominant' || thematicId === 'religion-dominant') {
+    const title = thematicId === 'polity-territory'
+      ? '国家领土政区'
+      : thematicId === 'culture-dominant'
+        ? '主导文化分布'
+        : '主导宗教分布'
+    if (!reader.capabilities.hasCivilization) {
+      return {
+        mode: thematicId,
+        title,
+        totalCells: count,
+        totalAreaKm2: 0,
+        rows: [],
+        description: '当前世界未启用初始文明生成。',
+        measure: 'cells',
+      }
+    }
+    const landMask = reader.field('landMask')
+    const items = thematicId === 'polity-territory'
+      ? reader.polities()
+      : thematicId === 'culture-dominant'
+        ? reader.cultures()
+        : reader.religions()
+    const fieldName = thematicId === 'polity-territory'
+      ? 'dominantPolityIndex'
+      : thematicId === 'culture-dominant'
+        ? 'dominantCultureIndex'
+        : 'dominantReligionIndex'
+    const fieldView = reader.field(fieldName)
+    const unownedLabel = thematicId === 'polity-territory'
+      ? '无归属边疆'
+      : thematicId === 'culture-dominant'
+        ? '无人文化区'
+        : '无主导宗教'
+    const buckets: StatisticBucket[] = [
+      ...items.map((item, idx) => ({
+        key: String(idx),
+        label: item.name,
+        color: CATEGORICAL_GROUP_PALETTE_HEX[idx % CATEGORICAL_GROUP_PALETTE_HEX.length],
+      })),
+      { key: 'unowned', label: unownedLabel, color: '#6f6a64' },
+      { key: 'ocean', label: '海洋', color: '#0e243b' },
+    ]
+    const { rows, totalAreaKm2 } = accumulateBuckets(reader, buckets, (r) => {
+      if (landMask.get(r) === 0)
+        return 'ocean'
+      const idx = fieldView.get(r)
+      return idx >= 0 && idx < items.length ? String(idx) : 'unowned'
+    })
+    return {
+      mode: thematicId,
+      title,
+      totalCells: count,
+      totalAreaKm2,
+      rows,
+      description: `共 ${items.length} 个${thematicId === 'polity-territory' ? '独立政体' : thematicId === 'culture-dominant' ? '主要文化' : '主要宗教'}。`,
+      measure: 'cells',
+      legendKind: 'categorical',
+    }
+  }
+
   // Fallback for custom style legends
   if (legend?.kind === 'continuous') {
     return buildContinuousLegendFallback(reader, legend, mode, month)

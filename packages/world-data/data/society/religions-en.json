@@ -1,0 +1,77 @@
+{
+  "format": "another-earth/society-pack",
+  "schemaVersion": 1,
+  "id": "builtin-religions-en",
+  "version": "1.0.0",
+  "language": "en",
+  "displayName": "Religions",
+  "dependencies": [],
+  "religions": [
+    {
+      "id": "builtin:religion/local-en",
+      "displayName": "Local Spirit Tradition",
+      "description": "A localized tradition honoring sacred peaks, springs, and ancestral memory.",
+      "tags": ["animist", "local"],
+      "organization": "decentralized",
+      "traits": ["nature-veneration", "ancestor-memory"],
+      "tolerance": 0.75,
+      "spreadBias": 0.3,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/solar-covenant-en",
+      "displayName": "Solar Covenant",
+      "description": "A hierarchical monotheistic faith centered on radiant order and written scripture.",
+      "tags": ["monotheistic", "civic"],
+      "organization": "hierarchical",
+      "traits": ["scriptural-law", "missionary"],
+      "tolerance": 0.35,
+      "spreadBias": 0.8,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/ocean-pantheon-en",
+      "displayName": "Tidal Pantheon",
+      "description": "A polytheistic maritime tradition shared across ports, islands, and sea lanes.",
+      "tags": ["polytheistic", "maritime"],
+      "organization": "decentralized",
+      "traits": ["seafaring-rites", "syncretic"],
+      "tolerance": 0.7,
+      "spreadBias": 0.65,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/hearth-ancestors-en",
+      "displayName": "Hearth Ancestor Rite",
+      "description": "An organized ancestral tradition anchored in clan halls, calendars, and civic rites.",
+      "tags": ["ancestral", "agrarian"],
+      "organization": "hierarchical",
+      "traits": ["kinship-rites", "civic-harmony"],
+      "tolerance": 0.6,
+      "spreadBias": 0.45,
+      "weight": 1
+    },
+    {
+      "id": "builtin:religion/astral-order-en",
+      "displayName": "Astral Order",
+      "description": "A scholarly order uniting celestial observation, natural philosophy, and civic ethics.",
+      "tags": ["philosophical", "scholarly"],
+      "organization": "hierarchical",
+      "traits": ["rational-inquiry", "monastic-academies"],
+      "tolerance": 0.65,
+      "spreadBias": 0.55,
+      "weight": 0.8
+    },
+    {
+      "id": "builtin:religion/steppe-sky-en",
+      "displayName": "Highland Sky Faith",
+      "description": "A pastoral tradition revering the open sky, mountain passes, and sworn clan oaths.",
+      "tags": ["sky-worship", "pastoral"],
+      "organization": "decentralized",
+      "traits": ["oath-bound", "nomadic-shrines"],
+      "tolerance": 0.65,
+      "spreadBias": 0.5,
+      "weight": 0.9
+    }
+  ]
+}

@@ -17,10 +17,9 @@ function cultures(names: readonly ContentPackV1[]): ContentPackV1 {
     names: [],
     namingStyles: [],
     peoples: [],
-    states: [],
+    polities: [],
     cultures: names.map((pack, index) => ({ id: `example:culture/culture-${index}` as const, displayNameKey: `culture.${index}`, tags: [], traits: [], namingStyleId: pack.namingStyles[0].id })),
     religions: [],
-    governments: [],
     resources: [],
     presets: [],
     translations: { en: { pack: 'Cultures', ...Object.fromEntries(names.map((_pack, index) => [`culture.${index}`, `Culture ${index}`])) } },
@@ -46,7 +45,15 @@ describe('naming content public API integration', () => {
   })
 
   it('uses one frozen profile and signature with only current content packs', () => {
-    expect(builtinContentPacks.map(pack => pack.manifest.id).sort()).toEqual(['builtin:naming-style/western-zh-cn', 'core', 'earthlike'])
+    expect(builtinContentPacks.map(pack => pack.manifest.id).sort()).toEqual([
+      'builtin-cultures-zh-cn',
+      'builtin-peoples-zh-cn',
+      'builtin-polities-zh-cn',
+      'builtin-religions-zh-cn',
+      'builtin:naming-style/western-zh-cn',
+      'core',
+      'earthlike',
+    ].sort())
     expect(Object.isFrozen(builtinGeographicNamingProfile)).toBe(true)
     expect(Object.isFrozen(builtinGeographicNamingProfile.pools.continent)).toBe(true)
     expect(builtinPipelineContent.content['geographic-naming-style']).toBe(builtinGeographicNamingProfile)
@@ -70,9 +77,9 @@ describe('naming content public API integration', () => {
       expect(generateName({ ...input, rule: 'continent' }).length).toBeGreaterThan(0)
       return name
     })
-    expect(names[0]).toMatch(/^(艾达|罗文)·(维尔|里德)$/u)
+    expect(names[0]).toMatch(/^[一-鿿]+·[一-鿿]+$/u)
     expect(names[0]).not.toContain(' ')
-    expect(names[1]).toMatch(/^(Ada|Rowan) (Vale|Reed)$/)
+    expect(names[1]).toMatch(/^[A-Za-z]+ [A-Za-z]+$/)
     expect(createContentCatalog([...packs, culturePack].reverse()).contentSignature).toBe(catalog.contentSignature)
   })
 

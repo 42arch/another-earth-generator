@@ -21,6 +21,7 @@
     formatOceanDisplayName,
   } from '@another-earth/cartography'
   import {
+    DEFAULT_CIVILIZATION_PARAMETERS,
     DEFAULT_CLIMATE_PARAMETERS,
     DEFAULT_GEOLOGY_PARAMETERS,
     DEFAULT_HYDROLOGY_PARAMETERS,
@@ -50,6 +51,7 @@
   let landformParameters = $state({ ...DEFAULT_LANDFORM_PARAMETERS })
   let climateParameters = $state({ ...DEFAULT_CLIMATE_PARAMETERS, axialTiltDegrees: 23.5, precipitationScale: 1.8 })
   let hydrologyParameters = $state({ ...DEFAULT_HYDROLOGY_PARAMETERS })
+  let civilizationParameters = $state({ ...DEFAULT_CIVILIZATION_PARAMETERS })
 
   let viewMode = $state<MapViewportMode>(DEFAULT_CARTOGRAPHY_VIEW_STATE.viewMode)
   let projectionId = $state<MapProjectionId>(DEFAULT_CARTOGRAPHY_VIEW_STATE.projectionId)
@@ -215,6 +217,10 @@
       riverDensityMultiplier: hydrologyParameters.riverDensityMultiplier,
       minimumRiverDrainageAreaKm2: hydrologyParameters.minimumRiverDrainageAreaKm2,
       minimumLakeAreaKm2: hydrologyParameters.minimumLakeAreaKm2,
+      civilizationEnabled: civilizationParameters.enabled,
+      populationScale: civilizationParameters.populationScale,
+      settlementDensity: civilizationParameters.settlementDensity,
+      polityCohesion: civilizationParameters.polityCohesion,
     }
   }
 
@@ -246,6 +252,10 @@
     hydrologyParameters.riverDensityMultiplier = Number(parameters.riverDensityMultiplier)
     hydrologyParameters.minimumRiverDrainageAreaKm2 = Number(parameters.minimumRiverDrainageAreaKm2)
     hydrologyParameters.minimumLakeAreaKm2 = Number(parameters.minimumLakeAreaKm2)
+    civilizationParameters.enabled = Boolean(parameters.civilizationEnabled)
+    civilizationParameters.populationScale = Number(parameters.populationScale)
+    civilizationParameters.settlementDensity = Number(parameters.settlementDensity)
+    civilizationParameters.polityCohesion = Number(parameters.polityCohesion)
   }
 
   function publishGeneratedShareUrl(parameters: ShareParameters, generationId: number): void {
@@ -320,6 +330,15 @@
       ? (lakeAreas[mid - 1] + lakeAreas[mid]) * 0.5
       : lakeAreas[mid]
 
+    const { hasResources, hasCivilization } = activeReader.capabilities
+    let totalPopulation = 0
+    if (hasCivilization) {
+      const popField = activeReader.field('population')
+      for (let r = 0; r < count; r++) {
+        totalPopulation += popField.get(r)
+      }
+    }
+
     return {
       plateCount: plates.length,
       landCoveragePercent: totalAreaKm2 > 0 ? (landAreaKm2 / totalAreaKm2) * 100 : 0,
@@ -334,18 +353,29 @@
       lakeCount: lakes.length,
       totalLakeAreaKm2: lakeAreas.reduce((sum, a) => sum + a, 0),
       medianLakeAreaKm2,
+      hasResources,
+      hasCivilization,
+      depositCount: hasResources ? activeReader.resources().deposits.length : 0,
+      totalPopulation,
+      settlementCount: hasCivilization ? activeReader.settlements().length : 0,
+      polityCount: hasCivilization ? activeReader.polities().length : 0,
+      cultureCount: hasCivilization ? activeReader.cultures().length : 0,
+      peopleCount: hasCivilization ? activeReader.peoples().length : 0,
+      religionCount: hasCivilization ? activeReader.religions().length : 0,
+      transportRouteCount: hasCivilization ? activeReader.transportRoutes().length : 0,
     }
   })
 
   const selectedInspection = $derived.by<RegionInspectionData>(() => {
     if (!activeReader || !controller || selection.regionId === null)
       return null
+    const activeController = controller
     const regionId = selection.regionId
     if (regionId < 0 || regionId >= activeReader.mesh.regionCount)
       return null
 
     try {
-      const regionFacts = controller.queryWorldRegion(regionId, climateMonth)
+      const regionFacts = activeController.queryWorldRegion(regionId, climateMonth)
       const neighbors: number[] = []
       activeReader.mesh.forEachRegionNeighbor(regionId, (neighbor) => {
         neighbors.push(neighbor)
@@ -389,7 +419,7 @@
         }
       }
 
-      const basin = regionFacts.basinId ? controller.queryWorldBasin(regionFacts.basinId) : null
+      const basin = regionFacts.basinId ? activeController.queryWorldBasin(regionFacts.basinId) : null
       const hitId = lastPickResult?.featureHit?.featureId
       const riverIdToQuery = hitId && lastPickResult?.featureHit?.sourceId.startsWith('river-')
         ? hitId
@@ -398,12 +428,63 @@
         ? hitId
         : regionFacts.lakeId
 
-      const river = riverIdToQuery ? controller.queryWorldRiver(riverIdToQuery) : null
-      const lake = lakeIdToQuery ? controller.queryWorldLake(lakeIdToQuery) : null
+      const river = riverIdToQuery ? activeController.queryWorldRiver(riverIdToQuery) : null
+      const lake = lakeIdToQuery ? activeController.queryWorldLake(lakeIdToQuery) : null
+
+      const { hasResources, hasCivilization } = activeReader.capabilities
+      const entityId = lastPickResult?.entityId ?? lastPickResult?.featureHit?.entityId
+      const sourceId = lastPickResult?.featureHit?.sourceId
+      const dominantPeople = hasCivilization && regionFacts.dominantPeopleId
+        ? activeController.queryWorldPeople(regionFacts.dominantPeopleId)
+        : null
+      const dominantCulture = hasCivilization && regionFacts.dominantCultureId
+        ? activeController.queryWorldCulture(regionFacts.dominantCultureId)
+        : null
+      const dominantReligion = hasCivilization && regionFacts.dominantReligionId
+        ? activeController.queryWorldReligion(regionFacts.dominantReligionId)
+        : null
+      const dominantPolity = hasCivilization && regionFacts.dominantPolityId
+        ? activeController.queryWorldPolity(regionFacts.dominantPolityId)
+        : null
+      const dominantPolityCapitalName = dominantPolity?.capitalSettlementId
+        ? activeController.queryWorldSettlement(dominantPolity.capitalSettlementId)?.name ?? null
+        : null
+
+      const pickedSettlement = hasCivilization && entityId && (sourceId === 'settlements' || sourceId === 'settlement-labels')
+        ? activeController.queryWorldSettlement(entityId)
+        : null
+      const pickedPolity = hasCivilization && entityId && (sourceId === 'polity-territory' || sourceId === 'polity-borders' || sourceId === 'polity-labels')
+        ? activeController.queryWorldPolity(entityId)
+        : null
+      const pickedPolityCapitalName = pickedPolity?.capitalSettlementId
+        ? activeController.queryWorldSettlement(pickedPolity.capitalSettlementId)?.name ?? null
+        : null
+      const pickedTransportRoute = hasCivilization && entityId && sourceId === 'transport-routes'
+        ? activeController.queryWorldTransportRoute(entityId)
+        : null
+      const pickedCulture = hasCivilization && entityId && sourceId === 'culture-dominant'
+        ? activeController.queryWorldCulture(entityId)
+        : null
+      const pickedReligion = hasCivilization && entityId && sourceId === 'religion-dominant'
+        ? activeController.queryWorldReligion(entityId)
+        : null
+
+      const regionPopulationGroups = hasCivilization
+        ? [...regionFacts.populationGroups]
+          .sort((a, b) => b.population - a.population)
+          .map(group => ({
+            population: group.population,
+            peopleName: activeController.queryWorldPeople(group.peopleId)?.name ?? group.peopleId,
+            cultureName: activeController.queryWorldCulture(group.cultureId)?.name ?? group.cultureId,
+            religionName: group.religionId ? (activeController.queryWorldReligion(group.religionId)?.name ?? group.religionId) : null,
+            polityName: group.polityId ? (activeController.queryWorldPolity(group.polityId)?.name ?? group.polityId) : null,
+          }))
+        : []
 
       return {
         regionId,
         coordinates: lastPickResult?.coordinates ?? { longitudeDegrees: 0, latitudeDegrees: 0 },
+        entityId,
         featureHit: lastPickResult?.featureHit,
         neighbors,
         slopeDeg,
@@ -416,6 +497,20 @@
         ocean,
         contributingAreaKm2,
         accumulatedFlowM3s,
+        hasResources,
+        hasCivilization,
+        dominantPeople,
+        dominantCulture,
+        dominantReligion,
+        dominantPolity,
+        dominantPolityCapitalName,
+        pickedPolity,
+        pickedPolityCapitalName,
+        pickedSettlement,
+        pickedTransportRoute,
+        pickedCulture,
+        pickedReligion,
+        regionPopulationGroups,
       }
     }
     catch {
@@ -474,6 +569,7 @@
           climate: { ...climateParameters },
           hydrology: { ...hydrologyParameters },
           ecology: true as const,
+          civilization: { ...civilizationParameters },
         },
         force,
       })
@@ -662,6 +758,7 @@
   bind:landformParameters
   bind:climateParameters
   bind:hydrologyParameters
+  bind:civilizationParameters
   bind:styleId
   bind:activeThematicId
   bind:surfaceEnabled
@@ -686,6 +783,8 @@
   onViewStateChange={applySessionViewState}
   hasCirculation={activeReader?.capabilities.hasCirculation}
   hasGeographicNames={activeReader?.capabilities.hasGeographicNames}
+  hasResources={activeReader?.capabilities.hasResources}
+  hasCivilization={activeReader?.capabilities.hasCivilization}
   onCancel={cancel}
   onRandomize={randomizeAndGenerate}
   onSelectViewMode={selectViewMode}

@@ -15,6 +15,7 @@ export interface MapFeatureHit {
   readonly layerId: string
   readonly sourceId: string
   readonly featureId: string
+  readonly entityId?: string
 }
 
 export interface MapPickResult {
@@ -25,6 +26,7 @@ export interface MapPickResult {
     longitudeDegrees: number
     latitudeDegrees: number
   }>
+  readonly entityId?: string
   readonly featureHit?: Readonly<MapFeatureHit>
 }
 
@@ -171,6 +173,7 @@ export class MapPicker {
         longitudeDegrees: lon,
         latitudeDegrees: lat,
       }),
+      ...(featureHit?.entityId ? { entityId: featureHit.entityId } : {}),
       ...(featureHit ? { featureHit: Object.freeze(featureHit) } : {}),
     })
   }
@@ -243,6 +246,7 @@ export class MapPicker {
         longitudeDegrees: lon,
         latitudeDegrees: lat,
       }),
+      ...(featureHit?.entityId ? { entityId: featureHit.entityId } : {}),
       ...(featureHit ? { featureHit: Object.freeze(featureHit) } : {}),
     })
   }
@@ -277,6 +281,7 @@ export class MapPicker {
             layerId: hit.layerId,
             sourceId: hit.sourceId,
             featureId: hit.featureId,
+            ...(hit.entityId ? { entityId: hit.entityId } : {}),
           }
         }
       }
@@ -287,6 +292,7 @@ export class MapPicker {
             layerId: hit.layerId,
             sourceId: hit.sourceId,
             featureId: hit.featureId,
+            ...(hit.entityId ? { entityId: hit.entityId } : {}),
           }
         }
       }
@@ -306,6 +312,7 @@ export class MapPicker {
             layerId: hit.layerId,
             sourceId: hit.sourceId,
             featureId: hit.featureId,
+            ...(hit.entityId ? { entityId: hit.entityId } : {}),
           }
         }
       }

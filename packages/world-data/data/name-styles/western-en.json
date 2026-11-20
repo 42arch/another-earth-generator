@@ -4,14 +4,71 @@
   "id": "builtin:naming-style/western-en",
   "style": "western",
   "language": "en",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "displayName": { "zh-CN": "西式命名 · 英文", "en": "Western naming · English" },
-  "source": "Small fictional examples for the naming configuration format",
+  "source": "Fictional naming configuration for geography and civilization",
   "pools": {
     "family": [{ "value": "Vale", "weight": 1 }, { "value": "Reed", "weight": 1 }],
     "given": [{ "value": "Ada", "weight": 1 }, { "value": "Rowan", "weight": 1 }],
-    "root": [{ "value": "Ash", "weight": 1 }, { "value": "Raven", "weight": 1 }],
-    "suffix": [{ "value": "ford", "weight": 1 }, { "value": "haven", "weight": 1 }],
+    "settlement-prefix": [
+      { "value": "New ", "weight": 1 }, { "value": "Port ", "weight": 1 }, { "value": "High ", "weight": 1 }, { "value": "Old ", "weight": 1 },
+      { "value": "East ", "weight": 1 }, { "value": "West ", "weight": 1 }, { "value": "North ", "weight": 1 }, { "value": "South ", "weight": 1 },
+      { "value": "White ", "weight": 1 }, { "value": "Silver ", "weight": 1 }, { "value": "Gold ", "weight": 1 }, { "value": "Fort ", "weight": 1 }
+    ],
+    "root": [
+      { "value": "Ash", "weight": 1 }, { "value": "Raven", "weight": 1 }, { "value": "Oak", "weight": 1 }, { "value": "Alder", "weight": 1 },
+      { "value": "Bel", "weight": 1 }, { "value": "Black", "weight": 1 }, { "value": "Cas", "weight": 1 }, { "value": "Cor", "weight": 1 },
+      { "value": "Dal", "weight": 1 }, { "value": "Dew", "weight": 1 }, { "value": "Eden", "weight": 1 }, { "value": "Elm", "weight": 1 },
+      { "value": "Fal", "weight": 1 }, { "value": "Fen", "weight": 1 }, { "value": "Glen", "weight": 1 }, { "value": "Gray", "weight": 1 },
+      { "value": "Hal", "weight": 1 }, { "value": "Helm", "weight": 1 }, { "value": "Iron", "weight": 1 }, { "value": "Kel", "weight": 1 },
+      { "value": "Kings", "weight": 1 }, { "value": "Lake", "weight": 1 }, { "value": "Linden", "weight": 1 }, { "value": "Loch", "weight": 1 },
+      { "value": "Mar", "weight": 1 }, { "value": "Mel", "weight": 1 }, { "value": "North", "weight": 1 }, { "value": "Oakh", "weight": 1 },
+      { "value": "Pel", "weight": 1 }, { "value": "River", "weight": 1 }, { "value": "Rose", "weight": 1 }, { "value": "Sel", "weight": 1 },
+      { "value": "Thorn", "weight": 1 }, { "value": "Tal", "weight": 1 }, { "value": "Val", "weight": 1 }, { "value": "Wind", "weight": 1 }
+    ],
+    "suffix": [
+      { "value": "ford", "weight": 1 }, { "value": "haven", "weight": 1 }, { "value": "burg", "weight": 1 }, { "value": "port", "weight": 1 },
+      { "value": "ton", "weight": 1 }, { "value": "stead", "weight": 1 }, { "value": "wick", "weight": 1 }, { "value": "ville", "weight": 1 },
+      { "value": "land", "weight": 1 }, { "value": "wood", "weight": 1 }, { "value": "bridge", "weight": 1 }, { "value": "field", "weight": 1 },
+      { "value": "stone", "weight": 1 }, { "value": "crest", "weight": 1 }, { "value": "moor", "weight": 1 }, { "value": "croft", "weight": 1 },
+      { "value": "well", "weight": 1 }, { "value": "vale", "weight": 1 }, { "value": "ridge", "weight": 1 }, { "value": "bay", "weight": 1 },
+      { "value": "crossing", "weight": 1 }, { "value": "mouth", "weight": 1 }, { "value": "keep", "weight": 1 }, { "value": "gate", "weight": 1 }
+    ],
+    "people-stem": [
+      { "value": "Avilan", "weight": 1 }, { "value": "Novari", "weight": 1 }, { "value": "Taren", "weight": 1 }, { "value": "Lomiri", "weight": 1 },
+      { "value": "Seviri", "weight": 1 }, { "value": "Isaren", "weight": 1 }, { "value": "Kovari", "weight": 1 }, { "value": "Casti", "weight": 1 },
+      { "value": "Beloni", "weight": 1 }, { "value": "Dewyn", "weight": 1 }, { "value": "Eloan", "weight": 1 }, { "value": "Orian", "weight": 1 },
+      { "value": "Vesta", "weight": 1 }, { "value": "Ryslan", "weight": 1 }, { "value": "Midlan", "weight": 1 }, { "value": "Kelot", "weight": 1 }
+    ],
+    "culture-trait": [
+      { "value": "Riverine ", "weight": 1 }, { "value": "Maritime ", "weight": 1 }, { "value": "Highland ", "weight": 1 }, { "value": "Woodland ", "weight": 1 },
+      { "value": "Coastal ", "weight": 1 }, { "value": "Stone ", "weight": 1 }, { "value": "Astral ", "weight": 1 }, { "value": "Steppe ", "weight": 1 }
+    ],
+    "culture-form": [
+      { "value": "Settlers", "weight": 1 }, { "value": "Seafarers", "weight": 1 }, { "value": "Pastoralists", "weight": 1 }, { "value": "Artisans", "weight": 1 },
+      { "value": "Traders", "weight": 1 }, { "value": "Folk", "weight": 1 }
+    ],
+    "religion-prefix": [
+      { "value": "Dawn ", "weight": 1 }, { "value": "Star ", "weight": 1 }, { "value": "Sacred ", "weight": 1 }, { "value": "Elder ", "weight": 1 },
+      { "value": "Living ", "weight": 1 }, { "value": "Tide ", "weight": 1 }, { "value": "Stone ", "weight": 1 }, { "value": "Silver ", "weight": 1 },
+      { "value": "Sky ", "weight": 1 }, { "value": "Spring ", "weight": 1 }, { "value": "Wind ", "weight": 1 }, { "value": "True ", "weight": 1 }
+    ],
+    "religion-core": [
+      { "value": "Covenant", "weight": 1 }, { "value": "Spirits", "weight": 1 }, { "value": "Ancestors", "weight": 1 }, { "value": "Order", "weight": 1 },
+      { "value": "Flame", "weight": 1 }, { "value": "Way", "weight": 1 }, { "value": "Heavens", "weight": 1 }, { "value": "Word", "weight": 1 }
+    ],
+    "polity-root": [
+      { "value": "Velan", "weight": 1 }, { "value": "Nor", "weight": 1 }, { "value": "Orea", "weight": 1 }, { "value": "Caslan", "weight": 1 },
+      { "value": "Sevir", "weight": 1 }, { "value": "Ivia", "weight": 1 }, { "value": "Ander", "weight": 1 }, { "value": "Belton", "weight": 1 },
+      { "value": "Lovia", "weight": 1 }, { "value": "Tavia", "weight": 1 }, { "value": "Ryston", "weight": 1 }, { "value": "Eloan", "weight": 1 },
+      { "value": "Kovia", "weight": 1 }, { "value": "Navia", "weight": 1 }, { "value": "Dewyn", "weight": 1 }, { "value": "Glan", "weight": 1 },
+      { "value": "Savil", "weight": 1 }, { "value": "Keloan", "weight": 1 }, { "value": "Silven", "weight": 1 }, { "value": "Levia", "weight": 1 },
+      { "value": "Avila", "weight": 1 }, { "value": "Morea", "weight": 1 }, { "value": "Valen", "weight": 1 }, { "value": "Tran", "weight": 1 }
+    ],
+    "polity-suffix": [
+      { "value": "nia", "weight": 1 }, { "value": "land", "weight": 1 }, { "value": "lia", "weight": 1 }, { "value": "mark", "weight": 1 },
+      { "value": "gard", "weight": 1 }, { "value": "reach", "weight": 1 }, { "value": "march", "weight": 1 }, { "value": "vale", "weight": 1 }
+    ],
     "continent": [
       { "value": "Avara", "weight": 1 }, { "value": "Belora", "weight": 1 }, { "value": "Cendria", "weight": 1 }, { "value": "Dorsan", "weight": 1 },
       { "value": "Elvara", "weight": 1 }, { "value": "Falorin", "weight": 1 }, { "value": "Gavara", "weight": 1 }, { "value": "Helion", "weight": 1 },
@@ -43,7 +100,20 @@
   },
   "rules": {
     "person": [{ "weight": 1, "parts": [{ "pool": "given" }, { "literal": " " }, { "pool": "family" }] }],
-    "settlement": [{ "weight": 1, "parts": [{ "pool": "root" }, { "pool": "suffix" }] }],
+    "settlement": [
+      { "weight": 3, "parts": [{ "pool": "root" }, { "pool": "suffix" }] },
+      { "weight": 1, "parts": [{ "pool": "settlement-prefix" }, { "pool": "root" }, { "pool": "suffix" }] }
+    ],
+    "people": [{ "weight": 1, "parts": [{ "pool": "people-stem" }] }],
+    "culture": [
+      { "weight": 2, "parts": [{ "pool": "people-stem" }, { "literal": " " }, { "pool": "culture-form" }] },
+      { "weight": 1, "parts": [{ "pool": "culture-trait" }, { "pool": "culture-form" }] }
+    ],
+    "religion": [{ "weight": 1, "parts": [{ "pool": "religion-prefix" }, { "pool": "religion-core" }] }],
+    "polity": [
+      { "weight": 2, "parts": [{ "pool": "polity-root" }] },
+      { "weight": 1, "parts": [{ "pool": "polity-root" }, { "pool": "polity-suffix" }] }
+    ],
     "continent": [{ "weight": 1, "parts": [{ "pool": "continent" }] }],
     "ocean": [{ "weight": 1, "parts": [{ "pool": "ocean" }] }]
   }
