@@ -1,37 +1,63 @@
-# Another Earth
+# Another Earth Generator
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [Simplified Chinese](README.zh-CN.md)
 
-A browser project for procedural planets and map exploration, built with TypeScript, Svelte 5, Vite, and a Bun workspace.
+Generate a fictional Earth-like planet in your browser, and explore its nature, climate, and evolving civilization on 3D and 2D maps.
 
-## Current capabilities
+## Features
 
-- Generate natural worlds on regular or perturbed spherical meshes from L0 to L8, with climate, hydrology, ecology, validated Schema 3 snapshots, and read-only queries.
-- Explore worlds in a 3D globe or 2D atlas with thematic layers, six map styles, region inspection, and Worker-backed generation.
-- Load built-in content and naming profiles; bilingual society packs are available as candidates for future civilization generation.
+### The natural world
 
-Initial civilization generation and browser project storage/import/export are not implemented yet. See [progress](docs/PROGRESS.md) for the current scope and validation status.
+Starting from tectonic plates and terrain, it generates continents, oceans, mountains, islands, climate, wind and ocean currents, rivers, lakes, and ecosystems.
 
-## Run locally
+Change the random seed, and adjust how much land there is, how rugged the terrain is, and how warm or wet the climate is. The same settings always produce the same planet. Move through the months to see how temperature, precipitation, wind, ocean currents, and snow change with the seasons.
+
+### Civilization
+
+On top of those natural conditions, it places people and settlements, links them by land routes, river routes, and coastal sea lanes, and forms peoples, cultures, religions, towns, and countries.
+
+You can adjust how large the population is, how densely towns are placed, and whether countries join into large realms or stay as many small states.
+
+### Maps
+
+View the world as a 3D globe or a flat map. Flat maps can use an equal-area projection, equirectangular, or Mercator.
+
+Several map styles are available: satellite, a standard atlas, physical geography, political, light or dark thematic bases, and historical parchment.
+
+You can view layers for elevation, tectonic plates, land and sea, temperature, precipitation, climate zones, wind and ocean currents, biomes, land cover, agricultural potential, minerals, population density, countries, cultures, and religions. Rivers, lakes, coastlines, place names, borders, transport routes, and towns can be drawn on top.
+
+Select a region, a town, or a country to see its natural conditions and civilization. You can also view an overview of the whole planet, copy a share link, or export the current map as an image.
+
+The interface is available in Simplified Chinese and English.
+
+## Future
+
+- Import and export a whole world.
+- Custom map styles.
+- Edit terrain and map layers.
+- Simulate how civilizations change over time.
+- A world encyclopedia and custom civilization packs.
+
+## Code and development
+
+The repository is a Bun workspace, built with TypeScript, Svelte 5, and Vite.
+
+### Layout
+
+| Path | Role |
+| --- | --- |
+| `packages/world-data` | Content definitions, society candidates, and name lexicons |
+| `packages/world-core` | Planet generation, domain rules, and the published world |
+| `packages/cartography` | Map data, styles, and 2D/3D rendering; it only reads the world |
+| `apps/web` | The interface, the Worker, and browser-side orchestration |
+
+In `apps/web/src`, `ui` is the interface, `world-view` is the map workspace, and `workers` runs generation.
+
+### Run locally
 
 ```sh
 bun install
 bun dev
 ```
 
-Open the address printed by Vite. The workspace is served from `/`; L8 requires substantial memory.
-
-## Documentation
-
-The main documents are in Chinese.
-
-| Document | Contents |
-| --- | --- |
-| [PRD](docs/PRD.md) | Product goals, user journeys, and scope |
-| [Technical design](docs/TECHNICAL_DESIGN.md) | Current package boundaries and durable design decisions |
-| [World data contracts](docs/WORLD_DATA_CONTRACTS.md) | Current snapshot, content, ownership, and archive contracts |
-| [Generation pipeline](docs/GENERATION_PIPELINE.md) | Stages, signatures, randomness, caching, and Workers |
-| [Progress](docs/PROGRESS.md) | Current capabilities, pending work, and validation status |
-| [M1 implementation plan](docs/M1_IMPLEMENTATION_PLAN.md) | Climate, hydrology, erosion, ecology, and world publication |
-
-`packages/world-core` owns generation and domain rules, `packages/world-data` owns content, `packages/cartography` owns mapping, and `apps/web` owns UI and Worker orchestration. Historical document snapshots are linked from the current progress page and are not current specifications.
+Open the address printed in the terminal. Higher subdivision levels use more memory.

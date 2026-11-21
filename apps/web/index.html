@@ -20,22 +20,71 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Another Earth Generator</title>
     <link rel="canonical" href="https://another-earth.starllow.com/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
 
-    <meta name="description" content="Another Earth Generator is a deterministic 3D virtual planet generator based on Earth sciences, featuring plate tectonics, climate, hydrology, and biomes. / Another Earth Generator（异星生成器）遵循地球物理与气候地理学规律，确定性生成具备板块构造、大洋环流、季节气候、水系与生物群系的 3D 虚拟星球。" />
-    <meta name="keywords" content="3D, Planet Generator, Earth Generator, Procedural Generation, Random Planet Generator, Geography, Climate, Tectonics, 过程生成, 地球生成器, 随机星球生成器, 虚拟星球" />
+    <meta name="description" content="Generate a fictional Earth-like planet in your browser, and explore its nature, climate, and evolving civilization on 3D and 2D maps. / 在浏览器里生成一颗架空的类地星球，并在3D和2D地图中探索它的自然、气候和文明演化。" />
+    <meta name="keywords" content="Planet Generator, Earth Generator, Procedural Generation, Random Planet Generator, Planet Maker, Civilization Generator, World Map, Geography, Climate, Tectonics, EarthGen, Sim World, Fantasy Map Simulator, Fantasy Map Generator, 地球生成器, 随机星球生成器, 虚拟星球, 文明生成器, 星球地图, 架空世界生成器, 架空世界模拟器, 架空星球" />
     <meta name="author" content="Another Earth Generator" />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:url" content="https://another-earth.starllow.com/" />
-    <meta property="og:title" content="Another Earth Generator" />
-    <meta property="og:description" content="Another Earth Generator is a deterministic 3D virtual planet generator based on Earth sciences, featuring plate tectonics, climate, hydrology, and biomes. / Another Earth Generator（异星生成器）遵循地球物理与气候地理学规律，确定性生成具备板块构造、大洋环流、季节气候、水系与生物群系的 3D 虚拟星球。" />
-    <meta property="og:image" content="/android-chrome-512x512.png" />
+    <meta property="og:title" content="Another Earth Generator（异星生成器）" />
+    <meta property="og:description" content="Generate a fictional Earth-like planet in your browser, and explore its nature, climate, and evolving civilization on 3D and 2D maps. / 在浏览器里生成一颗架空的类地星球，并在3D和2D地图中探索它的自然、气候和文明演化。" />
+    <meta property="og:image" content="https://another-earth.starllow.com/android-chrome-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="Another Earth Generator" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Another Earth Generator" />
-    <meta name="twitter:description" content="Another Earth Generator is a deterministic 3D virtual planet generator based on Earth sciences, featuring plate tectonics, climate, hydrology, and biomes. / Another Earth Generator（异星生成器）遵循地球物理与气候地理学规律，确定性生成具备板块构造、大洋环流、季节气候、水系与生物群系的 3D 虚拟星球。" />
-    <meta name="twitter:image" content="/android-chrome-512x512.png" />
+    <meta name="twitter:title" content="Another Earth Generator（异星生成器）" />
+    <meta name="twitter:description" content="Generate a fictional Earth-like planet in your browser, and explore its nature, climate, and evolving civilization on 3D and 2D maps. / 在浏览器里生成一颗架空的类地星球，并在3D和2D地图中探索它的自然、气候和文明演化。" />
+    <meta name="twitter:image" content="https://another-earth.starllow.com/android-chrome-512x512.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Another Earth Generator",
+        "alternateName": "异星生成器",
+        "url": "https://another-earth.starllow.com/",
+        "inLanguage": ["zh-CN", "en"],
+        "applicationCategory": "Simulation",
+        "operatingSystem": "Web",
+        "description": "在浏览器上，从一颗空白的星球开始，生成大陆、气候和文明，再用地图把它看清楚。",
+        "browserRequirements": "Requires JavaScript"
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        background: #282828;
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      #about {
+        max-width: 40rem;
+        margin: 0 auto;
+        padding: 3rem 1.5rem 4rem;
+        line-height: 1.7;
+      }
+      #about h1 { font-size: 1.75rem; font-weight: 600; }
+      #about h2 { margin-top: 1.75rem; font-size: 1.125rem; }
+      #about p { color: #d4d4d4; }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <article id="about">
+        <h1>Another Earth Generator（异星生成器）</h1>
+        <p>在浏览器上，从一颗空白的星球开始，生成大陆、气候和文明，再用地图把它看清楚。</p>
+        <p>In the browser, start from a blank planet, generate its continents, climate, and civilization, then read them on a map.</p>
+        <h2>自然世界</h2>
+        <p>从板块和地形开始，生成大陆、海洋、山脉、岛屿、气候、风与洋流、河流、湖泊和生态。可以更换种子，调整冷暖干湿，并按月份查看季节变化。</p>
+        <h2>文明</h2>
+        <p>在自然条件之上安排人口和聚落，连成陆路、河运和近海航线，并形成族群、文化、宗教、城镇和国家。</p>
+        <h2>地图</h2>
+        <p>用三维星球或平面地图查看地形、气候、人口与国家。点选一块区域、一座城镇或一个国家查看详情，也可以分享链接或把地图导出成图片。</p>
+      </article>
+    </div>
     <script type="module" src="/src/main.ts"></script>
 
     <!-- Cloudflare Web Analytics -->
