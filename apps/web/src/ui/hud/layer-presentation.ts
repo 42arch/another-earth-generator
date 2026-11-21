@@ -28,7 +28,7 @@ export const STYLE_PRESET_CARDS: readonly StylePresetPresentation[] = [
   { id: 'political-atlas', label: '政区地图', subtitle: '国家疆域 · 国界 · 聚落注记', swatch: 'linear-gradient(135deg, #275e8e 0%, #d96b43 35%, #519e72 70%, #c79f46 100%)' },
   { id: 'minimal-light', label: '极简明亮', subtitle: '低饱和浅底 · 突出科学专题', swatch: 'linear-gradient(135deg, #dce6ef 0%, #eef2f6 50%, #f7f6f2 100%)' },
   { id: 'minimal-dark', label: '极简暗色', subtitle: '深岩灰暗底 · 契合环流高亮', swatch: 'linear-gradient(135deg, #090f1d 0%, #111c33 50%, #1e293b 100%)' },
-  { id: 'historical-parchment', label: '古典羊皮纸', subtitle: '暖羊皮纸色调 · 墨棕海岸', swatch: 'linear-gradient(135deg, #bfb191 0%, #d8ceb4 50%, #e8dec3 100%)' },
+  { id: 'historical-parchment', label: '古典羊皮纸', subtitle: '暖羊皮纸 · 墨线国界与聚落', swatch: 'linear-gradient(135deg, #bfb191 0%, #d8ceb4 50%, #e8dec3 100%)' },
 ] as const
 
 export interface ProjectionOptionPresentation {

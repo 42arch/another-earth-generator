@@ -90,7 +90,7 @@
       "politicalAtlas": { "label": "Political atlas", "description": "Polity territories · borders · settlements" },
       "minimalLight": { "label": "Minimal light", "description": "Soft, low-saturation background · thematic data stands out" },
       "minimalDark": { "label": "Minimal dark", "description": "Dark slate background · highlights ocean circulation" },
-      "historicalParchment": { "label": "Historical parchment", "description": "Warm parchment tones · dark brown coasts" }
+      "historicalParchment": { "label": "Historical parchment", "description": "Warm parchment · ink borders, realms, and towns" }
     },
     "groups": {
       "geology": "Geology",

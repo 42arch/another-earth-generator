@@ -90,7 +90,7 @@
       "politicalAtlas": { "label": "政区地图", "description": "国家疆域 · 国界 · 聚落注记" },
       "minimalLight": { "label": "极简明亮", "description": "低饱和浅底 · 突出科学专题" },
       "minimalDark": { "label": "极简暗色", "description": "深岩灰暗底 · 契合环流高亮" },
-      "historicalParchment": { "label": "古典羊皮纸", "description": "暖羊皮纸色调 · 墨棕海岸" }
+      "historicalParchment": { "label": "古典羊皮纸", "description": "暖羊皮纸 · 墨线国界与聚落" }
     },
     "groups": {
       "geology": "地质",

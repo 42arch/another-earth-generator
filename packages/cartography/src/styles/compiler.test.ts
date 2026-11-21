@@ -270,6 +270,38 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
     expect(() => compiler.compile(rasterOnGeoJsonDoc)).toThrow('requires a "raster" source, but "land-areas" is "geojson"')
   })
 
+  it('enables ink-styled realm borders and settlements on historical parchment', () => {
+    const preset = BUILTIN_MAP_STYLE_PRESETS['historical-parchment']
+    expect(preset.defaultEnabledLayerIds).toEqual([
+      'world-surface',
+      'coastlines',
+      'labels',
+      'polity-borders',
+      'settlements',
+      'polity-labels',
+      'settlement-labels',
+    ])
+
+    const compiled = new StyleCompiler().compile(preset)
+    const borders = compiled.layersById.get('overlay-polity-borders')!
+    expect(borders.paint['line-color']!.evaluate({ zoom: 2, properties: { isFrontier: false } })).toBe('#3b2816')
+
+    const symbols = compiled.layersById.get('overlay-settlements')!
+    const symbolColor = (tier: string) => symbols.paint['circle-color']!.evaluate({ zoom: 4, properties: { tier } })
+    expect(symbolColor('capital')).toBe('#8f3d2c')
+    expect(symbolColor('city')).toBe('#3b2816')
+    expect(symbolColor('town')).toBe('#3b2816')
+    expect(symbols.paint['circle-stroke-color']!.evaluate({ zoom: 4, properties: { tier: 'town' } })).toBe('#24160e')
+
+    const polityLabels = compiled.layersById.get('overlay-polity-labels')!
+    expect(polityLabels.paint['text-color']!.evaluate({ zoom: 2, properties: {} })).toBe('#3b2816')
+    expect(polityLabels.paint['text-halo-color']!.evaluate({ zoom: 2, properties: {} })).toBe('#efe6cf')
+    expect(String(polityLabels.layout['text-font']!.evaluate({ zoom: 2, properties: {} }))).toContain('LXGW WenKai')
+
+    const settlementLabels = compiled.layersById.get('overlay-settlement-labels')!
+    expect(settlementLabels.paint['text-color']!.evaluate({ zoom: 4, properties: { tier: 'town' } })).toBe('#3b2816')
+  })
+
   it('shrinks settlement symbols and hides minor tiers when the globe is zoomed out', () => {
     const compiler = new StyleCompiler()
     const compiled = compiler.compile(BUILTIN_MAP_STYLE_PRESETS['political-atlas'])
