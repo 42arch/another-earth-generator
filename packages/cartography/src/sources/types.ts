@@ -348,7 +348,7 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
     kind: 'geojson',
     geometryKind: 'polygon',
     monthly: false,
-    adapterVersion: 'polity-territory-v3',
+    adapterVersion: 'polity-territory-v4',
     properties: ['id', 'entityId', 'groupIndex', 'polityIndex', 'areaKm2', 'name', 'sizeClass', 'archetypeId', 'unassigned'],
   },
   'culture-dominant': {
@@ -372,7 +372,7 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
     kind: 'geojson',
     geometryKind: 'line',
     monthly: false,
-    adapterVersion: 'polity-borders-v2',
+    adapterVersion: 'polity-borders-v3',
     properties: ['id', 'entityId', 'polityA', 'polityB', 'polityIndexA', 'polityIndexB', 'isFrontier'],
   },
   'transport-routes': {

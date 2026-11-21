@@ -9,7 +9,7 @@
 | 范围 | 状态 |
 | --- | --- |
 | `world-data` | 内置自然生成内容、双语命名风格（v1.5.0 中文 / v1.2.0 英文，含 `people`/`culture`/`religion`/`polity` 与扩容后的 `settlement` 规则）、八份双语 `peoples`/`cultures`/`polities`/`religions` 社会候选包及内置自然资源定义；默认生成目录优先加载中文内容包。 |
-| `world-core` | L0–L8 球面网格、自然生成 Stage、资源/宜居性/人口聚落/交通网/族群文化/政体宗教 M2 生成 Stage 与 `createWorldPipeline`、Schema 4 `WorldSnapshot`（含 `nature.resources` 与 `civilization.transport`，统一 `People`/`Polity` 契约）、世界组装/校验/发布、只读查询和 M0 JSON 档案编解码（拒绝旧 Schema 1–3 档案）。 |
+| `world-core` | L0–L8 球面网格、自然生成 Stage、资源/宜居性/人口聚落/交通网/族群文化/政体宗教 M2 生成 Stage 与 `createWorldPipeline`、Schema 5 `WorldSnapshot`（含 `nature.resources`、`civilization.transport` 与 `civilization.territoryPolityIndex`，统一 `People`/`Polity` 契约）、世界组装/校验/发布、只读查询和 M0 JSON 档案编解码（拒绝旧 Schema 1–4 档案）。 |
 | `cartography` | 3D Globe、三种 2D 投影、自然与文明/资源数据源（27 个内置数据源）、样式编译、七套预设（含政区图 `political-atlas`；人口密度与交通航路为独立专题/覆盖层）、统一拾取（含 `entityId`）与地图会话。 |
 | `apps/web` | Worker 完整世界生成与发布、3D/2D 地图、自然与资源/文明专题图层及能力门控、图例统计、区域与文明实体探测、概览统计、生成参数分享链接（`#w=10.`，含文明参数）、默认中文生成内容注入；无浏览器项目持久化或世界档案导入界面。 |
 | M2 初始文明 | Batch 1–4 均已实现并完成单元与构建验证（见下方验证记录）；Playwright 浏览器端到端界面验收尚未执行。 |
@@ -18,7 +18,7 @@
 
 ## 当前自然链
 
-当前阶段基线为 `terrain-v27`、`climate-c0-v22`、`cryosphere-i0-v1`、`hydrology-h0-v4`、`static-lakes-l1-v10`、`ecology-e0-v3`，完整世界生成链在此之上串联 `resource-potential-v1`、`habitability-v1`、`population-settlements-v2`、`transport-network-v3`、`peoples-cultures-v2`、`polities-religions-v2` 组装并发布 Schema 4 快照；M1 已按用户决定收尾，未完成的验收项目保留为延期事项，不视为通过。
+当前阶段基线为 `terrain-v27`、`climate-c0-v22`、`cryosphere-i0-v1`、`hydrology-h0-v4`、`static-lakes-l1-v10`、`ecology-e0-v3`，完整世界生成链在此之上串联 `resource-potential-v1`、`habitability-v1`、`population-settlements-v3`、`transport-network-v3`、`peoples-cultures-v2`、`polities-religions-v3` 组装并发布 Schema 5 快照；M1 已按用户决定收尾，未完成的验收项目保留为延期事项，不视为通过。
 
 当前已知限制：
 
@@ -28,6 +28,10 @@
 - 当前生成结果与约束以源码、测试和 [世界数据契约](WORLD_DATA_CONTRACTS.md) 为准；算法细节和历史对照见 [技术设计参考](TECHNICAL_DESIGN.md) 与各项 [基准记录](benchmarks/)。
 
 ## 最近工作与验证
+
+2026-11-21，政体宗教升为 `polities-religions-v3`，世界快照升为 Schema 5，新增 `civilization.territoryPolityIndex`。有首都的陆块上，空地和湖泊不再挡住扩张，全部划入到达代价最低的国家，不再设行程上限。与已划土地之间水面不超过约 112 km 的近岸岛并入对岸最近的国家；更远、且没有首都的陆块保持无主。海洋不能有归属。政区填充和国界改读这块土地归属，湖泊不再画进政区、也不再沿湖岸绕一圈。`polity-territory` 适配器升为 v4，`polity-borders` 升为 v3。旧 Schema 1–4 档案拒绝读取，不迁移。人口、聚落和文化人数不变。**本次未运行 test/typecheck/lint/build 或浏览器验证。**
+
+2026-11-21，人口聚落升为 `population-settlements-v3`。选址分把迁入比例从 16% 线性拉到 56%，目标人口为当地密度乘参考支撑面积再乘该比例；搜索只沿陆地由近到远，最远到约 126 km 乘分数占比。每个供体格子单次最多交出当前比例、累计最多交出 56%，海岸上的海面不扣减目标。凑不满就按实际人数缩小，等级按结果人口划分。总人口仍守恒。交通、文化、政体规则不变，但会因人口字段变化而重算；旧快照保留原事实。Schema 和公开配置不变。已运行 `population-settlements.test.ts`（2 项通过）。**未运行全仓 test/typecheck/lint/build、固定 Seed 的 v2/v3 对照或浏览器验证。** 湖泊格子仍无人、无主，湖岸被画成国界的问题未改。
 
 2026-11-21，古典羊皮纸默认打开国界、国名、城镇符号和城镇名，颜色改成墨棕与朱砂，沿用楷体注记。没有文明数据时这些图层仍不绘制。样式与默认图层变化，不改世界事实、数据源或公开样式字段。**本次未运行 test/typecheck/lint/build 或浏览器验证。**
 

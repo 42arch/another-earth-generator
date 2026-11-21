@@ -226,6 +226,7 @@ export function assembleWorld(
           settlements: politiesReligions.settlements.map(item => ({ ...item })),
           population: owned(meshId, politiesReligions.population),
           populationGroups: politiesReligions.populationGroups.map(item => ({ ...item })),
+          territoryPolityIndex: owned(meshId, politiesReligions.territoryPolityIndex),
           transport: {
             nodes: transport.nodes.map(node => ({ ...node })),
             routes: transport.routes.map(route => ({ ...route, regions: route.regions.slice() })),
@@ -241,6 +242,7 @@ export function assembleWorld(
           settlements: [],
           population: { meshId, values: new Float64Array(mesh.regionCount) },
           populationGroups: [],
+          territoryPolityIndex: { meshId, values: new Int32Array(mesh.regionCount).fill(-1) },
           transport: {
             nodes: [],
             routes: [],

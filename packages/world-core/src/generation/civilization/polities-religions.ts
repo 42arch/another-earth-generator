@@ -15,7 +15,7 @@ import { DeterministicRandom } from '#math/random'
 import { greatCircleDistanceKm } from '#math/spherical'
 import { REFERENCE_TRAVEL_KM_PER_DAY, SETTLEMENT_SUPPORT_AREA_KM2 } from './population-settlements'
 
-export const POLITIES_RELIGIONS_VERSION = 'polities-religions-v2' as const
+export const POLITIES_RELIGIONS_VERSION = 'polities-religions-v3' as const
 
 export interface PolitiesReligionsArtifact {
   readonly meshId: string
@@ -27,6 +27,8 @@ export interface PolitiesReligionsArtifact {
   readonly settlements: readonly Settlement[]
   readonly population: Float64Array
   readonly populationGroups: readonly PopulationGroup[]
+  /** Land ownership, length N. `-1` is unowned; ocean is always `-1`. */
+  readonly territoryPolityIndex: Int32Array
 }
 
 function chooseWeighted<T>(items: readonly { readonly item: T, readonly weight: number }[], random: DeterministicRandom): T {
@@ -152,6 +154,7 @@ export function generatePolitiesReligions(
       settlements: [],
       population,
       populationGroups: [],
+      territoryPolityIndex: new Int32Array(n).fill(-1),
     }
   }
 
@@ -175,6 +178,7 @@ export function generatePolitiesReligions(
       settlements: [],
       population,
       populationGroups: [],
+      territoryPolityIndex: new Int32Array(n).fill(-1),
     }
   }
 
@@ -254,10 +258,11 @@ export function generatePolitiesReligions(
   if (capitals.length === 0 && rankedSites.length > 0)
     capitals.push(rankedSites[0]!)
 
-  // 2. Multi-source administrative projection to partition territory
+  // 2. Multi-source administrative projection to partition territory.
+  // Empty land and lakes no longer stop the claim: every land cell on a
+  // landmass that contains a capital is assigned. The cost limit is gone.
   const regionPolity = new Int32Array(n).fill(-1)
   const regionPolityCost = new Float32Array(n).fill(Infinity)
-  const maxProjectionCost = ((mesh.physicalRadiusKm * (0.28 + cohesion * 0.52)) / kmPerDay)
 
   const queue = new IndexPriorityQueue(Math.min(n, 8192))
   const capitalCultureIndices = capitals.map(cap => cultureMap.get(cap.cultureId)?.index ?? -1)
@@ -269,17 +274,23 @@ export function generatePolitiesReligions(
     queue.push(capRegion, 0)
   }
 
+  const claim = (v: number, nextCost: number, pIdx: number) => {
+    if (nextCost < regionPolityCost[v]!) {
+      regionPolity[v] = pIdx
+      regionPolityCost[v] = nextCost
+      queue.push(v, nextCost)
+    }
+  }
+
   while (queue.size > 0) {
     const u = queue.pop()
     const pIdx = regionPolity[u]!
     const dU = regionPolityCost[u]!
-    if (dU > maxProjectionCost)
-      continue
     const polityCulture = capitalCultureIndices[pIdx]!
 
     for (let e = mesh.neighborOffsets[u]; e < mesh.neighborOffsets[u + 1]; e++) {
       const v = mesh.neighbors[e]!
-      if (terrain.landMask[v] !== 1 || lakes.lakeIndex[v] >= 0 || population[v]! <= 0)
+      if (terrain.landMask[v] !== 1)
         continue
       const stepKm = greatCircleDistanceKm(
         { x: mesh.centers[3 * u], y: mesh.centers[3 * u + 1], z: mesh.centers[3 * u + 2] },
@@ -288,28 +299,15 @@ export function generatePolitiesReligions(
       )
       const resistance = 0.5 * (habitability.movementCost[u]! + habitability.movementCost[v]!)
       const culturalAffinity = peoplesCultures.dominantCultureIndex[v] === polityCulture ? 0.78 : 1.08
-      const nextCost = dU + ((stepKm * resistance) / kmPerDay) * culturalAffinity
-      if (nextCost <= maxProjectionCost && nextCost < regionPolityCost[v]!) {
-        regionPolity[v] = pIdx
-        regionPolityCost[v] = nextCost
-        queue.push(v, nextCost)
-      }
+      claim(v, dU + ((stepKm * resistance) / kmPerDay) * culturalAffinity, pIdx)
     }
 
     const shortcuts = regionShortcuts.get(u)
     if (shortcuts) {
       for (const edge of shortcuts) {
-        const v = edge.toRegion
-        if (population[v]! <= 0)
-          continue
         const seaPenalty = edge.isSea ? (1.4 - cohesion * 0.35) : 0.85
-        const culturalAffinity = peoplesCultures.dominantCultureIndex[v] === polityCulture ? 0.82 : 1.12
-        const nextCost = dU + edge.cost * seaPenalty * culturalAffinity
-        if (nextCost <= maxProjectionCost && nextCost < regionPolityCost[v]!) {
-          regionPolity[v] = pIdx
-          regionPolityCost[v] = nextCost
-          queue.push(v, nextCost)
-        }
+        const culturalAffinity = peoplesCultures.dominantCultureIndex[edge.toRegion] === polityCulture ? 0.82 : 1.12
+        claim(edge.toRegion, dU + edge.cost * seaPenalty * culturalAffinity, pIdx)
       }
     }
   }
@@ -317,6 +315,46 @@ export function generatePolitiesReligions(
   // Ensure each capital region strictly belongs to its own polity
   for (let p = 0; p < capitals.length; p++)
     regionPolity[capitals[p]!.regionId] = p
+
+  // Nearshore islands follow the nearest claimed land across at most one
+  // support-cell width of water. Wider seas keep a landmass unowned.
+  const nearshoreKm = Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2)
+  const seaDistance = new Float32Array(n).fill(Infinity)
+  const seaClaim = new Int32Array(n).fill(-1)
+  queue.size = 0
+  for (let r = 0; r < n; r++) {
+    if (regionPolity[r]! < 0)
+      continue
+    seaDistance[r] = 0
+    seaClaim[r] = regionPolity[r]!
+    queue.push(r, 0)
+  }
+  while (queue.size > 0) {
+    const u = queue.pop()
+    const dU = seaDistance[u]!
+    if (dU > nearshoreKm)
+      continue
+    for (let e = mesh.neighborOffsets[u]; e < mesh.neighborOffsets[u + 1]; e++) {
+      const v = mesh.neighbors[e]!
+      if (terrain.landMask[v] === 1 && regionPolity[v]! >= 0)
+        continue
+      const stepKm = greatCircleDistanceKm(
+        { x: mesh.centers[3 * u], y: mesh.centers[3 * u + 1], z: mesh.centers[3 * u + 2] },
+        { x: mesh.centers[3 * v], y: mesh.centers[3 * v + 1], z: mesh.centers[3 * v + 2] },
+        mesh.physicalRadiusKm,
+      )
+      const next = dU + stepKm
+      if (next <= nearshoreKm && next < seaDistance[v]!) {
+        seaDistance[v] = next
+        seaClaim[v] = seaClaim[u]!
+        queue.push(v, next)
+      }
+    }
+  }
+  for (let r = 0; r < n; r++) {
+    if (terrain.landMask[r] === 1 && regionPolity[r]! < 0 && seaClaim[r]! >= 0)
+      regionPolity[r] = seaClaim[r]!
+  }
 
   // Tally regions, area and population per polity
   const polityAreaKm2 = new Float64Array(capitals.length)
@@ -584,6 +622,12 @@ export function generatePolitiesReligions(
     }
   }
 
+  const territoryPolityIndex = new Int32Array(n).fill(-1)
+  for (let r = 0; r < n; r++) {
+    if (terrain.landMask[r] === 1)
+      territoryPolityIndex[r] = regionPolity[r]!
+  }
+
   check?.(1)
   return {
     meshId: mesh.meshId,
@@ -595,6 +639,7 @@ export function generatePolitiesReligions(
     settlements,
     population,
     populationGroups,
+    territoryPolityIndex,
   }
 }
 
@@ -604,7 +649,14 @@ export function validatePolitiesReligionsArtifact(output: PolitiesReligionsArtif
     throw new Error('Invalid polities and religions metadata')
   if (!(output.population instanceof Float64Array) || output.population.length !== n)
     throw new Error('Population array dtype or length mismatch')
-  if (!output.enabled && (output.religions.length > 0 || output.polities.length > 0 || output.settlements.length > 0 || output.populationGroups.length > 0))
+  if (!(output.territoryPolityIndex instanceof Int32Array) || output.territoryPolityIndex.length !== n)
+    throw new Error('Territory ownership array dtype or length mismatch')
+  for (let r = 0; r < n; r++) {
+    const owner = output.territoryPolityIndex[r]!
+    if (owner < -1 || owner >= output.polities.length)
+      throw new Error(`Invalid territory ownership at region ${r}`)
+  }
+  if (!output.enabled && (output.religions.length > 0 || output.polities.length > 0 || output.settlements.length > 0 || output.populationGroups.length > 0 || output.territoryPolityIndex.some(owner => owner !== -1)))
     throw new Error('Disabled civilization must emit empty polities, religions, settlements and groups')
   const settlementMap = new Map(output.settlements.map(s => [s.id, s]))
   for (const polity of output.polities) {

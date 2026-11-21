@@ -8,7 +8,12 @@ import type { HabitabilityArtifact } from './habitability'
 import { DeterministicRandom } from '#math/random'
 import { greatCircleDistanceKm } from '#math/spherical'
 
-export const POPULATION_SETTLEMENTS_VERSION = 'population-settlements-v2' as const
+export const POPULATION_SETTLEMENTS_VERSION = 'population-settlements-v3' as const
+
+/** Sum of the site-score weights below. Dividing by it maps a score onto [0, 1]. */
+const SETTLEMENT_SCORE_WEIGHT_TOTAL = 1.33
+const MIN_IMMIGRATION_SHARE = 0.16
+const MAX_IMMIGRATION_SHARE = 0.56
 
 // Preserve the existing L6 Earthlike calibration as a physical area, rather
 // than treating the output mesh's cell count as a social unit.
@@ -165,26 +170,22 @@ export function generatePopulationSettlements(
   selected.sort((a, b) => (b.score !== a.score ? b.score - a.score : a.region - b.region))
 
   const siteRng = rng.fork('settlement-sites')
-  const selectedRegions = new Set(selected.map(site => site.region))
+  // The support disc is about 63 km across. Searching twice as far covers an
+  // equal area of land even when only a quarter of the directions are land,
+  // so a straight coast can still fill the same target as an inland site.
   const supportRadiusKm = Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2 / Math.PI)
-  const settlementSites: SettlementSite[] = selected.map((site, index) => {
-    const localDensity = population[site.region]! / mesh.areaKm2[site.region]!
-    const rankFraction = selected.length <= 1 ? 0 : index / (selected.length - 1)
+  const maxRecruitRadiusKm = supportRadiusKm * 2
+  const baselinePopulation = population.slice()
+  const recruited = new Float64Array(n)
+  const settlementSites: SettlementSite[] = selected.map((site) => {
+    const localDensity = baselinePopulation[site.region]! / mesh.areaKm2[site.region]!
     const supportedPopulation = localDensity * SETTLEMENT_SUPPORT_AREA_KM2
-    const tier: SettlementSite['tier'] = rankFraction <= 0.16 && supportedPopulation >= 1200
-      ? 'city'
-      : rankFraction <= 0.52 && supportedPopulation >= 400
-        ? 'town'
-        : 'village'
-    const urbanShare = tier === 'city'
-      ? 0.42 + siteRng.nextFloat() * 0.14
-      : tier === 'town'
-        ? 0.28 + siteRng.nextFloat() * 0.12
-        : 0.16 + siteRng.nextFloat() * 0.1
-    const desiredPopulation = Math.max(10, Math.round(supportedPopulation * urbanShare))
-    // A city occupies one region in the snapshot. Move residents from its
-    // physical hinterland into that region before publishing the population
-    // field, without creating or destroying residents.
+    const scoreShare = Math.min(1, Math.max(0, site.score / SETTLEMENT_SCORE_WEIGHT_TOTAL))
+    const immigrationShare = MIN_IMMIGRATION_SHARE + (MAX_IMMIGRATION_SHARE - MIN_IMMIGRATION_SHARE) * scoreShare
+    const desiredPopulation = Math.max(10, Math.round(supportedPopulation * immigrationShare))
+    // Higher-scoring sites are served first and may search farther. Each donor
+    // keeps at least 44% of its original residents, so a city cannot empty the
+    // cells around it. Sea cells hold nobody and are walked past, not deducted.
     let needed = Math.max(0, desiredPopulation - population[site.region]!)
     if (needed > 0) {
       const seen = new Set<number>([site.region])
@@ -197,29 +198,47 @@ export function generatePopulationSettlements(
           if (seen.has(v))
             continue
           seen.add(v)
+          if (terrain.landMask[v] !== 1)
+            continue
           const distance = greatCircleDistanceKm(
             { x: mesh.centers[3 * site.region], y: mesh.centers[3 * site.region + 1], z: mesh.centers[3 * site.region + 2] },
             { x: mesh.centers[3 * v], y: mesh.centers[3 * v + 1], z: mesh.centers[3 * v + 2] },
             mesh.physicalRadiusKm,
           )
-          if (distance <= supportRadiusKm) {
-            frontier.push(v)
-            if (!selectedRegions.has(v) && population[v]! > 0)
-              donors.push({ region: v, distance })
-          }
+          if (distance > maxRecruitRadiusKm * scoreShare)
+            continue
+          frontier.push(v)
+          const available = Math.min(
+            baselinePopulation[v]! * immigrationShare,
+            baselinePopulation[v]! * MAX_IMMIGRATION_SHARE - recruited[v]!,
+          )
+          if (available > 0)
+            donors.push({ region: v, distance })
         }
       }
       donors.sort((a, b) => a.distance - b.distance || a.region - b.region)
       for (const donor of donors) {
-        const moved = Math.min(needed, population[donor.region]!)
+        const available = Math.min(
+          baselinePopulation[donor.region]! * immigrationShare,
+          baselinePopulation[donor.region]! * MAX_IMMIGRATION_SHARE - recruited[donor.region]!,
+        )
+        const moved = Math.min(needed, Math.max(0, available))
+        if (moved <= 0)
+          continue
         population[donor.region] = population[donor.region]! - moved
         population[site.region] = population[site.region]! + moved
+        recruited[donor.region] = recruited[donor.region]! + moved
         needed -= moved
         if (needed <= 0)
           break
       }
     }
     const settlementPop = Math.min(population[site.region]!, desiredPopulation)
+    const tier: SettlementSite['tier'] = settlementPop >= 1200
+      ? 'city'
+      : settlementPop >= 400
+        ? 'town'
+        : 'village'
     const foundedAtYear = -Math.round((120 + siteRng.nextInt(0, 1400)) * (tier === 'city' ? 1.25 : tier === 'town' ? 1.0 : 0.7))
     return {
       id: `settlement:${site.region}`,

@@ -220,6 +220,7 @@ function buildDominantCategoryPolygonSource(
   const { mesh, identity } = reader
   const count = mesh.regionCount
   const landMask = reader.field('landMask')
+  const lakeIndex = sourceId === 'polity-territory' ? reader.field('lakeIndex') : null
   const field = reader.field(fieldName)
   const groupIds = new Int32Array(count).fill(-1)
   const areaByGroup = new Map<number, number>()
@@ -234,7 +235,7 @@ function buildDominantCategoryPolygonSource(
   const unassignedLandGroup = 1_000_000
   const includeUnassignedLand = sourceId === 'polity-territory'
   for (let r = 0; r < count; r++) {
-    if (landMask.get(r) === 0)
+    if (landMask.get(r) === 0 || lakeIndex?.get(r) >= 0)
       continue
     const idx = Math.floor(field.get(r))
     if (idx < 0 || idx >= entityCount) {
@@ -407,11 +408,12 @@ export function relaxPolityBorderBoundaries(
   const { mesh } = reader
   const count = mesh.regionCount
   const landMask = reader.field('landMask')
+  const lakeIndex = reader.field('lakeIndex')
   const polityField = reader.field('dominantPolityIndex')
   const polities = reader.polities()
   const groupIds = new Int32Array(count).fill(-1)
   for (let r = 0; r < count; r++) {
-    if (landMask.get(r) === 0)
+    if (landMask.get(r) === 0 || lakeIndex.get(r) >= 0)
       continue
     const idx = Math.floor(polityField.get(r))
     if (idx >= 0 && idx < polities.length)
@@ -454,12 +456,13 @@ export function buildPolityBordersSource(
   const { mesh, identity } = reader
   const count = mesh.regionCount
   const landMask = reader.field('landMask')
+  const lakeIndex = reader.field('lakeIndex')
   const polityField = reader.field('dominantPolityIndex')
   const polities = reader.polities()
   const groupIds = new Int32Array(count).fill(-1)
 
   for (let r = 0; r < count; r++) {
-    if (landMask.get(r) === 0)
+    if (landMask.get(r) === 0 || lakeIndex.get(r) >= 0)
       continue
     const idx = Math.floor(polityField.get(r))
     if (idx >= 0 && idx < polities.length)

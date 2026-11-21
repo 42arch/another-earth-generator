@@ -564,7 +564,7 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
       if (landMask.get(region) === 0)
         continue
       civReader.mesh.forEachRegionNeighbor(region, (neighbor) => {
-        if (lakeRegion >= 0 || landMask.get(neighbor) === 0 || polityField.get(neighbor) < 0)
+        if (lakeRegion >= 0 || landMask.get(neighbor) === 0)
           return
         if (polityField.get(region) !== polityField.get(neighbor))
           lakeRegion = region
@@ -596,6 +596,10 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
       civilization: {
         ...civSnapshot.civilization,
         populationGroups: civSnapshot.civilization.populationGroups.filter(group => group.regionId !== lakeRegion),
+        territoryPolityIndex: {
+          ...civSnapshot.civilization.territoryPolityIndex,
+          values: Int32Array.from(civSnapshot.civilization.territoryPolityIndex.values, (owner, region) => region === lakeRegion ? -1 : owner),
+        },
       },
     })
     const alignedRegistry = new MapSourceRegistry(lakeReader)
@@ -627,10 +631,20 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
 
     const unassignedTerritory = alignedRegistry.getGeoJsonSource('polity-territory')
       .data.features.find(feature => feature.properties.unassigned === true)
-    expect(unassignedTerritory).toBeDefined()
-    expect(unassignedTerritory?.properties.groupIndex).toBe(-1)
-    expect(unassignedTerritory?.properties.name).toBe('无归属地')
-    expect(Number(unassignedTerritory?.properties.areaKm2)).toBeGreaterThan(0)
+    const unownedLand = lakeReader.field('dominantPolityIndex')
+    let unownedLandCount = 0
+    for (let region = 0; region < lakeReader.mesh.regionCount; region++) {
+      if (lakeReader.field('landMask').get(region) === 1 && lakeReader.field('lakeIndex').get(region) < 0 && unownedLand.get(region) < 0)
+        unownedLandCount++
+    }
+    if (unownedLandCount > 0) {
+      expect(unassignedTerritory?.properties.groupIndex).toBe(-1)
+      expect(unassignedTerritory?.properties.name).toBe('无归属地')
+      expect(Number(unassignedTerritory?.properties.areaKm2)).toBeGreaterThan(0)
+    }
+    else {
+      expect(unassignedTerritory).toBeUndefined()
+    }
 
     const routes = registry.getGeoJsonSource('transport-routes')
     expect(routes.geometryKind).toBe('line')

@@ -788,13 +788,12 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
     const peopleDom = new Int32Array(count).fill(-1)
     const cultureDom = new Int32Array(count).fill(-1)
     const religionDom = new Int32Array(count).fill(-1)
-    const polityDom = new Int32Array(count).fill(-1)
+    const polityDom = Int32Array.from(civilization.territoryPolityIndex.values)
     const groups = civilization.populationGroups
     if (groups.length > 0) {
       const peopleIdx = new Map(civilization.peoples.map((item, i) => [item.id, i]))
       const cultureIdx = new Map(civilization.cultures.map((item, i) => [item.id, i]))
       const religionIdx = new Map(civilization.religions.map((item, i) => [item.id, i]))
-      const polityIdx = new Map(civilization.polities.map((item, i) => [item.id, i]))
 
       const counts = new Uint32Array(count)
       for (let i = 0; i < groups.length; i++)
@@ -857,7 +856,6 @@ export function createWorldMapReader(world: WorldSnapshot): WorldMapReader {
         peopleDom[r] = pickDominant(start, end, g => peopleIdx.get(g.peopleId) ?? -1)
         cultureDom[r] = pickDominant(start, end, g => cultureIdx.get(g.cultureId) ?? -1)
         religionDom[r] = pickDominant(start, end, g => (g.religionId !== null ? (religionIdx.get(g.religionId) ?? -1) : -1))
-        polityDom[r] = pickDominant(start, end, g => (g.polityId !== null ? (polityIdx.get(g.polityId) ?? -1) : -1))
       }
     }
 

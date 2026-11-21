@@ -111,5 +111,10 @@ export interface CivilizationState {
   readonly population: DenseField<Float64Array>
   /** Sparse joint composition; sums per region match population within max(1e-6, total*1e-9). */
   readonly populationGroups: readonly PopulationGroup[]
+  /**
+   * Land ownership, length N. `-1` is unowned. Ocean stays `-1`. Empty land and
+   * lakes can belong to a polity, so this is not derived from population groups.
+   */
+  readonly territoryPolityIndex: DenseField<Int32Array>
   readonly transport: TransportNetworkState
 }

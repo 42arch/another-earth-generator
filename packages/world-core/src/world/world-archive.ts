@@ -28,7 +28,7 @@ function assertValid(snapshot: WorldSnapshot, packs: readonly ContentPackView[],
     throw new Error(`Invalid world snapshot: ${result.issues[0]?.path}: ${result.issues[0]?.message}`)
 }
 
-/** Schema 4 JSON round trip. Legacy Schema 1-3 archives are rejected without migration. */
+/** Schema 5 JSON round trip. Legacy Schema 1-4 archives are rejected without migration. */
 export function encodeWorldArchive(snapshot: WorldSnapshot, packs: readonly ContentPackView[], content: ContentPort): string {
   assertValid(snapshot, packs, content)
   const payload = JSON.stringify(snapshot, (_, value: unknown) => {

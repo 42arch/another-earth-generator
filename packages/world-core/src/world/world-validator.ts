@@ -346,6 +346,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     }
   }
   field('civilization.population', c.population, 'Float64Array', count, nonnegative)
+  field('civilization.territoryPolityIndex', c.territoryPolityIndex, 'Int32Array', count, v => v === -1 || (v >= 0 && v < c.polities.length))
   if (!c.transport || typeof c.transport !== 'object')
     add('required', 'civilization.transport', 'Transport network state is required')
   else
@@ -684,10 +685,14 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       }
     }
   }
-  if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0 || (c.transport?.nodes.length ?? 0) > 0 || (c.transport?.routes.length ?? 0) > 0))
+  if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0 || c.territoryPolityIndex.values.some(v => v !== -1) || (c.transport?.nodes.length ?? 0) > 0 || (c.transport?.routes.length ?? 0) > 0))
     add('population', 'civilization', 'Civilization disabled in generation configuration')
   if (full) {
-    for (let r = 0; r < Math.min(count, c.population.values.length); r++) {
+    for (let r = 0; r < Math.min(count, c.population.values.length, c.territoryPolityIndex.values.length); r++) {
+      if (n.geography.landMask.values[r] !== 1 && c.territoryPolityIndex.values[r] !== -1) {
+        add('range', `civilization.territoryPolityIndex[${r}]`, 'Ocean cannot belong to a polity')
+        break
+      }
       const population = c.population.values[r]
       const tolerance = Math.max(1e-6, population * 1e-9)
       if (!finite(totals.get(r) ?? 0) || !finite(urban.get(r) ?? 0) || Math.abs((totals.get(r) ?? 0) - population) > tolerance || (urban.get(r) ?? 0) > population + tolerance) {

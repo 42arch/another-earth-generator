@@ -53,12 +53,12 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | ecology-e0 | ecology-e0-v3 | mesh、terrain、climate-c0；内容键 `ecology-classes` |
 | resource-potential | resource-potential-v1 | mesh、geology、terrain、climate-c0、hydrology-h0、ecology-e0；内容键 `resource-definitions` |
 | habitability | habitability-v1 | mesh、terrain、climate-c0、hydrology-h0、static-lakes-l1、ecology-e0、resource-potential |
-| population-settlements | population-settlements-v2 | mesh、terrain、hydrology-h0、static-lakes-l1、resource-potential、habitability |
+| population-settlements | population-settlements-v3 | mesh、terrain、hydrology-h0、static-lakes-l1、resource-potential、habitability |
 | transport-network | transport-network-v3 | mesh、terrain、hydrology-h0、static-lakes-l1、habitability、population-settlements |
 | peoples-cultures | peoples-cultures-v2 | mesh、habitability、population-settlements、transport-network；内容键 `civilization-content` |
-| polities-religions | polities-religions-v2 | mesh、population-settlements、transport-network、peoples-cultures；内容键 `civilization-content` |
+| polities-religions | polities-religions-v3 | mesh、population-settlements、transport-network、peoples-cultures；内容键 `civilization-content` |
 
-文明社会尺度的参考面积取半径 6371 km 的 L6 等面积格（约 12,453 km²），对应旧版默认量级。人口仍由区域面积乘承载密度决定；聚落数量按可居住总面积换算参考格数，聚落规模按参考支持面积估算，并从固定物理半径内的邻格向聚落格转移人口以保持区域与世界账本一致。交通和文化传播使用该参考面积对应的固定基准行进速度；政体规模使用实际 km²。输出 Mesh 等级变化会使所有相关 Stage 随 Mesh 失效，但不再直接重设上述社会单位。固定 Seed 跨等级对照和高等级性能尚未执行。
+文明社会尺度的参考面积取半径 6371 km 的 L6 等面积格（约 12,453 km²），对应旧版默认量级。人口仍由区域面积乘承载密度决定；聚落数量按可居住总面积换算参考格数。`population-settlements-v3` 用选址分决定迁入比例（16%–56%）和搜索距离：目标人口为当地密度乘参考面积再乘该比例，只沿陆地由近到远征集，最远到支撑半径的两倍（约 126 km）乘分数占比。每个供体格子单次最多交出当前比例、累计最多交出 56%，因此不会被抽成无人区；凑不满则聚落按实际人数缩小，等级按结果人口划分。海岸上的海面不扣减目标。交通和文化传播使用该参考面积对应的固定基准行进速度；政体规模使用实际 km²。输出 Mesh 等级变化会使所有相关 Stage 随 Mesh 失效，但不再直接重设上述社会单位。固定 Seed 跨等级对照和高等级性能尚未执行。
 
 `transport-network-v2` 为陆路、海路及多源可达性搜索增加每轮已处理标记，并将候选成本统一到 Float32 精度后再比较、保存和入队；同一目标的旧堆条目不再重复消耗搜索名额。版本变化使交通及下游文化、政体/宗教缓存失效，上游人口聚落与自然链可复用。已有 Schema 4 快照保留已存路线，不在读取时重算。本次补充了确定性合成图回归用例，尚未执行；固定 Seed `m2-civilization-seed` 的 v1/v2 对照与高等级性能/内存复验待执行，历史 M2 验证不覆盖 v2。
 

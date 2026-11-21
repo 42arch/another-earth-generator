@@ -160,7 +160,7 @@ describe('worldMapReader & circulation closure', () => {
       physicalRadiusKm: 6371,
     })
     const fakeSnapshot = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       snapshotId: 'snapshot:walk',
       revision: 0,
       time: { year: 0 },
@@ -192,7 +192,7 @@ describe('worldMapReader & circulation closure', () => {
         ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: { meshId: mesh.meshId, values: new Uint16Array(mesh.regionCount) }, landCoverIndex: { meshId: mesh.meshId, values: new Uint16Array(mesh.regionCount) }, aridityIndex: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, growingSeasonMonths: { meshId: mesh.meshId, values: new Uint8Array(mesh.regionCount) } },
         resources: { resourceIds: [], agriculturalPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, forestryPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, fisheryPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, deposits: [] },
       },
-      civilization: { meshId: mesh.meshId, population: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, peoples: [], cultures: [], religions: [], polities: [], settlements: [], populationGroups: [], transport: { nodes: [], routes: [], accessibility: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) } } },
+      civilization: { meshId: mesh.meshId, population: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, peoples: [], cultures: [], religions: [], polities: [], settlements: [], populationGroups: [], territoryPolityIndex: { meshId: mesh.meshId, values: new Int32Array(mesh.regionCount).fill(-1) }, transport: { nodes: [], routes: [], accessibility: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) } } },
     } as unknown as Parameters<typeof createWorldMapReader>[0]
 
     const reader = createWorldMapReader(fakeSnapshot)

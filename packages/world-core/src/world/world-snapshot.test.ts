@@ -93,6 +93,7 @@ function snapshot(civilized = false): WorldSnapshot {
       polities: civilized ? [{ id: 'polity:a', name: '海风合众', foundedAtYear: -5, cultureId: 'culture:a', archetypeId: 'test:polity/basic', capitalSettlementId: 'settlement:a' }] : [],
       settlements: civilized ? [{ id: 'settlement:a', name: '新港', foundedAtYear: -5, regionId: 0, polityId: 'polity:a', cultureId: 'culture:a', population: 60 }] : [],
       populationGroups: civilized ? [{ regionId: 0, peopleId: 'people:a', cultureId: 'culture:a', religionId: 'religion:a', polityId: 'polity:a', population: 100 }] : [],
+      territoryPolityIndex: field(new Int32Array(4).fill(-1)),
       transport: {
         nodes: civilized
           ? [
@@ -115,6 +116,11 @@ const validate = (s: WorldSnapshot) => validateWorldSnapshot(s, [pack], testCont
 describe('worldSnapshot public contract', () => {
   it('accepts a complete natural world', () => expect(validate(snapshot())).toEqual({ valid: true, issues: [] }))
   it('accepts a world with civilization and a nonduplicated urban population', () => expect(validate(snapshot(true)).valid).toBe(true))
+  it('rejects polity ownership of ocean', () => {
+    const s = snapshot(true)
+    s.civilization.territoryPolityIndex.values[0] = 0
+    expect(validate(s).issues.some(issue => issue.path === 'civilization.territoryPolityIndex[0]')).toBe(true)
+  })
   it('rejects mismatched field length and mesh identity', () => {
     const s = snapshot()
     expect(validate({ ...s, nature: { ...s.nature, geography: { ...s.nature.geography, elevationKm: { meshId: 'wrong', values: new Float32Array(3) } } } }).issues.map(e => e.code)).toEqual(expect.arrayContaining(['length', 'reference']))
@@ -122,8 +128,8 @@ describe('worldSnapshot public contract', () => {
   it('rejects invalid physics and legacy schemas', () => {
     const s = snapshot()
     expect(validate({ ...s, planet: { ...s.planet, physicalRadiusKm: -1 } }).valid).toBe(false)
-    // @ts-expect-error Schema 3 and earlier are rejected without migration
-    expect(validate({ ...s, schemaVersion: 3 }).valid).toBe(false)
+    // @ts-expect-error Schema 4 and earlier are rejected without migration
+    expect(validate({ ...s, schemaVersion: 4 }).valid).toBe(false)
   })
   it('rejects unresolved world entities, resources, transport routes, and content versions', () => {
     const s = snapshot(true)
@@ -180,7 +186,7 @@ describe('worldSnapshot public contract', () => {
     const s = snapshot()
     expect(validate({ ...s, metadata: { ...s.metadata, seed: '', createdAt: 'yesterday' } }).valid).toBe(false)
   })
-  it('requires complete natural provenance and parameters in Schema 4', () => {
+  it('requires complete natural provenance and parameters in Schema 5', () => {
     const s = snapshot()
     const missingHydrology = { ...s.metadata.generationConfig.hydrology }
     delete (missingHydrology as Partial<typeof missingHydrology>).minimumRiverDrainageAreaKm2

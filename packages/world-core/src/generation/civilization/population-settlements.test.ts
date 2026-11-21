@@ -61,4 +61,48 @@ describe('population and settlement physical scale', () => {
     }
     expect(generatePopulationSettlements(...fixture(4))).toEqual(fine)
   })
+
+  it('recruits along the landward side of a coast without emptying any cell', () => {
+    const input = fixture(4)
+    const [mesh, terrain, hydrology, lakes, resources, habitability, params] = input
+    const n = mesh.regionCount
+    const sea = new Uint8Array(n)
+    const coastal = new Uint8Array(n)
+    // Groups sit on a line. Treat the first cell of every group as sea, so
+    // each inhabited cell has land only on one side of the support disc.
+    for (let group = 0; group < 12; group++) {
+      const shore = group * 4
+      sea[shore] = 1
+      coastal[shore + 1] = 1
+    }
+    const coastalResult = generatePopulationSettlements(
+      mesh,
+      { ...terrain, landMask: Uint8Array.from(terrain.landMask, (land, region) => sea[region] ? 0 : land) },
+      hydrology,
+      lakes,
+      resources,
+      { ...habitability, coastalMask: coastal },
+      params,
+      'physical-scale-seed',
+    )
+    validatePopulationSettlementsArtifact(coastalResult)
+
+    const inland = generatePopulationSettlements(...input)
+    expect(coastalResult.settlementSites.length).toBeGreaterThan(0)
+    const coastalUrban = [...coastalResult.settlementSites].sort((a, b) => b.population - a.population)
+    const inlandUrban = [...inland.settlementSites].sort((a, b) => b.population - a.population)
+    expect(coastalUrban[0]!.population / inlandUrban[0]!.population).toBeGreaterThan(0.7)
+
+    // A donor keeps at least 44% of the residents it was assigned. The assigned
+    // population is at least the floor of the noise range, so no land cell can
+    // fall below this, and sea cells are never assigned anyone.
+    const areaKm2 = SETTLEMENT_SUPPORT_AREA_KM2 / 4
+    const retainedFloor = Math.round(areaKm2 * 10 * 0.88) * 0.44
+    for (let region = 0; region < n; region++) {
+      if (sea[region])
+        expect(coastalResult.population[region]).toBe(0)
+      else
+        expect(coastalResult.population[region]).toBeGreaterThan(retainedFloor - 1)
+    }
+  })
 })
