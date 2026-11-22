@@ -90,7 +90,7 @@
       "politicalAtlas": { "label": "Political atlas", "description": "Polity territories · borders · settlements" },
       "minimalLight": { "label": "Minimal light", "description": "Soft, low-saturation background · thematic data stands out" },
       "minimalDark": { "label": "Minimal dark", "description": "Dark slate background · highlights ocean circulation" },
-      "historicalParchment": { "label": "Historical parchment", "description": "Warm parchment tones · dark brown coasts" }
+      "historicalParchment": { "label": "Historical parchment", "description": "Warm parchment · ink borders, realms, and towns" }
     },
     "groups": {
       "geology": "Geology",
@@ -190,16 +190,58 @@
     "highLevelWarning": "High-level meshes contain many regions and use more GPU and system memory.",
     "forceRegenerate": "Force regeneration",
     "civilization": {
+      "presets": {
+        "title": "Social background preset",
+        "custom": "Custom",
+        "customHint": "These values form a custom combination. Choose a preset to replace capability and polity/settlement parameters while keeping population scale and cultural diversity.",
+        "hint": "Presets fill in capability and polity/settlement parameters while preserving population scale and cultural diversity. Editing preset values selects Custom; Generate applies the changes. These are static social scenarios, not historical evolution.",
+        "agrarian": {
+          "label": "Agrarian settlements",
+          "description": "Agriculture and dispersed settlements, with limited industry and long-distance transport."
+        },
+        "mercantile-city-states": {
+          "label": "Mercantile city-states",
+          "description": "Stronger settlement concentration and seafaring, more political centers and limited integration."
+        },
+        "regional-kingdoms": {
+          "label": "Regional kingdoms",
+          "description": "Regional agriculture and land connections with fewer political centers."
+        },
+        "industrial-mercantile": {
+          "label": "Industrial commerce",
+          "description": "Default background, referencing production and transport around 1900, with a calibrated population scale."
+        }
+      },
+      "urbanConcentration": "Urban concentration",
+      "urbanConcentrationDescription": "Changes recruitment strength and reach (default 0.65; 0.5 is the formula baseline). Population is conserved and donors retain at least 44%. This is not an exact urbanization rate.",
+      "polityCount": "Number of countries",
+      "polityCountDescription": "Exact number of countries, including island countries. Range 1–200, default 60. Too few settlements produces an explicit error.",
+      "politySizeVariation": "Country size variation",
+      "politySizeVariationDescription": "0 favors balanced areas; 1 favors a few large and many small countries. Geography and reachability still constrain the result.",
+      "culturalDiversity": "Cultural diversity",
+      "culturalDiversityDescription": "Changes the count and spacing of cultural origins, subject to available sites and names (0.5–2×).",
+      "administrativeCapacity": "Administrative integration",
+      "administrativeCapacityDescription": "Reduces relative cross-cultural and maritime integration costs without changing capital count targets (0–1; default 0.75).",
+      "capabilitiesTitle": "Social capabilities",
+      "capabilitiesDescription": "Production and transport use a 1× near-modern baseline; administrative integration defaults to 0.75. Geographic requirements still apply.",
+      "societyTitle": "Society layout",
+      "agriculturalProductivity": "Agricultural productivity",
+      "agriculturalProductivityDescription": "Changes the population supported by agricultural potential without changing the natural resource field (0.25–2×).",
+      "industrialCapability": "Industrial capability",
+      "industrialCapabilityDescription": "Changes energy use and mineral–fuel opportunities. At 0×, ordinary mining remains available (0–2×).",
+      "landTransportCapability": "Land transport capability",
+      "landTransportCapabilityDescription": "Changes food and resource hinterlands and overland/river travel costs (0.25–2×).",
+      "seafaringCapability": "Seafaring capability",
+      "seafaringCapabilityDescription": "Changes travel costs and reach between existing ports. At 0×, no sea routes are generated (0–2×).",
       "sectionTitle": "Initial civilization",
+      "invalidShareLink": "This parameter link is unsupported or invalid. Review the parameters and generate a new world.",
       "enabled": "Generate initial civilization",
       "enabledDescription": "Generates population, settlements, transport routes, peoples, cultures, religions, and polities on top of the natural world without invalidating natural caches.",
       "disabledHint": "Only the natural world and resource potential are generated; population, settlements, and polities are skipped.",
       "populationScale": "Population scale",
       "populationScaleDescription": "Scales initial carrying capacity and total population (0.1–4.0).",
       "settlementDensity": "Settlement density",
-      "settlementDensityDescription": "Adjusts settlement seeding density multiplier (0.25–4.0).",
-      "polityCohesion": "Polity cohesion",
-      "polityCohesionDescription": "Higher values favor larger kingdoms and empires; lower values preserve more city-states and frontiers."
+      "settlementDensityDescription": "Adjusts settlement seeding density multiplier (0.25–4.0)."
     },
     "footer": {
       "busy": "Generation in progress…",
@@ -289,6 +331,22 @@
       "minorChanges": "Minor changes",
       "majorChanges": "Major changes",
       "refactors": "Refactors"
+    }
+  },
+  "civilization": {
+    "settlementFeatures": {
+      "agrarian": "Agrarian Center",
+      "pastoral": "Pastoral Settlement",
+      "industrial": "Industrial Hub",
+      "craft": "Artisan Workshop",
+      "mining": "Mining Town",
+      "forestry": "Timber & Forestry",
+      "fishery": "Fishing Port",
+      "maritime-trade": "Maritime Trade Port",
+      "trade-hub": "Trade Crossroads",
+      "cultural": "Cultural Center",
+      "religious": "Sacred City",
+      "fortress": "Fortress Town"
     }
   }
 }

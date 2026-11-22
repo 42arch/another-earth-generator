@@ -1,14 +1,16 @@
 <script lang='ts'>
-  import type { CivilizationParameters, ClimateParameters, GeologyParameters, HydrologyParameters, LandformParameters, TerrainParameters } from '@another-earth/world-core'
+  import type { CivilizationCapabilities, CivilizationParameters, ClimateParameters, GeologyParameters, HydrologyParameters, LandformParameters, TerrainParameters } from '@another-earth/world-core'
   import type { Mutable } from '@/lib/mutable'
-  import { TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C } from '@another-earth/world-core'
+  import { CIVILIZATION_CAPABILITY_RANGES, CIVILIZATION_SOCIETY_RANGES, TEMPERATURE_OFFSET_MAX_C, TEMPERATURE_OFFSET_MIN_C } from '@another-earth/world-core'
   import { CircleQuestionMark, Play, SlidersHorizontal, X } from '@lucide/svelte'
   import { t } from '@/lib/i18n'
+  import Select from '@/ui/components/Select.svelte'
   import Slider from '@/ui/components/Slider.svelte'
   import Tabs from '@/ui/components/Tabs.svelte'
   import Toggle from '@/ui/components/Toggle.svelte'
   import Tooltip from '@/ui/components/Tooltip.svelte'
   import { appState } from '@/ui/state/app.svelte'
+  import { applyCivilizationPreset, CIVILIZATION_PRESETS, matchCivilizationPreset } from './civilization-presets'
 
   interface Props {
     open: boolean
@@ -26,7 +28,7 @@
     landformParameters: Mutable<LandformParameters>
     climateParameters: Mutable<ClimateParameters>
     hydrologyParameters: Mutable<HydrologyParameters>
-    civilizationParameters: Mutable<CivilizationParameters>
+    civilizationParameters: Omit<Mutable<CivilizationParameters>, 'capabilities'> & { capabilities: Mutable<CivilizationCapabilities> }
   }
 
   let {
@@ -50,6 +52,15 @@
 
   type ParameterTab = 'nature' | 'civilization'
   let activeTab = $state<ParameterTab>('nature')
+  const civilizationPreset = $derived(matchCivilizationPreset(civilizationParameters))
+  const civilizationPresetOptions = $derived([
+    ...(civilizationPreset === 'custom' ? [{ value: 'custom', label: t('parameters.civilization.presets.custom') }] : []),
+    ...CIVILIZATION_PRESETS.map(preset => ({
+      value: preset.id,
+      label: t(`parameters.civilization.presets.${preset.id}.label`),
+      description: t(`parameters.civilization.presets.${preset.id}.description`),
+    })),
+  ])
   const parameterTabs = $derived([
     { value: 'nature' as const, label: t('parameters.tabs.nature') },
     { value: 'civilization' as const, label: t('parameters.tabs.civilization') },
@@ -183,6 +194,40 @@
 
             {#if civilizationParameters.enabled}
               <section class='flex flex-col gap-2 border-t border-white/6 pt-3'>
+                <Select
+                  label={t('parameters.civilization.presets.title')}
+                  value={civilizationPreset}
+                  options={civilizationPresetOptions}
+                  disabled={busy}
+                  onchange={(id) => {
+                    if (id !== 'custom')
+                      civilizationParameters = applyCivilizationPreset(id as typeof CIVILIZATION_PRESETS[number]['id'], civilizationParameters)
+                  }}
+                />
+                <p class='text-xs leading-relaxed text-obs-text-muted' aria-live='polite'>
+                  {t(civilizationPreset === 'custom' ? 'parameters.civilization.presets.customHint' : `parameters.civilization.presets.${civilizationPreset}.description`)}
+                </p>
+                <p class='text-xs leading-relaxed text-obs-text-dim'>{t('parameters.civilization.presets.hint')}</p>
+              </section>
+              <section class='flex flex-col gap-2 border-t border-white/6 pt-3' aria-label={t('parameters.civilization.capabilitiesTitle')}>
+                <span class='text-[11px] font-bold text-obs-text-muted'>{t('parameters.civilization.capabilitiesTitle')}</span>
+                <p class='text-[10px] leading-relaxed text-obs-text-dim'>{t('parameters.civilization.capabilitiesDescription')}</p>
+                {#each ['agriculturalProductivity', 'industrialCapability', 'landTransportCapability', 'seafaringCapability', 'administrativeCapacity'] as key (key)}
+                  {@const capability = key as keyof CivilizationCapabilities}
+                  <Slider
+                    label={t(`parameters.civilization.${capability}`)}
+                    description={t(`parameters.civilization.${capability}Description`)}
+                    bind:value={civilizationParameters.capabilities[capability]}
+                    min={CIVILIZATION_CAPABILITY_RANGES[capability][0]}
+                    max={CIVILIZATION_CAPABILITY_RANGES[capability][1]}
+                    step={0.05}
+                    decimals={2}
+                    formatValue={value => capability === 'administrativeCapacity' ? value.toFixed(2) : `${value.toFixed(2)}×`}
+                  />
+                {/each}
+              </section>
+              <section class='flex flex-col gap-2 border-t border-white/6 pt-3' aria-label={t('parameters.civilization.societyTitle')}>
+                <span class='text-[11px] font-bold text-obs-text-muted'>{t('parameters.civilization.societyTitle')}</span>
                 <Slider
                   label={t('parameters.civilization.populationScale')}
                   description={t('parameters.civilization.populationScaleDescription')}
@@ -204,14 +249,27 @@
                   formatValue={value => `${value.toFixed(2)}×`}
                 />
                 <Slider
-                  label={t('parameters.civilization.polityCohesion')}
-                  description={t('parameters.civilization.polityCohesionDescription')}
-                  bind:value={civilizationParameters.polityCohesion}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  decimals={2}
+                  label={t('parameters.civilization.polityCount')}
+                  description={t('parameters.civilization.polityCountDescription')}
+                  bind:value={civilizationParameters.polityCount}
+                  min={CIVILIZATION_SOCIETY_RANGES.polityCount[0]}
+                  max={CIVILIZATION_SOCIETY_RANGES.polityCount[1]}
+                  step={1}
+                  decimals={0}
                 />
+                {#each ['urbanConcentration', 'politySizeVariation', 'culturalDiversity'] as key (key)}
+                  {@const parameter = key as keyof typeof CIVILIZATION_SOCIETY_RANGES}
+                  <Slider
+                    label={t(`parameters.civilization.${parameter}`)}
+                    description={t(`parameters.civilization.${parameter}Description`)}
+                    bind:value={civilizationParameters[parameter]}
+                    min={CIVILIZATION_SOCIETY_RANGES[parameter][0]}
+                    max={CIVILIZATION_SOCIETY_RANGES[parameter][1]}
+                    step={0.05}
+                    decimals={2}
+                    formatValue={value => parameter !== 'culturalDiversity' ? value.toFixed(2) : `${value.toFixed(2)}×`}
+                  />
+                {/each}
               </section>
             {:else}
               <div class='rounded-lg border border-white/6 bg-white/2 p-3 text-[11px] leading-relaxed text-obs-text-dim'>{t('parameters.civilization.disabledHint')}</div>

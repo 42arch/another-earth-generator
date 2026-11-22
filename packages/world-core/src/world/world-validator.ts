@@ -2,6 +2,9 @@ import type { ContentPackView, ContentPort, ContentValidationIssue, ContentValid
 import type { WorldEntity } from '#generation/civilization/civilization-types'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
+import { validateCivilizationParameters } from '#generation/civilization/civilization-parameters'
+import { classifyPolitySize } from '#generation/civilization/civilization-scale'
+import { POLITY_TRAIT_SET, SETTLEMENT_FEATURE_SET } from '#generation/civilization/civilization-traits'
 import { DEFAULT_CLIMATE_PARAMETERS } from '#generation/nature/climate/climate'
 import { GEOGRAPHIC_NAMES_VERSION } from '#generation/nature/geography/geographic-names'
 import { DEFAULT_HYDROLOGY_PARAMETERS } from '#generation/nature/hydrology/hydrology'
@@ -59,12 +62,17 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     add('range', 'metadata.generationConfig.mesh.seed', 'Invalid mesh seed override')
   if (config.civilization !== undefined) {
     const civ = config.civilization
-    if (typeof civ.enabled !== 'boolean' || civ.enabled !== config.civilizationEnabled
-      || !finite(civ.populationScale) || civ.populationScale < 0.1 || civ.populationScale > 4
-      || !finite(civ.settlementDensity) || civ.settlementDensity < 0.25 || civ.settlementDensity > 4
-      || !finite(civ.polityCohesion) || civ.polityCohesion < 0 || civ.polityCohesion > 1) {
+    try {
+      validateCivilizationParameters(civ)
+      if (civ.enabled !== config.civilizationEnabled)
+        throw new Error('Civilization enabled flags disagree')
+    }
+    catch {
       add('range', 'metadata.generationConfig.civilization', 'Invalid civilization generation parameters')
     }
+  }
+  else if (config.civilizationEnabled) {
+    add('required', 'metadata.generationConfig.civilization', 'Complete civilization parameters are required')
   }
   const naturalStages = ['mesh', 'reference-mesh', 'reference-subdivisions', 'plate-topology', 'continental-crust', 'geological-mapping', 'geology', 'plate-dynamics', 'tectonics', 'tectonic-elevation', 'terrain', 'geographic-names', 'climate-c0', 'cryosphere-i0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0']
   if (!m.provenance || !nonempty(m.provenance.configSignature) || naturalStages.some(stage => !nonempty(m.provenance.stageVersions?.[stage]) || !nonempty(m.provenance.artifactSignatures?.[stage])))
@@ -123,7 +131,13 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     }
   }
   const contentIds = new Set<string>()
+  const polityTraitIds = new Set<string>()
   for (const pack of selected) {
+    for (const trait of pack.polityTraits ?? []) {
+      if (polityTraitIds.has(trait.id))
+        add('duplicate', 'content.polityTraits', `Conflicting trait ID ${trait.id}`)
+      polityTraitIds.add(trait.id)
+    }
     for (const domain of ['names', 'peoples', 'cultures', 'religions', 'polities', 'resources', 'presets'] as const) {
       for (const entry of pack[domain]) {
         if (contentIds.has(entry.id))
@@ -173,6 +187,8 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     resources: new Map(selected.flatMap(p => p.resources.map(a => [a.id, a] as const))),
     namingStyles: new Set(selected.flatMap(p => (p.namingStyles ?? []).map(a => a.id))),
   }
+  const polityArchetypes = new Map(selected.flatMap(p => p.polities.map(a => [a.id, a] as const)))
+  const polityTraitDefinitions = new Map(selected.flatMap(p => (p.polityTraits ?? []).map(t => [t.id, t] as const)))
   function field(path: string, f: DenseField<NumericArray>, dtype: string, length: number, valid: (v: number) => boolean) {
     if (f.meshId !== mesh.meshId)
       add('reference', `${path}.meshId`, 'Field belongs to another mesh')
@@ -346,6 +362,7 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     }
   }
   field('civilization.population', c.population, 'Float64Array', count, nonnegative)
+  field('civilization.territoryPolityIndex', c.territoryPolityIndex, 'Int32Array', count, v => v === -1 || (v >= 0 && v < c.polities.length))
   if (!c.transport || typeof c.transport !== 'object')
     add('required', 'civilization.transport', 'Transport network state is required')
   else
@@ -611,11 +628,73 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
     if (!archetypes.religions.has(e.archetypeId))
       add('reference', `religions.${e.id}`, 'Invalid religion archetype')
   }
-  for (const e of c.polities) {
+  const territoryTraits = [...polityTraitDefinitions.values()].filter(trait => trait.dimension === 'territory')
+  const checkPolityAreas = full && (territoryTraits.length > 0 || c.polities.some(e => polityArchetypes.get(e.archetypeId)?.allowedSizeClasses))
+  const polityAreas = new Float64Array(checkPolityAreas ? c.polities.length : 0)
+  const polityPopulations = new Float64Array(polityAreas.length)
+  if (checkPolityAreas) {
+    for (let r = 0; r < Math.min(count, c.territoryPolityIndex.values.length, c.population.values.length); r++) {
+      const p = c.territoryPolityIndex.values[r]!
+      if (p >= 0 && p < polityAreas.length && n.geography.landMask.values[r] === 1) {
+        if (n.hydrology.lakeIndex.values[r]! < 0)
+          polityAreas[p]! += mesh.areaKm2[r]!
+        polityPopulations[p]! += c.population.values[r]!
+      }
+    }
+  }
+  const ownedPopulation = Math.max(1, polityPopulations.reduce((sum, value) => sum + value, 0))
+  for (const [polityIndex, e] of c.polities.entries()) {
+    const allowedSizes = polityArchetypes.get(e.archetypeId)?.allowedSizeClasses
+    if (allowedSizes) {
+      if (!e.sizeClass || !allowedSizes.includes(e.sizeClass))
+        add('range', `polities.${e.id}.sizeClass`, 'Polity size is not allowed by its archetype')
+      if (checkPolityAreas) {
+        const actualSize = classifyPolitySize(polityAreas[polityIndex]!, polityPopulations[polityIndex]! / ownedPopulation)
+        if (actualSize !== e.sizeClass || !allowedSizes.includes(actualSize))
+          add('range', `polities.${e.id}.sizeClass`, 'Physical territory area disagrees with archetype size requirements')
+      }
+    }
     if (!cultures.has(e.cultureId) || !archetypes.polities.has(e.archetypeId))
       add('reference', `polities.${e.id}`, 'Invalid culture or polity archetype')
     if (e.capitalSettlementId !== null && settlements.get(e.capitalSettlementId)?.polityId !== e.id)
       add('reference', `polities.${e.id}.capitalSettlementId`, 'Capital must belong to polity')
+    if (!Array.isArray(e.traits) || e.traits.length < 1 || e.traits.length > 4) {
+      add('range', `polities.${e.id}.traits`, 'Polity must declare 1-4 valid traits')
+    }
+    else {
+      const seenTraits = new Set<string>()
+      const dimensions = new Set<string>()
+      for (const trait of e.traits) {
+        if (typeof trait !== 'string' || !POLITY_TRAIT_SET.has(trait))
+          add('reference', `polities.${e.id}.traits`, `Invalid polity trait "${String(trait)}"`)
+        else if (seenTraits.has(trait))
+          add('duplicate', `polities.${e.id}.traits`, `Duplicate polity trait "${trait}"`)
+        else
+          seenTraits.add(trait)
+        if (polityTraitDefinitions.size) {
+          const definition = polityTraitDefinitions.get(trait)
+          if (!definition)
+            add('reference', `polities.${e.id}.traits`, `Trait ${trait} is absent from recorded content`)
+          else if (dimensions.has(definition.dimension))
+            add('range', `polities.${e.id}.traits`, `Conflicting traits in dimension ${definition.dimension}`)
+          else
+            dimensions.add(definition.dimension)
+        }
+      }
+      for (const trait of territoryTraits) {
+        const actualSize = checkPolityAreas
+          ? classifyPolitySize(polityAreas[polityIndex]!, polityPopulations[polityIndex]! / ownedPopulation)
+          : e.sizeClass
+        if (actualSize !== undefined && seenTraits.has(trait.id) !== Boolean(trait.sizeClasses?.includes(actualSize)))
+          add('range', `polities.${e.id}.traits`, 'Territory trait disagrees with physical territory size')
+        if (checkPolityAreas && actualSize !== e.sizeClass)
+          add('range', `polities.${e.id}.sizeClass`, 'Declared size disagrees with physical territory area')
+      }
+      if (polityTraitDefinitions.size && (!dimensions.has('power') || !dimensions.has('economy')))
+        add('required', `polities.${e.id}.traits`, 'Power and economy traits are required')
+      if (polityArchetypes.get(e.archetypeId)?.requiredTraits?.some(trait => !seenTraits.has(trait)))
+        add('reference', `polities.${e.id}.traits`, 'Polity does not satisfy its archetype trait requirements')
+    }
   }
   const totals = new Map<number, number>()
   const urban = new Map<number, number>()
@@ -631,6 +710,20 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       add('reference', `settlements.${e.id}`, 'Invalid region, culture or polity')
     if (!finite(e.population) || e.population < 0)
       add('population', `settlements.${e.id}`, 'Invalid population')
+    if (!Array.isArray(e.features) || e.features.length < 1 || e.features.length > 3) {
+      add('range', `settlements.${e.id}.features`, 'Settlement must declare 1-3 valid features')
+    }
+    else {
+      const seenFeatures = new Set<string>()
+      for (const feature of e.features) {
+        if (typeof feature !== 'string' || !SETTLEMENT_FEATURE_SET.has(feature))
+          add('reference', `settlements.${e.id}.features`, `Invalid settlement feature "${String(feature)}"`)
+        else if (seenFeatures.has(feature))
+          add('duplicate', `settlements.${e.id}.features`, `Duplicate settlement feature "${feature}"`)
+        else
+          seenFeatures.add(feature)
+      }
+    }
     urban.set(e.regionId, (urban.get(e.regionId) ?? 0) + e.population)
   }
   if (c.transport && typeof c.transport === 'object') {
@@ -684,10 +777,18 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
       }
     }
   }
-  if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0 || (c.transport?.nodes.length ?? 0) > 0 || (c.transport?.routes.length ?? 0) > 0))
+  const polityCount = config.civilization?.polityCount
+  if (config.civilizationEnabled && polityCount !== undefined && (c.polities.length > 0 || c.populationGroups.some(group => group.population > 0))
+    && c.polities.length !== polityCount)
+    add('range', 'civilization.polities', 'Polity count does not match the saved exact count')
+  if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0 || c.territoryPolityIndex.values.some(v => v !== -1) || (c.transport?.nodes.length ?? 0) > 0 || (c.transport?.routes.length ?? 0) > 0))
     add('population', 'civilization', 'Civilization disabled in generation configuration')
   if (full) {
-    for (let r = 0; r < Math.min(count, c.population.values.length); r++) {
+    for (let r = 0; r < Math.min(count, c.population.values.length, c.territoryPolityIndex.values.length); r++) {
+      if (n.geography.landMask.values[r] !== 1 && c.territoryPolityIndex.values[r] !== -1) {
+        add('range', `civilization.territoryPolityIndex[${r}]`, 'Ocean cannot belong to a polity')
+        break
+      }
       const population = c.population.values[r]
       const tolerance = Math.max(1e-6, population * 1e-9)
       if (!finite(totals.get(r) ?? 0) || !finite(urban.get(r) ?? 0) || Math.abs((totals.get(r) ?? 0) - population) > tolerance || (urban.get(r) ?? 0) > population + tolerance) {

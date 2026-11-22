@@ -2,14 +2,15 @@ import type { TerrainArtifact } from '#generation/nature/geography'
 import type { HydrologyArtifact } from '#generation/nature/hydrology/hydrology'
 import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
-import type { TransportLink, TransportLinkMode, TransportNode } from './civilization-types'
+import type { CivilizationCapabilities, TransportLink, TransportLinkMode, TransportNode } from './civilization-types'
 import type { HabitabilityArtifact } from './habitability'
 import type { PopulationSettlementsArtifact } from './population-settlements'
 import { IndexPriorityQueue } from '#generation/nature/common/priority-queue'
 import { greatCircleDistanceKm } from '#math/spherical'
+import { resolveCivilizationCapabilities } from './civilization-parameters'
 import { REFERENCE_TRAVEL_KM_PER_DAY } from './population-settlements'
 
-export const TRANSPORT_NETWORK_VERSION = 'transport-network-v3' as const
+export const TRANSPORT_NETWORK_VERSION = 'transport-network-v4' as const
 
 export interface TransportNetworkArtifact {
   readonly meshId: string
@@ -63,8 +64,10 @@ export function generateTransportNetwork(
   lakes: Pick<StaticLakeArtifact, 'meshId' | 'lakeIndex'>,
   habitability: Pick<HabitabilityArtifact, 'meshId' | 'movementCost'>,
   settlements: Pick<PopulationSettlementsArtifact, 'meshId' | 'enabled' | 'population' | 'settlementSites'>,
+  capabilities: Partial<Pick<CivilizationCapabilities, 'landTransportCapability' | 'seafaringCapability'>> = {},
   check?: (fraction: number) => void,
 ): TransportNetworkArtifact {
+  const { landTransportCapability, seafaringCapability } = resolveCivilizationCapabilities(capabilities)
   const n = mesh.regionCount
   if (!n || terrain.meshId !== mesh.meshId || hydrology.meshId !== mesh.meshId || lakes.meshId !== mesh.meshId || habitability.meshId !== mesh.meshId || settlements.meshId !== mesh.meshId)
     throw new Error('Transport network stage received mismatched mesh artifacts')
@@ -97,6 +100,7 @@ export function generateTransportNetwork(
     nodeByRegion.set(nodes[i]!.regionId, i)
 
   const kmPerDay = REFERENCE_TRAVEL_KM_PER_DAY
+  const landKmPerDay = kmPerDay * landTransportCapability
   const maxLandSearchCost = (mesh.physicalRadiusKm * 1.15) / kmPerDay
   const maxSeaSearchCost = (mesh.physicalRadiusKm * 1.8) / kmPerDay
 
@@ -192,7 +196,7 @@ export function generateTransportNetwork(
           && (hydrology.downstreamRegion[u] === v || hydrology.downstreamRegion[v] === u)) {
           avgResistance *= 0.65
         }
-        const nextCost = Math.fround(dU + (stepKm * avgResistance) / kmPerDay)
+        const nextCost = Math.fround(dU + (stepKm * avgResistance) / landKmPerDay)
         if (nextCost > maxLandSearchCost)
           continue
         if (stamp[v] !== visitId || nextCost < dist[v]!) {
@@ -205,7 +209,7 @@ export function generateTransportNetwork(
     }
 
     // 2. Maritime bounded Dijkstra between port nodes
-    if (!sites[sIdx]!.isPort)
+    if (!sites[sIdx]!.isPort || seafaringCapability === 0)
       continue
     visitId++
     queue.size = 0
@@ -251,7 +255,7 @@ export function generateTransportNetwork(
           continue
         const stepKm = edgeDistanceKm(mesh, u, v, vecA, vecB)
         const seaFactor = terrain.landMask[v] === 0 ? habitability.movementCost[v]! : 0.7
-        const nextCost = Math.fround(dU + (stepKm * seaFactor) / (kmPerDay * 1.65))
+        const nextCost = Math.fround(dU + (stepKm * seaFactor) / (kmPerDay * 1.65 * seafaringCapability))
         if (nextCost > maxSeaSearchCost)
           continue
         if (stamp[v] !== visitId || nextCost < dist[v]!) {
@@ -289,7 +293,7 @@ export function generateTransportNetwork(
         continue
       const stepKm = edgeDistanceKm(mesh, u, v, vecA, vecB)
       const avgResistance = 0.5 * (habitability.movementCost[u]! + habitability.movementCost[v]!)
-      const nextCost = Math.fround(dU + (stepKm * avgResistance) / kmPerDay)
+      const nextCost = Math.fround(dU + (stepKm * avgResistance) / landKmPerDay)
       if (nextCost > maxAccessCost)
         continue
       if (stamp[v] !== visitId || nextCost < dist[v]!) {

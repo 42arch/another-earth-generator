@@ -1,6 +1,7 @@
 import type { ContentDefinition, ContentPack, ValidationIssue, ValidationResult } from '../schemas/content'
 import type { NamingStyle } from '../schemas/naming-style'
 import { parseNamingStyle } from '../names/parse-naming-style'
+import { validatePolityTraitReferences } from '../society/polity-traits'
 
 /** Validates typed data; this is not a parser for untrusted JSON. Dependencies must be resolved first. */
 export function validateContentPack(pack: ContentPack, dependencies: readonly ContentPack[] = []): ValidationResult {
@@ -90,8 +91,33 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
     if (!['decentralized', 'hierarchical'].includes(r.organization))
       add('range', `religions[${i}].organization`, 'Invalid organization')
   })
+  const ownTraits = Array.isArray(pack.polityTraits) ? pack.polityTraits : []
+  const polityTraits = [...ownTraits, ...resolved.flatMap(dep => Array.isArray(dep.polityTraits) ? dep.polityTraits : [])]
+  const traitIds = new Set<string>()
+  if (pack.polityTraits !== undefined && !Array.isArray(pack.polityTraits))
+    add('dtype', 'polityTraits', 'Expected a trait definition array')
+  for (const [i, trait] of polityTraits.entries()) {
+    if (typeof trait.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(trait.id))
+      add('required', `polityTraits[${i}].id`, 'Expected a stable trait ID')
+    if (traitIds.has(trait.id))
+      add('duplicate', `polityTraits[${i}].id`, 'Duplicate polity trait ID')
+    traitIds.add(trait.id)
+    if (!['power', 'governance', 'economy', 'territory'].includes(trait.dimension))
+      add('range', `polityTraits[${i}].dimension`, 'Invalid polity trait dimension')
+    if (trait.dimension === 'territory') {
+      const sizes = trait.sizeClasses
+      if (!Array.isArray(sizes) || !sizes.length || sizes.some(size => !['city-state', 'regional', 'kingdom', 'empire'].includes(size)) || new Set(sizes).size !== sizes.length)
+        add('range', `polityTraits[${i}].sizeClasses`, 'Territory traits require nonempty unique supported size classes')
+    }
+    else if (trait.sizeClasses !== undefined) {
+      add('range', `polityTraits[${i}].sizeClasses`, 'Size conditions are only supported for territory traits')
+    }
+    if (!nonempty(trait.displayNameKey) || !nonempty(trait.descriptionKey))
+      add('required', `polityTraits[${i}]`, 'Trait name and description keys are required')
+  }
   polities.forEach((polity, i) => {
     const path = `polities[${i}]`
+    issues.push(...validatePolityTraitReferences(polity, path, polityTraits))
     if (!['republic', 'empire', 'dynastic-monarchy', 'federation', 'confederation', 'chiefdom', 'emirate', 'khanate', 'league', 'free-territory', 'kingdom', 'principality', 'theocracy', 'merchant-republic', 'city-state', 'sultanate', 'tribal-confederation', 'military-junta', 'protectorate', 'commune'].includes(polity.politicalForm))
       add('range', `${path}.politicalForm`, 'Invalid political form')
     if (!['centralized', 'parliamentary', 'presidential', 'federal-council', 'confederal-assembly', 'tribal-council', 'theocratic-hierarchy', 'merchant-council', 'military-command', 'rotating-delegation', 'chartered-administration'].includes(polity.governmentOrganization))
@@ -123,7 +149,7 @@ export function validateContentPack(pack: ContentPack, dependencies: readonly Co
   if (!locales.length)
     add('required', 'translations', 'At least one locale required')
   for (const [locale, texts] of Object.entries(pack.translations)) {
-    for (const key of [m.nameKey, ...definitions.map(d => d.displayNameKey)]) {
+    for (const key of [m.nameKey, ...definitions.map(d => d.displayNameKey), ...ownTraits.flatMap(t => [t.displayNameKey, t.descriptionKey])]) {
       if (!nonempty(texts[key] ?? ''))
         add('required', `translations.${locale}.${key}`, 'Missing localized text')
     }

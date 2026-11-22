@@ -5,6 +5,14 @@ import { createFieldView, decodeWorldArchive, DEFAULT_CIVILIZATION_PARAMETERS, e
 
 const pack = testContentPack
 
+function withPolityTraits(world: WorldSnapshot, traits: WorldSnapshot['civilization']['polities'][number]['traits']): WorldSnapshot {
+  return { ...world, civilization: { ...world.civilization, polities: world.civilization.polities.map((polity, i) => i === 0 ? { ...polity, traits } : polity) } }
+}
+
+function withSettlementFeatures(world: WorldSnapshot, features: WorldSnapshot['civilization']['settlements'][number]['features']): WorldSnapshot {
+  return { ...world, civilization: { ...world.civilization, settlements: world.civilization.settlements.map((settlement, i) => i === 0 ? { ...settlement, features } : settlement) } }
+}
+
 function snapshot(civilized = false): WorldSnapshot {
   const field = <T extends Float32Array | Float64Array | Uint8Array | Uint16Array | Uint32Array | Int32Array>(values: T) => ({ meshId: 'mesh:test', values })
   const planet = { physicalRadiusKm: 1, rotationPeriodHours: 24, orbitalPeriodDays: 365, axialTiltDegrees: 23.4, seaLevelDatumKm: 0 }
@@ -48,7 +56,7 @@ function snapshot(civilized = false): WorldSnapshot {
         mesh: { subdivisionLevel: 0, irregularity: 0 },
         regionCount: 4,
         civilizationEnabled: civilized,
-        ...(civilized ? { civilization: DEFAULT_CIVILIZATION_PARAMETERS } : {}),
+        ...(civilized ? { civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 1 } } : {}),
         geology: { primaryPlateCount: 1, microPlateCount: 0, plateSizeVariety: 0, continentCount: 0, continentSizeVariety: 0, candidateLandCoverage: 0 },
         landforms: { islandArcCount: 0, islandDensity: 0, hotspotCount: 0 },
         terrain: { roughness: 0, terrainWarp: 0, smoothing: 0, glacialErosion: 0, hydraulicErosion: 0, ridgeSharpening: 0 },
@@ -90,9 +98,10 @@ function snapshot(civilized = false): WorldSnapshot {
       peoples: civilized ? [{ id: 'people:a', name: '山民', foundedAtYear: -100, archetypeId: 'test:people/basic' }] : [],
       cultures: civilized ? [{ id: 'culture:a', name: '星辉文脉', foundedAtYear: -10, archetypeId: 'test:culture/basic', peopleId: 'people:a', namingStyleId: testNamingStyle.id as ContentId }] : [],
       religions: civilized ? [{ id: 'religion:a', name: '晨曦圣宗', foundedAtYear: -10, archetypeId: 'test:religion/basic' }] : [],
-      polities: civilized ? [{ id: 'polity:a', name: '海风合众', foundedAtYear: -5, cultureId: 'culture:a', archetypeId: 'test:polity/basic', capitalSettlementId: 'settlement:a' }] : [],
-      settlements: civilized ? [{ id: 'settlement:a', name: '新港', foundedAtYear: -5, regionId: 0, polityId: 'polity:a', cultureId: 'culture:a', population: 60 }] : [],
+      polities: civilized ? [{ id: 'polity:a', name: '海风合众', foundedAtYear: -5, cultureId: 'culture:a', archetypeId: 'test:polity/basic', capitalSettlementId: 'settlement:a', traits: ['centralized', 'agrarian-realm'] }] : [],
+      settlements: civilized ? [{ id: 'settlement:a', name: '新港', foundedAtYear: -5, regionId: 0, polityId: 'polity:a', cultureId: 'culture:a', population: 60, features: ['agrarian', 'maritime-trade'] }] : [],
       populationGroups: civilized ? [{ regionId: 0, peopleId: 'people:a', cultureId: 'culture:a', religionId: 'religion:a', polityId: 'polity:a', population: 100 }] : [],
+      territoryPolityIndex: field(new Int32Array(4).fill(-1)),
       transport: {
         nodes: civilized
           ? [
@@ -115,6 +124,27 @@ const validate = (s: WorldSnapshot) => validateWorldSnapshot(s, [pack], testCont
 describe('worldSnapshot public contract', () => {
   it('accepts a complete natural world', () => expect(validate(snapshot())).toEqual({ valid: true, issues: [] }))
   it('accepts a world with civilization and a nonduplicated urban population', () => expect(validate(snapshot(true)).valid).toBe(true))
+  it('requires complete valid capabilities in saved civilization configuration', () => {
+    const original = snapshot(true)
+    const config = original.metadata.generationConfig
+    const civilization = config.civilization!
+    const invalid = { ...civilization, capabilities: { ...civilization.capabilities, seafaringCapability: -1 } }
+    expect(validate({ ...original, metadata: { ...original.metadata, generationConfig: { ...config, civilization: invalid } } }).valid).toBe(false)
+    expect(validate({ ...original, metadata: { ...original.metadata, generationConfig: { ...config, civilization: undefined } } }).valid).toBe(false)
+  })
+  it('rejects a polity count that differs from the saved exact count', () => {
+    const world = snapshot(true)
+    const wrongCount = { ...world, metadata: { ...world.metadata, generationConfig: { ...world.metadata.generationConfig,
+      civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 2 },
+    } } }
+    expect(validate(wrongCount).issues).toContainEqual(expect.objectContaining({ path: 'civilization.polities', code: 'range' }))
+  })
+
+  it('rejects polity ownership of ocean', () => {
+    const s = snapshot(true)
+    s.civilization.territoryPolityIndex.values[0] = 0
+    expect(validate(s).issues.some(issue => issue.path === 'civilization.territoryPolityIndex[0]')).toBe(true)
+  })
   it('rejects mismatched field length and mesh identity', () => {
     const s = snapshot()
     expect(validate({ ...s, nature: { ...s.nature, geography: { ...s.nature.geography, elevationKm: { meshId: 'wrong', values: new Float32Array(3) } } } }).issues.map(e => e.code)).toEqual(expect.arrayContaining(['length', 'reference']))
@@ -122,8 +152,12 @@ describe('worldSnapshot public contract', () => {
   it('rejects invalid physics and legacy schemas', () => {
     const s = snapshot()
     expect(validate({ ...s, planet: { ...s.planet, physicalRadiusKm: -1 } }).valid).toBe(false)
-    // @ts-expect-error Schema 3 and earlier are rejected without migration
-    expect(validate({ ...s, schemaVersion: 3 }).valid).toBe(false)
+    // @ts-expect-error Schema 6 and earlier are rejected without migration
+    expect(validate({ ...s, schemaVersion: 6 }).valid).toBe(false)
+    // @ts-expect-error Schema 10 uses the three-dimensional trait contract
+    expect(validate({ ...s, schemaVersion: 10 }).valid).toBe(false)
+    // @ts-expect-error Schema 9 uses the obsolete count-range contract
+    expect(validate({ ...s, schemaVersion: 9 }).valid).toBe(false)
   })
   it('rejects unresolved world entities, resources, transport routes, and content versions', () => {
     const s = snapshot(true)
@@ -180,7 +214,7 @@ describe('worldSnapshot public contract', () => {
     const s = snapshot()
     expect(validate({ ...s, metadata: { ...s.metadata, seed: '', createdAt: 'yesterday' } }).valid).toBe(false)
   })
-  it('requires complete natural provenance and parameters in Schema 4', () => {
+  it('requires complete natural provenance and parameters in Schema 7', () => {
     const s = snapshot()
     const missingHydrology = { ...s.metadata.generationConfig.hydrology }
     delete (missingHydrology as Partial<typeof missingHydrology>).minimumRiverDrainageAreaKm2
@@ -251,5 +285,53 @@ describe('worldSnapshot public contract', () => {
     const outOfRangeWarmth = structuredClone(withCirculation)
     outOfRangeWarmth.nature.climate.circulation!.oceanWarmth.values[0] = 1.5
     expect(validate(outOfRangeWarmth).valid).toBe(false)
+  })
+  it('enforces recorded trait dimensions and archetype requirements at publication', () => {
+    const world = snapshot(true)
+    const recordedPack = {
+      ...pack,
+      polityTraits: [
+        { id: 'centralized', dimension: 'power' as const, displayNameKey: 'centralized', descriptionKey: 'centralized.description' },
+        { id: 'decentralized', dimension: 'power' as const, displayNameKey: 'decentralized', descriptionKey: 'decentralized.description' },
+        { id: 'agrarian-realm', dimension: 'economy' as const, displayNameKey: 'agrarian', descriptionKey: 'agrarian.description' },
+        { id: 'theocratic', dimension: 'governance' as const, displayNameKey: 'theocratic', descriptionKey: 'theocratic.description' },
+      ],
+    }
+    expect(validateWorldSnapshot(world, [recordedPack], testContentPort).valid).toBe(true)
+    const territoryPack = { ...recordedPack, polityTraits: [...recordedPack.polityTraits, { id: 'small-area', dimension: 'territory' as const, sizeClasses: ['city-state' as const], displayNameKey: 'small-area', descriptionKey: 'small-area.description' }] }
+    const fourTraits = withPolityTraits(world, ['centralized', 'theocratic', 'agrarian-realm', 'small-area'])
+    const classified = { ...fourTraits, civilization: { ...fourTraits.civilization, polities: fourTraits.civilization.polities.map(polity => ({ ...polity, sizeClass: 'city-state' as const })) } }
+    expect(validateWorldSnapshot(classified, [territoryPack], testContentPort).valid).toBe(true)
+    const missingSizeTrait = withPolityTraits(classified, ['centralized', 'theocratic', 'agrarian-realm'])
+    expect(validateWorldSnapshot(missingSizeTrait, [territoryPack], testContentPort).issues).toContainEqual(expect.objectContaining({ code: 'range', message: 'Territory trait disagrees with physical territory size' }))
+    const conflicting = withPolityTraits(world, ['centralized', 'decentralized', 'agrarian-realm'])
+    expect(validateWorldSnapshot(conflicting, [recordedPack], testContentPort).valid).toBe(false)
+    const missingEconomy = withPolityTraits(world, ['centralized'])
+    expect(validateWorldSnapshot(missingEconomy, [recordedPack], testContentPort).valid).toBe(false)
+    const requiredPack = { ...recordedPack, polities: recordedPack.polities.map(a => ({ ...a, requiredTraits: ['theocratic'] })) }
+    expect(validateWorldSnapshot(world, [requiredPack], testContentPort).valid).toBe(false)
+  })
+
+  it('validates settlement features and polity traits and rejects invalid, empty, or duplicate entries', () => {
+    const valid = snapshot(true)
+    expect(validate(valid).valid).toBe(true)
+
+    const emptyFeatures = withSettlementFeatures(valid, [])
+    expect(validate(emptyFeatures).valid).toBe(false)
+
+    const unknownFeature = withSettlementFeatures(valid, ['unknown-feature' as never])
+    expect(validate(unknownFeature).valid).toBe(false)
+
+    const duplicateFeature = withSettlementFeatures(valid, ['agrarian', 'agrarian'])
+    expect(validate(duplicateFeature).valid).toBe(false)
+
+    const emptyTraits = withPolityTraits(valid, [])
+    expect(validate(emptyTraits).valid).toBe(false)
+
+    const unknownTrait = withPolityTraits(valid, ['unknown-trait' as never])
+    expect(validate(unknownTrait).valid).toBe(false)
+
+    const duplicateTrait = withPolityTraits(valid, ['centralized', 'centralized'])
+    expect(validate(duplicateTrait).valid).toBe(false)
   })
 })

@@ -1328,7 +1328,15 @@ const SATELLITE_DEFAULT_LAYERS = ['world-surface', 'rivers', 'lakes', 'labels'] 
 const STANDARD_ATLAS_DEFAULT_LAYERS = ['world-surface', 'rivers', 'lakes', 'coastlines', 'labels'] as const
 const PHYSICAL_RELIEF_DEFAULT_LAYERS = ['world-surface', 'rivers', 'lakes'] as const
 const MINIMAL_DEFAULT_LAYERS = ['world-surface'] as const
-const PARCHMENT_DEFAULT_LAYERS = ['world-surface', 'coastlines', 'labels'] as const
+const PARCHMENT_DEFAULT_LAYERS = [
+  'world-surface',
+  'coastlines',
+  'labels',
+  'polity-borders',
+  'settlements',
+  'polity-labels',
+  'settlement-labels',
+] as const
 const POLITICAL_ATLAS_DEFAULT_LAYERS = [
   'polity-territory',
   'polity-borders',
@@ -1674,7 +1682,7 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
   version: 1,
   id: 'historical-parchment',
   name: '古典羊皮纸风格',
-  description: '暖羊皮纸色调、墨棕海岸线与古典字色',
+  description: '暖羊皮纸色调、墨棕海岸与国界、朱砂首都与楷体注记',
   defaultEnabledLayerIds: PARCHMENT_DEFAULT_LAYERS,
   defaultGlobeEffects: ATLAS_GLOBE_EFFECTS,
   tokens: {
@@ -1694,6 +1702,15 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
     labelHalo: '#efe6cf',
     labelFontFamily: '"LXGW WenKai", "Kaiti SC", "STKaiti", "Songti SC", "Noto Serif SC", serif',
     labelFontWeight: '600',
+    // Shared civilization defaults are a modern atlas palette (slate borders, neon red
+    // capitals, near-white towns). Those disappear or clash on warm paper.
+    polityBorder: '#3b2816',
+    polityLabel: '#3b2816',
+    settlementLabel: '#3b2816',
+    settlementCapital: '#8f3d2c',
+    settlementCity: '#3b2816',
+    settlementTown: '#3b2816',
+    settlementStroke: '#24160e',
   },
   layers: composePresetLayers([
     {

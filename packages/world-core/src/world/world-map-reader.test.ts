@@ -1,3 +1,4 @@
+import type { HabitabilityArtifact } from '#generation/civilization/habitability'
 import { describe, expect, it } from 'vitest'
 import { testContentPack, testContentPort, testPipelineContent } from '#content/test-content'
 import {
@@ -160,7 +161,7 @@ describe('worldMapReader & circulation closure', () => {
       physicalRadiusKm: 6371,
     })
     const fakeSnapshot = {
-      schemaVersion: 4,
+      schemaVersion: 8,
       snapshotId: 'snapshot:walk',
       revision: 0,
       time: { year: 0 },
@@ -192,7 +193,7 @@ describe('worldMapReader & circulation closure', () => {
         ecology: { potentialBiomeIds: ['ocean'], landCoverIds: ['water'], potentialBiomeIndex: { meshId: mesh.meshId, values: new Uint16Array(mesh.regionCount) }, landCoverIndex: { meshId: mesh.meshId, values: new Uint16Array(mesh.regionCount) }, aridityIndex: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, growingSeasonMonths: { meshId: mesh.meshId, values: new Uint8Array(mesh.regionCount) } },
         resources: { resourceIds: [], agriculturalPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, forestryPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, fisheryPotential: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) }, deposits: [] },
       },
-      civilization: { meshId: mesh.meshId, population: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, peoples: [], cultures: [], religions: [], polities: [], settlements: [], populationGroups: [], transport: { nodes: [], routes: [], accessibility: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) } } },
+      civilization: { meshId: mesh.meshId, population: { meshId: mesh.meshId, values: new Float64Array(mesh.regionCount) }, peoples: [], cultures: [], religions: [], polities: [], settlements: [], populationGroups: [], territoryPolityIndex: { meshId: mesh.meshId, values: new Int32Array(mesh.regionCount).fill(-1) }, transport: { nodes: [], routes: [], accessibility: { meshId: mesh.meshId, values: new Float32Array(mesh.regionCount) } } },
     } as unknown as Parameters<typeof createWorldMapReader>[0]
 
     const reader = createWorldMapReader(fakeSnapshot)
@@ -339,7 +340,7 @@ describe('worldMapReader & circulation closure', () => {
       seed: 'm2-map-reader-civilization',
       config: {
         ...naturalInput.config,
-        civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+        civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 1 },
       },
     }
     const result = await pipeline.execute({ ...worldInput, ...testPipelineContent(packs) })
@@ -383,6 +384,13 @@ describe('worldMapReader & circulation closure', () => {
 
     const hab = reader.field('habitability')
     const cap = reader.field('carryingCapacityPerKm2')
+    const generatedHabitability = result.getOutput<HabitabilityArtifact>('habitability')
+    for (let r = 0; r < snapshot.mesh.regionCount; r++) {
+      // The reader reconstructs slope from saved elevations; allow only the
+      // roundoff of that reconstruction, including resource-access paths.
+      expect(hab.get(r)).toBeCloseTo(generatedHabitability.habitability[r]!, 6)
+      expect(cap.get(r)).toBeCloseTo(generatedHabitability.carryingCapacityPerKm2[r]!, 3)
+    }
     const density = reader.field('populationDensity')
     const access = reader.field('transportAccessibility')
     const domPeople = reader.field('dominantPeopleIndex')

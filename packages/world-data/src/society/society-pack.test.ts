@@ -33,9 +33,7 @@ describe('society pack JSON', () => {
       expect(parsed.valid).toBe(true)
       if (!parsed.valid)
         throw new Error(`Invalid bundled society document: ${source.id}`)
-      const dependencies = parsed.value.cultures
-        ? [catalog.get(parsed.value.dependencies[0]!.id)!]
-        : []
+      const dependencies = parsed.value.dependencies.map(dependency => catalog.get(dependency.id)!)
       const pack = createSocietyPack(parsed.value, dependencies)
       expect(pack).toEqual(catalog.get(source.id))
       expect('translations' in parsed.value).toBe(false)

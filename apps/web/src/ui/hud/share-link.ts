@@ -1,4 +1,6 @@
 import {
+  CIVILIZATION_CAPABILITY_RANGES,
+  CIVILIZATION_SOCIETY_RANGES,
   DEFAULT_CIVILIZATION_PARAMETERS,
   DEFAULT_CLIMATE_PARAMETERS,
   DEFAULT_GEOLOGY_PARAMETERS,
@@ -9,8 +11,8 @@ import {
   TEMPERATURE_OFFSET_MIN_C,
 } from '@another-earth/world-core'
 
-/** Current parameter-link version. v2–v9 belong to previous field layouts and are not applied. */
-const SHARE_VERSION = 10
+/** Current parameter-link version. v2–v14 belong to previous field layouts or defaults and are not applied. */
+const SHARE_VERSION = 15
 
 const SHARE_FIELDS = [
   'seed',
@@ -43,7 +45,15 @@ const SHARE_FIELDS = [
   'civilizationEnabled',
   'populationScale',
   'settlementDensity',
-  'polityCohesion',
+  'urbanConcentration',
+  'polityCount',
+  'politySizeVariation',
+  'culturalDiversity',
+  'administrativeCapacity',
+  'agriculturalProductivity',
+  'industrialCapability',
+  'landTransportCapability',
+  'seafaringCapability',
 ] as const
 
 export type ShareField = (typeof SHARE_FIELDS)[number]
@@ -82,7 +92,15 @@ export const SHARE_DEFAULT_PARAMETERS: ShareParameters = {
   civilizationEnabled: DEFAULT_CIVILIZATION_PARAMETERS.enabled,
   populationScale: DEFAULT_CIVILIZATION_PARAMETERS.populationScale,
   settlementDensity: DEFAULT_CIVILIZATION_PARAMETERS.settlementDensity,
-  polityCohesion: DEFAULT_CIVILIZATION_PARAMETERS.polityCohesion,
+  urbanConcentration: DEFAULT_CIVILIZATION_PARAMETERS.urbanConcentration,
+  polityCount: DEFAULT_CIVILIZATION_PARAMETERS.polityCount,
+  politySizeVariation: DEFAULT_CIVILIZATION_PARAMETERS.politySizeVariation,
+  culturalDiversity: DEFAULT_CIVILIZATION_PARAMETERS.culturalDiversity,
+  administrativeCapacity: DEFAULT_CIVILIZATION_PARAMETERS.capabilities.administrativeCapacity,
+  agriculturalProductivity: DEFAULT_CIVILIZATION_PARAMETERS.capabilities.agriculturalProductivity,
+  industrialCapability: DEFAULT_CIVILIZATION_PARAMETERS.capabilities.industrialCapability,
+  landTransportCapability: DEFAULT_CIVILIZATION_PARAMETERS.capabilities.landTransportCapability,
+  seafaringCapability: DEFAULT_CIVILIZATION_PARAMETERS.capabilities.seafaringCapability,
 }
 
 const NUMBER_RANGES: Record<Exclude<ShareField, 'seed' | 'civilizationEnabled'>, readonly [number, number, boolean?]> = {
@@ -114,7 +132,15 @@ const NUMBER_RANGES: Record<Exclude<ShareField, 'seed' | 'civilizationEnabled'>,
   minimumLakeAreaKm2: [0, 10_000_000],
   populationScale: [0.1, 4],
   settlementDensity: [0.25, 4],
-  polityCohesion: [0, 1],
+  urbanConcentration: CIVILIZATION_SOCIETY_RANGES.urbanConcentration,
+  polityCount: [...CIVILIZATION_SOCIETY_RANGES.polityCount, true],
+  politySizeVariation: CIVILIZATION_SOCIETY_RANGES.politySizeVariation,
+  culturalDiversity: CIVILIZATION_SOCIETY_RANGES.culturalDiversity,
+  administrativeCapacity: CIVILIZATION_CAPABILITY_RANGES.administrativeCapacity,
+  agriculturalProductivity: CIVILIZATION_CAPABILITY_RANGES.agriculturalProductivity,
+  industrialCapability: CIVILIZATION_CAPABILITY_RANGES.industrialCapability,
+  landTransportCapability: CIVILIZATION_CAPABILITY_RANGES.landTransportCapability,
+  seafaringCapability: CIVILIZATION_CAPABILITY_RANGES.seafaringCapability,
 }
 
 function isValidFieldValue(field: ShareField, value: unknown): boolean {
@@ -156,7 +182,7 @@ async function pipeBytes(bytes: Uint8Array, stream: CompressionStream | Decompre
   return new Uint8Array(buffer)
 }
 
-/** `#w=10.<payload>` — only fields that differ from the workbench defaults, raw-deflated like the previous share hash. */
+/** `#w=15.<payload>` — only fields that differ from the workbench defaults, raw-deflated like the previous share hash. */
 export async function createShareHash(parameters: ShareParameters): Promise<string> {
   const changedFields: [number, string | number | boolean][] = []
   for (let index = 0; index < SHARE_FIELDS.length; index++) {
@@ -178,7 +204,7 @@ export async function createShareUrl(parameters: ShareParameters): Promise<strin
 }
 
 export async function applyShareHash(hash: string): Promise<ShareParameters | null> {
-  const match = /^#w=10\.([\w-]+)$/.exec(hash)
+  const match = /^#w=15\.([\w-]+)$/.exec(hash)
   if (!match)
     return null
 

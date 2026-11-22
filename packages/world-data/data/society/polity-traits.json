@@ -1,0 +1,188 @@
+{
+  "manifest": {
+    "id": "builtin-polity-traits",
+    "version": "1.1.0",
+    "schemaVersion": 1,
+    "nameKey": "polity-traits.pack",
+    "dependencies": []
+  },
+  "polityTraits": [
+    {
+      "id": "small-area",
+      "dimension": "territory",
+      "sizeClasses": ["city-state"],
+      "displayNameKey": "polity-traits.small-area.name",
+      "descriptionKey": "polity-traits.small-area.description"
+    },
+    {
+      "id": "centralized",
+      "dimension": "power",
+      "displayNameKey": "polity-traits.centralized.name",
+      "descriptionKey": "polity-traits.centralized.description"
+    },
+    {
+      "id": "city-state-civic",
+      "dimension": "power",
+      "displayNameKey": "polity-traits.city-state-civic.name",
+      "descriptionKey": "polity-traits.city-state-civic.description"
+    },
+    {
+      "id": "decentralized",
+      "dimension": "power",
+      "displayNameKey": "polity-traits.decentralized.name",
+      "descriptionKey": "polity-traits.decentralized.description"
+    },
+    {
+      "id": "tribal-kinship",
+      "dimension": "power",
+      "displayNameKey": "polity-traits.tribal-kinship.name",
+      "descriptionKey": "polity-traits.tribal-kinship.description"
+    },
+    {
+      "id": "nomadic-pastoral",
+      "dimension": "power",
+      "displayNameKey": "polity-traits.nomadic-pastoral.name",
+      "descriptionKey": "polity-traits.nomadic-pastoral.description"
+    },
+    {
+      "id": "theocratic",
+      "dimension": "governance",
+      "displayNameKey": "polity-traits.theocratic.name",
+      "descriptionKey": "polity-traits.theocratic.description"
+    },
+    {
+      "id": "democratic",
+      "dimension": "governance",
+      "displayNameKey": "polity-traits.democratic.name",
+      "descriptionKey": "polity-traits.democratic.description"
+    },
+    {
+      "id": "militaristic",
+      "dimension": "governance",
+      "displayNameKey": "polity-traits.militaristic.name",
+      "descriptionKey": "polity-traits.militaristic.description"
+    },
+    {
+      "id": "dynastic-aristocratic",
+      "dimension": "governance",
+      "displayNameKey": "polity-traits.dynastic-aristocratic.name",
+      "descriptionKey": "polity-traits.dynastic-aristocratic.description"
+    },
+    {
+      "id": "ancestral-ritual",
+      "dimension": "governance",
+      "displayNameKey": "polity-traits.ancestral-ritual.name",
+      "descriptionKey": "polity-traits.ancestral-ritual.description"
+    },
+    {
+      "id": "mercantile",
+      "dimension": "economy",
+      "displayNameKey": "polity-traits.mercantile.name",
+      "descriptionKey": "polity-traits.mercantile.description"
+    },
+    {
+      "id": "agrarian-realm",
+      "dimension": "economy",
+      "displayNameKey": "polity-traits.agrarian-realm.name",
+      "descriptionKey": "polity-traits.agrarian-realm.description"
+    },
+    {
+      "id": "industrial-power",
+      "dimension": "economy",
+      "displayNameKey": "polity-traits.industrial-power.name",
+      "descriptionKey": "polity-traits.industrial-power.description"
+    },
+    {
+      "id": "artisan-craft",
+      "dimension": "economy",
+      "displayNameKey": "polity-traits.artisan-craft.name",
+      "descriptionKey": "polity-traits.artisan-craft.description"
+    },
+    {
+      "id": "cultural-patron",
+      "dimension": "economy",
+      "displayNameKey": "polity-traits.cultural-patron.name",
+      "descriptionKey": "polity-traits.cultural-patron.description"
+    }
+  ],
+  "names": [],
+  "namingStyles": [],
+  "peoples": [],
+  "cultures": [],
+  "polities": [],
+  "religions": [],
+  "resources": [],
+  "presets": [],
+  "translations": {
+    "zh-CN": {
+      "polity-traits.pack": "国家特征",
+      "polity-traits.small-area.name": "小面积",
+      "polity-traits.small-area.description": "陆地领土不超过约 3.74 万平方千米，不含海面和湖面。",
+      "polity-traits.centralized.name": "中央集权",
+      "polity-traits.centralized.description": "权力集中于中央，倾向整合更广的领土。",
+      "polity-traits.city-state-civic.name": "城邦自治",
+      "polity-traits.city-state-civic.description": "以城市共同体为核心，倾向紧凑领土与海上联系。",
+      "polity-traits.decentralized.name": "地方分权",
+      "polity-traits.decentralized.description": "地方共同体保有较多自治权。",
+      "polity-traits.tribal-kinship.name": "部族宗法",
+      "polity-traits.tribal-kinship.description": "政治整合以亲族与部族关系为基础。",
+      "polity-traits.nomadic-pastoral.name": "游牧部族",
+      "polity-traits.nomadic-pastoral.description": "以牧业和流动社群为基础组织权力。",
+      "polity-traits.theocratic.name": "政教合一",
+      "polity-traits.theocratic.description": "宗教权威构成治理与合法性的基础。",
+      "polity-traits.democratic.name": "民主代议",
+      "polity-traits.democratic.description": "共同体通过公共参与和代表制度治理。",
+      "polity-traits.militaristic.name": "尚武扩张",
+      "polity-traits.militaristic.description": "军事组织与战略控制影响国家治理。",
+      "polity-traits.dynastic-aristocratic.name": "贵族王朝",
+      "polity-traits.dynastic-aristocratic.description": "统治家族与贵族等级维系政治秩序。",
+      "polity-traits.ancestral-ritual.name": "礼法宗族",
+      "polity-traits.ancestral-ritual.description": "先祖礼法与地方宗族维系共同体秩序。",
+      "polity-traits.mercantile.name": "重商海贸",
+      "polity-traits.mercantile.description": "港口与贸易网络构成立国的重要基础。",
+      "polity-traits.agrarian-realm.name": "农本立国",
+      "polity-traits.agrarian-realm.description": "农业腹地构成立国的重要基础。",
+      "polity-traits.industrial-power.name": "工业强权",
+      "polity-traits.industrial-power.description": "工业、矿业和交通网络支撑国家力量。",
+      "polity-traits.artisan-craft.name": "矿冶工艺",
+      "polity-traits.artisan-craft.description": "工坊、矿冶和林木资源支撑地方经济。",
+      "polity-traits.cultural-patron.name": "文教兴邦",
+      "polity-traits.cultural-patron.description": "文化中心和知识传承构成立国的重要基础。"
+    },
+    "en": {
+      "polity-traits.pack": "Polity Traits",
+      "polity-traits.small-area.name": "Small Area",
+      "polity-traits.small-area.description": "Land territory is at most about 37,356 square kilometers, excluding ocean and lake surfaces.",
+      "polity-traits.centralized.name": "Centralized",
+      "polity-traits.centralized.description": "Power is concentrated in a central authority.",
+      "polity-traits.city-state-civic.name": "Civic City-State",
+      "polity-traits.city-state-civic.description": "An urban community governs a compact territory.",
+      "polity-traits.decentralized.name": "Decentralized",
+      "polity-traits.decentralized.description": "Local communities retain substantial autonomy.",
+      "polity-traits.tribal-kinship.name": "Tribal Kinship",
+      "polity-traits.tribal-kinship.description": "Political cohesion rests on kinship and tribal ties.",
+      "polity-traits.nomadic-pastoral.name": "Nomadic Pastoral",
+      "polity-traits.nomadic-pastoral.description": "Power is organized around pastoral and mobile communities.",
+      "polity-traits.theocratic.name": "Theocratic",
+      "polity-traits.theocratic.description": "Religious authority underpins governance and legitimacy.",
+      "polity-traits.democratic.name": "Democratic",
+      "polity-traits.democratic.description": "Public participation and representation shape governance.",
+      "polity-traits.militaristic.name": "Militaristic",
+      "polity-traits.militaristic.description": "Military organization and strategic control shape governance.",
+      "polity-traits.dynastic-aristocratic.name": "Dynastic Aristocracy",
+      "polity-traits.dynastic-aristocratic.description": "Ruling families and aristocratic estates sustain political order.",
+      "polity-traits.ancestral-ritual.name": "Ancestral Ritual",
+      "polity-traits.ancestral-ritual.description": "Ancestral rites and local lineages sustain communal order.",
+      "polity-traits.mercantile.name": "Mercantile",
+      "polity-traits.mercantile.description": "Ports and trade networks are central to the polity.",
+      "polity-traits.agrarian-realm.name": "Agrarian Realm",
+      "polity-traits.agrarian-realm.description": "Agricultural hinterlands are central to the polity.",
+      "polity-traits.industrial-power.name": "Industrial Power",
+      "polity-traits.industrial-power.description": "Industry, mining and transport sustain state power.",
+      "polity-traits.artisan-craft.name": "Artisan Craft",
+      "polity-traits.artisan-craft.description": "Workshops, metallurgy and forest resources sustain the economy.",
+      "polity-traits.cultural-patron.name": "Cultural Patron",
+      "polity-traits.cultural-patron.description": "Cultural centers and knowledge traditions are central to the polity."
+    }
+  }
+}

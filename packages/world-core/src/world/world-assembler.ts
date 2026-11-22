@@ -16,7 +16,7 @@ import type { WorldGenerationPipelineConfig } from '#generation/stages/world-sta
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { DenseField, NumericArray } from './fields'
 import type { WorldSnapshot } from './world-snapshot'
-import { DEFAULT_CIVILIZATION_PARAMETERS } from '#generation/civilization/civilization-types'
+import { resolveCivilizationParameters } from '#generation/civilization/civilization-parameters'
 import { extractMonthlyCirculation } from '#generation/nature/climate/climate'
 import { normalizeWorldSeed, stableHash } from '#math/random'
 import { WORLD_SCHEMA_VERSION } from './world-snapshot'
@@ -61,8 +61,8 @@ export function assembleWorld(
 
   const hasCivilizationStages = CIVILIZATION_STAGES.every(stageId => outputs.has(stageId))
   const civInput = 'civilization' in input.config ? input.config.civilization : undefined
-  const civParams = civInput ? { ...civInput } : undefined
-  const civilizationEnabled = hasCivilizationStages && (civParams?.enabled ?? DEFAULT_CIVILIZATION_PARAMETERS.enabled)
+  const civParams = resolveCivilizationParameters(civInput)
+  const civilizationEnabled = hasCivilizationStages && civParams.enabled
 
   const mesh = result.getOutput<SphericalMesh>('mesh')
   const geology = result.getOutput<GeologyArtifact>('geology')
@@ -116,7 +116,7 @@ export function assembleWorld(
         mesh: { ...input.config.mesh },
         regionCount: mesh.regionCount,
         civilizationEnabled,
-        ...(civParams ? { civilization: civParams } : {}),
+        civilization: { ...civParams, enabled: civilizationEnabled },
         ...(input.config.reference ? { reference: { ...input.config.reference } } : {}),
         geology: { ...input.config.geology },
         landforms: { ...input.config.landforms },
@@ -222,10 +222,11 @@ export function assembleWorld(
           peoples: peoplesCultures.peoples.map(item => ({ ...item })),
           cultures: peoplesCultures.cultures.map(item => ({ ...item })),
           religions: politiesReligions.religions.map(item => ({ ...item })),
-          polities: politiesReligions.polities.map(item => ({ ...item })),
-          settlements: politiesReligions.settlements.map(item => ({ ...item })),
+          polities: politiesReligions.polities.map(item => ({ ...item, traits: [...item.traits] })),
+          settlements: politiesReligions.settlements.map(item => ({ ...item, features: [...item.features] })),
           population: owned(meshId, politiesReligions.population),
           populationGroups: politiesReligions.populationGroups.map(item => ({ ...item })),
+          territoryPolityIndex: owned(meshId, politiesReligions.territoryPolityIndex),
           transport: {
             nodes: transport.nodes.map(node => ({ ...node })),
             routes: transport.routes.map(route => ({ ...route, regions: route.regions.slice() })),
@@ -241,6 +242,7 @@ export function assembleWorld(
           settlements: [],
           population: { meshId, values: new Float64Array(mesh.regionCount) },
           populationGroups: [],
+          territoryPolityIndex: { meshId, values: new Int32Array(mesh.regionCount).fill(-1) },
           transport: {
             nodes: [],
             routes: [],

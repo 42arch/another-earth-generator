@@ -1,0 +1,623 @@
+{
+  "date": "2026-11-22",
+  "schemaVersion": 7,
+  "seed": "m2-civilization-seed",
+  "config": {
+    "ecology": true,
+    "planet": {
+      "physicalRadiusKm": 6371,
+      "seaLevelDatumKm": 0
+    },
+    "mesh": {
+      "subdivisionLevel": 4,
+      "irregularity": 0.45
+    },
+    "reference": {
+      "subdivisionLevel": 4
+    },
+    "geology": {
+      "primaryPlateCount": 10,
+      "microPlateCount": 14,
+      "plateSizeVariety": 0.8,
+      "continentCount": 7,
+      "continentSizeVariety": 0.35,
+      "candidateLandCoverage": 0.3
+    },
+    "landforms": {
+      "islandArcCount": 6,
+      "islandDensity": 0.65,
+      "hotspotCount": 5
+    },
+    "terrain": {
+      "roughness": 0.4,
+      "terrainWarp": 0.75,
+      "smoothing": 0.1,
+      "glacialErosion": 0.5,
+      "hydraulicErosion": 0.5,
+      "ridgeSharpening": 0.5
+    },
+    "climate": {
+      "rotationPeriodHours": 24,
+      "axialTiltDegrees": 23.44,
+      "orbitalPeriodDays": 365.25,
+      "temperatureOffsetC": 0,
+      "precipitationScale": 1
+    },
+    "hydrology": {
+      "snowTemperatureMinC": -2,
+      "snowTemperatureMaxC": 2,
+      "degreeDayMeltFactorMmPerCMonth": 3,
+      "evapotranspirationFactorMmPerCMonth": 2,
+      "minimumRiverDrainageAreaKm2": 5000,
+      "riverDensityMultiplier": 0.5,
+      "minimumLakeAreaKm2": 0
+    }
+  },
+  "content": "testContentPack",
+  "note": "L4 deterministic parameter comparison using core test content; not historical calibration or a performance benchmark. Each snapshot passed full assembly validation.",
+  "versions": {
+    "mesh": "1",
+    "reference-mesh": "geology-v2",
+    "geological-mapping": "geology-v2",
+    "reference-subdivisions": "geology-v2",
+    "plate-topology": "geology-v2",
+    "continental-crust": "geology-v2",
+    "geology": "geology-v2",
+    "plate-dynamics": "terrain-v2",
+    "tectonics": "terrain-v2",
+    "tectonic-elevation": "terrain-skeleton-v10",
+    "terrain": "terrain-v27",
+    "climate-c0": "climate-c0-v22",
+    "cryosphere-i0": "cryosphere-i0-v1",
+    "ecology-e0": "ecology-e0-v3",
+    "geographic-regions": "geographic-regions-v3",
+    "geographic-names": "geographic-names-v4",
+    "hydrology-h0": "hydrology-h0-v4",
+    "resource-potential": "resource-potential-v1",
+    "static-lakes-l1": "static-lakes-l1-v10",
+    "habitability": "habitability-v3",
+    "population-settlements": "population-settlements-v5",
+    "transport-network": "transport-network-v4",
+    "peoples-cultures": "peoples-cultures-v3",
+    "polities-religions": "polities-religions-v5"
+  },
+  "results": [
+    {
+      "name": "baseline",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 0,
+      "executedStages": [
+        "mesh",
+        "reference-mesh",
+        "geological-mapping",
+        "reference-subdivisions",
+        "plate-topology",
+        "continental-crust",
+        "geology",
+        "plate-dynamics",
+        "tectonics",
+        "tectonic-elevation",
+        "terrain",
+        "climate-c0",
+        "cryosphere-i0",
+        "ecology-e0",
+        "geographic-regions",
+        "geographic-names",
+        "hydrology-h0",
+        "resource-potential",
+        "static-lakes-l1",
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "agriculture-low",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 0.5,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 5020814943,
+      "urbanPopulation": 81558771,
+      "urbanShare": 0.016244130071694618,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 617,
+      "executedStages": [
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "agriculture-high",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1.5,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 13608318140,
+      "urbanPopulation": 233856753,
+      "urbanShare": 0.017184838757745267,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 397,
+      "executedStages": [
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "industry-zero",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 0,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9309670816,
+      "urbanPopulation": 157591675,
+      "urbanShare": 0.016927738704697933,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 110,
+      "executedStages": [
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "industry-high",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 2,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9319462290,
+      "urbanPopulation": 157826359,
+      "urbanShare": 0.01693513575019788,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 155,
+      "executedStages": [
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "land-slow",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 0.5,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 618,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 675,
+      "executedStages": [
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "land-fast",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 2,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314862314,
+      "urbanPopulation": 157719097,
+      "urbanShare": 0.01693198371412879,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 714,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 574,
+      "executedStages": [
+        "habitability",
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "no-seafaring",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 0,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 0,
+      "ownerIndexChanges": 711,
+      "executedStages": [
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "urban-low",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 59378127,
+      "urbanShare": 0.006374760078046839,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 481,
+      "executedStages": [
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "urban-high",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 1,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 207823436,
+      "urbanShare": 0.022311659360614765,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 481,
+      "executedStages": [
+        "population-settlements",
+        "transport-network",
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "polities-low",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 0.5,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 11,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 410,
+      "executedStages": [
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "polities-high",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 2,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 43,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 651,
+      "executedStages": [
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "cultures-low",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 0.5,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 6,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 71,
+      "executedStages": [
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "cultures-high",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 2,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.6
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 24,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 87,
+      "executedStages": [
+        "peoples-cultures",
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "administration-low",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 13,
+      "executedStages": [
+        "polities-religions"
+      ]
+    },
+    {
+      "name": "administration-high",
+      "civilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.5,
+        "polityDensity": 1,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 1
+        }
+      },
+      "population": 9314566552,
+      "urbanPopulation": 157707755,
+      "urbanShare": 0.01693130368649708,
+      "settlements": 233,
+      "polities": 22,
+      "cultures": 12,
+      "roadRiverRoutes": 679,
+      "seaRoutes": 132,
+      "ownerIndexChanges": 62,
+      "executedStages": [
+        "polities-religions"
+      ]
+    }
+  ]
+}

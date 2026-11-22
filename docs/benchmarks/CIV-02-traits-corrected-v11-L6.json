@@ -1,0 +1,3124 @@
+{
+  "method": "Built-in production content, default civilization parameters, reference L6. Diagnostic replay compared to fully validated pipeline snapshot. No prescribed trait proportions.",
+  "reports": [
+    {
+      "seed": "1024",
+      "level": 6,
+      "config": {
+        "ecology": true,
+        "planet": {
+          "physicalRadiusKm": 6371,
+          "seaLevelDatumKm": 0
+        },
+        "mesh": {
+          "subdivisionLevel": 6,
+          "irregularity": 0.45
+        },
+        "reference": {
+          "subdivisionLevel": 6
+        },
+        "geology": {
+          "primaryPlateCount": 10,
+          "microPlateCount": 14,
+          "plateSizeVariety": 0.8,
+          "continentCount": 7,
+          "continentSizeVariety": 0.35,
+          "candidateLandCoverage": 0.3
+        },
+        "landforms": {
+          "islandArcCount": 6,
+          "islandDensity": 0.65,
+          "hotspotCount": 5
+        },
+        "terrain": {
+          "roughness": 0.4,
+          "terrainWarp": 0.75,
+          "smoothing": 0.1,
+          "glacialErosion": 0.5,
+          "hydraulicErosion": 0.5,
+          "ridgeSharpening": 0.5
+        },
+        "climate": {
+          "rotationPeriodHours": 24,
+          "axialTiltDegrees": 23.44,
+          "orbitalPeriodDays": 365.25,
+          "temperatureOffsetC": 0,
+          "precipitationScale": 1
+        },
+        "hydrology": {
+          "snowTemperatureMinC": -2,
+          "snowTemperatureMaxC": 2,
+          "degreeDayMeltFactorMmPerCMonth": 3,
+          "evapotranspirationFactorMmPerCMonth": 2,
+          "minimumRiverDrainageAreaKm2": 5000,
+          "riverDensityMultiplier": 0.5,
+          "minimumLakeAreaKm2": 0
+        },
+        "civilization": {
+          "enabled": true,
+          "populationScale": 1,
+          "settlementDensity": 1,
+          "urbanConcentration": 0.65,
+          "polityDensity": 1,
+          "culturalDiversity": 1,
+          "capabilities": {
+            "agriculturalProductivity": 1,
+            "industrialCapability": 1,
+            "landTransportCapability": 1,
+            "seafaringCapability": 1,
+            "administrativeCapacity": 0.75
+          }
+        }
+      },
+      "contentSignatures": {
+        "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+        "ecology-classes": "ecology-classes:d6314fd7",
+        "resource-definitions": "resource-definitions:44412414",
+        "civilization-content": "civilization-content:70037ef1"
+      },
+      "versions": {
+        "mesh": "1",
+        "reference-mesh": "geology-v2",
+        "geological-mapping": "geology-v2",
+        "reference-subdivisions": "geology-v2",
+        "plate-topology": "geology-v2",
+        "continental-crust": "geology-v2",
+        "geology": "geology-v2",
+        "plate-dynamics": "terrain-v2",
+        "tectonics": "terrain-v2",
+        "tectonic-elevation": "terrain-skeleton-v10",
+        "terrain": "terrain-v27",
+        "climate-c0": "climate-c0-v22",
+        "cryosphere-i0": "cryosphere-i0-v1",
+        "ecology-e0": "ecology-e0-v3",
+        "geographic-regions": "geographic-regions-v3",
+        "geographic-names": "geographic-names-v4",
+        "hydrology-h0": "hydrology-h0-v4",
+        "resource-potential": "resource-potential-v1",
+        "static-lakes-l1": "static-lakes-l1-v10",
+        "habitability": "habitability-v4",
+        "population-settlements": "population-settlements-v5",
+        "transport-network": "transport-network-v4",
+        "peoples-cultures": "peoples-cultures-v4",
+        "polities-religions": "polities-religions-v11"
+      },
+      "validation": "Full snapshot validation; diagnostic replay matches polities, settlements and territory",
+      "polities": 21,
+      "traitCounts": {
+        "centralized": 4,
+        "theocratic": 3,
+        "mercantile": 19,
+        "decentralized": 13,
+        "democratic": 17,
+        "city-state-civic": 4,
+        "cultural-patron": 2,
+        "dynastic-aristocratic": 1
+      },
+      "signalSummary": {
+        "capitalPrimacy": {
+          "min": 0.5322774924678575,
+          "p10": 0.5515320310284464,
+          "median": 0.5645154428843666,
+          "p90": 0.5888059330932588,
+          "max": 0.7514648093901335
+        },
+        "largestRivalPopulation": {
+          "min": 53435.0878033415,
+          "p10": 112598.38780644342,
+          "median": 116098.90475444886,
+          "p90": 126089.44443754756,
+          "max": 128229.76402783979
+        },
+        "distributedCenters": {
+          "min": 0.3307343038612416,
+          "p10": 0.6983524516245214,
+          "median": 0.7714307245352655,
+          "p90": 0.8131313210137434,
+          "max": 0.8787193036541682
+        },
+        "geographicFragmentation": {
+          "min": 0.01003928432373858,
+          "p10": 0.020139439744686523,
+          "median": 0.038380345709826603,
+          "p90": 0.0883615029883818,
+          "max": 0.1755000041263113
+        },
+        "coreCulturalDiversity": {
+          "min": 0,
+          "p10": 0,
+          "median": 0.01610300733997483,
+          "p90": 0.6280261058375258,
+          "max": 0.6730325772713496
+        },
+        "productiveCore": {
+          "min": 0.5438238502312892,
+          "p10": 0.595639210669501,
+          "median": 0.6307312784457442,
+          "p90": 0.7453118033744794,
+          "max": 0.8555981485637093
+        },
+        "civicFunction": {
+          "min": 0.4436973208609206,
+          "p10": 0.5821517303008119,
+          "median": 0.6743646596268563,
+          "p90": 0.7733889946703466,
+          "max": 0.8109101290889725
+        },
+        "civicSpecialization": {
+          "min": 0,
+          "p10": 0,
+          "median": 0.031607561407002716,
+          "p90": 0.19075131547280255,
+          "max": 0.2295651444390574
+        },
+        "administrativeReach": {
+          "min": 0.75,
+          "p10": 0.75,
+          "median": 0.75,
+          "p90": 0.75,
+          "max": 0.75
+        },
+        "corePopulation": {
+          "min": 215000.0878033415,
+          "p10": 490182.72774875554,
+          "median": 863716.5864864745,
+          "p90": 1384523.632056991,
+          "max": 1712134.1544554147
+        },
+        "hinterlandSites": {
+          "min": 1,
+          "p10": 4,
+          "median": 8,
+          "p90": 15,
+          "max": 17
+        }
+      },
+      "diagnostics": [
+        {
+          "capitalSettlementId": "settlement:27779",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.651216461590264
+            },
+            {
+              "id": "centralized",
+              "score": 0.6052602245576371
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2941077704069761
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5596017022912096,
+            "largestRivalPopulation": 125289.62922158751,
+            "distributedCenters": 0.7869852716774131,
+            "geographicFragmentation": 0.02818915488494903,
+            "coreCulturalDiversity": 0.01610300733997483,
+            "productiveCore": 0.6861363787067633,
+            "civicFunction": 0.717743940113766,
+            "civicSpecialization": 0.031607561407002716,
+            "administrativeReach": 0.75,
+            "corePopulation": 1186448.4813050607,
+            "hinterlandSites": 11
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:16532",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6221201688426277
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5926093995940381
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.36840096011041523
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5718676992549343,
+            "largestRivalPopulation": 117038.1729812297,
+            "distributedCenters": 0.74865620370387,
+            "geographicFragmentation": 0.022645949480799683,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.62015881361617,
+            "civicFunction": 0.8109101290889725,
+            "civicSpecialization": 0.19075131547280255,
+            "administrativeReach": 0.75,
+            "corePopulation": 1266196.2223629712,
+            "hinterlandSites": 12
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:14351",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6391566176936826
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5927920141698301
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2718506870429657
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5653593200883318,
+            "largestRivalPopulation": 128229.76402783979,
+            "distributedCenters": 0.7687866184708162,
+            "geographicFragmentation": 0.020139439744686523,
+            "coreCulturalDiversity": 0.009116247163081903,
+            "productiveCore": 0.6365282790388113,
+            "civicFunction": 0.6498782926065481,
+            "civicSpecialization": 0.013350013567736796,
+            "administrativeReach": 0.75,
+            "corePopulation": 1549834.923588685,
+            "hinterlandSites": 15
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:39047",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.5965380277412322
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5587118790932403
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.31750082621493864
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5722034313071775,
+            "largestRivalPopulation": 125534.58773414869,
+            "distributedCenters": 0.7476302050750324,
+            "geographicFragmentation": 0.024329549741481774,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.626566371125139,
+            "civicFunction": 0.7104164509577972,
+            "civicSpecialization": 0.08385007983265813,
+            "administrativeReach": 0.75,
+            "corePopulation": 1250637.6066370665,
+            "hinterlandSites": 12
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:16944",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7993003477692879
+            },
+            {
+              "id": "centralized",
+              "score": 0.44330965809834705
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.3583080275978448
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5747110886878645,
+            "largestRivalPopulation": 118371.89308060938,
+            "distributedCenters": 0.7400047079013596,
+            "geographicFragmentation": 0.0883615029883818,
+            "coreCulturalDiversity": 0.4591132372756783,
+            "productiveCore": 0.595639210669501,
+            "civicFunction": 0.8008103514338185,
+            "civicSpecialization": 0.20517114076431753,
+            "administrativeReach": 0.75,
+            "corePopulation": 1299468.2299110852,
+            "hinterlandSites": 15
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:40087",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.5831574519977382
+            },
+            {
+              "id": "centralized",
+              "score": 0.5426410807877962
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.24001014996576941
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.54395300342828,
+            "largestRivalPopulation": 126089.44443754756,
+            "distributedCenters": 0.8383941143765546,
+            "geographicFragmentation": 0.05008970050196826,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6212355410442061,
+            "civicFunction": 0.6291268811322835,
+            "civicSpecialization": 0.007891340088077459,
+            "administrativeReach": 0.75,
+            "corePopulation": 1384523.632056991,
+            "hinterlandSites": 14
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:10397",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6457015014535682
+            },
+            {
+              "id": "decentralized",
+              "score": 0.6030811154541816
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2529743921695591
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5645154428843666,
+            "largestRivalPopulation": 124772.74824778292,
+            "distributedCenters": 0.7714307245352655,
+            "geographicFragmentation": 0.03028165229905057,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.7356013322117625,
+            "civicFunction": 0.6191072053133195,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 755829.0413979293,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:11020",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8707978588713995
+            },
+            {
+              "id": "centralized",
+              "score": 0.45819159308618396
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2752128608254782
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5322774924678575,
+            "largestRivalPopulation": 126750.86595559548,
+            "distributedCenters": 0.8787193036541682,
+            "geographicFragmentation": 0.021567725909629288,
+            "coreCulturalDiversity": 0.4748299798467289,
+            "productiveCore": 0.6185092813618827,
+            "civicFunction": 0.6924740865521768,
+            "civicSpecialization": 0.07396480519029414,
+            "administrativeReach": 0.75,
+            "corePopulation": 953552.4384658646,
+            "hinterlandSites": 8
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:23281",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6203122694866139
+            },
+            {
+              "id": "centralized",
+              "score": 0.6158903771010171
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.23266722549539942
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5515320310284464,
+            "largestRivalPopulation": 125749.9456634544,
+            "distributedCenters": 0.8131313210137434,
+            "geographicFragmentation": 0.04134606522142416,
+            "coreCulturalDiversity": 0.0206584565729635,
+            "productiveCore": 0.7453118033744794,
+            "civicFunction": 0.5996627081028385,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 1374601.0401538126,
+            "hinterlandSites": 12
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:4542",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6727128971435046
+            },
+            {
+              "id": "centralized",
+              "score": 0.5868526270602517
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.30691270260134945
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.557618954130142,
+            "largestRivalPopulation": 124263.11882784679,
+            "distributedCenters": 0.793339327139535,
+            "geographicFragmentation": 0.046559062405523155,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6196978004232734,
+            "civicFunction": 0.7027791756512233,
+            "civicSpecialization": 0.0830813752279499,
+            "administrativeReach": 0.75,
+            "corePopulation": 777964.9669910127,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:21811",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8700638430959745
+            },
+            {
+              "id": "centralized",
+              "score": 0.4102636862585743
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2454554466097343
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5843254766809868,
+            "largestRivalPopulation": 114118.06265075442,
+            "distributedCenters": 0.7113749783426803,
+            "geographicFragmentation": 0.0528937670150405,
+            "coreCulturalDiversity": 0.5682954813410575,
+            "productiveCore": 0.6466785944897914,
+            "civicFunction": 0.6094176107498657,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 1253975.7203216506,
+            "hinterlandSites": 13
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:17002",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7549190272241257
+            },
+            {
+              "id": "centralized",
+              "score": 0.4784359258673348
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.26732604927070464
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5597848049812107,
+            "largestRivalPopulation": 113623.11353632517,
+            "distributedCenters": 0.7864007581155494,
+            "geographicFragmentation": 0.01003928432373858,
+            "coreCulturalDiversity": 0.46180701232834287,
+            "productiveCore": 0.8555981485637093,
+            "civicFunction": 0.6743646596268563,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 1712134.1544554147,
+            "hinterlandSites": 17
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:36321",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.5960472240514385
+            },
+            {
+              "id": "centralized",
+              "score": 0.5637651175952986
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.28181318225776314
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5644891032999927,
+            "largestRivalPopulation": 116031.75495557605,
+            "distributedCenters": 0.7715133811335221,
+            "geographicFragmentation": 0.038380345709826603,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6342222474767453,
+            "civicFunction": 0.6869389487168264,
+            "civicSpecialization": 0.0527167012400811,
+            "administrativeReach": 0.75,
+            "corePopulation": 678493.8110896692,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:17319",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.9315720533755455
+            },
+            {
+              "id": "centralized",
+              "score": 0.43368526986720957
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2282015290317736
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.568608016569278,
+            "largestRivalPopulation": 114738.33171715931,
+            "distributedCenters": 0.7586807974209457,
+            "geographicFragmentation": 0.04384703235267756,
+            "coreCulturalDiversity": 0.6280261058375258,
+            "productiveCore": 0.6360435049074464,
+            "civicFunction": 0.623078332512726,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 667878.5551451993,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:39662",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6124612265296188
+            },
+            {
+              "id": "centralized",
+              "score": 0.6006290390908346
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.264184639855147
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5545619031191958,
+            "largestRivalPopulation": 114172.83994591172,
+            "distributedCenters": 0.8032252024082207,
+            "geographicFragmentation": 0.03688020267149953,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6186944127838776,
+            "civicFunction": 0.6955545883716155,
+            "civicSpecialization": 0.07686017558773794,
+            "administrativeReach": 0.75,
+            "corePopulation": 808909.3077093425,
+            "hinterlandSites": 9
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:1017",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.938114322657314
+            },
+            {
+              "id": "centralized",
+              "score": 0.38735216146219664
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.31592080236044245
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5602395915241327,
+            "largestRivalPopulation": 116098.90475444886,
+            "distributedCenters": 0.7849506088627158,
+            "geographicFragmentation": 0.09279325782763595,
+            "coreCulturalDiversity": 0.6662479103530673,
+            "productiveCore": 0.6269097483332424,
+            "civicFunction": 0.7333869666412617,
+            "civicSpecialization": 0.10647721830801926,
+            "administrativeReach": 0.75,
+            "corePopulation": 607339.0020553702,
+            "hinterlandSites": 5
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:10226",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6486223347380615
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5869949989700668
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.20384736543004556
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.561671802064794,
+            "largestRivalPopulation": 115613.01274621942,
+            "distributedCenters": 0.7803991518246826,
+            "geographicFragmentation": 0.02542093604854337,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.7454456741957947,
+            "civicFunction": 0.535218119063461,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 863716.5864864745,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:17967",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7891781056552393
+            },
+            {
+              "id": "centralized",
+              "score": 0.5479343693581248
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.23592506821708406
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5888059330932588,
+            "largestRivalPopulation": 114545.16582035724,
+            "distributedCenters": 0.6983524516245214,
+            "geographicFragmentation": 0.016742990927527714,
+            "coreCulturalDiversity": 0.45107159832199206,
+            "productiveCore": 0.7145225557405842,
+            "civicFunction": 0.5821517303008119,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 670182.2024111263,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:15797",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.855160770279622
+            },
+            {
+              "id": "centralized",
+              "score": 0.45637279686439275
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.29175933903373796
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5946479266725337,
+            "largestRivalPopulation": 100723.84855034295,
+            "distributedCenters": 0.681667344903885,
+            "geographicFragmentation": 0.1755000041263113,
+            "coreCulturalDiversity": 0.5186907216772929,
+            "productiveCore": 0.6307312784457442,
+            "civicFunction": 0.6624696816967334,
+            "civicSpecialization": 0.0317384032509892,
+            "administrativeReach": 0.75,
+            "corePopulation": 490182.72774875554,
+            "hinterlandSites": 4
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:37134",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6962170685642218
+            },
+            {
+              "id": "centralized",
+              "score": 0.4697492812294396
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.3915221132777128
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.7514648093901335,
+            "largestRivalPopulation": 53435.0878033415,
+            "distributedCenters": 0.3307343038612416,
+            "geographicFragmentation": 0.07006165075271606,
+            "coreCulturalDiversity": 0.6730325772713496,
+            "productiveCore": 0.5438238502312892,
+            "civicFunction": 0.7733889946703466,
+            "civicSpecialization": 0.2295651444390574,
+            "administrativeReach": 0.75,
+            "corePopulation": 215000.0878033415,
+            "hinterlandSites": 1
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:36909",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.5613918277586392
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5555690661090296
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.16565717824057258
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5873315847633789,
+            "largestRivalPopulation": 112598.38780644342,
+            "distributedCenters": 0.7026157386084978,
+            "geographicFragmentation": 0.06445420088103053,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.5594880822061257,
+            "civicFunction": 0.4436973208609206,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 272854.38780644344,
+            "hinterlandSites": 1
+          }
+        }
+      ]
+    },
+    {
+      "seed": "42",
+      "level": 6,
+      "config": {
+        "ecology": true,
+        "planet": {
+          "physicalRadiusKm": 6371,
+          "seaLevelDatumKm": 0
+        },
+        "mesh": {
+          "subdivisionLevel": 6,
+          "irregularity": 0.45
+        },
+        "reference": {
+          "subdivisionLevel": 6
+        },
+        "geology": {
+          "primaryPlateCount": 10,
+          "microPlateCount": 14,
+          "plateSizeVariety": 0.8,
+          "continentCount": 7,
+          "continentSizeVariety": 0.35,
+          "candidateLandCoverage": 0.3
+        },
+        "landforms": {
+          "islandArcCount": 6,
+          "islandDensity": 0.65,
+          "hotspotCount": 5
+        },
+        "terrain": {
+          "roughness": 0.4,
+          "terrainWarp": 0.75,
+          "smoothing": 0.1,
+          "glacialErosion": 0.5,
+          "hydraulicErosion": 0.5,
+          "ridgeSharpening": 0.5
+        },
+        "climate": {
+          "rotationPeriodHours": 24,
+          "axialTiltDegrees": 23.44,
+          "orbitalPeriodDays": 365.25,
+          "temperatureOffsetC": 0,
+          "precipitationScale": 1
+        },
+        "hydrology": {
+          "snowTemperatureMinC": -2,
+          "snowTemperatureMaxC": 2,
+          "degreeDayMeltFactorMmPerCMonth": 3,
+          "evapotranspirationFactorMmPerCMonth": 2,
+          "minimumRiverDrainageAreaKm2": 5000,
+          "riverDensityMultiplier": 0.5,
+          "minimumLakeAreaKm2": 0
+        },
+        "civilization": {
+          "enabled": true,
+          "populationScale": 1,
+          "settlementDensity": 1,
+          "urbanConcentration": 0.65,
+          "polityDensity": 1,
+          "culturalDiversity": 1,
+          "capabilities": {
+            "agriculturalProductivity": 1,
+            "industrialCapability": 1,
+            "landTransportCapability": 1,
+            "seafaringCapability": 1,
+            "administrativeCapacity": 0.75
+          }
+        }
+      },
+      "contentSignatures": {
+        "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+        "ecology-classes": "ecology-classes:d6314fd7",
+        "resource-definitions": "resource-definitions:44412414",
+        "civilization-content": "civilization-content:70037ef1"
+      },
+      "versions": {
+        "mesh": "1",
+        "reference-mesh": "geology-v2",
+        "geological-mapping": "geology-v2",
+        "reference-subdivisions": "geology-v2",
+        "plate-topology": "geology-v2",
+        "continental-crust": "geology-v2",
+        "geology": "geology-v2",
+        "plate-dynamics": "terrain-v2",
+        "tectonics": "terrain-v2",
+        "tectonic-elevation": "terrain-skeleton-v10",
+        "terrain": "terrain-v27",
+        "climate-c0": "climate-c0-v22",
+        "cryosphere-i0": "cryosphere-i0-v1",
+        "ecology-e0": "ecology-e0-v3",
+        "geographic-regions": "geographic-regions-v3",
+        "geographic-names": "geographic-names-v4",
+        "hydrology-h0": "hydrology-h0-v4",
+        "resource-potential": "resource-potential-v1",
+        "static-lakes-l1": "static-lakes-l1-v10",
+        "habitability": "habitability-v4",
+        "population-settlements": "population-settlements-v5",
+        "transport-network": "transport-network-v4",
+        "peoples-cultures": "peoples-cultures-v4",
+        "polities-religions": "polities-religions-v11"
+      },
+      "validation": "Full snapshot validation; diagnostic replay matches polities, settlements and territory",
+      "polities": 22,
+      "traitCounts": {
+        "centralized": 6,
+        "democratic": 19,
+        "cultural-patron": 1,
+        "city-state-civic": 2,
+        "mercantile": 19,
+        "decentralized": 14,
+        "theocratic": 3,
+        "agrarian-realm": 2
+      },
+      "signalSummary": {
+        "capitalPrimacy": {
+          "min": 0.5361540990772535,
+          "p10": 0.5425636815568804,
+          "median": 0.5582529010691609,
+          "p90": 0.586062408336252,
+          "max": 0.621765375071409
+        },
+        "largestRivalPopulation": {
+          "min": 104406.59978699924,
+          "p10": 109986.9364297438,
+          "median": 121641.01541584189,
+          "p90": 127407.22268026513,
+          "max": 135022.03310570246
+        },
+        "distributedCenters": {
+          "min": 0.6083237183883893,
+          "p10": 0.7014662224713692,
+          "median": 0.7845725793250514,
+          "p90": 0.8406832155317325,
+          "max": 0.865135418569115
+        },
+        "geographicFragmentation": {
+          "min": 0.004745244033334434,
+          "p10": 0.012999807344001255,
+          "median": 0.0556671702586817,
+          "p90": 0.11495577471177858,
+          "max": 0.1697241490056483
+        },
+        "coreCulturalDiversity": {
+          "min": 0,
+          "p10": 0,
+          "median": 0.11112186969688265,
+          "p90": 0.45737252591928024,
+          "max": 0.6469726180044666
+        },
+        "productiveCore": {
+          "min": 0.5236564861911523,
+          "p10": 0.5442774242814601,
+          "median": 0.6288700762852564,
+          "p90": 0.7686754755246433,
+          "max": 0.8646855526042152
+        },
+        "civicFunction": {
+          "min": 0.5292586292777332,
+          "p10": 0.5845048225770694,
+          "median": 0.6792668039323886,
+          "p90": 0.7696427921058615,
+          "max": 0.8561019983566315
+        },
+        "civicSpecialization": {
+          "min": 0,
+          "p10": 0,
+          "median": 0.03216893041547475,
+          "p90": 0.2024850700461367,
+          "max": 0.33244551216547913
+        },
+        "administrativeReach": {
+          "min": 0.75,
+          "p10": 0.75,
+          "median": 0.75,
+          "p90": 0.75,
+          "max": 0.75
+        },
+        "corePopulation": {
+          "min": 283070.81204122386,
+          "p10": 409169.60301682295,
+          "median": 734345.5786279726,
+          "p90": 1074815.4753977563,
+          "max": 1475727.3425239108
+        },
+        "hinterlandSites": {
+          "min": 1,
+          "p10": 3,
+          "median": 6,
+          "p90": 10,
+          "max": 15
+        }
+      },
+      "diagnostics": [
+        {
+          "capitalSettlementId": "settlement:32790",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.668179798660942
+            },
+            {
+              "id": "centralized",
+              "score": 0.6089757733602966
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2868629874897102
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.545755124333103,
+            "largestRivalPopulation": 135022.03310570246,
+            "distributedCenters": 0.8323236107438677,
+            "geographicFragmentation": 0.012999807344001255,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.8646855526042152,
+            "civicFunction": 0.7178717157554797,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 1074815.4753977563,
+            "hinterlandSites": 10
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:984",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6450895630684907
+            },
+            {
+              "id": "centralized",
+              "score": 0.5815034913229268
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.31340820178626183
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5732428474320629,
+            "largestRivalPopulation": 122958.96131915857,
+            "distributedCenters": 0.7444613648119067,
+            "geographicFragmentation": 0.04812354822223545,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6267664527690091,
+            "civicFunction": 0.7472197091721855,
+            "civicSpecialization": 0.12045325640317639,
+            "administrativeReach": 0.75,
+            "corePopulation": 730422.7286834287,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:35365",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6485621981137486
+            },
+            {
+              "id": "centralized",
+              "score": 0.5513723731216414
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.26983746451735796
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5747994179567939,
+            "largestRivalPopulation": 124293.6237673746,
+            "distributedCenters": 0.73973732185506,
+            "geographicFragmentation": 0.04491868646931931,
+            "coreCulturalDiversity": 0.024079055804757887,
+            "productiveCore": 0.6793249433442756,
+            "civicFunction": 0.6800091559318306,
+            "civicSpecialization": 0.000684212587555022,
+            "administrativeReach": 0.75,
+            "corePopulation": 779088.4753176225,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:5460",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7544157219600898
+            },
+            {
+              "id": "centralized",
+              "score": 0.49770999116252485
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2653210618810825
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.586062408336252,
+            "largestRivalPopulation": 116922.09206206797,
+            "distributedCenters": 0.7063029223096874,
+            "geographicFragmentation": 0.0317754016669794,
+            "coreCulturalDiversity": 0.3529386667439466,
+            "productiveCore": 0.659250957491851,
+            "civicFunction": 0.671789170491387,
+            "civicSpecialization": 0.012538212999535947,
+            "administrativeReach": 0.75,
+            "corePopulation": 1116770.7720568327,
+            "hinterlandSites": 12
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:17142",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8832524915295182
+            },
+            {
+              "id": "centralized",
+              "score": 0.47414422643967175
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.31825382519705125
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5582529010691609,
+            "largestRivalPopulation": 115394.10869072335,
+            "distributedCenters": 0.791302827239785,
+            "geographicFragmentation": 0.023829219712679654,
+            "coreCulturalDiversity": 0.44013817602424354,
+            "productiveCore": 0.6218470307798243,
+            "civicFunction": 0.7218844211313291,
+            "civicSpecialization": 0.10003739035150483,
+            "administrativeReach": 0.75,
+            "corePopulation": 1335937.6288996208,
+            "hinterlandSites": 15
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:37635",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6257010573635589
+            },
+            {
+              "id": "decentralized",
+              "score": 0.6007012652901096
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.32001922641287595
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5507474120371798,
+            "largestRivalPopulation": 120768.96223557608,
+            "distributedCenters": 0.8157143876556103,
+            "geographicFragmentation": 0.04484828969307626,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.621784572109309,
+            "civicFunction": 0.7621284227493169,
+            "civicSpecialization": 0.14034385064000787,
+            "administrativeReach": 0.75,
+            "corePopulation": 819815.6924453218,
+            "hinterlandSites": 8
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:5051",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6135103256913855
+            },
+            {
+              "id": "centralized",
+              "score": 0.6107911916703804
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2753017036635073
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.554884475508002,
+            "largestRivalPopulation": 126104.61976369793,
+            "distributedCenters": 0.8021769289625384,
+            "geographicFragmentation": 0.05446520775581834,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6268676511819942,
+            "civicFunction": 0.6590365815974689,
+            "civicSpecialization": 0.03216893041547475,
+            "administrativeReach": 0.75,
+            "corePopulation": 787245.2996883425,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:25279",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8376417619187971
+            },
+            {
+              "id": "centralized",
+              "score": 0.4788393808715466
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.26308619124637456
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5460224096138491,
+            "largestRivalPopulation": 134597.9997495128,
+            "distributedCenters": 0.8314266638015961,
+            "geographicFragmentation": 0.07196006123399099,
+            "coreCulturalDiversity": 0.29304539446589706,
+            "productiveCore": 0.6288700762852564,
+            "civicFunction": 0.6819552741188476,
+            "civicSpecialization": 0.053085197833591224,
+            "administrativeReach": 0.75,
+            "corePopulation": 673386.8935128783,
+            "hinterlandSites": 5
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:4247",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6368233822254582
+            },
+            {
+              "id": "decentralized",
+              "score": 0.6210524312148683
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.26433216639101537
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5453961863408451,
+            "largestRivalPopulation": 119150.54226382752,
+            "distributedCenters": 0.8335295057876522,
+            "geographicFragmentation": 0.004745244033334434,
+            "coreCulturalDiversity": 0.10622531014416103,
+            "productiveCore": 0.8522517274575183,
+            "civicFunction": 0.6731337883682796,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 1475727.3425239108,
+            "hinterlandSites": 15
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:1227",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8443414637511418
+            },
+            {
+              "id": "centralized",
+              "score": 0.4697709673906011
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2880572487764493
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5425636815568804,
+            "largestRivalPopulation": 121641.01541584189,
+            "distributedCenters": 0.8431016192062677,
+            "geographicFragmentation": 0.11780992099426062,
+            "coreCulturalDiversity": 0.3743310386577663,
+            "productiveCore": 0.5693680614747696,
+            "civicFunction": 0.70852871180073,
+            "civicSpecialization": 0.13916065032596037,
+            "administrativeReach": 0.75,
+            "corePopulation": 734345.5786279726,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:23018",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.9174073438915816
+            },
+            {
+              "id": "centralized",
+              "score": 0.393882331122724
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.36547464164445786
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5703727298276353,
+            "largestRivalPopulation": 121832.72302486972,
+            "distributedCenters": 0.7532395006019952,
+            "geographicFragmentation": 0.1697241490056483,
+            "coreCulturalDiversity": 0.5366480355097123,
+            "productiveCore": 0.5671577220597248,
+            "civicFunction": 0.7696427921058615,
+            "civicSpecialization": 0.2024850700461367,
+            "administrativeReach": 0.75,
+            "corePopulation": 466124.7627152292,
+            "hinterlandSites": 3
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:19731",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6523703069646534
+            },
+            {
+              "id": "decentralized",
+              "score": 0.6497042061626292
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.25105309734140785
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.560358268184426,
+            "largestRivalPopulation": 130481.48109496997,
+            "distributedCenters": 0.7845725793250514,
+            "geographicFragmentation": 0.008273912120952865,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.7488270851999963,
+            "civicFunction": 0.5845048225770694,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 854006.3983554458,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:14434",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6401525389700639
+            },
+            {
+              "id": "centralized",
+              "score": 0.5564439627852223
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.4070995135958059
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.621765375071409,
+            "largestRivalPopulation": 104406.59978699924,
+            "distributedCenters": 0.6083237183883893,
+            "geographicFragmentation": 0.07376734570771357,
+            "coreCulturalDiversity": 0.11112186969688265,
+            "productiveCore": 0.5442774242814601,
+            "civicFunction": 0.8125287207924822,
+            "civicSpecialization": 0.2682512965110221,
+            "administrativeReach": 0.75,
+            "corePopulation": 409169.60301682295,
+            "hinterlandSites": 3
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:33243",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6688030129360371
+            },
+            {
+              "id": "centralized",
+              "score": 0.46155497291566483
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2478344046596719
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.592377912781812,
+            "largestRivalPopulation": 107639.22634766618,
+            "distributedCenters": 0.6881115558545915,
+            "geographicFragmentation": 0.09174590339661653,
+            "coreCulturalDiversity": 0.28436962961622325,
+            "productiveCore": 0.631895737350385,
+            "civicFunction": 0.6655389932144903,
+            "civicSpecialization": 0.033643255864105326,
+            "administrativeReach": 0.75,
+            "corePopulation": 584740.3526794203,
+            "hinterlandSites": 5
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:32312",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7977126027962145
+            },
+            {
+              "id": "centralized",
+              "score": 0.4552003132200129
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.24595884241461632
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5361540990772535,
+            "largestRivalPopulation": 125775.11742241507,
+            "distributedCenters": 0.865135418569115,
+            "geographicFragmentation": 0.07463081507830457,
+            "coreCulturalDiversity": 0.25546132744091166,
+            "productiveCore": 0.6234801428510571,
+            "civicFunction": 0.6686372195340724,
+            "civicSpecialization": 0.045157076683015274,
+            "administrativeReach": 0.75,
+            "corePopulation": 621276.2742701296,
+            "hinterlandSites": 5
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:36047",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.787775577674073
+            },
+            {
+              "id": "centralized",
+              "score": 0.5097049899007718
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.42315630943428295
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5755070844112852,
+            "largestRivalPopulation": 109986.9364297438,
+            "distributedCenters": 0.7375980714867304,
+            "geographicFragmentation": 0.11495577471177858,
+            "coreCulturalDiversity": 0.26748753386247914,
+            "productiveCore": 0.5415889852636602,
+            "civicFunction": 0.7921108133418405,
+            "civicSpecialization": 0.25052182807818035,
+            "administrativeReach": 0.75,
+            "corePopulation": 403242.5153612906,
+            "hinterlandSites": 3
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:16085",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8891215499827129
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.4537352344307062
+            },
+            {
+              "id": "centralized",
+              "score": 0.3857487631688916
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5385334266199809,
+            "largestRivalPopulation": 122787.04799136726,
+            "distributedCenters": 0.8568949494488025,
+            "geographicFragmentation": 0.13461685768706516,
+            "coreCulturalDiversity": 0.6469726180044666,
+            "productiveCore": 0.5236564861911523,
+            "civicFunction": 0.8561019983566315,
+            "civicSpecialization": 0.33244551216547913,
+            "administrativeReach": 0.75,
+            "corePopulation": 420452.5547835566,
+            "hinterlandSites": 3
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:8349",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.9361587628635046
+            },
+            {
+              "id": "centralized",
+              "score": 0.46625061351522284
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2695984244566798
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5432765353440364,
+            "largestRivalPopulation": 127407.22268026513,
+            "distributedCenters": 0.8406832155317325,
+            "geographicFragmentation": 0.06750700436632544,
+            "coreCulturalDiversity": 0.5334954178514995,
+            "productiveCore": 0.6773659283098199,
+            "civicFunction": 0.6419824289170897,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 780221.7228832283,
+            "hinterlandSites": 8
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:34240",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6065131408319103
+            },
+            {
+              "id": "centralized",
+              "score": 0.5965443896619196
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.28472381521313805
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5529928421604693,
+            "largestRivalPopulation": 115054.50333743934,
+            "distributedCenters": 0.8083416705596649,
+            "geographicFragmentation": 0.0556671702586817,
+            "coreCulturalDiversity": 0.016601116019710593,
+            "productiveCore": 0.6814133406261094,
+            "civicFunction": 0.6792668039323886,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 662182.8309265767,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:39605",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7993471911897547
+            },
+            {
+              "id": "centralized",
+              "score": 0.5143628137945155
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2763730466705588
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5726073941469523,
+            "largestRivalPopulation": 118394.28415696979,
+            "distributedCenters": 0.7463972876035947,
+            "geographicFragmentation": 0.07351929318102661,
+            "coreCulturalDiversity": 0.45737252591928024,
+            "productiveCore": 0.7686754755246433,
+            "civicFunction": 0.6473916309298849,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 982536.6894514054,
+            "hinterlandSites": 10
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:20864",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6001983058467626
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5986178291677134
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.20427323484123058
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5877283879003523,
+            "largestRivalPopulation": 110662.60979086075,
+            "distributedCenters": 0.7014662224713692,
+            "geographicFragmentation": 0.06603358941527863,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.7813321400900958,
+            "civicFunction": 0.5539153652619725,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 790094.8163818523,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:11461",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6116646382942239
+            },
+            {
+              "id": "decentralized",
+              "score": 0.6038137149608752
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2045223215192366
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5694723480587046,
+            "largestRivalPopulation": 121869.81204122388,
+            "distributedCenters": 0.7560115138319482,
+            "geographicFragmentation": 0.031721662713902234,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6749285868472579,
+            "civicFunction": 0.5292586292777332,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 283070.81204122386,
+            "hinterlandSites": 1
+          }
+        }
+      ]
+    },
+    {
+      "seed": "m2-civilization-seed",
+      "level": 6,
+      "config": {
+        "ecology": true,
+        "planet": {
+          "physicalRadiusKm": 6371,
+          "seaLevelDatumKm": 0
+        },
+        "mesh": {
+          "subdivisionLevel": 6,
+          "irregularity": 0.45
+        },
+        "reference": {
+          "subdivisionLevel": 6
+        },
+        "geology": {
+          "primaryPlateCount": 10,
+          "microPlateCount": 14,
+          "plateSizeVariety": 0.8,
+          "continentCount": 7,
+          "continentSizeVariety": 0.35,
+          "candidateLandCoverage": 0.3
+        },
+        "landforms": {
+          "islandArcCount": 6,
+          "islandDensity": 0.65,
+          "hotspotCount": 5
+        },
+        "terrain": {
+          "roughness": 0.4,
+          "terrainWarp": 0.75,
+          "smoothing": 0.1,
+          "glacialErosion": 0.5,
+          "hydraulicErosion": 0.5,
+          "ridgeSharpening": 0.5
+        },
+        "climate": {
+          "rotationPeriodHours": 24,
+          "axialTiltDegrees": 23.44,
+          "orbitalPeriodDays": 365.25,
+          "temperatureOffsetC": 0,
+          "precipitationScale": 1
+        },
+        "hydrology": {
+          "snowTemperatureMinC": -2,
+          "snowTemperatureMaxC": 2,
+          "degreeDayMeltFactorMmPerCMonth": 3,
+          "evapotranspirationFactorMmPerCMonth": 2,
+          "minimumRiverDrainageAreaKm2": 5000,
+          "riverDensityMultiplier": 0.5,
+          "minimumLakeAreaKm2": 0
+        },
+        "civilization": {
+          "enabled": true,
+          "populationScale": 1,
+          "settlementDensity": 1,
+          "urbanConcentration": 0.65,
+          "polityDensity": 1,
+          "culturalDiversity": 1,
+          "capabilities": {
+            "agriculturalProductivity": 1,
+            "industrialCapability": 1,
+            "landTransportCapability": 1,
+            "seafaringCapability": 1,
+            "administrativeCapacity": 0.75
+          }
+        }
+      },
+      "contentSignatures": {
+        "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+        "ecology-classes": "ecology-classes:d6314fd7",
+        "resource-definitions": "resource-definitions:44412414",
+        "civilization-content": "civilization-content:70037ef1"
+      },
+      "versions": {
+        "mesh": "1",
+        "reference-mesh": "geology-v2",
+        "geological-mapping": "geology-v2",
+        "reference-subdivisions": "geology-v2",
+        "plate-topology": "geology-v2",
+        "continental-crust": "geology-v2",
+        "geology": "geology-v2",
+        "plate-dynamics": "terrain-v2",
+        "tectonics": "terrain-v2",
+        "tectonic-elevation": "terrain-skeleton-v10",
+        "terrain": "terrain-v27",
+        "climate-c0": "climate-c0-v22",
+        "cryosphere-i0": "cryosphere-i0-v1",
+        "ecology-e0": "ecology-e0-v3",
+        "geographic-regions": "geographic-regions-v3",
+        "geographic-names": "geographic-names-v4",
+        "hydrology-h0": "hydrology-h0-v4",
+        "resource-potential": "resource-potential-v1",
+        "static-lakes-l1": "static-lakes-l1-v10",
+        "habitability": "habitability-v4",
+        "population-settlements": "population-settlements-v5",
+        "transport-network": "transport-network-v4",
+        "peoples-cultures": "peoples-cultures-v4",
+        "polities-religions": "polities-religions-v11"
+      },
+      "validation": "Full snapshot validation; diagnostic replay matches polities, settlements and territory",
+      "polities": 22,
+      "traitCounts": {
+        "centralized": 8,
+        "theocratic": 4,
+        "mercantile": 20,
+        "city-state-civic": 2,
+        "decentralized": 12,
+        "democratic": 17,
+        "agrarian-realm": 2
+      },
+      "signalSummary": {
+        "capitalPrimacy": {
+          "min": 0.5265205583093436,
+          "p10": 0.5401420014608542,
+          "median": 0.552213676526642,
+          "p90": 0.5735971434093046,
+          "max": 1
+        },
+        "largestRivalPopulation": {
+          "min": 0,
+          "p10": 116368.73488543043,
+          "median": 124256.38917744312,
+          "p90": 133930.3669466171,
+          "max": 136852.54449902513
+        },
+        "distributedCenters": {
+          "min": 0,
+          "p10": 0.7320603195786294,
+          "median": 0.8094967699708547,
+          "p90": 0.850854757856842,
+          "max": 0.899261071991183
+        },
+        "geographicFragmentation": {
+          "min": 0.009123102272938409,
+          "p10": 0.016942698587791672,
+          "median": 0.05602986770466375,
+          "p90": 0.10146496550527033,
+          "max": 0.13862161694729952
+        },
+        "coreCulturalDiversity": {
+          "min": 0,
+          "p10": 0,
+          "median": 0.03497075075343292,
+          "p90": 0.3837086663126511,
+          "max": 0.49997755092290574
+        },
+        "productiveCore": {
+          "min": 0.5440244152355539,
+          "p10": 0.5885768662573755,
+          "median": 0.6307443751804613,
+          "p90": 0.7503055378188245,
+          "max": 0.8593930267413362
+        },
+        "civicFunction": {
+          "min": 0,
+          "p10": 0.5617891132243621,
+          "median": 0.6388331303157537,
+          "p90": 0.7702562439610332,
+          "max": 0.8507312653767832
+        },
+        "civicSpecialization": {
+          "min": 0,
+          "p10": 0,
+          "median": 0.027924779314084547,
+          "p90": 0.1924396782248241,
+          "max": 0.26215439911940774
+        },
+        "administrativeReach": {
+          "min": 0.75,
+          "p10": 0.75,
+          "median": 0.75,
+          "p90": 0.75,
+          "max": 0.75
+        },
+        "corePopulation": {
+          "min": 155620,
+          "p10": 371884.76968077547,
+          "median": 749890.9919038066,
+          "p90": 1032032.5211629744,
+          "max": 1637601.6775727072
+        },
+        "hinterlandSites": {
+          "min": 0,
+          "p10": 2,
+          "median": 6,
+          "p90": 10,
+          "max": 17
+        }
+      },
+      "diagnostics": [
+        {
+          "capitalSettlementId": "settlement:21376",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.5966926554784989
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5870144771002973
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.31356357338825774
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5480053012308789,
+            "largestRivalPopulation": 135452.75791791241,
+            "distributedCenters": 0.8247998655376003,
+            "geographicFragmentation": 0.05602986770466375,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6456586947098536,
+            "civicFunction": 0.7702562439610332,
+            "civicSpecialization": 0.1245975492511796,
+            "administrativeReach": 0.75,
+            "corePopulation": 1161162.6903670786,
+            "hinterlandSites": 10
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:30523",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8693875400236768
+            },
+            {
+              "id": "centralized",
+              "score": 0.4938354455607324
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.3351227433022269
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.552213676526642,
+            "largestRivalPopulation": 133930.3669466171,
+            "distributedCenters": 0.8108932149052888,
+            "geographicFragmentation": 0.009123102272938409,
+            "coreCulturalDiversity": 0.46605862724571256,
+            "productiveCore": 0.5996966800945732,
+            "civicFunction": 0.7921363583193973,
+            "civicSpecialization": 0.1924396782248241,
+            "administrativeReach": 0.75,
+            "corePopulation": 1637601.6775727072,
+            "hinterlandSites": 17
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:29995",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.5941641749555608
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5806586698936568
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.3547924593420626
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5495346196617141,
+            "largestRivalPopulation": 136085.25646212412,
+            "distributedCenters": 0.8197215684347351,
+            "geographicFragmentation": 0.026372443775398855,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.5910162463660964,
+            "civicFunction": 0.7490865438696472,
+            "civicSpecialization": 0.15807029750355084,
+            "administrativeReach": 0.75,
+            "corePopulation": 917583.4568295131,
+            "hinterlandSites": 11
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:25853",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6168322876428134
+            },
+            {
+              "id": "centralized",
+              "score": 0.4937244194465247
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.4080400665832317
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5835742345637989,
+            "largestRivalPopulation": 116673.57937510591,
+            "distributedCenters": 0.7135780518950853,
+            "geographicFragmentation": 0.016942698587791672,
+            "coreCulturalDiversity": 0.14998721853097785,
+            "productiveCore": 0.5885768662573755,
+            "civicFunction": 0.8507312653767832,
+            "civicSpecialization": 0.26215439911940774,
+            "administrativeReach": 0.75,
+            "corePopulation": 706654.5588253797,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:24019",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7026877459290404
+            },
+            {
+              "id": "centralized",
+              "score": 0.6134426390121763
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.28839656872847813
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5486064225984724,
+            "largestRivalPopulation": 120436.58400063946,
+            "distributedCenters": 0.8228003880514262,
+            "geographicFragmentation": 0.10608435289827074,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6446245085728943,
+            "civicFunction": 0.7446272466812371,
+            "civicSpecialization": 0.10000273810834281,
+            "administrativeReach": 0.75,
+            "corePopulation": 1032032.5211629744,
+            "hinterlandSites": 10
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:18569",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6323123361686185
+            },
+            {
+              "id": "centralized",
+              "score": 0.6258997061518304
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2775541401150306
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5735971434093046,
+            "largestRivalPopulation": 126862.9154284615,
+            "distributedCenters": 0.7433838565796779,
+            "geographicFragmentation": 0.029673930400416392,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6818925438775977,
+            "civicFunction": 0.7098173231916822,
+            "civicSpecialization": 0.027924779314084547,
+            "administrativeReach": 0.75,
+            "corePopulation": 849044.6551748293,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:3848",
+          "selected": "city-state-civic",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7566028235234558
+            },
+            {
+              "id": "centralized",
+              "score": 0.43373765274907816
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.30276909724293966
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5412668083160315,
+            "largestRivalPopulation": 127513.27311116646,
+            "distributedCenters": 0.8475176837670164,
+            "geographicFragmentation": 0.056200855007941294,
+            "coreCulturalDiversity": 0.3837086663126511,
+            "productiveCore": 0.6295028920502215,
+            "civicFunction": 0.740503330976909,
+            "civicSpecialization": 0.11100043892668754,
+            "administrativeReach": 0.75,
+            "corePopulation": 942906.9169423808,
+            "hinterlandSites": 9
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:40041",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6739499827747161
+            },
+            {
+              "id": "centralized",
+              "score": 0.5408125657134419
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.36565042971745704
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5325779678729688,
+            "largestRivalPopulation": 136852.54449902513,
+            "distributedCenters": 0.8776593481586179,
+            "geographicFragmentation": 0.13862161694729952,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.5577511884502797,
+            "civicFunction": 0.8005606206875662,
+            "civicSpecialization": 0.24280943223728646,
+            "administrativeReach": 0.75,
+            "corePopulation": 663981.4161478573,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:37894",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.9237360806336455
+            },
+            {
+              "id": "centralized",
+              "score": 0.4141442811481333
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.31888218640544236
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5711766728361108,
+            "largestRivalPopulation": 124039.51034785667,
+            "distributedCenters": 0.750771779657277,
+            "geographicFragmentation": 0.08910438095173534,
+            "coreCulturalDiversity": 0.49997755092290574,
+            "productiveCore": 0.6307443751804613,
+            "civicFunction": 0.7097948013798767,
+            "civicSpecialization": 0.07905042619941538,
+            "administrativeReach": 0.75,
+            "corePopulation": 687027.3540244027,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:4430",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6752036436068728
+            },
+            {
+              "id": "centralized",
+              "score": 0.5992805270383885
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2978069802927466
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5536553452239185,
+            "largestRivalPopulation": 124149.77068162794,
+            "distributedCenters": 0.8061778119302064,
+            "geographicFragmentation": 0.06856028522616975,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6200667069496731,
+            "civicFunction": 0.6777813043846087,
+            "civicSpecialization": 0.057714597434935566,
+            "administrativeReach": 0.75,
+            "corePopulation": 861437.2093786822,
+            "hinterlandSites": 8
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:3985",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7821421396425586
+            },
+            {
+              "id": "centralized",
+              "score": 0.536143367147812
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2299885201902522
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5402909092434292,
+            "largestRivalPopulation": 127920.05686047119,
+            "distributedCenters": 0.850854757856842,
+            "geographicFragmentation": 0.0349929084427328,
+            "coreCulturalDiversity": 0.32765732684345417,
+            "productiveCore": 0.6486769104570298,
+            "civicFunction": 0.6388331303157537,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 575269.9119716942,
+            "hinterlandSites": 4
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:19938",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8135054313779551
+            },
+            {
+              "id": "centralized",
+              "score": 0.5591391824146742
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.20552520214517359
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5451969583162256,
+            "largestRivalPopulation": 131712.5966297888,
+            "distributedCenters": 0.834199521377335,
+            "geographicFragmentation": 0.05767567780245606,
+            "coreCulturalDiversity": 0.2485866394932208,
+            "productiveCore": 0.7503055378188245,
+            "civicFunction": 0.5847386145421575,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 989271.3201841698,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:42",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6386972173491859
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5864135879111242
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2446367170776843
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5526398369951813,
+            "largestRivalPopulation": 122901.03760405505,
+            "distributedCenters": 0.8094967699708547,
+            "geographicFragmentation": 0.03207675473648621,
+            "coreCulturalDiversity": 0.0663866912062323,
+            "productiveCore": 0.8593930267413362,
+            "civicFunction": 0.6087771086795377,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 760454.9346584156,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:5227",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.6376688520682415
+            },
+            {
+              "id": "decentralized",
+              "score": 0.6230585039099211
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.23054704987317162
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5603276164066529,
+            "largestRivalPopulation": 124301.96060803323,
+            "distributedCenters": 0.7846702013599467,
+            "geographicFragmentation": 0.07497892587767753,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6510663224280948,
+            "civicFunction": 0.5399113603368012,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 749890.9919038066,
+            "hinterlandSites": 7
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:9263",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6980587395744464
+            },
+            {
+              "id": "centralized",
+              "score": 0.5460244604175428
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.25400434747458706
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5564332395084346,
+            "largestRivalPopulation": 116368.73488543043,
+            "distributedCenters": 0.7971607894658165,
+            "geographicFragmentation": 0.08349383277913847,
+            "coreCulturalDiversity": 0.03497075075343292,
+            "productiveCore": 0.5924056261024747,
+            "civicFunction": 0.6216800660553687,
+            "civicSpecialization": 0.029274439952894027,
+            "administrativeReach": 0.75,
+            "corePopulation": 879740.7620409833,
+            "hinterlandSites": 8
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:21055",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6821994323069522
+            },
+            {
+              "id": "centralized",
+              "score": 0.6526940364455887
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.2052662112319867
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5401420014608542,
+            "largestRivalPopulation": 122145.33747047016,
+            "distributedCenters": 0.8513650064157674,
+            "geographicFragmentation": 0.0110043196387693,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.8514072717130943,
+            "civicFunction": 0.566635417772679,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 1352142.0299016458,
+            "hinterlandSites": 14
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:26248",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.8459805834320986
+            },
+            {
+              "id": "centralized",
+              "score": 0.4628605183838502
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.20484870025509536
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5604552708537202,
+            "largestRivalPopulation": 124256.38917744312,
+            "distributedCenters": 0.7842637084610484,
+            "geographicFragmentation": 0.04748486780298762,
+            "coreCulturalDiversity": 0.40779361408158454,
+            "productiveCore": 0.6135860929339141,
+            "civicFunction": 0.5617891132243621,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 703509.0284840296,
+            "hinterlandSites": 6
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:280",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6887774250003297
+            },
+            {
+              "id": "centralized",
+              "score": 0.5813422274794258
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.20360627428847827
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5566285705314138,
+            "largestRivalPopulation": 126318.52771512934,
+            "distributedCenters": 0.7965301332723528,
+            "geographicFragmentation": 0.029731902077473532,
+            "coreCulturalDiversity": 0.16223028606692047,
+            "productiveCore": 0.7455698219511633,
+            "civicFunction": 0.5750119816584203,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 675786.9757109779,
+            "hinterlandSites": 5
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:3613",
+          "selected": "centralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.7590605600455604
+            },
+            {
+              "id": "centralized",
+              "score": 0.5134151115514396
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.22736178994546286
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5265205583093436,
+            "largestRivalPopulation": 128541.27689149168,
+            "distributedCenters": 0.899261071991183,
+            "geographicFragmentation": 0.051635882906053296,
+            "coreCulturalDiversity": 0.20494022347278196,
+            "productiveCore": 0.63390915293408,
+            "civicFunction": 0.6182918273849201,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 718609.8020394738,
+            "hinterlandSites": 5
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:5452",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "decentralized",
+              "score": 0.6679085071326092
+            },
+            {
+              "id": "centralized",
+              "score": 0.5578470636855444
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.3884366917736672
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.577347098537121,
+            "largestRivalPopulation": 114141.38090806073,
+            "distributedCenters": 0.7320603195786294,
+            "geographicFragmentation": 0.10146496550527033,
+            "coreCulturalDiversity": 0.1094423280311474,
+            "productiveCore": 0.5440244152355539,
+            "civicFunction": 0.7655452513663332,
+            "civicSpecialization": 0.22152083613077933,
+            "administrativeReach": 0.75,
+            "corePopulation": 333863.49846600305,
+            "hinterlandSites": 2
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:19672",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.5970134782619558
+            },
+            {
+              "id": "decentralized",
+              "score": 0.5928174675449006
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0.22894562497568288
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 0.5509918250222781,
+            "largestRivalPopulation": 116870.98337620765,
+            "distributedCenters": 0.8149089597827832,
+            "geographicFragmentation": 0.09789330169707693,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.6228907289978538,
+            "civicFunction": 0.6384578824921647,
+            "civicSpecialization": 0.015567153494310926,
+            "administrativeReach": 0.75,
+            "corePopulation": 371884.76968077547,
+            "hinterlandSites": 2
+          }
+        },
+        {
+          "capitalSettlementId": "settlement:31847",
+          "selected": "decentralized",
+          "scores": [
+            {
+              "id": "centralized",
+              "score": 0.7977007452880013
+            },
+            {
+              "id": "decentralized",
+              "score": 0.28267276895156707
+            },
+            {
+              "id": "city-state-civic",
+              "score": 0
+            },
+            {
+              "id": "tribal-kinship",
+              "score": 0
+            },
+            {
+              "id": "nomadic-pastoral",
+              "score": 0
+            }
+          ],
+          "signals": {
+            "capitalPrimacy": 1,
+            "largestRivalPopulation": 0,
+            "distributedCenters": 0,
+            "geographicFragmentation": 0.10484804709752399,
+            "coreCulturalDiversity": 0,
+            "productiveCore": 0.7945334280485457,
+            "civicFunction": 0,
+            "civicSpecialization": 0,
+            "administrativeReach": 0.75,
+            "corePopulation": 155620,
+            "hinterlandSites": 0
+          }
+        }
+      ]
+    }
+  ]
+}

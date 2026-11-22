@@ -1,5 +1,6 @@
 import type { WorldMapReader } from '@another-earth/world-core'
 import type { LonLatTuple } from '#projections/spherical-math'
+import type { SharedBoundaryRelaxation } from '#sources/topology/spherical-smooth'
 import type {
   GeoJsonFeature,
   GeoJsonLineStringGeometry,
@@ -14,7 +15,7 @@ import type {
 } from '#sources/types'
 import { cartesianToLonLatDeg } from '#projections/spherical-math'
 import { traceClassificationRings } from '#sources/topology/ring-tracer'
-import { alignInlandBoundariesToCoastline, type SharedBoundaryRelaxation } from '#sources/topology/spherical-smooth'
+import { alignInlandBoundariesToCoastline } from '#sources/topology/spherical-smooth'
 import { computeTerritorySpine } from '#sources/topology/territory-spine'
 import { BUILTIN_MAP_SOURCE_SCHEMAS } from '#sources/types'
 import { buildTiledSmoothedGroupPolygons, makePolygonGeometry } from './area-sources'
@@ -220,6 +221,7 @@ function buildDominantCategoryPolygonSource(
   const { mesh, identity } = reader
   const count = mesh.regionCount
   const landMask = reader.field('landMask')
+  const lakeIndex = sourceId === 'polity-territory' ? reader.field('lakeIndex') : null
   const field = reader.field(fieldName)
   const groupIds = new Int32Array(count).fill(-1)
   const areaByGroup = new Map<number, number>()
@@ -234,7 +236,7 @@ function buildDominantCategoryPolygonSource(
   const unassignedLandGroup = 1_000_000
   const includeUnassignedLand = sourceId === 'polity-territory'
   for (let r = 0; r < count; r++) {
-    if (landMask.get(r) === 0)
+    if (landMask.get(r) === 0 || (lakeIndex !== null && lakeIndex.get(r) >= 0))
       continue
     const idx = Math.floor(field.get(r))
     if (idx < 0 || idx >= entityCount) {
@@ -396,6 +398,27 @@ export function buildReligionDominantSource(
   )
 }
 
+/**
+ * Land ownership used to stroke borders. Lakes keep the polity that already
+ * owns them, so a lake inside one country is not a frontier ring.
+ */
+function polityBorderGroupIds(reader: WorldMapReader): Int32Array {
+  const { mesh } = reader
+  const count = mesh.regionCount
+  const landMask = reader.field('landMask')
+  const polityField = reader.field('dominantPolityIndex')
+  const polityCount = reader.polities().length
+  const groupIds = new Int32Array(count).fill(-1)
+  for (let r = 0; r < count; r++) {
+    if (landMask.get(r) === 0)
+      continue
+    const idx = Math.floor(polityField.get(r))
+    if (idx >= 0 && idx < polityCount)
+      groupIds[r] = idx
+  }
+  return groupIds
+}
+
 /** Same corner and edge-midpoint relaxation used by polity border strokes. */
 export function relaxPolityBorderBoundaries(
   reader: WorldMapReader,
@@ -405,18 +428,8 @@ export function relaxPolityBorderBoundaries(
     return null
 
   const { mesh } = reader
-  const count = mesh.regionCount
   const landMask = reader.field('landMask')
-  const polityField = reader.field('dominantPolityIndex')
-  const polities = reader.polities()
-  const groupIds = new Int32Array(count).fill(-1)
-  for (let r = 0; r < count; r++) {
-    if (landMask.get(r) === 0)
-      continue
-    const idx = Math.floor(polityField.get(r))
-    if (idx >= 0 && idx < polities.length)
-      groupIds[r] = idx
-  }
+  const groupIds = polityBorderGroupIds(reader)
 
   const coastlineEdgeIds: number[] = []
   const inlandEdgeIds: number[] = []
@@ -452,19 +465,9 @@ export function buildPolityBordersSource(
   }
 
   const { mesh, identity } = reader
-  const count = mesh.regionCount
   const landMask = reader.field('landMask')
-  const polityField = reader.field('dominantPolityIndex')
   const polities = reader.polities()
-  const groupIds = new Int32Array(count).fill(-1)
-
-  for (let r = 0; r < count; r++) {
-    if (landMask.get(r) === 0)
-      continue
-    const idx = Math.floor(polityField.get(r))
-    if (idx >= 0 && idx < polities.length)
-      groupIds[r] = idx
-  }
+  const groupIds = polityBorderGroupIds(reader)
 
   const traced = traceClassificationRings(mesh, groupIds, sharedCornerPositions)
   const edgesByPair = new Map<string, {

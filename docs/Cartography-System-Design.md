@@ -142,7 +142,7 @@ export interface WorldMapReader {
 | `climate-monthly` | `raster` | Cell 月切片 | 当前月（0–11）`temperatureC`、`precipitationMm`、`snowWaterEquivalentMm`、`snowfallMm`、`snowmeltMm`、`windSpeedMps`、`oceanSpeedMps`（带 `oceanAvailable` 掩码）、`oceanWarmth` |
 | `land-areas` | `geojson` | `Polygon` / `MultiPolygon` | 从 `landMask` 追踪海陆共享对偶边闭合外环与内陆海孔洞，经球面角落平滑（Chaikin 保拓扑平滑）输出平滑大陆与岛屿轮廓 |
 | `continent-areas` / `plate-areas` / `koppen-areas` / `biome-areas` / `land-cover-areas` | `geojson` | `Polygon` / `MultiPolygon` | 按分类 ID 提取连通区域边界环与孔洞，经三岔口锁定的共享边界中点细分与四点球面样条松弛（`buildSmoothedSharedBoundaryRings`）生成零裂缝平滑多边形面片（其中 `continent-areas` 同时覆盖大陆、大洋与海三类分区） |
-| `lake-polygons` | `geojson` | `Polygon` / `MultiPolygon` | 从静态湖泊成员区域追踪外环与湖心岛孔洞，用与国界线相同的共享边界松弛；与国界或海岸重合的边直接采用那条边的顶点。属性含 `id`、`areaKm2`、`waterLevelKm`、`endorheic` |
+| `lake-polygons` | `geojson` | `Polygon` / `MultiPolygon` | 从静态湖泊成员区域追踪外环与湖心岛孔洞，用与国界线相同的共享边界松弛；与国界或海岸重合的边直接采用那条边的顶点。境内湖泊沿用土地归属，不单独成国境。属性含 `id`、`areaKm2`、`waterLevelKm`、`endorheic` |
 | `river-polygons` | `geojson` | `Polygon` / `MultiPolygon` | **变宽河网面化源**：对每条河段中心路径做球面 Catmull-Rom 平滑，按节点累积年均流量 `accumulatedAnnualFlowM3s` 的幂律映射计算球面弧度半宽，向两侧切向法线偏移构建封闭多边形带；支流汇流节点补圆形衔接盖片（Confluence Cap），入湖端与入海端延伸至湖岸/海陆共享对偶边中点，确保水体无缝一体 |
 | `river-centerlines` | `geojson` | `LineString` | 与 `river-polygons` 同源平滑中心线，携带 `id`、`strahlerOrder`、`annualMeanDischargeM3s`，专供全球远景最小像素线保底与线要素拾取 |
 | `coastlines` | `geojson` | `LineString` / `MultiLineString` | 海陆交界平滑对偶边链，每条物理海岸边全局唯一输出一次 |
@@ -190,7 +190,7 @@ export interface WorldMapReader {
 3. `physical-relief`：**自然地理地形图**（清晰海深与陆高阶梯色带 + 增强法线晕渲 + 流域水系突出）。
 4. `minimal-light`：**极简明亮底图**（低饱和暖白陆地与淡灰蓝海洋，专为高对比度叠加任意气候/生态/地质专题而设计）。
 5. `minimal-dark`：**极简暗色底图**（深岩灰陆地与深海蓝底色，契合暗色 HUD 工作台及风场/洋流高亮展示）。
-6. `historical-parchment`：**古典羊皮纸风格**（暖羊皮纸色调、墨棕双海岸线与古典字色）。
+6. `historical-parchment`：**古典羊皮纸风格**（暖羊皮纸色调、墨棕海岸与国界、朱砂首都星与楷体国名、聚落注记）。
 
 ---
 

@@ -450,6 +450,7 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
       peoples: genPacks.flatMap(pack => pack.peoples),
       cultures: genPacks.flatMap(pack => pack.cultures),
       religions: genPacks.flatMap(pack => pack.religions),
+      polityTraits: genPacks.flatMap(pack => pack.polityTraits ?? []),
       polities: genPacks.flatMap(pack => pack.polities),
       namingStyles: genPacks.flatMap(pack => pack.namingStyles ?? []),
       translations,
@@ -522,6 +523,8 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
     const coastCoords: [number, number][] = []
     const coasts = registry.getGeoJsonSource('coastlines')
     for (const feature of coasts.data.features) {
+      if (feature.geometry.type !== 'LineString' && feature.geometry.type !== 'MultiLineString')
+        throw new Error('Expected coastline line geometry')
       const lines = feature.geometry.type === 'MultiLineString'
         ? feature.geometry.coordinates
         : [feature.geometry.coordinates]
@@ -564,7 +567,7 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
       if (landMask.get(region) === 0)
         continue
       civReader.mesh.forEachRegionNeighbor(region, (neighbor) => {
-        if (lakeRegion >= 0 || landMask.get(neighbor) === 0 || polityField.get(neighbor) < 0)
+        if (lakeRegion >= 0 || landMask.get(neighbor) === 0)
           return
         if (polityField.get(region) !== polityField.get(neighbor))
           lakeRegion = region
@@ -596,6 +599,10 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
       civilization: {
         ...civSnapshot.civilization,
         populationGroups: civSnapshot.civilization.populationGroups.filter(group => group.regionId !== lakeRegion),
+        territoryPolityIndex: {
+          ...civSnapshot.civilization.territoryPolityIndex,
+          values: Int32Array.from(civSnapshot.civilization.territoryPolityIndex.values, (owner, region) => region === lakeRegion ? -1 : owner),
+        },
       },
     })
     const alignedRegistry = new MapSourceRegistry(lakeReader)
@@ -609,6 +616,8 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
     }
     const alignedLakePoints: [number, number][] = []
     for (const feature of alignedLakes.data.features) {
+      if (feature.geometry.type !== 'Polygon' && feature.geometry.type !== 'MultiPolygon')
+        throw new Error('Expected lake polygon geometry')
       const polygons = feature.geometry.type === 'Polygon'
         ? [feature.geometry.coordinates]
         : feature.geometry.coordinates
@@ -625,12 +634,92 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
     expect(alignedLakes.data.features.length).toBeGreaterThan(0)
     expect(sharedVertices).toBeGreaterThan(0)
 
+    let interiorRegion = -1
+    for (let region = 0; region < civReader.mesh.regionCount; region++) {
+      if (landMask.get(region) === 1 && polityField.get(region) >= 0) {
+        interiorRegion = region
+        break
+      }
+    }
+    expect(interiorRegion).toBeGreaterThanOrEqual(0)
+    const interiorOwner = Math.floor(polityField.get(interiorRegion))
+    const interiorTerritory = Int32Array.from(civSnapshot.civilization.territoryPolityIndex.values)
+    interiorTerritory[interiorRegion] = interiorOwner
+    civReader.mesh.forEachRegionNeighbor(interiorRegion, (neighbor) => {
+      if (landMask.get(neighbor) === 1)
+        interiorTerritory[neighbor] = interiorOwner
+    })
+    const interiorLakeIndex = new Int32Array(civReader.mesh.regionCount).fill(-1)
+    interiorLakeIndex[interiorRegion] = 0
+    const interiorReader = createWorldMapReader({
+      ...civSnapshot,
+      nature: {
+        ...civSnapshot.nature,
+        hydrology: {
+          ...civSnapshot.nature.hydrology,
+          lakeIndex: { ...civSnapshot.nature.hydrology.lakeIndex, values: interiorLakeIndex },
+          lakes: [{
+            id: 'lake:interior',
+            basinId: 'basin:interior',
+            endorheic: true,
+            areaKm2: 1,
+            waterLevelKm: 0,
+            spillRegion: null,
+            downstreamRegion: null,
+            regions: Uint32Array.from([interiorRegion]),
+          }],
+        },
+      },
+      civilization: {
+        ...civSnapshot.civilization,
+        territoryPolityIndex: {
+          ...civSnapshot.civilization.territoryPolityIndex,
+          values: interiorTerritory,
+        },
+      },
+    })
+    const interiorRegistry = new MapSourceRegistry(interiorReader)
+    const interiorBorders = interiorRegistry.getGeoJsonSource('polity-borders')
+    const interiorBorderPoints = new Set<string>()
+    for (const border of interiorBorders.data.features) {
+      const coords = border.geometry.coordinates as readonly (readonly [number, number])[]
+      for (const coord of coords)
+        interiorBorderPoints.add(`${coord[0].toFixed(6)},${coord[1].toFixed(6)}`)
+    }
+    const interiorLake = interiorRegistry.getGeoJsonSource('lake-polygons').data.features.find(feature => feature.properties.id === 'lake:interior')
+    expect(interiorLake).toBeDefined()
+    const interiorLakePoints: [number, number][] = []
+    if (interiorLake?.geometry.type === 'Polygon') {
+      for (const ring of interiorLake.geometry.coordinates)
+        interiorLakePoints.push(...ring.map(coord => [coord[0], coord[1]] as [number, number]))
+    }
+    else if (interiorLake?.geometry.type === 'MultiPolygon') {
+      for (const polygon of interiorLake.geometry.coordinates)
+        for (const ring of polygon)
+          interiorLakePoints.push(...ring.map(coord => [coord[0], coord[1]] as [number, number]))
+    }
+    expect(interiorLakePoints.length).toBeGreaterThan(0)
+    for (const point of interiorLakePoints)
+      expect(interiorBorderPoints.has(`${point[0].toFixed(6)},${point[1].toFixed(6)}`)).toBe(false)
+
     const unassignedTerritory = alignedRegistry.getGeoJsonSource('polity-territory')
-      .data.features.find(feature => feature.properties.unassigned === true)
-    expect(unassignedTerritory).toBeDefined()
-    expect(unassignedTerritory?.properties.groupIndex).toBe(-1)
-    expect(unassignedTerritory?.properties.name).toBe('无归属地')
-    expect(Number(unassignedTerritory?.properties.areaKm2)).toBeGreaterThan(0)
+      .data
+      .features
+      .find(feature => feature.properties.unassigned === true)
+    const unownedLand = lakeReader.field('dominantPolityIndex')
+    let unownedLandCount = 0
+    for (let region = 0; region < lakeReader.mesh.regionCount; region++) {
+      if (lakeReader.field('landMask').get(region) === 1 && lakeReader.field('lakeIndex').get(region) < 0 && unownedLand.get(region) < 0)
+        unownedLandCount++
+    }
+    if (unownedLandCount > 0) {
+      expect(unassignedTerritory?.properties.groupIndex).toBe(-1)
+      expect(unassignedTerritory?.properties.name).toBe('无归属地')
+      expect(Number(unassignedTerritory?.properties.areaKm2)).toBeGreaterThan(0)
+    }
+    else {
+      expect(unassignedTerritory).toBeUndefined()
+    }
 
     const routes = registry.getGeoJsonSource('transport-routes')
     expect(routes.geometryKind).toBe('line')

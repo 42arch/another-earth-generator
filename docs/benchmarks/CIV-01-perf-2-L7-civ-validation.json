@@ -1,0 +1,266 @@
+{
+  "startedAt": "2026-11-21T17:08:30.865Z",
+  "tag": "perf-2",
+  "seed": "civ-validation",
+  "level": 7,
+  "schemaVersion": 7,
+  "environment": {
+    "bun": "1.4.3",
+    "platform": "darwin",
+    "release": "25.6.0",
+    "arch": "arm64",
+    "cpu": "Apple M3 Pro",
+    "totalMemoryBytes": 19327352832
+  },
+  "contentSignatures": {
+    "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+    "ecology-classes": "ecology-classes:d6314fd7",
+    "resource-definitions": "resource-definitions:44412414",
+    "civilization-content": "civilization-content:edb438a3"
+  },
+  "config": {
+    "ecology": true,
+    "planet": {
+      "physicalRadiusKm": 6371,
+      "seaLevelDatumKm": 0
+    },
+    "mesh": {
+      "subdivisionLevel": 7,
+      "irregularity": 0.45
+    },
+    "reference": {
+      "subdivisionLevel": 6
+    },
+    "geology": {
+      "primaryPlateCount": 10,
+      "microPlateCount": 14,
+      "plateSizeVariety": 0.8,
+      "continentCount": 7,
+      "continentSizeVariety": 0.35,
+      "candidateLandCoverage": 0.3
+    },
+    "landforms": {
+      "islandArcCount": 6,
+      "islandDensity": 0.65,
+      "hotspotCount": 5
+    },
+    "terrain": {
+      "roughness": 0.4,
+      "terrainWarp": 0.75,
+      "smoothing": 0.1,
+      "glacialErosion": 0.5,
+      "hydraulicErosion": 0.5,
+      "ridgeSharpening": 0.5
+    },
+    "climate": {
+      "rotationPeriodHours": 24,
+      "axialTiltDegrees": 23.44,
+      "orbitalPeriodDays": 365.25,
+      "temperatureOffsetC": 0,
+      "precipitationScale": 1
+    },
+    "hydrology": {
+      "snowTemperatureMinC": -2,
+      "snowTemperatureMaxC": 2,
+      "degreeDayMeltFactorMmPerCMonth": 3,
+      "evapotranspirationFactorMmPerCMonth": 2,
+      "minimumRiverDrainageAreaKm2": 5000,
+      "riverDensityMultiplier": 0.5,
+      "minimumLakeAreaKm2": 0
+    },
+    "civilization": {
+      "enabled": true,
+      "populationScale": 1,
+      "settlementDensity": 1,
+      "urbanConcentration": 0.5,
+      "polityDensity": 1,
+      "culturalDiversity": 1,
+      "capabilities": {
+        "agriculturalProductivity": 1,
+        "industrialCapability": 1,
+        "landTransportCapability": 1,
+        "seafaringCapability": 1,
+        "administrativeCapacity": 0.6
+      }
+    }
+  },
+  "versions": {
+    "mesh": "1",
+    "reference-mesh": "geology-v2",
+    "geological-mapping": "geology-v2",
+    "reference-subdivisions": "geology-v2",
+    "plate-topology": "geology-v2",
+    "continental-crust": "geology-v2",
+    "geology": "geology-v2",
+    "plate-dynamics": "terrain-v2",
+    "tectonics": "terrain-v2",
+    "tectonic-elevation": "terrain-skeleton-v10",
+    "terrain": "terrain-v27",
+    "climate-c0": "climate-c0-v22",
+    "cryosphere-i0": "cryosphere-i0-v1",
+    "ecology-e0": "ecology-e0-v3",
+    "geographic-regions": "geographic-regions-v3",
+    "geographic-names": "geographic-names-v4",
+    "hydrology-h0": "hydrology-h0-v4",
+    "resource-potential": "resource-potential-v1",
+    "static-lakes-l1": "static-lakes-l1-v10",
+    "habitability": "habitability-v4",
+    "population-settlements": "population-settlements-v5",
+    "transport-network": "transport-network-v4",
+    "peoples-cultures": "peoples-cultures-v3",
+    "polities-religions": "polities-religions-v5"
+  },
+  "validation": "Full assembly and domain validation passed",
+  "fingerprint": "46715214bbd819626f8ec6eaec1692ce3afeb8a1fad8a01450183f980d9462a0",
+  "performance": {
+    "pipelineMs": 6509.566333,
+    "assemblyValidationMs": 1099.9370420000005,
+    "totalMs": 7609.50375,
+    "peakRssKiB": 844721,
+    "finalMemory": {
+      "rss": 708396760,
+      "heapTotal": 590760960,
+      "heapUsed": 613817732,
+      "external": 386258423,
+      "arrayBuffers": 230690545
+    },
+    "stages": [
+      {
+        "id": "mesh",
+        "durationMs": 584.00375,
+        "rssBytes": 118031152
+      },
+      {
+        "id": "reference-mesh",
+        "durationMs": 81.27304200000003,
+        "rssBytes": 138150728
+      },
+      {
+        "id": "geological-mapping",
+        "durationMs": 196.92654199999993,
+        "rssBytes": 217432952
+      },
+      {
+        "id": "reference-subdivisions",
+        "durationMs": 102.11258399999997,
+        "rssBytes": 310379480
+      },
+      {
+        "id": "plate-topology",
+        "durationMs": 20.407916,
+        "rssBytes": 313476080
+      },
+      {
+        "id": "continental-crust",
+        "durationMs": 64.43820800000003,
+        "rssBytes": 323945456
+      },
+      {
+        "id": "geology",
+        "durationMs": 17.290917000000036,
+        "rssBytes": 373294112
+      },
+      {
+        "id": "plate-dynamics",
+        "durationMs": 31.332042,
+        "rssBytes": 388776992
+      },
+      {
+        "id": "tectonics",
+        "durationMs": 92.395084,
+        "rssBytes": 463324240
+      },
+      {
+        "id": "tectonic-elevation",
+        "durationMs": 728.113208,
+        "rssBytes": 496436376
+      },
+      {
+        "id": "terrain",
+        "durationMs": 744.8519999999999,
+        "rssBytes": 535479496
+      },
+      {
+        "id": "climate-c0",
+        "durationMs": 1704.4228330000005,
+        "rssBytes": 517588240
+      },
+      {
+        "id": "cryosphere-i0",
+        "durationMs": 32.36529200000041,
+        "rssBytes": 602719576
+      },
+      {
+        "id": "ecology-e0",
+        "durationMs": 25.57329100000061,
+        "rssBytes": 630883696
+      },
+      {
+        "id": "geographic-regions",
+        "durationMs": 183.14108399999986,
+        "rssBytes": 664782216
+      },
+      {
+        "id": "geographic-names",
+        "durationMs": 1.1107920000004015,
+        "rssBytes": 666322312
+      },
+      {
+        "id": "hydrology-h0",
+        "durationMs": 136.9591249999994,
+        "rssBytes": 693077432
+      },
+      {
+        "id": "resource-potential",
+        "durationMs": 294.7681249999996,
+        "rssBytes": 685868472
+      },
+      {
+        "id": "static-lakes-l1",
+        "durationMs": 22.865042000000358,
+        "rssBytes": 726468048
+      },
+      {
+        "id": "habitability",
+        "durationMs": 49.16391600000043,
+        "rssBytes": 753223168
+      },
+      {
+        "id": "population-settlements",
+        "durationMs": 29.069916999999805,
+        "rssBytes": 772703744
+      },
+      {
+        "id": "transport-network",
+        "durationMs": 178.44279200000074,
+        "rssBytes": 785942064
+      },
+      {
+        "id": "peoples-cultures",
+        "durationMs": 439.579334,
+        "rssBytes": 821364296
+      },
+      {
+        "id": "polities-religions",
+        "durationMs": 740.3432499999999,
+        "rssBytes": 615368312
+      }
+    ]
+  },
+  "metrics": {
+    "regions": 163842,
+    "population": 1873093217.9999993,
+    "landAreaKm2": 150754484.09389123,
+    "populatedAreaKm2": 146546282.97642198,
+    "peoplePerLandKm2": 12.424792730101615,
+    "earthLandEquivalentPopulation": 1850548629.2213345,
+    "namedSettlementPopulation": 29434566,
+    "namedSettlementShare": 0.01571441598161828,
+    "coastalPopulationShare": 0.16117070280638826,
+    "settlements": 239,
+    "polities": 22,
+    "cultures": 12,
+    "routes": 891,
+    "seaRoutes": 170
+  }
+}

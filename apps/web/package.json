@@ -10,6 +10,10 @@
     "lint": "eslint src e2e vite.config.ts playwright.config.ts",
     "lint:fix": "eslint src e2e vite.config.ts playwright.config.ts --fix",
     "test": "vitest run",
+    "bench:civilization:layout": "bun benchmarks/civilization-layout.ts",
+    "bench:civilization:traits": "bun benchmarks/civilization-traits.ts",
+    "bench:civilization:calibration": "bun benchmarks/civilization-suite.ts calibration",
+    "bench:civilization:performance": "bun benchmarks/civilization-suite.ts performance",
     "test:browser": "playwright test"
   },
   "dependencies": {

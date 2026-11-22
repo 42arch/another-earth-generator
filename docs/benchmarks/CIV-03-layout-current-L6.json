@@ -1,0 +1,3593 @@
+{
+  "method": "Production content; physical country land area excludes lakes and oceans. Geographic constraints may prevent target shares. This is a behavior comparison, not a performance benchmark or historical calibration.",
+  "reports": [
+    {
+      "seed": "1024",
+      "level": 6,
+      "referenceLevel": 6,
+      "naturalParameters": {
+        "geology": {
+          "primaryPlateCount": 10,
+          "microPlateCount": 14,
+          "plateSizeVariety": 0.8,
+          "continentCount": 7,
+          "continentSizeVariety": 0.35,
+          "candidateLandCoverage": 0.3
+        },
+        "landforms": {
+          "islandArcCount": 6,
+          "islandDensity": 0.65,
+          "hotspotCount": 5
+        },
+        "terrain": {
+          "roughness": 0.4,
+          "terrainWarp": 0.75,
+          "smoothing": 0.1,
+          "glacialErosion": 0.5,
+          "hydraulicErosion": 0.5,
+          "ridgeSharpening": 0.5
+        },
+        "climate": {
+          "rotationPeriodHours": 24,
+          "axialTiltDegrees": 23.44,
+          "orbitalPeriodDays": 365.25,
+          "temperatureOffsetC": 0,
+          "precipitationScale": 1
+        },
+        "hydrology": {
+          "snowTemperatureMinC": -2,
+          "snowTemperatureMaxC": 2,
+          "degreeDayMeltFactorMmPerCMonth": 3,
+          "evapotranspirationFactorMmPerCMonth": 2,
+          "minimumRiverDrainageAreaKm2": 5000,
+          "riverDensityMultiplier": 0.5,
+          "minimumLakeAreaKm2": 0
+        }
+      },
+      "defaultCivilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.65,
+        "polityCount": {
+          "min": 20,
+          "max": 30
+        },
+        "politySizeVariation": 0.5,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.75
+        }
+      },
+      "contentSignatures": {
+        "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+        "ecology-classes": "ecology-classes:d6314fd7",
+        "resource-definitions": "resource-definitions:44412414",
+        "civilization-content": "civilization-content:70037ef1"
+      },
+      "validation": "All scenarios passed complete assembly/domain validation, exact counts, population conservation, local invalidation, origin independence, increasing dispersion and forced-repeat ownership/area equality",
+      "scenarios": [
+        {
+          "ownershipFingerprint": "a7978a12688d30c4259c788dbbdeef99c13b2dd4b716f031bd721f9407b2c689",
+          "count": 24,
+          "variation": 0,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 12445.651503333009,
+            "maxKm2": 14233948.522927731,
+            "totalKm2": 144924287.53950495,
+            "gini": 0.3155301211030185,
+            "coefficientOfVariation": 0.5726020473955689
+          },
+          "areasKm2": [
+            11270935.466981508,
+            27164.651461214715,
+            13619.050235694716,
+            12445.651503333009,
+            14233948.522927731,
+            4801186.9634266,
+            3862194.340408896,
+            2912297.7163122096,
+            11446608.574526051,
+            6897903.310716651,
+            8162185.461851849,
+            4806005.067512491,
+            8280951.9806651175,
+            5538840.818274114,
+            4894399.516360102,
+            7790639.5800205525,
+            4668106.589426801,
+            8008995.576360267,
+            8264938.059634179,
+            7602283.696303124,
+            4749133.169583608,
+            3815743.338804079,
+            7393495.40229092,
+            5470265.033917816
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1805655323,
+          "elapsedMs": 3679.596083,
+          "executedStages": [
+            "mesh",
+            "reference-mesh",
+            "geological-mapping",
+            "reference-subdivisions",
+            "plate-topology",
+            "continental-crust",
+            "geology",
+            "plate-dynamics",
+            "tectonics",
+            "tectonic-elevation",
+            "terrain",
+            "climate-c0",
+            "cryosphere-i0",
+            "ecology-e0",
+            "geographic-regions",
+            "geographic-names",
+            "hydrology-h0",
+            "resource-potential",
+            "static-lakes-l1",
+            "habitability",
+            "population-settlements",
+            "transport-network",
+            "peoples-cultures",
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:27779",
+            "settlement:16778",
+            "settlement:39752",
+            "settlement:5890",
+            "settlement:31710",
+            "settlement:21811",
+            "settlement:19970",
+            "settlement:39919",
+            "settlement:25893",
+            "settlement:9452",
+            "settlement:11661",
+            "settlement:16047",
+            "settlement:18092",
+            "settlement:14285",
+            "settlement:9872",
+            "settlement:36321",
+            "settlement:17002",
+            "settlement:36909",
+            "settlement:2112",
+            "settlement:40756",
+            "settlement:39047",
+            "settlement:10909",
+            "settlement:10445",
+            "settlement:14260"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "agrarian-realm"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "cultural-patron"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "b121f3f3d279dbe70308129c684e46047be78a74a8d7441b58f5fbfcd63a67cb",
+          "count": 24,
+          "variation": 0.5,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 12445.651503333009,
+            "maxKm2": 21077354.63132492,
+            "totalKm2": 144924287.53950495,
+            "gini": 0.511975813695047,
+            "coefficientOfVariation": 0.9614412157312042
+          },
+          "areasKm2": [
+            14322844.775225084,
+            27164.651461214715,
+            13619.050235694716,
+            12445.651503333009,
+            14233948.522927731,
+            4843372.519838972,
+            1817356.2242287865,
+            2049469.7484904907,
+            8394699.266282486,
+            3451000.1655080696,
+            9289049.026536278,
+            8896501.819113698,
+            21077354.63132492,
+            13231672.125256281,
+            1530257.6304913699,
+            16645205.318037787,
+            1676705.6047163857,
+            3473831.938498896,
+            1441232.1388077515,
+            2492414.934291483,
+            2053393.7261004827,
+            4988082.500036899,
+            6266631.837606485,
+            2696033.732984348
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1805655323,
+          "elapsedMs": 426.71987500000023,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:27779",
+            "settlement:16778",
+            "settlement:39752",
+            "settlement:5890",
+            "settlement:31710",
+            "settlement:21811",
+            "settlement:19970",
+            "settlement:39919",
+            "settlement:25893",
+            "settlement:9452",
+            "settlement:11661",
+            "settlement:16047",
+            "settlement:18092",
+            "settlement:14285",
+            "settlement:9872",
+            "settlement:36321",
+            "settlement:17002",
+            "settlement:36909",
+            "settlement:2112",
+            "settlement:40756",
+            "settlement:39047",
+            "settlement:10909",
+            "settlement:10445",
+            "settlement:14260"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "agrarian-realm"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "cultural-patron"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "20e43a522b66aa9bbbfca745f53f4d7310890cb9690756029fa4f414bce63252",
+          "count": 24,
+          "variation": 1,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 12445.651503333009,
+            "maxKm2": 26039930.70663363,
+            "totalKm2": 144924287.53950498,
+            "gini": 0.6457744681086467,
+            "coefficientOfVariation": 1.2757172645633603
+          },
+          "areasKm2": [
+            16797094.42745258,
+            27164.651461214715,
+            13619.050235694716,
+            12445.651503333009,
+            4220428.234868458,
+            3630197.8078068886,
+            449267.56326528615,
+            10474493.179316828,
+            5920449.614054988,
+            901209.7971727079,
+            10359672.498140201,
+            12824832.77074783,
+            26039930.70663363,
+            19447163.298950043,
+            258988.69444808815,
+            21725039.14928202,
+            397502.4006980462,
+            1230273.91591783,
+            88133.24281745846,
+            471434.61220601475,
+            463033.2874520756,
+            3274392.1823615683,
+            5196008.366002565,
+            701512.4367096252
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1805655323,
+          "elapsedMs": 339.84091699999954,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:27779",
+            "settlement:16778",
+            "settlement:39752",
+            "settlement:5890",
+            "settlement:31710",
+            "settlement:21811",
+            "settlement:19970",
+            "settlement:39919",
+            "settlement:25893",
+            "settlement:9452",
+            "settlement:11661",
+            "settlement:16047",
+            "settlement:18092",
+            "settlement:14285",
+            "settlement:9872",
+            "settlement:36321",
+            "settlement:17002",
+            "settlement:36909",
+            "settlement:2112",
+            "settlement:40756",
+            "settlement:39047",
+            "settlement:10909",
+            "settlement:10445",
+            "settlement:14260"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "agrarian-realm"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "cultural-patron"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "5f1fd93857dab61c3fdc1432e3ba2c76816a30ea51a204b7769fe2a661f19c73",
+          "count": 12,
+          "variation": 0.5,
+          "actualCount": 12,
+          "area": {
+            "minKm2": 12445.651503333009,
+            "maxKm2": 29631718.17115828,
+            "totalKm2": 144924287.53950483,
+            "gini": 0.4769658588950495,
+            "coefficientOfVariation": 0.8494487792625837
+          },
+          "areasKm2": [
+            14550340.569958841,
+            27164.651461214715,
+            13619.050235694716,
+            12445.651503333009,
+            14233948.522927731,
+            24907930.062207647,
+            4683728.120136394,
+            27060471.452914648,
+            8292603.73629758,
+            5954636.686560696,
+            15555680.864142751,
+            29631718.17115828
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1805655323,
+          "elapsedMs": 312.132834,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:27779",
+            "settlement:16778",
+            "settlement:39752",
+            "settlement:5890",
+            "settlement:31710",
+            "settlement:21811",
+            "settlement:19970",
+            "settlement:39919",
+            "settlement:25893",
+            "settlement:9452",
+            "settlement:11661",
+            "settlement:16047"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "agrarian-realm"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "d87739687d6ba66af5bdd5b768666fb214f39b0a4c8513ad6f39c2fc0ee8f674",
+          "count": 36,
+          "variation": 0.5,
+          "actualCount": 36,
+          "area": {
+            "minKm2": 12445.651503333009,
+            "maxKm2": 22193335.07548607,
+            "totalKm2": 144924287.53950498,
+            "gini": 0.5598280527872097,
+            "coefficientOfVariation": 1.1792468097752682
+          },
+          "areasKm2": [
+            13249835.71834921,
+            27164.651461214715,
+            13619.050235694716,
+            12445.651503333009,
+            4587206.049648125,
+            1379012.8358439554,
+            1201724.4423847978,
+            1228666.950603775,
+            9467708.32315837,
+            2553062.531005076,
+            1513587.4822588,
+            1426184.9123461244,
+            22193335.07548607,
+            4460751.309218247,
+            1431579.749092911,
+            4625411.429672479,
+            532952.5439617326,
+            3016231.639207615,
+            643630.8831158538,
+            1383650.3998602564,
+            2696023.780507816,
+            2566629.139005025,
+            1100413.672428877,
+            1277440.3778577182,
+            562745.2200322633,
+            5098134.969658514,
+            3614903.635460664,
+            11911198.268009767,
+            2207031.158623397,
+            7095636.7529886095,
+            4501218.697025691,
+            12941679.709455093,
+            924591.5515617147,
+            3145539.912909583,
+            686596.5922869721,
+            9646742.473279618
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1805655323,
+          "elapsedMs": 311.53137499999957,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:27779",
+            "settlement:16778",
+            "settlement:39752",
+            "settlement:5890",
+            "settlement:31710",
+            "settlement:21811",
+            "settlement:19970",
+            "settlement:39919",
+            "settlement:25893",
+            "settlement:9452",
+            "settlement:11661",
+            "settlement:16047",
+            "settlement:18092",
+            "settlement:14285",
+            "settlement:9872",
+            "settlement:36321",
+            "settlement:17002",
+            "settlement:36909",
+            "settlement:2112",
+            "settlement:40756",
+            "settlement:39047",
+            "settlement:10909",
+            "settlement:10445",
+            "settlement:14260",
+            "settlement:24022",
+            "settlement:16944",
+            "settlement:22771",
+            "settlement:17319",
+            "settlement:17967",
+            "settlement:16270",
+            "settlement:37797",
+            "settlement:10291",
+            "settlement:32584",
+            "settlement:17106",
+            "settlement:40399",
+            "settlement:29100"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "cultural-patron"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "cultural-patron"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "industrial-power"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        }
+      ],
+      "planet": {
+        "physicalRadiusKm": 6371,
+        "seaLevelDatumKm": 0
+      },
+      "mesh": {
+        "subdivisionLevel": 6,
+        "irregularity": 0.45
+      },
+      "reference": {
+        "subdivisionLevel": 6
+      }
+    },
+    {
+      "seed": "42",
+      "level": 6,
+      "referenceLevel": 6,
+      "naturalParameters": {
+        "geology": {
+          "primaryPlateCount": 10,
+          "microPlateCount": 14,
+          "plateSizeVariety": 0.8,
+          "continentCount": 7,
+          "continentSizeVariety": 0.35,
+          "candidateLandCoverage": 0.3
+        },
+        "landforms": {
+          "islandArcCount": 6,
+          "islandDensity": 0.65,
+          "hotspotCount": 5
+        },
+        "terrain": {
+          "roughness": 0.4,
+          "terrainWarp": 0.75,
+          "smoothing": 0.1,
+          "glacialErosion": 0.5,
+          "hydraulicErosion": 0.5,
+          "ridgeSharpening": 0.5
+        },
+        "climate": {
+          "rotationPeriodHours": 24,
+          "axialTiltDegrees": 23.44,
+          "orbitalPeriodDays": 365.25,
+          "temperatureOffsetC": 0,
+          "precipitationScale": 1
+        },
+        "hydrology": {
+          "snowTemperatureMinC": -2,
+          "snowTemperatureMaxC": 2,
+          "degreeDayMeltFactorMmPerCMonth": 3,
+          "evapotranspirationFactorMmPerCMonth": 2,
+          "minimumRiverDrainageAreaKm2": 5000,
+          "riverDensityMultiplier": 0.5,
+          "minimumLakeAreaKm2": 0
+        }
+      },
+      "defaultCivilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.65,
+        "polityCount": {
+          "min": 20,
+          "max": 30
+        },
+        "politySizeVariation": 0.5,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.75
+        }
+      },
+      "contentSignatures": {
+        "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+        "ecology-classes": "ecology-classes:d6314fd7",
+        "resource-definitions": "resource-definitions:44412414",
+        "civilization-content": "civilization-content:70037ef1"
+      },
+      "validation": "All scenarios passed complete assembly/domain validation, exact counts, population conservation, local invalidation, origin independence, increasing dispersion and forced-repeat ownership/area equality",
+      "scenarios": [
+        {
+          "ownershipFingerprint": "adbcb5bac605330c1b2cbb0f55189923a73b8a867f44bd85ca08cd9edecc8145",
+          "count": 24,
+          "variation": 0,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 23840.01246937149,
+            "maxKm2": 13116578.420710573,
+            "totalKm2": 149541205.03843698,
+            "gini": 0.19130430347503619,
+            "coefficientOfVariation": 0.37807566226434114
+          },
+          "areasKm2": [
+            5043529.395270092,
+            23840.01246937149,
+            7042037.050137855,
+            4808503.188543554,
+            6710924.57439966,
+            7406946.888908111,
+            13116578.420710573,
+            5042751.13728365,
+            7561489.059573312,
+            9616844.424861362,
+            7399938.186337903,
+            7424436.759639811,
+            5931210.497015323,
+            6575470.856469421,
+            6680538.057627677,
+            7383735.228177722,
+            5464793.302476547,
+            2662343.406547456,
+            6885711.474685903,
+            4946237.6597782355,
+            7289506.125768596,
+            4937504.778221276,
+            4655020.820324135,
+            4931313.733209417
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1828108722,
+          "elapsedMs": 2311.345125,
+          "executedStages": [
+            "mesh",
+            "reference-mesh",
+            "geological-mapping",
+            "reference-subdivisions",
+            "plate-topology",
+            "continental-crust",
+            "geology",
+            "plate-dynamics",
+            "tectonics",
+            "tectonic-elevation",
+            "terrain",
+            "climate-c0",
+            "cryosphere-i0",
+            "ecology-e0",
+            "geographic-regions",
+            "geographic-names",
+            "hydrology-h0",
+            "resource-potential",
+            "static-lakes-l1",
+            "habitability",
+            "population-settlements",
+            "transport-network",
+            "peoples-cultures",
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:32790",
+            "settlement:40827",
+            "settlement:5460",
+            "settlement:19731",
+            "settlement:30944",
+            "settlement:14434",
+            "settlement:32312",
+            "settlement:17724",
+            "settlement:984",
+            "settlement:35365",
+            "settlement:37088",
+            "settlement:1149",
+            "settlement:25279",
+            "settlement:36047",
+            "settlement:23018",
+            "settlement:9730",
+            "settlement:40075",
+            "settlement:20713",
+            "settlement:31572",
+            "settlement:34162",
+            "settlement:40570",
+            "settlement:8425",
+            "settlement:16913",
+            "settlement:20208"
+          ],
+          "traits": [
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "industrial-power"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "5f8daa5e4a6148ba3c6c437f1be55ce00a586d8bf755cc8c99335e7dec09095d",
+          "count": 24,
+          "variation": 0.5,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 23840.01246937149,
+            "maxKm2": 23145427.944646854,
+            "totalKm2": 149541205.03843695,
+            "gini": 0.4686633683762754,
+            "coefficientOfVariation": 0.9826895893706215
+          },
+          "areasKm2": [
+            6347125.008533703,
+            23840.01246937149,
+            12460198.472277006,
+            4023174.8293415294,
+            23145427.944646854,
+            5680439.451001411,
+            16950796.262712877,
+            2320960.5958104986,
+            3694773.401020187,
+            21935206.65568219,
+            1566253.177399871,
+            9893196.33504126,
+            3682106.81133828,
+            2047259.2149057058,
+            2384649.580087866,
+            2480730.6249792976,
+            4221817.049408785,
+            2239745.3107224447,
+            4276237.512844002,
+            3559283.2511574076,
+            4732211.018235892,
+            1438459.4937051975,
+            4298072.836878854,
+            6139240.188236455
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1828108722,
+          "elapsedMs": 322.96458300000086,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:32790",
+            "settlement:40827",
+            "settlement:5460",
+            "settlement:19731",
+            "settlement:30944",
+            "settlement:14434",
+            "settlement:32312",
+            "settlement:17724",
+            "settlement:984",
+            "settlement:35365",
+            "settlement:37088",
+            "settlement:1149",
+            "settlement:25279",
+            "settlement:36047",
+            "settlement:23018",
+            "settlement:9730",
+            "settlement:40075",
+            "settlement:20713",
+            "settlement:31572",
+            "settlement:34162",
+            "settlement:40570",
+            "settlement:8425",
+            "settlement:16913",
+            "settlement:20208"
+          ],
+          "traits": [
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "industrial-power"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "94115fa9b7fe629f9b8a5498c0c4e5b0afe18b97626dc1cd6f2d227e86dac6ff",
+          "count": 24,
+          "variation": 1,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 23840.01246937149,
+            "maxKm2": 54324013.50420178,
+            "totalKm2": 149541205.03843674,
+            "gini": 0.7904634686693108,
+            "coefficientOfVariation": 2.085958797555878
+          },
+          "areasKm2": [
+            5964125.190043589,
+            23840.01246937149,
+            13483221.485203493,
+            159279.7807976952,
+            54324013.50420178,
+            3056338.0192118417,
+            20191097.98980869,
+            473765.0542358629,
+            1281442.5393936634,
+            36955060.755766705,
+            166210.3771674194,
+            4493332.264490108,
+            443140.67171707324,
+            227311.1296339253,
+            458250.887753847,
+            418989.14842403523,
+            507255.66843004327,
+            146237.25692415296,
+            2540951.583294764,
+            1856354.0420714119,
+            701032.4105853711,
+            177322.11337710562,
+            1195853.0774365466,
+            296780.0759982435
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1828108722,
+          "elapsedMs": 304.17104199999994,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:32790",
+            "settlement:40827",
+            "settlement:5460",
+            "settlement:19731",
+            "settlement:30944",
+            "settlement:14434",
+            "settlement:32312",
+            "settlement:17724",
+            "settlement:984",
+            "settlement:35365",
+            "settlement:37088",
+            "settlement:1149",
+            "settlement:25279",
+            "settlement:36047",
+            "settlement:23018",
+            "settlement:9730",
+            "settlement:40075",
+            "settlement:20713",
+            "settlement:31572",
+            "settlement:34162",
+            "settlement:40570",
+            "settlement:8425",
+            "settlement:16913",
+            "settlement:20208"
+          ],
+          "traits": [
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "industrial-power"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "6f1b8659b608f32544dc8cc8e068c2fc8bc798e458afaeb9a5bef5a75fa55221",
+          "count": 12,
+          "variation": 0.5,
+          "actualCount": 12,
+          "area": {
+            "minKm2": 23840.01246937149,
+            "maxKm2": 31511733.347319067,
+            "totalKm2": 149541205.03843695,
+            "gini": 0.4479167674491217,
+            "coefficientOfVariation": 0.83023538743934
+          },
+          "areasKm2": [
+            9546199.939395765,
+            23840.01246937149,
+            15185074.600617137,
+            3246251.7617966086,
+            30745806.14016626,
+            8352035.6982591925,
+            24599377.762678087,
+            5140009.910133689,
+            7574031.6833577845,
+            31511733.347319067,
+            3192894.2671724926,
+            10423949.915071482
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1828108722,
+          "elapsedMs": 322.6911659999987,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:32790",
+            "settlement:40827",
+            "settlement:5460",
+            "settlement:19731",
+            "settlement:30944",
+            "settlement:14434",
+            "settlement:32312",
+            "settlement:17724",
+            "settlement:984",
+            "settlement:35365",
+            "settlement:37088",
+            "settlement:1149"
+          ],
+          "traits": [
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "6c8aa2acd7e98122334bb1868d9a763babc3f7adffe0557015c9c4be362e56c4",
+          "count": 36,
+          "variation": 0.5,
+          "actualCount": 36,
+          "area": {
+            "minKm2": 23840.01246937149,
+            "maxKm2": 16787634.280243646,
+            "totalKm2": 149541205.03843692,
+            "gini": 0.46224460795760725,
+            "coefficientOfVariation": 0.9318610091636461
+          },
+          "areasKm2": [
+            6869596.697159825,
+            23840.01246937149,
+            9412396.317639431,
+            3598950.4508662918,
+            10073784.095356252,
+            5903756.872296936,
+            6112231.797502912,
+            1668261.6547095552,
+            3677726.93375594,
+            16787634.280243646,
+            227458.53900702283,
+            6645267.6530598225,
+            1865561.888836649,
+            1395335.8209928325,
+            2294073.593743147,
+            1247064.4076539478,
+            1921436.817540171,
+            2096394.8359484426,
+            4755923.3007873595,
+            1732231.2386360164,
+            2419646.680195026,
+            777251.2319186265,
+            4244385.809017949,
+            3815920.3616859033,
+            832324.6720089937,
+            2636329.063794554,
+            759492.7770217384,
+            3930796.607393349,
+            16215105.21812821,
+            6598930.599453006,
+            3265096.345895861,
+            3721653.564178945,
+            536453.0130283411,
+            2890894.6797997933,
+            6601837.39471596,
+            1986159.8119951144
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1828108722,
+          "elapsedMs": 315.0328750000008,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:32790",
+            "settlement:40827",
+            "settlement:5460",
+            "settlement:19731",
+            "settlement:30944",
+            "settlement:14434",
+            "settlement:32312",
+            "settlement:17724",
+            "settlement:984",
+            "settlement:35365",
+            "settlement:37088",
+            "settlement:1149",
+            "settlement:25279",
+            "settlement:36047",
+            "settlement:23018",
+            "settlement:9730",
+            "settlement:40075",
+            "settlement:20713",
+            "settlement:31572",
+            "settlement:34162",
+            "settlement:40570",
+            "settlement:8425",
+            "settlement:16913",
+            "settlement:20208",
+            "settlement:19164",
+            "settlement:23367",
+            "settlement:25166",
+            "settlement:15911",
+            "settlement:6447",
+            "settlement:30778",
+            "settlement:18283",
+            "settlement:33018",
+            "settlement:22117",
+            "settlement:10762",
+            "settlement:37910",
+            "settlement:2108"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "democratic",
+              "cultural-patron"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "industrial-power"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        }
+      ],
+      "planet": {
+        "physicalRadiusKm": 6371,
+        "seaLevelDatumKm": 0
+      },
+      "mesh": {
+        "subdivisionLevel": 6,
+        "irregularity": 0.45
+      },
+      "reference": {
+        "subdivisionLevel": 6
+      }
+    },
+    {
+      "seed": "m2-civilization-seed",
+      "level": 6,
+      "referenceLevel": 6,
+      "naturalParameters": {
+        "geology": {
+          "primaryPlateCount": 10,
+          "microPlateCount": 14,
+          "plateSizeVariety": 0.8,
+          "continentCount": 7,
+          "continentSizeVariety": 0.35,
+          "candidateLandCoverage": 0.3
+        },
+        "landforms": {
+          "islandArcCount": 6,
+          "islandDensity": 0.65,
+          "hotspotCount": 5
+        },
+        "terrain": {
+          "roughness": 0.4,
+          "terrainWarp": 0.75,
+          "smoothing": 0.1,
+          "glacialErosion": 0.5,
+          "hydraulicErosion": 0.5,
+          "ridgeSharpening": 0.5
+        },
+        "climate": {
+          "rotationPeriodHours": 24,
+          "axialTiltDegrees": 23.44,
+          "orbitalPeriodDays": 365.25,
+          "temperatureOffsetC": 0,
+          "precipitationScale": 1
+        },
+        "hydrology": {
+          "snowTemperatureMinC": -2,
+          "snowTemperatureMaxC": 2,
+          "degreeDayMeltFactorMmPerCMonth": 3,
+          "evapotranspirationFactorMmPerCMonth": 2,
+          "minimumRiverDrainageAreaKm2": 5000,
+          "riverDensityMultiplier": 0.5,
+          "minimumLakeAreaKm2": 0
+        }
+      },
+      "defaultCivilization": {
+        "enabled": true,
+        "populationScale": 1,
+        "settlementDensity": 1,
+        "urbanConcentration": 0.65,
+        "polityCount": {
+          "min": 20,
+          "max": 30
+        },
+        "politySizeVariation": 0.5,
+        "culturalDiversity": 1,
+        "capabilities": {
+          "agriculturalProductivity": 1,
+          "industrialCapability": 1,
+          "landTransportCapability": 1,
+          "seafaringCapability": 1,
+          "administrativeCapacity": 0.75
+        }
+      },
+      "contentSignatures": {
+        "geographic-naming-style": "naming-style-v2:fnv1a32:c450f792",
+        "ecology-classes": "ecology-classes:d6314fd7",
+        "resource-definitions": "resource-definitions:44412414",
+        "civilization-content": "civilization-content:70037ef1"
+      },
+      "validation": "All scenarios passed complete assembly/domain validation, exact counts, population conservation, local invalidation, origin independence, increasing dispersion and forced-repeat ownership/area equality",
+      "scenarios": [
+        {
+          "ownershipFingerprint": "31798edc5c462e55642b3923d8662d28b66edb78b8e7a950b8ccfa7d9636e729",
+          "count": 24,
+          "variation": 0,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 10258.883134979465,
+            "maxKm2": 22069423.33705617,
+            "totalKm2": 147571352.67639387,
+            "gini": 0.42169900901495366,
+            "coefficientOfVariation": 0.8514765613867665
+          },
+          "areasKm2": [
+            5377455.758525401,
+            5628048.46402833,
+            22069423.33705617,
+            510926.56138063216,
+            24541.592671279985,
+            19695.562259535374,
+            11086.537564265973,
+            10258.883134979465,
+            6288236.1386122685,
+            6252987.265367552,
+            5353269.801637402,
+            6264546.56242955,
+            6178465.042987662,
+            14684025.26932824,
+            14680919.711818758,
+            5609968.544795029,
+            5022431.792734371,
+            5516943.527928515,
+            5788061.379333088,
+            5915762.1522008395,
+            13563755.518476972,
+            5431591.241368698,
+            5299176.399167413,
+            2069775.6315869298
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1668300995,
+          "elapsedMs": 2115.2305419999993,
+          "executedStages": [
+            "mesh",
+            "reference-mesh",
+            "geological-mapping",
+            "reference-subdivisions",
+            "plate-topology",
+            "continental-crust",
+            "geology",
+            "plate-dynamics",
+            "tectonics",
+            "tectonic-elevation",
+            "terrain",
+            "climate-c0",
+            "cryosphere-i0",
+            "ecology-e0",
+            "geographic-regions",
+            "geographic-names",
+            "hydrology-h0",
+            "resource-potential",
+            "static-lakes-l1",
+            "habitability",
+            "population-settlements",
+            "transport-network",
+            "peoples-cultures",
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:18569",
+            "settlement:21376",
+            "settlement:30523",
+            "settlement:31847",
+            "settlement:35353",
+            "settlement:30517",
+            "settlement:15107",
+            "settlement:16013",
+            "settlement:36659",
+            "settlement:40740",
+            "settlement:5227",
+            "settlement:24019",
+            "settlement:26248",
+            "settlement:2601",
+            "settlement:24367",
+            "settlement:5452",
+            "settlement:1244",
+            "settlement:32996",
+            "settlement:37894",
+            "settlement:9345",
+            "settlement:12506",
+            "settlement:39933",
+            "settlement:33720",
+            "settlement:4430"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "militaristic",
+              "industrial-power"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "883c0aea7e6e2ed52c1de4117b22fb001b62d51621699faa3372c787b8d73936",
+          "count": 24,
+          "variation": 0.5,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 10258.883134979465,
+            "maxKm2": 22069423.33705617,
+            "totalKm2": 147571352.67639387,
+            "gini": 0.5393372118927119,
+            "coefficientOfVariation": 1.0310095356725932
+          },
+          "areasKm2": [
+            10555104.384272099,
+            8656277.515172245,
+            22069423.33705617,
+            510926.56138063216,
+            24541.592671279985,
+            19695.562259535374,
+            11086.537564265973,
+            10258.883134979465,
+            5073471.651208236,
+            2033387.0662758546,
+            2142874.7911240584,
+            4528804.164385338,
+            2021726.5753345236,
+            21196874.2186231,
+            10613553.460874673,
+            5726942.139791651,
+            2845258.346879897,
+            1742261.6317612468,
+            7729176.154255088,
+            3779951.6165865534,
+            11118272.820126178,
+            17236659.11937777,
+            5855048.914691565,
+            2069775.6315869298
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1668300995,
+          "elapsedMs": 262.9078329999993,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:18569",
+            "settlement:21376",
+            "settlement:30523",
+            "settlement:31847",
+            "settlement:35353",
+            "settlement:30517",
+            "settlement:15107",
+            "settlement:16013",
+            "settlement:36659",
+            "settlement:40740",
+            "settlement:5227",
+            "settlement:24019",
+            "settlement:26248",
+            "settlement:2601",
+            "settlement:24367",
+            "settlement:5452",
+            "settlement:1244",
+            "settlement:32996",
+            "settlement:37894",
+            "settlement:9345",
+            "settlement:12506",
+            "settlement:39933",
+            "settlement:33720",
+            "settlement:4430"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "militaristic",
+              "industrial-power"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "4aad0de244b1b8522c8b9d994d0e6682f30e5688921ca86c5466a1b77a6b0221",
+          "count": 24,
+          "variation": 1,
+          "actualCount": 24,
+          "area": {
+            "minKm2": 10258.883134979465,
+            "maxKm2": 26724554.24667662,
+            "totalKm2": 147571352.6763939,
+            "gini": 0.6347320401488592,
+            "coefficientOfVariation": 1.2664835957426097
+          },
+          "areasKm2": [
+            15597763.567569539,
+            10616753.349572046,
+            22069423.33705617,
+            510926.56138063216,
+            24541.592671279985,
+            19695.562259535374,
+            11086.537564265973,
+            10258.883134979465,
+            3854061.85038526,
+            249511.7939368244,
+            543108.623110498,
+            2854232.998901621,
+            329960.9636938981,
+            26724554.24667662,
+            7153202.469688786,
+            4734534.371527672,
+            1192196.4356316745,
+            100051.76833625001,
+            8038768.933792221,
+            5396271.737220292,
+            9050943.783258539,
+            22640205.271888744,
+            3779522.40554962,
+            2069775.6315869298
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1668300995,
+          "elapsedMs": 302.9569589999992,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:18569",
+            "settlement:21376",
+            "settlement:30523",
+            "settlement:31847",
+            "settlement:35353",
+            "settlement:30517",
+            "settlement:15107",
+            "settlement:16013",
+            "settlement:36659",
+            "settlement:40740",
+            "settlement:5227",
+            "settlement:24019",
+            "settlement:26248",
+            "settlement:2601",
+            "settlement:24367",
+            "settlement:5452",
+            "settlement:1244",
+            "settlement:32996",
+            "settlement:37894",
+            "settlement:9345",
+            "settlement:12506",
+            "settlement:39933",
+            "settlement:33720",
+            "settlement:4430"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "militaristic",
+              "industrial-power"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "e29dee8555ac8dc5fecf84dcf7e01943ad19350317ab25f6b005a5ed731ba36f",
+          "count": 12,
+          "variation": 0.5,
+          "actualCount": 12,
+          "area": {
+            "minKm2": 10258.883134979465,
+            "maxKm2": 66017322.91397793,
+            "totalKm2": 147571352.67639378,
+            "gini": 0.6586557608605561,
+            "coefficientOfVariation": 1.4545282141263718
+          },
+          "areasKm2": [
+            66017322.91397793,
+            19006190.476625454,
+            22069423.33705617,
+            510926.56138063216,
+            24541.592671279985,
+            19695.562259535374,
+            11086.537564265973,
+            10258.883134979465,
+            11095269.101774873,
+            15187816.411198217,
+            6155882.004164719,
+            7462939.294585713
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1668300995,
+          "elapsedMs": 342.6499160000003,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:18569",
+            "settlement:21376",
+            "settlement:30523",
+            "settlement:31847",
+            "settlement:35353",
+            "settlement:30517",
+            "settlement:15107",
+            "settlement:16013",
+            "settlement:36659",
+            "settlement:40740",
+            "settlement:5227",
+            "settlement:24019"
+          ],
+          "traits": [
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        },
+        {
+          "ownershipFingerprint": "51f025a1d260ed392fc1f27d2ca4985cda4520e0447ff82d2a3dfe9a80ccbaf9",
+          "count": 36,
+          "variation": 0.5,
+          "actualCount": 36,
+          "area": {
+            "minKm2": 10258.883134979465,
+            "maxKm2": 13548378.770771861,
+            "totalKm2": 147571352.67639384,
+            "gini": 0.4501310337368409,
+            "coefficientOfVariation": 0.8197120500678546
+          },
+          "areasKm2": [
+            6947601.923597836,
+            8751387.564651746,
+            12246157.26858226,
+            510926.56138063216,
+            24541.592671279985,
+            19695.562259535374,
+            11086.537564265973,
+            10258.883134979465,
+            3677175.0688762926,
+            680975.3391116281,
+            1616958.562181785,
+            2567811.4740133197,
+            888523.7328538065,
+            6065445.862117672,
+            6533834.878155608,
+            5726942.139791651,
+            1969951.6343421717,
+            855623.6125292347,
+            5556439.236939028,
+            3706986.2124716756,
+            8034175.003976109,
+            5635457.115659016,
+            4138378.465395316,
+            2069775.6315869298,
+            833196.5618010007,
+            4551060.592919824,
+            4059519.136337917,
+            3584494.207817344,
+            4973700.885703493,
+            3174066.830912745,
+            5668636.882656452,
+            13548378.770771861,
+            9185989.068933908,
+            937831.9449258792,
+            6379443.1665474735,
+            2428924.763222166
+          ],
+          "unownedAreaKm2": 0,
+          "population": 1668300995,
+          "elapsedMs": 342.72149999999965,
+          "executedStages": [
+            "polities-religions"
+          ],
+          "capitals": [
+            "settlement:18569",
+            "settlement:21376",
+            "settlement:30523",
+            "settlement:31847",
+            "settlement:35353",
+            "settlement:30517",
+            "settlement:15107",
+            "settlement:16013",
+            "settlement:36659",
+            "settlement:40740",
+            "settlement:5227",
+            "settlement:24019",
+            "settlement:26248",
+            "settlement:2601",
+            "settlement:24367",
+            "settlement:5452",
+            "settlement:1244",
+            "settlement:32996",
+            "settlement:37894",
+            "settlement:9345",
+            "settlement:12506",
+            "settlement:39933",
+            "settlement:33720",
+            "settlement:4430",
+            "settlement:19113",
+            "settlement:17143",
+            "settlement:6589",
+            "settlement:3613",
+            "settlement:4162",
+            "settlement:9689",
+            "settlement:30570",
+            "settlement:10203",
+            "settlement:16320",
+            "settlement:40041",
+            "settlement:20996",
+            "settlement:23605"
+          ],
+          "traits": [
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "theocratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "militaristic",
+              "industrial-power"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "city-state-civic",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "dynastic-aristocratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "centralized",
+              "democratic",
+              "mercantile"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "agrarian-realm"
+            ],
+            [
+              "decentralized",
+              "democratic",
+              "mercantile"
+            ]
+          ],
+          "schemaVersion": 9,
+          "versions": {
+            "mesh": "1",
+            "reference-mesh": "geology-v2",
+            "geological-mapping": "geology-v2",
+            "reference-subdivisions": "geology-v2",
+            "plate-topology": "geology-v2",
+            "continental-crust": "geology-v2",
+            "geology": "geology-v2",
+            "plate-dynamics": "terrain-v2",
+            "tectonics": "terrain-v2",
+            "tectonic-elevation": "terrain-skeleton-v10",
+            "terrain": "terrain-v27",
+            "climate-c0": "climate-c0-v22",
+            "cryosphere-i0": "cryosphere-i0-v1",
+            "ecology-e0": "ecology-e0-v3",
+            "geographic-regions": "geographic-regions-v3",
+            "geographic-names": "geographic-names-v4",
+            "hydrology-h0": "hydrology-h0-v4",
+            "resource-potential": "resource-potential-v1",
+            "static-lakes-l1": "static-lakes-l1-v10",
+            "habitability": "habitability-v4",
+            "population-settlements": "population-settlements-v5",
+            "transport-network": "transport-network-v4",
+            "peoples-cultures": "peoples-cultures-v4",
+            "polities-religions": "polities-religions-v12"
+          }
+        }
+      ],
+      "planet": {
+        "physicalRadiusKm": 6371,
+        "seaLevelDatumKm": 0
+      },
+      "mesh": {
+        "subdivisionLevel": 6,
+        "irregularity": 0.45
+      },
+      "reference": {
+        "subdivisionLevel": 6
+      }
+    }
+  ]
+}

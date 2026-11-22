@@ -64,7 +64,7 @@ it('transfers C0 without detaching cached climate and invalidates only climate o
   const messages: WorkerResponse[] = []
   const runtime = new GenerationWorkerRuntime((message, transfer = []) => messages.push(structuredClone(message, { transfer })))
   const base = input(2, 0)
-  const request = { type: 'GENERATE', requestId: 'climate-first', input: { ...base, config: { ...base.config, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS } } }
+  const request = { type: 'GENERATE', requestId: 'climate-first', input: { ...base, config: { ...base.config, civilization: { enabled: false }, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS } } }
   await runtime.handle(request)
   const first = messages.find((m): m is Extract<WorkerResponse, { type: 'COMPLETED' }> => m.type === 'COMPLETED')!
   expect(first.climate).toBeDefined()
@@ -190,7 +190,7 @@ it('publishes one complete natural world without detaching cached stage outputs'
     input: {
       ...base,
       publication: { snapshotId: 'snapshot:web-world', worldId: 'world:web-world', name: 'Web World', createdAt: '2026-11-12T00:00:00Z' },
-      config: { ...base.config, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS, ecology: true as const },
+      config: { ...base.config, civilization: { enabled: false }, reference: { subdivisionLevel: 2 }, geology: DEFAULT_GEOLOGY_PARAMETERS, landforms: DEFAULT_LANDFORM_PARAMETERS, terrain: DEFAULT_TERRAIN_PARAMETERS, climate: DEFAULT_CLIMATE_PARAMETERS, hydrology: DEFAULT_HYDROLOGY_PARAMETERS, ecology: true as const },
     },
   }
   await runtime.handle(request)
@@ -201,6 +201,7 @@ it('publishes one complete natural world without detaching cached stage outputs'
     'builtin-cultures-zh-cn',
     'builtin-peoples-zh-cn',
     'builtin-polities-zh-cn',
+    'builtin-polity-traits',
     'builtin-religions-zh-cn',
     'builtin:naming-style/western-zh-cn',
     'core',
@@ -237,7 +238,7 @@ it('preserves natural and resource caches when only civilization parameters chan
         climate: DEFAULT_CLIMATE_PARAMETERS,
         hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
         ecology: true as const,
-        civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+        civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 1 },
       },
     },
   }
@@ -249,11 +250,11 @@ it('preserves natural and resource caches when only civilization parameters chan
 
   await runtime.handle({
     ...request,
-    requestId: 'civ-cohesion-changed',
+    requestId: 'civ-administration-changed',
     input: {
       ...request.input,
       publication: { ...request.input.publication, snapshotId: 'snapshot:web-civ-2' },
-      config: { ...request.input.config, civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCohesion: 0.9 } },
+      config: { ...request.input.config, civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 1, capabilities: { ...DEFAULT_CIVILIZATION_PARAMETERS.capabilities, administrativeCapacity: 0.9 } } },
     },
   })
   const second = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[1]
@@ -276,4 +277,23 @@ it('preserves natural and resource caches when only civilization parameters chan
   expect(third.world?.nature.resources.resourceIds.length).toBeGreaterThan(0)
   expect(third.stages?.find(stage => stage.stageId === 'resource-potential')?.action).toBe('cache-hit')
   expect(third.stages?.find(stage => stage.stageId === 'habitability')?.action).toBe('cache-hit')
+
+  const capabilities = { agriculturalProductivity: 1.5, industrialCapability: 0.25, landTransportCapability: 1.75, seafaringCapability: 0, administrativeCapacity: 0.6 }
+  await runtime.handle({
+    ...request,
+    requestId: 'civ-capabilities-changed',
+    input: {
+      ...request.input,
+      publication: { ...request.input.publication, snapshotId: 'snapshot:web-civ-capabilities' },
+      config: { ...request.input.config, civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 1, capabilities, urbanConcentration: 0.75, politySizeVariation: 0.8, culturalDiversity: 1.5 } },
+    },
+  })
+  const fourth = messages.filter((message): message is Extract<WorkerResponse, { type: 'COMPLETED' }> => message.type === 'COMPLETED')[3]
+  expect(fourth.world?.metadata.generationConfig.civilization?.capabilities).toEqual(capabilities)
+  expect(fourth.world?.metadata.generationConfig.civilization?.urbanConcentration).toBe(0.75)
+  expect(fourth.world?.metadata.generationConfig.civilization?.politySizeVariation).toBe(0.8)
+  expect(fourth.world?.metadata.generationConfig.civilization?.culturalDiversity).toBe(1.5)
+  expect(fourth.world?.civilization.transport.routes.some(route => route.mode === 'sea')).toBe(false)
+  expect(fourth.stages?.find(stage => stage.stageId === 'resource-potential')?.action).toBe('cache-hit')
+  expect(fourth.stages?.find(stage => stage.stageId === 'habitability')?.action).toBe('execute')
 })

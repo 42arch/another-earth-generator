@@ -110,7 +110,7 @@ export function societyPackDocumentFromPack(pack: ContentPack, dependencies: rea
   }
   const active = (Object.keys(entries) as (keyof typeof entries)[]).filter(domain => entries[domain].length > 0)
   if (active.length !== 1 || pack.names.length || pack.namingStyles.length
-    || pack.resources.length || pack.presets.length
+    || pack.resources.length || pack.presets.length || pack.polityTraits?.length
     || pack.manifest.schemaVersion !== 1) {
     throw new TypeError('Content pack cannot be represented as a society document')
   }

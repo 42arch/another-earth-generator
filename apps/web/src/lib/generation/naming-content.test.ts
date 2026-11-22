@@ -2,7 +2,7 @@ import type { ContentPackV1, NamingStyle } from '@another-earth/world-data'
 import { generateName } from '@another-earth/world-core'
 import { calculateContentHash, calculateNamingStyleSignature, createContentCatalog, createNamingStylePack, decodeNamingStyleJson, encodeNamingStyleJson, loadBuiltinNamingStyles } from '@another-earth/world-data'
 import { describe, expect, it } from 'vitest'
-import { builtinContentPacks, builtinGeographicNamingProfile, builtinPipelineContent } from './builtin-content'
+import { builtinContentPacks, builtinGeographicNamingProfile, builtinPipelineContent, findPolityTrait, translateContentKey } from './builtin-content'
 
 function roundTrip(style: NamingStyle): NamingStyle {
   const result = decodeNamingStyleJson(encodeNamingStyleJson(style))
@@ -28,6 +28,16 @@ function cultures(names: readonly ContentPackV1[]): ContentPackV1 {
 }
 
 describe('naming content public API integration', () => {
+  it('injects the neutral polity trait catalog and resolves bilingual names and descriptions', () => {
+    const definition = findPolityTrait('centralized')!
+    expect(translateContentKey(definition.displayNameKey, 'zh-CN')).toBe('中央集权')
+    expect(translateContentKey(definition.displayNameKey, 'en')).toBe('Centralized')
+    expect(translateContentKey(definition.descriptionKey, 'zh-CN')).not.toBe(definition.descriptionKey)
+    const content = builtinPipelineContent.content['civilization-content']
+    expect(content.polityTraits).toHaveLength(16)
+    expect(content.polities.find(p => p.politicalForm === 'theocracy')?.requiredTraits).toEqual(['theocratic'])
+  })
+
   it('generates both kinds of geographic names from the current style', () => {
     const style = builtinGeographicNamingProfile
     for (const kind of ['continent', 'ocean'] as const) {
@@ -49,6 +59,7 @@ describe('naming content public API integration', () => {
       'builtin-cultures-zh-cn',
       'builtin-peoples-zh-cn',
       'builtin-polities-zh-cn',
+      'builtin-polity-traits',
       'builtin-religions-zh-cn',
       'builtin:naming-style/western-zh-cn',
       'core',

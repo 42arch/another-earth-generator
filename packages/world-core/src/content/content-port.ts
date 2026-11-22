@@ -42,11 +42,33 @@ export type PolityGovernmentOrganization
 
 export type PolitySuccession = 'hereditary' | 'elective' | 'appointed' | 'rotating' | 'collective' | 'mixed'
 
+export type PolityTraitDimension = 'power' | 'governance' | 'economy' | 'territory'
+/** Stable algorithm-facing ID, independent of the language of polity candidates. */
+export interface PolityTraitDefinitionView {
+  readonly id: string
+  readonly dimension: PolityTraitDimension
+  /** Territory traits are derived after expansion from these eligible size classes. */
+  readonly sizeClasses?: readonly ('city-state' | 'regional' | 'kingdom' | 'empire')[]
+  readonly displayNameKey: string
+  readonly descriptionKey: string
+}
+/** Matching entries multiply in document order; all listed traits must be present. */
+export interface PolityTraitAffinityView {
+  readonly traits: readonly string[]
+  readonly excludedTraits?: readonly string[]
+  readonly sizeClasses?: readonly ('city-state' | 'regional' | 'kingdom' | 'empire')[]
+  readonly weight: number
+}
+
 export interface PolityArchetypeView {
   readonly id: string
   readonly displayNameKey: string
   readonly description?: string
   readonly tags: readonly string[]
+  /** Hard territory-size eligibility; omitted means unrestricted. */
+  readonly allowedSizeClasses?: readonly ('city-state' | 'regional' | 'kingdom' | 'empire')[]
+  readonly requiredTraits?: readonly string[]
+  readonly traitAffinities?: readonly PolityTraitAffinityView[]
   readonly politicalForm: PolityPoliticalForm
   readonly governmentOrganization: PolityGovernmentOrganization
   readonly headOfStateTitle: string
@@ -78,6 +100,7 @@ export interface ContentPackView {
   readonly peoples: readonly PeopleArchetypeView[]
   readonly cultures: readonly CultureArchetypeView[]
   readonly religions: readonly ReligionArchetypeView[]
+  readonly polityTraits?: readonly PolityTraitDefinitionView[]
   readonly polities: readonly PolityArchetypeView[]
   readonly resources: readonly ResourceDefinitionView[]
   readonly presets: readonly { readonly id: string }[]
@@ -144,6 +167,7 @@ export interface CivilizationContentBundle {
   readonly peoples: readonly PeopleArchetypeView[]
   readonly cultures: readonly CultureArchetypeView[]
   readonly religions: readonly ReligionArchetypeView[]
+  readonly polityTraits?: readonly PolityTraitDefinitionView[]
   readonly polities: readonly PolityArchetypeView[]
   readonly namingStyles: readonly NamingStyleView[]
   readonly translations: Readonly<Record<string, Readonly<Record<string, string>>>>
@@ -181,7 +205,13 @@ export function civilizationContentSignature(bundle: CivilizationContentBundle):
     peoples: [...bundle.peoples].sort((a, b) => a.id.localeCompare(b.id)).map(p => [p.id, p.tags]),
     cultures: [...bundle.cultures].sort((a, b) => a.id.localeCompare(b.id)).map(c => [c.id, c.namingStyleId, c.traits]),
     religions: [...bundle.religions].sort((a, b) => a.id.localeCompare(b.id)).map(r => [r.id, r.organization, r.tolerance, r.spreadBias, r.weight, r.traits]),
-    polities: [...bundle.polities].sort((a, b) => a.id.localeCompare(b.id)).map(s => [s.id, s.politicalForm, s.governmentOrganization, s.headOfStateTitle, s.headOfGovernmentTitle, s.legislatureTitle, s.succession, s.weight]),
+    polities: [...bundle.polities].sort((a, b) => a.id.localeCompare(b.id)).map(s => [
+      s.id, s.politicalForm, s.governmentOrganization, s.headOfStateTitle, s.headOfGovernmentTitle, s.legislatureTitle, s.succession, s.weight,
+      s.allowedSizeClasses ? [...s.allowedSizeClasses].sort() : null,
+      [...(s.requiredTraits ?? [])].sort(),
+      (s.traitAffinities ?? []).map(rule => [[...rule.traits].sort(), [...(rule.excludedTraits ?? [])].sort(), rule.sizeClasses ? [...rule.sizeClasses].sort() : null, rule.weight]),
+    ]),
+    polityTraits: [...(bundle.polityTraits ?? [])].sort((a, b) => a.id.localeCompare(b.id)).map(t => [t.id, t.dimension, t.sizeClasses ? [...t.sizeClasses].sort() : null]),
     namingStyles: [...bundle.namingStyles].sort((a, b) => a.id.localeCompare(b.id)).map(n => [n.id, n.version, n.language, n.pools, n.rules]),
   }
   return `civilization-content:${fnv1a32(JSON.stringify(payload))}`

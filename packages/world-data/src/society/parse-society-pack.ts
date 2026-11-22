@@ -1,5 +1,6 @@
 import type { ContentId, ValidationIssue } from '../schemas/content'
 import type { SocietyPackDocument, SocietyPackParseResult } from '../schemas/society-pack'
+import { validatePolityTraitReferences } from './polity-traits'
 
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -100,7 +101,7 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
         : domain === 'cultures'
           ? ['id', 'displayName', 'description', 'tags', 'traits', 'namingStyleId']
           : domain === 'polities'
-            ? ['id', 'displayName', 'description', 'tags', 'politicalForm', 'governmentOrganization', 'headOfStateTitle', 'headOfGovernmentTitle', 'legislatureTitle', 'succession', 'weight']
+            ? ['id', 'displayName', 'description', 'tags', 'politicalForm', 'governmentOrganization', 'headOfStateTitle', 'headOfGovernmentTitle', 'legislatureTitle', 'succession', 'weight', 'allowedSizeClasses', 'requiredTraits', 'traitAffinities']
             : ['id', 'displayName', 'description', 'tags', 'organization', 'traits', 'tolerance', 'spreadBias', 'weight']
       keys(entry, allowed, path)
       const expectedDomain = domain === 'peoples' ? 'people' : domain === 'cultures' ? 'culture' : domain === 'polities' ? 'polity' : 'religion'
@@ -123,6 +124,7 @@ export function parseSocietyPack(value: unknown): SocietyPackParseResult {
           add('reference', `${path}.namingStyleId`, 'Naming style must be a declared dependency')
       }
       if (domain === 'polities') {
+        issues.push(...validatePolityTraitReferences({ allowedSizeClasses: entry.allowedSizeClasses, requiredTraits: entry.requiredTraits, traitAffinities: entry.traitAffinities }, path))
         if (!politicalForms.includes(entry.politicalForm as string))
           add('range', `${path}.politicalForm`, 'Invalid political form')
         if (!governmentOrganizations.includes(entry.governmentOrganization as string))

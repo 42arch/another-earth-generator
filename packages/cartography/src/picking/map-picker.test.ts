@@ -116,6 +116,7 @@ function createMinimalMeshReader(): WorldMapReader {
       settlements: [],
       population: field(new Float64Array(4)),
       populationGroups: [],
+      territoryPolityIndex: field(new Int32Array(4).fill(-1)),
       transport: {
         nodes: [],
         routes: [],

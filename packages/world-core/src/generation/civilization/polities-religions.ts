@@ -1,10 +1,13 @@
 import type { CivilizationContentBundle, ContentId, NamingStyleView, PolityArchetypeView, ReligionArchetypeView } from '#content/content-port'
+import type { EcologyArtifact } from '#generation/nature/ecology/ecology'
 import type { TerrainArtifact } from '#generation/nature/geography'
+import type { HydrologyArtifact } from '#generation/nature/hydrology/hydrology'
 import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import type { ResourcePotentialArtifact } from '#generation/nature/resources/resource-potential'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
-import type { CivilizationParameters, Polity, PolitySizeClass, PopulationGroup, Religion, Settlement } from './civilization-types'
+import type { CivilizationParameters, Polity, PolitySizeClass, PolityTraitId, PopulationGroup, Religion, Settlement } from './civilization-types'
 import type { HabitabilityArtifact } from './habitability'
+import type { PolityPowerDiagnostic } from './civilization-traits'
 import type { PeoplesCulturesArtifact } from './peoples-cultures'
 import type { PopulationSettlementsArtifact } from './population-settlements'
 import type { TransportNetworkArtifact } from './transport-network'
@@ -13,9 +16,22 @@ import { UniqueNameAllocator } from '#generation/names/unique-naming'
 import { IndexPriorityQueue } from '#generation/nature/common/priority-queue'
 import { DeterministicRandom } from '#math/random'
 import { greatCircleDistanceKm } from '#math/spherical'
+import { resolveCivilizationParameters } from './civilization-parameters'
+import {
+  applyPolityTraitArchetypeWeight,
+  computePolityExpansionModifiers,
+  emergePolityTraitsForCapitals,
+  evaluateSettlementFeatures,
+  POLITY_TRAIT_SET,
+  selectSettlementFeatures,
+  SETTLEMENT_FEATURE_SET,
+} from './civilization-traits'
+import { classifyPolitySize } from './civilization-scale'
+import { buildTerritoryComponents, checkPolityCountBudget, createPolityAreaTargets, growPolityTerritories, selectPolityCapitals } from './polity-layout'
+import { claimMaritimeTerritory } from './nearshore-territory'
 import { REFERENCE_TRAVEL_KM_PER_DAY, SETTLEMENT_SUPPORT_AREA_KM2 } from './population-settlements'
 
-export const POLITIES_RELIGIONS_VERSION = 'polities-religions-v2' as const
+export const POLITIES_RELIGIONS_VERSION = 'polities-religions-v15' as const
 
 export interface PolitiesReligionsArtifact {
   readonly meshId: string
@@ -27,6 +43,14 @@ export interface PolitiesReligionsArtifact {
   readonly settlements: readonly Settlement[]
   readonly population: Float64Array
   readonly populationGroups: readonly PopulationGroup[]
+  /** Land ownership, length N. `-1` is unowned; ocean is always `-1`. */
+  readonly territoryPolityIndex: Int32Array
+}
+
+export interface PolitiesReligionsExtraContext {
+  readonly hydrology?: Pick<HydrologyArtifact, 'meshId' | 'riverIndex' | 'downstreamRegion'>
+  readonly ecology?: Pick<EcologyArtifact, 'meshId' | 'landCoverIds' | 'landCoverIndex'>
+  readonly onPowerEvaluated?: (diagnostic: PolityPowerDiagnostic) => void
 }
 
 function chooseWeighted<T>(items: readonly { readonly item: T, readonly weight: number }[], random: DeterministicRandom): T {
@@ -51,12 +75,30 @@ function resolveStyle(styles: readonly NamingStyleView[], preferredId: ContentId
   return styles.find(style => style.id === preferredId) ?? styles[0]!
 }
 
+function polityFormTitle(bundle: CivilizationContentBundle, displayNameKey: string): string {
+  const locales = Object.keys(bundle.translations).sort()
+  for (const locale of locales) {
+    const text = bundle.translations[locale]?.[displayNameKey]?.trim()
+    if (text)
+      return text
+  }
+  return ''
+}
+
+function appendPoliticalForm(properName: string, formTitle: string): string {
+  const form = formTitle.trim()
+  if (!form || properName.endsWith(form))
+    return properName
+  return /[\u3400-\u9fff]/.test(`${properName}${form}`) ? `${properName}${form}` : `${properName} ${form}`
+}
+
 function scorePolityArchetype(
   arch: PolityArchetypeView,
   sizeClass: PolitySizeClass,
   isCoastalCapital: boolean,
   isHighlandCapital: boolean,
-  cohesion: number,
+  administrativeCapacity: number,
+  traits: readonly PolityTraitId[],
 ): number {
   let score = Math.max(0.05, arch.weight)
   const form = arch.politicalForm
@@ -87,9 +129,9 @@ function scorePolityArchetype(
     score *= 1.8
   if (isHighlandCapital && (form === 'khanate' || form === 'tribal-confederation' || form === 'chiefdom'))
     score *= 1.9
-  if (cohesion < 0.4 && (form === 'confederation' || form === 'tribal-confederation' || form === 'chiefdom' || form === 'free-territory'))
+  if (administrativeCapacity < 0.4 && (form === 'confederation' || form === 'tribal-confederation' || form === 'chiefdom' || form === 'free-territory'))
     score *= 1.5
-  return score
+  return applyPolityTraitArchetypeWeight(score, arch, traits, sizeClass)
 }
 
 function scoreReligionArchetype(
@@ -122,22 +164,33 @@ export function generatePolitiesReligions(
   bundle: CivilizationContentBundle,
   bundleSignature: string,
   mesh: Pick<SphericalMesh, 'meshId' | 'regionCount' | 'centers' | 'areaKm2' | 'neighborOffsets' | 'neighbors' | 'physicalRadiusKm'>,
-  terrain: Pick<TerrainArtifact, 'meshId' | 'landMask' | 'elevationKm'>,
+  terrain: Pick<TerrainArtifact, 'meshId' | 'landMask' | 'elevationKm'> & Partial<Pick<TerrainArtifact, 'slopeRadians'>>,
   lakes: Pick<StaticLakeArtifact, 'meshId' | 'lakeIndex'>,
-  resources: Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential'>,
-  habitability: Pick<HabitabilityArtifact, 'meshId' | 'movementCost' | 'coastalMask'>,
+  resources: Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential'> & Partial<Pick<ResourcePotentialArtifact, 'forestryPotential' | 'fisheryPotential' | 'deposits'>>,
+  habitability: Pick<HabitabilityArtifact, 'meshId' | 'movementCost' | 'coastalMask'> & Partial<Pick<HabitabilityArtifact, 'economicOpportunity' | 'portPotential'>>,
   popSettlements: Pick<PopulationSettlementsArtifact, 'meshId' | 'enabled' | 'population'>,
   transport: Pick<TransportNetworkArtifact, 'meshId' | 'nodes' | 'routes' | 'nodeCentrality'>,
-  peoplesCultures: Pick<PeoplesCulturesArtifact, 'meshId' | 'peoples' | 'cultures' | 'namedSettlements' | 'regionCultures' | 'dominantCultureIndex' | 'usedNames'>,
-  params: Pick<CivilizationParameters, 'enabled' | 'polityCohesion'>,
+  peoplesCultures: Pick<PeoplesCulturesArtifact, 'meshId' | 'peoples' | 'cultures' | 'namedSettlements' | 'regionCultures' | 'dominantCultureIndex' | 'usedNames'> & Partial<Pick<PeoplesCulturesArtifact, 'hearthRegions'>>,
+  params: Pick<CivilizationParameters, 'enabled' | 'polityCount' | 'politySizeVariation'> & Partial<Pick<CivilizationParameters, 'urbanConcentration'>> & {
+    readonly capabilities: Pick<CivilizationParameters['capabilities'], 'administrativeCapacity'>
+      & Partial<Pick<CivilizationParameters['capabilities'], 'seafaringCapability' | 'industrialCapability' | 'landTransportCapability'>>
+  },
   worldSeed: string,
   check?: (fraction: number) => void,
+  extra?: PolitiesReligionsExtraContext,
 ): PolitiesReligionsArtifact {
   const n = mesh.regionCount
   if (!n || terrain.meshId !== mesh.meshId || lakes.meshId !== mesh.meshId || resources.meshId !== mesh.meshId || habitability.meshId !== mesh.meshId || popSettlements.meshId !== mesh.meshId || transport.meshId !== mesh.meshId || peoplesCultures.meshId !== mesh.meshId)
     throw new Error('Polities and religions stage received mismatched mesh artifacts')
+  if ((extra?.hydrology && extra.hydrology.meshId !== mesh.meshId) || (extra?.ecology && extra.ecology.meshId !== mesh.meshId))
+    throw new Error('Polities and religions stage received mismatched auxiliary mesh artifacts')
   if (bundleSignature !== civilizationContentSignature(bundle))
     throw new Error('Civilization content signature mismatch')
+
+  const resolvedParams = resolveCivilizationParameters(params)
+  const { polityCount, politySizeVariation, urbanConcentration, capabilities } = resolvedParams
+  const { administrativeCapacity, seafaringCapability, industrialCapability } = capabilities
+  const lowSpecialization = urbanConcentration <= 0.25 && industrialCapability < 0.2
 
   const population = popSettlements.population.slice()
   if (!params.enabled) {
@@ -152,6 +205,7 @@ export function generatePolitiesReligions(
       settlements: [],
       population,
       populationGroups: [],
+      territoryPolityIndex: new Int32Array(n).fill(-1),
     }
   }
 
@@ -175,10 +229,12 @@ export function generatePolitiesReligions(
       settlements: [],
       population,
       populationGroups: [],
+      territoryPolityIndex: new Int32Array(n).fill(-1),
     }
   }
 
-  const rng = new DeterministicRandom(JSON.stringify([worldSeed, POLITIES_RELIGIONS_VERSION]))
+  // Retain the v8 random stream so changes to power scoring can be compared independently.
+  const rng = new DeterministicRandom(JSON.stringify([worldSeed, 'polities-religions-v8']))
   const allocator = new UniqueNameAllocator(worldSeed, peoplesCultures.usedNames)
 
   const centralityBySettlement = new Map<string, number>()
@@ -190,10 +246,12 @@ export function generatePolitiesReligions(
 
   const cultureMap = new Map(peoplesCultures.cultures.map((c, idx) => [c.id, { culture: c, index: idx }]))
 
-  // Transport shortcuts map for polity projection and religion spread
+  // Transport shortcuts map for religion spread and polity projection
   const regionShortcuts = new Map<number, { readonly toRegion: number, readonly cost: number, readonly isSea: boolean }[]>()
   const nodeRegion = new Map(transport.nodes.map(node => [node.id, node.regionId]))
   for (const route of transport.routes) {
+    if (route.mode === 'sea' && seafaringCapability <= 0)
+      continue
     const a = nodeRegion.get(route.fromNodeId)
     const b = nodeRegion.get(route.toNodeId)
     if (a === undefined || b === undefined)
@@ -214,179 +272,30 @@ export function generatePolitiesReligions(
   }
 
   const kmPerDay = REFERENCE_TRAVEL_KM_PER_DAY
-  const cohesion = params.polityCohesion
 
-  // 1. Select polity capitals from top settlements
-  const rankedSites = [...peoplesCultures.namedSettlements].sort((a, b) => {
-    const scoreA = a.population * (0.65 + 0.55 * (centralityBySettlement.get(a.id) ?? 0))
-    const scoreB = b.population * (0.65 + 0.55 * (centralityBySettlement.get(b.id) ?? 0))
+  const siteScore = (site: Omit<Settlement, 'polityId' | 'features'>) =>
+    site.population * (0.65 + 0.55 * (centralityBySettlement.get(site.id) ?? 0))
+
+  const uniqueSites = new Map(peoplesCultures.namedSettlements.filter(site => terrain.landMask[site.regionId] === 1 && lakes.lakeIndex[site.regionId]! < 0 && site.population > 0).map(site => [site.regionId, site]))
+  const rankedSites = [...uniqueSites.values()].sort((a, b) => {
+    const scoreA = siteScore(a)
+    const scoreB = siteScore(b)
     return scoreB !== scoreA ? scoreB - scoreA : a.regionId - b.regionId
   })
 
-  const maxCapitals = rankedSites.length <= 1
-    ? rankedSites.length
-    : Math.max(1, Math.min(rankedSites.length, Math.round(Math.max(2, Math.sqrt(rankedSites.length) * (2.1 - cohesion * 1.15)))))
-  const capitalSpacingKm = Math.max(Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2) * (3.2 + cohesion * 3.2), mesh.physicalRadiusKm * (0.14 + cohesion * 0.16))
+  checkPolityCountBudget(polityCount, rankedSites.length)
+  const components = buildTerritoryComponents(mesh, terrain.landMask, lakes.lakeIndex, population, regionShortcuts, () => check?.(0.05))
+  // Religion origin spacing remains independent of political layout controls.
+  const baseCapitalSpacingKm = Math.max(Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2) * (3.2 + 0.6 * 3.2), mesh.physicalRadiusKm * (0.14 + 0.6 * 0.16))
+  const capitalSpacingKm = Math.sqrt(components.areaKm2.reduce((sum, area) => sum + area, 0) / polityCount)
 
-  const capitals: Omit<Settlement, 'polityId'>[] = []
+  const queue = new IndexPriorityQueue(Math.min(n, 8192))
   const vecA = { x: 0, y: 0, z: 0 }
   const vecB = { x: 0, y: 0, z: 0 }
 
-  for (const site of rankedSites) {
-    if (capitals.length >= maxCapitals)
-      break
-    vecA.x = mesh.centers[3 * site.regionId]
-    vecA.y = mesh.centers[3 * site.regionId + 1]
-    vecA.z = mesh.centers[3 * site.regionId + 2]
-    let farEnough = true
-    for (const cap of capitals) {
-      vecB.x = mesh.centers[3 * cap.regionId]
-      vecB.y = mesh.centers[3 * cap.regionId + 1]
-      vecB.z = mesh.centers[3 * cap.regionId + 2]
-      if (greatCircleDistanceKm(vecA, vecB, mesh.physicalRadiusKm) < capitalSpacingKm) {
-        farEnough = false
-        break
-      }
-    }
-    if (farEnough)
-      capitals.push(site)
-  }
-  if (capitals.length === 0 && rankedSites.length > 0)
-    capitals.push(rankedSites[0]!)
-
-  // 2. Multi-source administrative projection to partition territory
-  const regionPolity = new Int32Array(n).fill(-1)
-  const regionPolityCost = new Float32Array(n).fill(Infinity)
-  const maxProjectionCost = ((mesh.physicalRadiusKm * (0.28 + cohesion * 0.52)) / kmPerDay)
-
-  const queue = new IndexPriorityQueue(Math.min(n, 8192))
-  const capitalCultureIndices = capitals.map(cap => cultureMap.get(cap.cultureId)?.index ?? -1)
-
-  for (let p = 0; p < capitals.length; p++) {
-    const capRegion = capitals[p]!.regionId
-    regionPolity[capRegion] = p
-    regionPolityCost[capRegion] = 0
-    queue.push(capRegion, 0)
-  }
-
-  while (queue.size > 0) {
-    const u = queue.pop()
-    const pIdx = regionPolity[u]!
-    const dU = regionPolityCost[u]!
-    if (dU > maxProjectionCost)
-      continue
-    const polityCulture = capitalCultureIndices[pIdx]!
-
-    for (let e = mesh.neighborOffsets[u]; e < mesh.neighborOffsets[u + 1]; e++) {
-      const v = mesh.neighbors[e]!
-      if (terrain.landMask[v] !== 1 || lakes.lakeIndex[v] >= 0 || population[v]! <= 0)
-        continue
-      const stepKm = greatCircleDistanceKm(
-        { x: mesh.centers[3 * u], y: mesh.centers[3 * u + 1], z: mesh.centers[3 * u + 2] },
-        { x: mesh.centers[3 * v], y: mesh.centers[3 * v + 1], z: mesh.centers[3 * v + 2] },
-        mesh.physicalRadiusKm,
-      )
-      const resistance = 0.5 * (habitability.movementCost[u]! + habitability.movementCost[v]!)
-      const culturalAffinity = peoplesCultures.dominantCultureIndex[v] === polityCulture ? 0.78 : 1.08
-      const nextCost = dU + ((stepKm * resistance) / kmPerDay) * culturalAffinity
-      if (nextCost <= maxProjectionCost && nextCost < regionPolityCost[v]!) {
-        regionPolity[v] = pIdx
-        regionPolityCost[v] = nextCost
-        queue.push(v, nextCost)
-      }
-    }
-
-    const shortcuts = regionShortcuts.get(u)
-    if (shortcuts) {
-      for (const edge of shortcuts) {
-        const v = edge.toRegion
-        if (population[v]! <= 0)
-          continue
-        const seaPenalty = edge.isSea ? (1.4 - cohesion * 0.35) : 0.85
-        const culturalAffinity = peoplesCultures.dominantCultureIndex[v] === polityCulture ? 0.82 : 1.12
-        const nextCost = dU + edge.cost * seaPenalty * culturalAffinity
-        if (nextCost <= maxProjectionCost && nextCost < regionPolityCost[v]!) {
-          regionPolity[v] = pIdx
-          regionPolityCost[v] = nextCost
-          queue.push(v, nextCost)
-        }
-      }
-    }
-  }
-
-  // Ensure each capital region strictly belongs to its own polity
-  for (let p = 0; p < capitals.length; p++)
-    regionPolity[capitals[p]!.regionId] = p
-
-  // Tally regions, area and population per polity
-  const polityAreaKm2 = new Float64Array(capitals.length)
-  const polityPop = new Float64Array(capitals.length)
-  for (let r = 0; r < n; r++) {
-    const p = regionPolity[r]!
-    if (p >= 0) {
-      polityAreaKm2[p] += mesh.areaKm2[r]!
-      polityPop[p] += population[r]!
-    }
-  }
-
-  const capitalSet = new Set(capitals.map(c => c.id))
-  const politySettlementCount = new Int32Array(capitals.length)
-  for (const s of peoplesCultures.namedSettlements) {
-    const p = regionPolity[s.regionId]!
-    if (p >= 0)
-      politySettlementCount[p]++
-  }
-
-  const polities: Polity[] = capitals.map((cap, pIdx) => {
-    const equivalentRegions = polityAreaKm2[pIdx]! / SETTLEMENT_SUPPORT_AREA_KM2
-    const sCount = politySettlementCount[pIdx]!
-    const totalPop = polityPop[pIdx]!
-    const shareOfWorld = totalPop / Math.max(1, capitals.reduce((sum, _, idx) => sum + polityPop[idx]!, 0))
-    const sizeClass: PolitySizeClass = (equivalentRegions <= 3 || sCount <= 1)
-      ? 'city-state'
-      : (shareOfWorld >= 0.25 && equivalentRegions >= 18)
-          ? 'empire'
-          : (equivalentRegions >= 8)
-              ? 'kingdom'
-              : 'regional'
-
-    const arch = chooseWeighted(
-      bundle.polities.map(a => ({
-        item: a,
-        weight: scorePolityArchetype(a, sizeClass, habitability.coastalMask[cap.regionId] === 1, terrain.elevationKm[cap.regionId]! >= 0.7, cohesion),
-      })),
-      rng.fork(`polity-arch-${pIdx}`),
-    )
-
-    const culture = cultureMap.get(cap.cultureId)!.culture
-    const style = resolveStyle(bundle.namingStyles, culture.namingStyleId)
-    const id = `polity:${pIdx}`
-    const name = allocator.allocate(style, bundleSignature, id, 'polity')
-    return {
-      id,
-      name,
-      foundedAtYear: Math.min(-1, cap.foundedAtYear + rng.nextInt(20, 200)),
-      archetypeId: arch.id as ContentId,
-      cultureId: culture.id,
-      capitalSettlementId: cap.id,
-      sizeClass,
-    }
-  })
-
-  // Update settlement tiers and polity links
-  const settlements: Settlement[] = peoplesCultures.namedSettlements.map((s) => {
-    const pIdx = regionPolity[s.regionId]!
-    const polityId = pIdx >= 0 ? polities[pIdx]!.id : null
-    const isCapital = capitalSet.has(s.id)
-    return {
-      ...s,
-      polityId,
-      tier: isCapital ? 'capital' : s.tier,
-    }
-  })
-
-  // 3. Seed and spread Religions
-  check?.(0.45)
+  // Step 1. Seed and spread Religions BEFORE settlement features and territory expansion
+  // so religious sanctuaries and theocratic traits are grounded without circularity.
+  check?.(0.1)
   const religionTargetCount = Math.max(1, Math.min(6, Math.max(1, Math.round(peoplesCultures.cultures.length * 0.75))))
   const religionOrigins: { region: number, cultureId: string }[] = []
   const usedReligionRegions = new Set<number>()
@@ -404,7 +313,7 @@ export function generatePolitiesReligions(
       vecB.x = mesh.centers[3 * o.region]
       vecB.y = mesh.centers[3 * o.region + 1]
       vecB.z = mesh.centers[3 * o.region + 2]
-      if (greatCircleDistanceKm(vecA, vecB, mesh.physicalRadiusKm) < capitalSpacingKm * 0.8) {
+      if (greatCircleDistanceKm(vecA, vecB, mesh.physicalRadiusKm) < baseCapitalSpacingKm * 0.8) {
         spaced = false
         break
       }
@@ -492,9 +401,236 @@ export function generatePolitiesReligions(
     }
   }
 
-  // 4. Assemble sparse conservative PopulationGroup[]
-  check?.(0.75)
   const relScale = Math.max(5.0, (mesh.physicalRadiusKm * 0.16) / kmPerDay)
+  const dominantReligionIndex = new Int32Array(n).fill(-1)
+  for (let r = 0; r < n; r++) {
+    let minRelCost = Infinity
+    for (let rel = 0; rel < relCount; rel++) {
+      if (relCosts[rel]![r]! < minRelCost)
+        minRelCost = relCosts[rel]![r]!
+    }
+    if (!Number.isFinite(minRelCost))
+      continue
+    let bestRel = -1
+    let bestWeight = -1
+    for (let rel = 0; rel < relCount; rel++) {
+      const d = relCosts[rel]![r]!
+      if (!Number.isFinite(d))
+        continue
+      const w = Math.exp(-(d - minRelCost) / relScale) * (0.6 + religionArchetypes[rel]!.spreadBias * 0.8)
+      if (w > bestWeight) {
+        bestWeight = w
+        bestRel = rel
+      }
+    }
+    dominantReligionIndex[r] = bestRel
+  }
+
+  // Step 2. Evaluate objective + capability-gated settlement features
+  check?.(0.24)
+  const settlementProfiles = evaluateSettlementFeatures({
+    mesh,
+    terrain,
+    hydrology: extra?.hydrology,
+    ecology: extra?.ecology,
+    resources,
+    habitability,
+    transport,
+    namedSettlements: peoplesCultures.namedSettlements,
+    regionCultures: peoplesCultures.regionCultures,
+    hearthRegions: peoplesCultures.hearthRegions,
+    religionOriginRegions: usedReligionRegions,
+    dominantReligionIndex,
+    religionCosts: relCosts,
+    religionArchetypes,
+    capabilities,
+    urbanConcentration,
+  })
+
+  // Step 3. Select polity capitals from top settlements
+  const capitals = selectPolityCapitals(rankedSites, polityCount, mesh, components, siteScore, () => check?.(0.3))
+
+  // Step 4. Emerge polity traits from each capital and its local settlement hinterland
+  check?.(0.32)
+  const traitContext = {
+    mesh,
+    terrain,
+    habitability,
+    capabilities,
+    urbanConcentration,
+    territoryComponentIndex: components.index,
+    namedSettlements: peoplesCultures.namedSettlements,
+    settlementProfiles,
+    regionCultures: peoplesCultures.regionCultures,
+    dominantReligionIndex,
+    religionArchetypes,
+    onPowerEvaluated: extra?.onPowerEvaluated,
+  }
+  const polityTraits: (readonly PolityTraitId[])[] = [
+    ...emergePolityTraitsForCapitals(capitals, traitContext, rng.fork('polity-traits-main'), capitalSpacingKm * 0.9),
+  ]
+  const polityModifiers = polityTraits.map(traits => computePolityExpansionModifiers(traits))
+
+  // Step 5. Trait-modulated multi-source territory expansion and maritime projection
+  const capitalCultureIndices = capitals.map(cap => cultureMap.get(cap.cultureId)?.index ?? -1)
+  const capitalReligionIndices = capitals.map(cap => dominantReligionIndex[cap.regionId]!)
+  const targetAreasKm2 = createPolityAreaTargets(mesh, capitals.map(cap => cap.regionId), components, politySizeVariation,
+    capitals.map((cap, p) => rng.fork(`polity-area-rank:${cap.id}`).nextFloat() * polityModifiers[p]!.baseRate))
+  const culturalCost = (p: number, v: number, shortcut: boolean) => {
+    const mod = polityModifiers[p]!
+    return peoplesCultures.dominantCultureIndex[v] === capitalCultureIndices[p]
+      ? (shortcut ? 0.82 : 0.78) * mod.sameCultureFactor
+      : Math.max(shortcut ? 0.78 : 0.75, ((shortcut ? 1.12 : 1.08) + (0.6 - administrativeCapacity) * 0.6) * mod.diffCultureFactor)
+  }
+  const religiousCost = (p: number, v: number) => {
+    const religion = capitalReligionIndices[p]!
+    const local = dominantReligionIndex[v]!
+    const mod = polityModifiers[p]!
+    return religion >= 0 && local >= 0 ? (religion === local ? mod.sameReligionFactor : mod.diffReligionFactor) : 1
+  }
+  const regionPolity = growPolityTerritories({
+    mesh,
+    landMask: terrain.landMask,
+    lakeIndex: lakes.lakeIndex,
+    capitalRegions: capitals.map(cap => cap.regionId),
+    targetAreasKm2,
+    shortcuts: regionShortcuts,
+    landStepCost(p, u, v) {
+      const mod = polityModifiers[p]!
+      const stepKm = greatCircleDistanceKm(
+        { x: mesh.centers[3 * u], y: mesh.centers[3 * u + 1], z: mesh.centers[3 * u + 2] },
+        { x: mesh.centers[3 * v], y: mesh.centers[3 * v + 1], z: mesh.centers[3 * v + 2] },
+        mesh.physicalRadiusKm,
+      )
+      const resistance = 0.5 * (habitability.movementCost[u]! + habitability.movementCost[v]!)
+      const terrainFactor = resistance >= 2.2 ? mod.roughTerrainFactor : (resistance <= 1.35 ? mod.flatSteppeFactor : 1)
+      return stepKm * resistance * terrainFactor / kmPerDay * culturalCost(p, v, false) * religiousCost(p, v) / mod.baseRate
+    },
+    shortcutCost(p, _u, edge) {
+      const mod = polityModifiers[p]!
+      const penalty = edge.isSea ? (1.4 - administrativeCapacity * 0.35) * mod.seaShortcutFactor : 0.85 * mod.landShortcutFactor
+      return edge.cost * penalty * culturalCost(p, edge.toRegion, true) * religiousCost(p, edge.toRegion) / mod.baseRate
+    },
+    check: () => check?.(0.45),
+  })
+
+  // Step 5b. Capability-driven maritime territorial projection and isolated island polities
+  const referenceCellKm = Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2)
+  const adminSeaFactor = 1.25 - 0.4 * administrativeCapacity
+
+  // Pass 1: coastal & strait projection from all owned coasts (unbiased by polity sea trait)
+  if (seafaringCapability > 0) {
+    claimMaritimeTerritory(mesh, terrain.landMask, regionPolity, {
+      maxWaterBudgetKm: referenceCellKm * 2.2 * seafaringCapability,
+      seaCostMultiplier: adminSeaFactor,
+      islandHopPenaltyKm: referenceCellKm * 0.4,
+      movementCost: habitability.movementCost,
+      check: () => check?.(0.48),
+    })
+  }
+
+  // Isolated island capitals were included in the original budget; projection cannot create polities.
+
+  // Pass 3: open-ocean projection launched primarily from owned ports, modulated by each polity's sea trait.
+  if (seafaringCapability > 0) {
+    const oceanBudgetKm = mesh.physicalRadiusKm * 5.0 * (seafaringCapability ** 3.5) * (0.65 + 0.6 * administrativeCapacity)
+    const ownedPortMask = new Uint8Array(n)
+    let hasOwnedPort = false
+    for (const s of peoplesCultures.namedSettlements) {
+      if (s.isPort && regionPolity[s.regionId]! >= 0) {
+        ownedPortMask[s.regionId] = 1
+        hasOwnedPort = true
+      }
+    }
+    const politySeaCostFactors = polityModifiers.map(mod => mod.oceanProjectionFactor)
+    claimMaritimeTerritory(mesh, terrain.landMask, regionPolity, {
+      maxWaterBudgetKm: oceanBudgetKm,
+      seaCostMultiplier: adminSeaFactor,
+      islandHopPenaltyKm: referenceCellKm * 1.2,
+      prioritySourceMask: hasOwnedPort ? ownedPortMask : undefined,
+      nonPriorityPenaltyKm: hasOwnedPort ? Math.min(oceanBudgetKm * 0.25, referenceCellKm * 6) : 0,
+      movementCost: habitability.movementCost,
+      politySeaCostFactors,
+      check: () => check?.(0.62),
+    })
+  }
+
+  // Step 6. Tally territory stats, align PolityArchetype with traits, finalize settlements & PopulationGroup[]
+  const polityAreaKm2 = new Float64Array(capitals.length)
+  const polityPop = new Float64Array(capitals.length)
+  for (let r = 0; r < n; r++) {
+    const p = regionPolity[r]!
+    if (p >= 0) {
+      if (lakes.lakeIndex[r]! < 0)
+        polityAreaKm2[p] += mesh.areaKm2[r]!
+      polityPop[p] += population[r]!
+    }
+  }
+
+  const capitalSet = new Set(capitals.map(c => c.id))
+  const totalOwnedPop = Math.max(1, capitals.reduce((sum, _, idx) => sum + polityPop[idx]!, 0))
+  const polities: Polity[] = capitals.map((cap, pIdx) => {
+    const sizeClass = classifyPolitySize(polityAreaKm2[pIdx]!, polityPop[pIdx]! / totalOwnedPop)
+    const traits: PolityTraitId[] = [
+      ...polityTraits[pIdx]!,
+      ...(bundle.polityTraits ?? [])
+        .filter(trait => trait.dimension === 'territory' && trait.sizeClasses?.includes(sizeClass))
+        .map(trait => trait.id as PolityTraitId),
+    ]
+
+    const candidates = bundle.polities.map(a => ({
+      item: a,
+      weight: scorePolityArchetype(
+        a,
+        sizeClass,
+        habitability.coastalMask[cap.regionId] === 1,
+        terrain.elevationKm[cap.regionId]! >= 0.7,
+        administrativeCapacity,
+        traits,
+      ),
+    })).filter(candidate => candidate.weight > 0)
+    if (!candidates.length)
+      throw new Error(`No polity archetype matches traits or territory size for capital ${cap.id}`)
+    const arch = chooseWeighted(candidates, rng.fork(`polity-arch-${pIdx}`))
+
+    const culture = cultureMap.get(cap.cultureId)!.culture
+    const style = resolveStyle(bundle.namingStyles, culture.namingStyleId)
+    const id = `polity:${pIdx}`
+    const name = appendPoliticalForm(
+      allocator.allocate(style, bundleSignature, id, 'polity'),
+      polityFormTitle(bundle, arch.displayNameKey),
+    )
+    return {
+      id,
+      name,
+      foundedAtYear: Math.min(-1, cap.foundedAtYear + rng.nextInt(20, 200)),
+      archetypeId: arch.id as ContentId,
+      cultureId: culture.id,
+      capitalSettlementId: cap.id,
+      sizeClass,
+      traits: [...traits],
+    }
+  })
+
+  // Update settlement tiers, polity links, and finalized feature slots (capitals get major-city slot allowance)
+  const settlements: Settlement[] = peoplesCultures.namedSettlements.map((s) => {
+    const pIdx = regionPolity[s.regionId]!
+    const polityId = pIdx >= 0 ? polities[pIdx]!.id : null
+    const isCapital = capitalSet.has(s.id)
+    const profile = settlementProfiles.get(s.id)
+    const features = profile
+      ? (isCapital ? selectSettlementFeatures(profile.scores, true, lowSpecialization) : profile.features)
+      : (['agrarian'] as const)
+    return {
+      ...s,
+      polityId,
+      tier: isCapital ? 'capital' : s.tier,
+      features: [...features],
+    }
+  })
+
+  // Assemble sparse conservative PopulationGroup[]
+  check?.(0.78)
   const populationGroups: PopulationGroup[] = []
 
   for (let r = 0; r < n; r++) {
@@ -584,6 +720,12 @@ export function generatePolitiesReligions(
     }
   }
 
+  const territoryPolityIndex = new Int32Array(n).fill(-1)
+  for (let r = 0; r < n; r++) {
+    if (terrain.landMask[r] === 1)
+      territoryPolityIndex[r] = regionPolity[r]!
+  }
+
   check?.(1)
   return {
     meshId: mesh.meshId,
@@ -595,6 +737,7 @@ export function generatePolitiesReligions(
     settlements,
     population,
     populationGroups,
+    territoryPolityIndex,
   }
 }
 
@@ -604,12 +747,37 @@ export function validatePolitiesReligionsArtifact(output: PolitiesReligionsArtif
     throw new Error('Invalid polities and religions metadata')
   if (!(output.population instanceof Float64Array) || output.population.length !== n)
     throw new Error('Population array dtype or length mismatch')
-  if (!output.enabled && (output.religions.length > 0 || output.polities.length > 0 || output.settlements.length > 0 || output.populationGroups.length > 0))
+  if (!(output.territoryPolityIndex instanceof Int32Array) || output.territoryPolityIndex.length !== n)
+    throw new Error('Territory ownership array dtype or length mismatch')
+  for (let r = 0; r < n; r++) {
+    const owner = output.territoryPolityIndex[r]!
+    if (owner < -1 || owner >= output.polities.length)
+      throw new Error(`Invalid territory ownership at region ${r}`)
+  }
+  if (!output.enabled && (output.religions.length > 0 || output.polities.length > 0 || output.settlements.length > 0 || output.populationGroups.length > 0 || output.territoryPolityIndex.some(owner => owner !== -1)))
     throw new Error('Disabled civilization must emit empty polities, religions, settlements and groups')
   const settlementMap = new Map(output.settlements.map(s => [s.id, s]))
+  for (const settlement of output.settlements) {
+    if (!Array.isArray(settlement.features) || settlement.features.length < 1 || settlement.features.length > 3)
+      throw new Error(`Settlement ${settlement.id} must have 1-3 valid features`)
+    const seen = new Set<string>()
+    for (const f of settlement.features) {
+      if (!SETTLEMENT_FEATURE_SET.has(f) || seen.has(f))
+        throw new Error(`Settlement ${settlement.id} has invalid or duplicate feature "${String(f)}"`)
+      seen.add(f)
+    }
+  }
   for (const polity of output.polities) {
     if (polity.capitalSettlementId !== null && settlementMap.get(polity.capitalSettlementId)?.polityId !== polity.id)
       throw new Error(`Polity ${polity.id} capital ownership mismatch`)
+    if (!Array.isArray(polity.traits) || polity.traits.length < 1 || polity.traits.length > 4)
+      throw new Error(`Polity ${polity.id} must have 1-4 valid traits`)
+    const seen = new Set<string>()
+    for (const t of polity.traits) {
+      if (!POLITY_TRAIT_SET.has(t) || seen.has(t))
+        throw new Error(`Polity ${polity.id} has invalid or duplicate trait "${String(t)}"`)
+      seen.add(t)
+    }
   }
   const totals = new Float64Array(n)
   for (const g of output.populationGroups) {

@@ -1,5 +1,5 @@
 import type { CivilizationContentBundle, ResourceDefinitionView } from '#content/content-port'
-import type { CivilizationParameters } from '#generation/civilization/civilization-types'
+import type { CivilizationParametersInput } from '#generation/civilization/civilization-types'
 import type { HabitabilityArtifact } from '#generation/civilization/habitability'
 import type { PeoplesCulturesArtifact } from '#generation/civilization/peoples-cultures'
 import type { PolitiesReligionsArtifact } from '#generation/civilization/polities-religions'
@@ -12,11 +12,11 @@ import type { GeologyArtifact } from '#generation/nature/geology'
 import type { HydrologyArtifact } from '#generation/nature/hydrology/hydrology'
 import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import type { ResourcePotentialArtifact } from '#generation/nature/resources/resource-potential'
-import type { GenerationInput, GenerationStage, PipelineOptions, StageExecutionContext } from '#generation/pipeline'
+import type { GenerationInput, GenerationStage, PipelineOptions } from '#generation/pipeline'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { NaturalGenerationConfig } from './natural-stage'
 import { civilizationContentSignature, resourceDefinitionsSignature } from '#content/content-port'
-import { DEFAULT_CIVILIZATION_PARAMETERS } from '#generation/civilization/civilization-types'
+import { resolveCivilizationParameters } from '#generation/civilization/civilization-parameters'
 import { generateHabitability, HABITABILITY_VERSION, validateHabitabilityArtifact } from '#generation/civilization/habitability'
 import { generatePeoplesCultures, PEOPLES_CULTURES_VERSION, validatePeoplesCulturesArtifact } from '#generation/civilization/peoples-cultures'
 import { generatePolitiesReligions, POLITIES_RELIGIONS_VERSION, validatePolitiesReligionsArtifact } from '#generation/civilization/polities-religions'
@@ -29,32 +29,10 @@ import { InvalidStageInputError } from '#generation/pipeline/errors'
 import { createNaturalPipeline } from './natural-stage'
 
 export interface WorldGenerationPipelineConfig extends NaturalGenerationConfig {
-  readonly civilization?: CivilizationParameters
+  readonly civilization?: CivilizationParametersInput
 }
 
-function readCivilizationParameters(context: StageExecutionContext): CivilizationParameters {
-  const enabled = context.getConfig('civilization.enabled')
-  const populationScale = context.getConfig('civilization.populationScale')
-  const settlementDensity = context.getConfig('civilization.settlementDensity')
-  const polityCohesion = context.getConfig('civilization.polityCohesion')
-  const resolved: CivilizationParameters = {
-    enabled: typeof enabled === 'boolean' ? enabled : DEFAULT_CIVILIZATION_PARAMETERS.enabled,
-    populationScale: typeof populationScale === 'number' ? populationScale : DEFAULT_CIVILIZATION_PARAMETERS.populationScale,
-    settlementDensity: typeof settlementDensity === 'number' ? settlementDensity : DEFAULT_CIVILIZATION_PARAMETERS.settlementDensity,
-    polityCohesion: typeof polityCohesion === 'number' ? polityCohesion : DEFAULT_CIVILIZATION_PARAMETERS.polityCohesion,
-  }
-  validateCivilizationParameters(resolved, context.stageId)
-  return resolved
-}
-
-export function validateCivilizationParameters(params: CivilizationParameters, stageId = 'population-settlements'): void {
-  if (typeof params.enabled !== 'boolean'
-    || !Number.isFinite(params.populationScale) || params.populationScale < 0.1 || params.populationScale > 4
-    || !Number.isFinite(params.settlementDensity) || params.settlementDensity < 0.25 || params.settlementDensity > 4
-    || !Number.isFinite(params.polityCohesion) || params.polityCohesion < 0 || params.polityCohesion > 1) {
-    throw new InvalidStageInputError(stageId, 'Invalid civilization parameters')
-  }
-}
+export { validateCivilizationParameters } from '#generation/civilization/civilization-parameters'
 
 export const resourcePotentialStage: GenerationStage<ResourcePotentialArtifact> = {
   id: 'resource-potential',
@@ -112,12 +90,12 @@ export const habitabilityStage: GenerationStage<HabitabilityArtifact> = {
   id: 'habitability',
   version: HABITABILITY_VERSION,
   dependencies: ['mesh', 'terrain', 'climate-c0', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0', 'resource-potential'],
-  configKeys: [],
+  configKeys: ['civilization.capabilities.agriculturalProductivity', 'civilization.capabilities.industrialCapability', 'civilization.capabilities.landTransportCapability'],
   execute(context) {
-    const mesh = copyDependency<SphericalMesh, Pick<SphericalMesh, 'meshId' | 'regionCount' | 'neighborOffsets' | 'neighbors'>>(
+    const mesh = copyDependency<SphericalMesh, Pick<SphericalMesh, 'meshId' | 'regionCount' | 'centers' | 'neighborOffsets' | 'neighbors' | 'physicalRadiusKm'>>(
       context,
       'mesh',
-      ({ meshId, regionCount, neighborOffsets, neighbors }) => ({ meshId, regionCount, neighborOffsets, neighbors }),
+      ({ meshId, regionCount, centers, neighborOffsets, neighbors, physicalRadiusKm }) => ({ meshId, regionCount, centers, neighborOffsets, neighbors, physicalRadiusKm }),
     )
     const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'elevationKm' | 'landMask' | 'slopeRadians'>>(
       context,
@@ -144,12 +122,16 @@ export const habitabilityStage: GenerationStage<HabitabilityArtifact> = {
       'ecology-e0',
       ({ meshId, potentialBiomeIds, landCoverIds, potentialBiomeIndex, landCoverIndex, aridityIndex, growingSeasonMonths }) => ({ meshId, potentialBiomeIds, landCoverIds, potentialBiomeIndex, landCoverIndex, aridityIndex, growingSeasonMonths }),
     )
-    const resources = copyDependency<ResourcePotentialArtifact, Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential' | 'forestryPotential' | 'fisheryPotential'>>(
+    const resources = copyDependency<ResourcePotentialArtifact, Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential' | 'forestryPotential' | 'fisheryPotential' | 'deposits'>>(
       context,
       'resource-potential',
-      ({ meshId, agriculturalPotential, forestryPotential, fisheryPotential }) => ({ meshId, agriculturalPotential, forestryPotential, fisheryPotential }),
+      ({ meshId, agriculturalPotential, forestryPotential, fisheryPotential, deposits }) => ({ meshId, agriculturalPotential, forestryPotential, fisheryPotential, deposits }),
     )
-    const output = generateHabitability(mesh, terrain, climate, hydrology, lakes, ecology, resources, (fraction) => {
+    const output = generateHabitability(mesh, terrain, climate, hydrology, lakes, ecology, resources, {
+      agriculturalProductivity: context.getConfig('civilization.capabilities.agriculturalProductivity') as number,
+      industrialCapability: context.getConfig('civilization.capabilities.industrialCapability') as number,
+      landTransportCapability: context.getConfig('civilization.capabilities.landTransportCapability') as number,
+    }, (fraction) => {
       context.throwIfCancelled()
       context.progress(fraction, '评估区域宜居性与通行成本')
     })
@@ -164,15 +146,13 @@ export const populationSettlementsStage: GenerationStage<PopulationSettlementsAr
   id: 'population-settlements',
   version: POPULATION_SETTLEMENTS_VERSION,
   dependencies: ['mesh', 'terrain', 'hydrology-h0', 'static-lakes-l1', 'resource-potential', 'habitability'],
-  configKeys: ['civilization.enabled', 'civilization.populationScale', 'civilization.settlementDensity'],
+  configKeys: ['civilization.enabled', 'civilization.populationScale', 'civilization.settlementDensity', 'civilization.urbanConcentration'],
   execute(context) {
-    const params = readCivilizationParameters({
-      ...context,
-      getConfig(path) {
-        if (path === 'civilization.polityCohesion')
-          return DEFAULT_CIVILIZATION_PARAMETERS.polityCohesion
-        return context.getConfig(path)
-      },
+    const params = resolveCivilizationParameters({
+      enabled: context.getConfig('civilization.enabled') as boolean,
+      populationScale: context.getConfig('civilization.populationScale') as number,
+      settlementDensity: context.getConfig('civilization.settlementDensity') as number,
+      urbanConcentration: context.getConfig('civilization.urbanConcentration') as number,
     })
     const mesh = copyDependency<SphericalMesh, Pick<SphericalMesh, 'meshId' | 'regionCount' | 'centers' | 'areaKm2' | 'neighborOffsets' | 'neighbors' | 'physicalRadiusKm'>>(
       context,
@@ -199,10 +179,10 @@ export const populationSettlementsStage: GenerationStage<PopulationSettlementsAr
       'resource-potential',
       ({ meshId, agriculturalPotential, fisheryPotential, mineralPotential }) => ({ meshId, agriculturalPotential, fisheryPotential, mineralPotential }),
     )
-    const habitability = copyDependency<HabitabilityArtifact, Pick<HabitabilityArtifact, 'meshId' | 'habitability' | 'carryingCapacityPerKm2' | 'coastalMask' | 'lakeShoreMask'>>(
+    const habitability = copyDependency<HabitabilityArtifact, Pick<HabitabilityArtifact, 'meshId' | 'habitability' | 'carryingCapacityPerKm2' | 'coastalMask' | 'lakeShoreMask' | 'portPotential'>>(
       context,
       'habitability',
-      ({ meshId, habitability, carryingCapacityPerKm2, coastalMask, lakeShoreMask }) => ({ meshId, habitability, carryingCapacityPerKm2, coastalMask, lakeShoreMask }),
+      ({ meshId, habitability, carryingCapacityPerKm2, coastalMask, lakeShoreMask, portPotential }) => ({ meshId, habitability, carryingCapacityPerKm2, coastalMask, lakeShoreMask, portPotential }),
     )
     const output = generatePopulationSettlements(mesh, terrain, hydrology, lakes, resources, habitability, params, context.worldSeed, (fraction) => {
       context.throwIfCancelled()
@@ -219,7 +199,7 @@ export const transportNetworkStage: GenerationStage<TransportNetworkArtifact> = 
   id: 'transport-network',
   version: TRANSPORT_NETWORK_VERSION,
   dependencies: ['mesh', 'terrain', 'hydrology-h0', 'static-lakes-l1', 'habitability', 'population-settlements'],
-  configKeys: ['civilization.enabled'],
+  configKeys: ['civilization.enabled', 'civilization.capabilities.landTransportCapability', 'civilization.capabilities.seafaringCapability'],
   execute(context) {
     const mesh = copyDependency<SphericalMesh, Pick<SphericalMesh, 'meshId' | 'regionCount' | 'centers' | 'areaKm2' | 'neighborOffsets' | 'neighbors' | 'physicalRadiusKm'>>(
       context,
@@ -251,7 +231,10 @@ export const transportNetworkStage: GenerationStage<TransportNetworkArtifact> = 
       'population-settlements',
       ({ meshId, enabled, population, settlementSites }) => ({ meshId, enabled, population, settlementSites }),
     )
-    const output = generateTransportNetwork(mesh, terrain, hydrology, lakes, habitability, settlements, (fraction) => {
+    const output = generateTransportNetwork(mesh, terrain, hydrology, lakes, habitability, settlements, {
+      landTransportCapability: context.getConfig('civilization.capabilities.landTransportCapability') as number,
+      seafaringCapability: context.getConfig('civilization.capabilities.seafaringCapability') as number,
+    }, (fraction) => {
       context.throwIfCancelled()
       context.progress(fraction, '构建陆路、河运与近海交通网')
     })
@@ -266,7 +249,7 @@ export const peoplesCulturesStage: GenerationStage<PeoplesCulturesArtifact> = {
   id: 'peoples-cultures',
   version: PEOPLES_CULTURES_VERSION,
   dependencies: ['mesh', 'terrain', 'static-lakes-l1', 'resource-potential', 'habitability', 'population-settlements', 'transport-network'],
-  configKeys: ['civilization.enabled'],
+  configKeys: ['civilization.enabled', 'civilization.culturalDiversity'],
   contentKeys: ['civilization-content'],
   execute(context) {
     const bundle = context.getContent<CivilizationContentBundle>('civilization-content')
@@ -308,7 +291,7 @@ export const peoplesCulturesStage: GenerationStage<PeoplesCulturesArtifact> = {
       'transport-network',
       ({ meshId, enabled, nodes, routes }) => ({ meshId, enabled, nodes, routes }),
     )
-    const output = generatePeoplesCultures(bundle, signature, mesh, terrain, lakes, resources, habitability, settlements, transport, context.worldSeed, (fraction) => {
+    const output = generatePeoplesCultures(bundle, signature, mesh, terrain, lakes, resources, habitability, settlements, transport, context.worldSeed, context.getConfig('civilization.culturalDiversity') as number, (fraction) => {
       context.throwIfCancelled()
       context.progress(fraction, '生成族群、文化与聚落命名')
     })
@@ -322,18 +305,29 @@ export const peoplesCulturesStage: GenerationStage<PeoplesCulturesArtifact> = {
 export const politiesReligionsStage: GenerationStage<PolitiesReligionsArtifact> = {
   id: 'polities-religions',
   version: POLITIES_RELIGIONS_VERSION,
-  dependencies: ['mesh', 'terrain', 'static-lakes-l1', 'resource-potential', 'habitability', 'population-settlements', 'transport-network', 'peoples-cultures'],
-  configKeys: ['civilization.enabled', 'civilization.polityCohesion'],
+  dependencies: ['mesh', 'terrain', 'hydrology-h0', 'static-lakes-l1', 'ecology-e0', 'resource-potential', 'habitability', 'population-settlements', 'transport-network', 'peoples-cultures'],
+  configKeys: [
+    'civilization.enabled',
+    'civilization.polityCount',
+    'civilization.politySizeVariation',
+    'civilization.urbanConcentration',
+    'civilization.capabilities.administrativeCapacity',
+    'civilization.capabilities.seafaringCapability',
+    'civilization.capabilities.industrialCapability',
+    'civilization.capabilities.landTransportCapability',
+  ],
   contentKeys: ['civilization-content'],
   execute(context) {
-    const params = readCivilizationParameters({
-      ...context,
-      getConfig(path) {
-        if (path === 'civilization.populationScale')
-          return DEFAULT_CIVILIZATION_PARAMETERS.populationScale
-        if (path === 'civilization.settlementDensity')
-          return DEFAULT_CIVILIZATION_PARAMETERS.settlementDensity
-        return context.getConfig(path)
+    const params = resolveCivilizationParameters({
+      enabled: context.getConfig('civilization.enabled') as boolean,
+      polityCount: context.getConfig('civilization.polityCount') as number,
+      politySizeVariation: context.getConfig('civilization.politySizeVariation') as number,
+      urbanConcentration: context.getConfig('civilization.urbanConcentration') as number,
+      capabilities: {
+        administrativeCapacity: context.getConfig('civilization.capabilities.administrativeCapacity') as number,
+        seafaringCapability: context.getConfig('civilization.capabilities.seafaringCapability') as number,
+        industrialCapability: context.getConfig('civilization.capabilities.industrialCapability') as number,
+        landTransportCapability: context.getConfig('civilization.capabilities.landTransportCapability') as number,
       },
     })
     const bundle = context.getContent<CivilizationContentBundle>('civilization-content')
@@ -345,25 +339,35 @@ export const politiesReligionsStage: GenerationStage<PolitiesReligionsArtifact> 
       'mesh',
       ({ meshId, regionCount, centers, areaKm2, neighborOffsets, neighbors, physicalRadiusKm }) => ({ meshId, regionCount, centers, areaKm2, neighborOffsets, neighbors, physicalRadiusKm }),
     )
-    const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'landMask' | 'elevationKm'>>(
+    const terrain = copyDependency<TerrainArtifact, Pick<TerrainArtifact, 'meshId' | 'landMask' | 'elevationKm' | 'slopeRadians'>>(
       context,
       'terrain',
-      ({ meshId, landMask, elevationKm }) => ({ meshId, landMask, elevationKm }),
+      ({ meshId, landMask, elevationKm, slopeRadians }) => ({ meshId, landMask, elevationKm, slopeRadians }),
+    )
+    const hydrology = copyDependency<HydrologyArtifact, Pick<HydrologyArtifact, 'meshId' | 'riverIndex' | 'downstreamRegion'>>(
+      context,
+      'hydrology-h0',
+      ({ meshId, riverIndex, downstreamRegion }) => ({ meshId, riverIndex, downstreamRegion }),
     )
     const lakes = copyDependency<StaticLakeArtifact, Pick<StaticLakeArtifact, 'meshId' | 'lakeIndex'>>(
       context,
       'static-lakes-l1',
       ({ meshId, lakeIndex }) => ({ meshId, lakeIndex }),
     )
-    const resources = copyDependency<ResourcePotentialArtifact, Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential'>>(
+    const ecology = copyDependency<EcologyArtifact, Pick<EcologyArtifact, 'meshId' | 'landCoverIds' | 'landCoverIndex'>>(
+      context,
+      'ecology-e0',
+      ({ meshId, landCoverIds, landCoverIndex }) => ({ meshId, landCoverIds, landCoverIndex }),
+    )
+    const resources = copyDependency<ResourcePotentialArtifact, Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential' | 'forestryPotential' | 'fisheryPotential' | 'deposits'>>(
       context,
       'resource-potential',
-      ({ meshId, agriculturalPotential }) => ({ meshId, agriculturalPotential }),
+      ({ meshId, agriculturalPotential, forestryPotential, fisheryPotential, deposits }) => ({ meshId, agriculturalPotential, forestryPotential, fisheryPotential, deposits }),
     )
-    const habitability = copyDependency<HabitabilityArtifact, Pick<HabitabilityArtifact, 'meshId' | 'movementCost' | 'coastalMask'>>(
+    const habitability = copyDependency<HabitabilityArtifact, Pick<HabitabilityArtifact, 'meshId' | 'movementCost' | 'coastalMask' | 'economicOpportunity' | 'portPotential'>>(
       context,
       'habitability',
-      ({ meshId, movementCost, coastalMask }) => ({ meshId, movementCost, coastalMask }),
+      ({ meshId, movementCost, coastalMask, economicOpportunity, portPotential }) => ({ meshId, movementCost, coastalMask, economicOpportunity, portPotential }),
     )
     const popSettlements = copyDependency<PopulationSettlementsArtifact, Pick<PopulationSettlementsArtifact, 'meshId' | 'enabled' | 'population'>>(
       context,
@@ -375,15 +379,30 @@ export const politiesReligionsStage: GenerationStage<PolitiesReligionsArtifact> 
       'transport-network',
       ({ meshId, nodes, routes, nodeCentrality }) => ({ meshId, nodes, routes, nodeCentrality }),
     )
-    const peoplesCultures = copyDependency<PeoplesCulturesArtifact, Pick<PeoplesCulturesArtifact, 'meshId' | 'peoples' | 'cultures' | 'namedSettlements' | 'regionCultures' | 'dominantCultureIndex' | 'usedNames'>>(
+    const peoplesCultures = copyDependency<PeoplesCulturesArtifact, Pick<PeoplesCulturesArtifact, 'meshId' | 'peoples' | 'cultures' | 'namedSettlements' | 'hearthRegions' | 'regionCultures' | 'dominantCultureIndex' | 'usedNames'>>(
       context,
       'peoples-cultures',
-      ({ meshId, peoples, cultures, namedSettlements, regionCultures, dominantCultureIndex, usedNames }) => ({ meshId, peoples, cultures, namedSettlements, regionCultures, dominantCultureIndex, usedNames }),
+      ({ meshId, peoples, cultures, namedSettlements, hearthRegions, regionCultures, dominantCultureIndex, usedNames }) => ({ meshId, peoples, cultures, namedSettlements, hearthRegions, regionCultures, dominantCultureIndex, usedNames }),
     )
-    const output = generatePolitiesReligions(bundle, signature, mesh, terrain, lakes, resources, habitability, popSettlements, transport, peoplesCultures, params, context.worldSeed, (fraction) => {
-      context.throwIfCancelled()
-      context.progress(fraction, '划分政体领土、宗教传播与人群结构')
-    })
+    const output = generatePolitiesReligions(
+      bundle,
+      signature,
+      mesh,
+      terrain,
+      lakes,
+      resources,
+      habitability,
+      popSettlements,
+      transport,
+      peoplesCultures,
+      params,
+      context.worldSeed,
+      (fraction) => {
+        context.throwIfCancelled()
+        context.progress(fraction, '划分政体领土、宗教传播与人群结构')
+      },
+      { hydrology, ecology },
+    )
     context.throwIfCancelled()
     context.progress(1)
     return output
@@ -405,21 +424,20 @@ export function createWorldPipeline(cache = new StageCache()): GenerationPipelin
   return new class extends GenerationPipeline<WorldGenerationPipelineConfig> {
     constructor() { super(natural.registry, cache) }
 
-    #validateConfig(input: GenerationInput<WorldGenerationPipelineConfig>) {
-      if (input.config.civilization !== undefined)
-        validateCivilizationParameters(input.config.civilization)
+    #normalizeInput(input: GenerationInput<WorldGenerationPipelineConfig>): GenerationInput<WorldGenerationPipelineConfig> {
+      return { ...input, config: { ...input.config, civilization: resolveCivilizationParameters(input.config.civilization) } }
     }
 
     override plan(input: GenerationInput<WorldGenerationPipelineConfig>, options: Pick<PipelineOptions, 'force'> = {}) {
-      this.#validateConfig(input)
-      natural.plan(input, options)
-      return super.plan(input, options)
+      const normalized = this.#normalizeInput(input)
+      natural.plan(normalized, options)
+      return super.plan(normalized, options)
     }
 
     override async execute(input: GenerationInput<WorldGenerationPipelineConfig>, options: PipelineOptions = {}) {
-      this.#validateConfig(input)
-      natural.plan(input, { force: options.force })
-      return super.execute(input, options)
+      const normalized = this.#normalizeInput(input)
+      natural.plan(normalized, { force: options.force })
+      return super.execute(normalized, options)
     }
   }()
 }

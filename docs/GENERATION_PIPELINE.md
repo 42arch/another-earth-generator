@@ -4,11 +4,11 @@
 
 历史记录（2026-11-13）：`geographic-regions-v3` 依赖 Mesh、Geology 和最终 Terrain，读取候选大陆来源与最终海陆掩码，无独立配置或随机流。阶段输出大陆、洋、海的区域索引和面积表；沿用 v2 的海岸距离/海峡收窄后的洋海等级，并在宽阔洋区内按离岸峰值间的通路收窄程度划分多个大洋，抑制小面积碎区。`geographic-names` 依赖该分区产物，阶段版本为纯 `geographic-names-v2`，不再把内容签名写进版本字符串，也不再调用 `loadBuiltinGenerationCatalog()`。它声明内容键 `geographic-name-pools`；调用方传入大陆/大洋 `NamePoolView`，并提供 `contentSignatures['geographic-name-pools']`。缓存键已经包含该签名，词库变化只使名称阶段失效。命名仍由 Seed、稳定区域 ID、词库 ID 和内容签名决定，同类重名使用中文序号；新产物写入 `namePoolIds`。`apps/web` 注入 `geography-zh` 中文词库。T0/海陆变化使分区与名称阶段重算，不使气候、水文和生态重算。Worker 传输带名称的独立副本，完整自然世界组装时复制入快照。旧 `geography` 词库保留供历史档案解析。`ecology-e0` 另声明内容键 `ecology-classes`，算法版本仍是 `ecology-e0-v3`；调用方传入生物群系与土地覆盖词表，签名必须等于 `ecologyVocabularySignature`。
 
-> 更新：2026-11-21。记录当前执行与缓存契约，不表示完整 M1 延期事项或浏览器验收已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
+> 更新：2026-11-23。记录当前执行与缓存契约，不表示完整 M1 延期事项或浏览器验收已完成。字段见 [世界数据契约](WORLD_DATA_CONTRACTS.md)，算法与后续设计见 [技术设计](TECHNICAL_DESIGN.md)和 [M1 实施计划](M1_IMPLEMENTATION_PLAN.md)。
 
 ## 公开入口
 
-`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、Mesh/Geology/Terrain/C0/Hydrology/Ecology Pipeline，以及 `createNaturalPipeline`、`createWorldPipeline`、`assembleWorld` 和 `WorldStore`。Hydrology Pipeline 在 T0/C0 上生成 I0、H0、L1；Ecology Pipeline 从独立的 T0/C0 分支生成 E0 `ecology-e0-v3`。Natural Pipeline 合并两支但保持 E0 的独立直接依赖；World Pipeline 在自然链之后串联 `resource-potential`、`habitability`、`population-settlements`、`transport-network`、`peoples-cultures`、`polities-religions`（调整 `civilization` 参数不会使自然 Stage 缓存失效）。只有完整结果经过装配与校验才可发布。E0 v3 的历史专项检查见 [E0 收尾记录](benchmarks/M1.4-E0-closeout.md)；M2 全仓单测与构建已通过。
+`@another-earth/world-core` 提供 `StageRegistry`、`GenerationPipeline`、`StageCache`、Mesh/Geology/Terrain/C0/Hydrology/Ecology Pipeline，以及 `createNaturalPipeline`、`createWorldPipeline`、`assembleWorld` 和 `WorldStore`。Hydrology Pipeline 在 T0/C0 上生成 I0、H0、L1；Ecology Pipeline 从独立的 T0/C0 分支生成 E0 `ecology-e0-v3`。Natural Pipeline 合并两支但保持 E0 的独立直接依赖；World Pipeline 在自然链之后串联 `resource-potential`、`habitability`、`population-settlements`、`transport-network`、`peoples-cultures`、`polities-religions`（调整 `civilization` 参数不会使自然 Stage 缓存失效）。只有完整结果经过装配与校验才可发布。E0 v3 的历史专项检查见 [E0 收尾记录](benchmarks/M1.4-E0-closeout.md)；M2 初版的历史全仓单测与构建结果见进度；当前 CIV-03 的验证范围见下方验收记录。
 
 ```ts
 import { createTerrainPipeline, DEFAULT_GEOLOGY_PARAMETERS,
@@ -52,15 +52,65 @@ const terrain = result.getOutput<TerrainArtifact>('terrain') // 共享借用，�
 | static-lakes-l1 | static-lakes-l1-v10 | mesh、terrain、climate-c0、hydrology-h0 |
 | ecology-e0 | ecology-e0-v3 | mesh、terrain、climate-c0；内容键 `ecology-classes` |
 | resource-potential | resource-potential-v1 | mesh、geology、terrain、climate-c0、hydrology-h0、ecology-e0；内容键 `resource-definitions` |
-| habitability | habitability-v1 | mesh、terrain、climate-c0、hydrology-h0、static-lakes-l1、ecology-e0、resource-potential |
-| population-settlements | population-settlements-v2 | mesh、terrain、hydrology-h0、static-lakes-l1、resource-potential、habitability |
-| transport-network | transport-network-v3 | mesh、terrain、hydrology-h0、static-lakes-l1、habitability、population-settlements |
-| peoples-cultures | peoples-cultures-v2 | mesh、habitability、population-settlements、transport-network；内容键 `civilization-content` |
-| polities-religions | polities-religions-v2 | mesh、population-settlements、transport-network、peoples-cultures；内容键 `civilization-content` |
+| habitability | habitability-v4 | mesh、terrain、climate-c0、hydrology-h0、static-lakes-l1、ecology-e0、resource-potential |
+| population-settlements | population-settlements-v5 | mesh、terrain、hydrology-h0、static-lakes-l1、resource-potential、habitability |
+| transport-network | transport-network-v4 | mesh、terrain、hydrology-h0、static-lakes-l1、habitability、population-settlements |
+| peoples-cultures | peoples-cultures-v4 | mesh、habitability、population-settlements、transport-network；内容键 `civilization-content` |
+| polities-religions | polities-religions-v15 | mesh、terrain、hydrology-h0、static-lakes-l1、ecology-e0、resource-potential、habitability、population-settlements、transport-network、peoples-cultures；内容键 `civilization-content` |
 
-文明社会尺度的参考面积取半径 6371 km 的 L6 等面积格（约 12,453 km²），对应旧版默认量级。人口仍由区域面积乘承载密度决定；聚落数量按可居住总面积换算参考格数，聚落规模按参考支持面积估算，并从固定物理半径内的邻格向聚落格转移人口以保持区域与世界账本一致。交通和文化传播使用该参考面积对应的固定基准行进速度；政体规模使用实际 km²。输出 Mesh 等级变化会使所有相关 Stage 随 Mesh 失效，但不再直接重设上述社会单位。固定 Seed 跨等级对照和高等级性能尚未执行。
+`polities-religions-v4` 修正近岸领土补全：以原有已归属海岸为源，只沿海洋搜索，水面路径不超过参考面积平方根（约 112 km）时记录登岛点。海洋—海洋中心连线全长计入水程，海陆相邻连线按中点岸线估计，仅计一半；不把登岛后的陆地距离计入跨海门槛。随后全部登岛点同时沿原本无主的陆地（含湖泊格）扩张，不设岛内距离上限，按跨海加岛内距离的最小值划分，同成本由固定网格遍历顺序确定。已有归属保持不变；新接管的岛屿不再发起跨海搜索，避免岛链接力；海洋始终无主。仅政体宗教及其下游缓存失效，上游自然、人口、交通和文化可复用。该轮近岸算法不变；当时 Schema 7 拒绝旧版档案。近岸合成图回归已在本轮核心测试中通过；原 v3/v4 的固定 Seed 新旧算法对照与岛屿截图专项未补做；当前全链路高等级实测见 C 批。
 
-`transport-network-v2` 为陆路、海路及多源可达性搜索增加每轮已处理标记，并将候选成本统一到 Float32 精度后再比较、保存和入队；同一目标的旧堆条目不再重复消耗搜索名额。版本变化使交通及下游文化、政体/宗教缓存失效，上游人口聚落与自然链可复用。已有 Schema 4 快照保留已存路线，不在读取时重算。本次补充了确定性合成图回归用例，尚未执行；固定 Seed `m2-civilization-seed` 的 v1/v2 对照与高等级性能/内存复验待执行，历史 M2 验证不覆盖 v2。
+文明社会尺度的参考面积取半径 6371 km 的 L6 等面积格（约 12,453 km²），对应旧版默认量级。人口仍由区域面积乘承载密度决定；聚落数量按可居住总面积换算参考格数。`population-settlements-v5` 在默认聚居倾向 0.5 时沿用选址分决定迁入比例（16%–56%）和搜索距离：目标人口为当地密度乘参考面积再乘该比例，只沿陆地由近到远征集，最远到支撑半径的两倍（约 126 km）乘分数占比。每个供体格子单次最多交出当前比例、累计最多交出 56%，因此不会被抽成无人区；凑不满则聚落按实际人数缩小，等级按结果人口划分。海岸上的海面不扣减目标。交通和文化传播使用该参考面积对应的固定基准行进速度；政体规模使用实际 km²。输出 Mesh 等级变化会使所有相关 Stage 随 Mesh 失效，但不再直接重设上述社会单位。当前已完成同 Seed L6/L7/L8 的三次冷启动统计与峰值实测，详见 C 批；自然形态随网格变化，尚无全参数跨等级不变性保证。
+
+### 默认近代定居模型
+
+`habitability-v4` 默认以约 1900 年的技术条件为参照，计算包含经济机会的定居适宜度。C 批预设仅填写能力与格局参数，不增加时代分支或产业演化。承载密度的全局尺度已按三 Seed / L5 样本拟合并经独立 L6 样本验证；其他权重仍是建模假设，不将英国工业化分布当作全球通用比例。
+
+- 环境上限 `E = sqrt(T × W) × G × biomeFactor`。`T` 沿用年均温 −12/8/25/35°C 的分段舒适度，`G` 沿用坡度与海拔评分。冰盖为零，苔原/高山苔原系数 0.25；去掉临海荒漠的特殊减罚。淡水 `W` 取降水、河流和湖岸代理的最大值：降水为 `clamp(aridity/0.45) × clamp(年降水/600 mm)`，有河流时为 `clamp(log10(1+年均流量 m³/s)/5)`，湖岸为 0.85。海洋不提供淡水。
+- 本地食物潜力 `L = clamp(农业 + 0.25 × 渔业)`；环境上限为零的格子不提供食物。林业不直接作为食物。对食物、矿产、能源分别进行多源陆地传播，潜力沿路径按 `距离 km × 平均通行阻力 / R` 递减，取可达来源中的最大值，不能跨海；湖泊格允许通行但不产粮、不居住。`R = 2 × sqrt(参考面积) × landTransportCapability`，基准 1× 时约 223 km，表示满潜力来源在阻力 1 路径上的衰减范围，弱来源更短。这里得到的是供给可达潜力 `F`，不代表运输流量或可重复分配的粮食总量。
+- 矿产 `M`、能源 `C` 以已保存矿点的类别和丰富度为源，不使用快照未保存的综合地质潜力场。木材作为有限燃料替代 `B = max(C, 0.25 × 林业)`；资源机会为 `I = 0.35 × max(M,C × industrialCapability) + 0.65 × sqrt(M × B) × industrialCapability`。矿点不代表已投产矿山，不模拟矿种工艺、储量耗竭或开采深度。
+- 港口代理 `P = 平缓度 × W × (1−海洋邻居占比)`，仅海岸有效，反映粗略遮蔽；没有港湾水深或风浪模型。`P >= 0.5` 且定居分不低于 0.14 才标记港口。通达潜力 `A = 0.45 × 平缓度 + 0.4 × 河流供水代理 + 0.15 × P`，不读取后续生成的道路、航线或铁路。
+- 经济机会 `O = clamp(I × F × A)`。最终定居分 `H = clamp(E × (0.5 + 0.25F + 0.15O + 0.1A))`；环境限制不能被矿产加分抵消。`H > 0.01` 时承载密度为 `E × (22 × max(0, L + 农业潜力 × (agriculturalProductivity−1)) + 7F × O)` 人/km²，反映本地生产与有供给条件的工业聚集，没有海岸固定奖励。不是完整的粮食贸易守恒模型。
+- `population-settlements-v5` 沿用选址分 `0.9H + 汇流点加分0.06 + [0,0.04)确定性扰动`，满分基准为 1；取消港口、河口、农业、矿产、渔业和坡度的重复独立加分。全球数量目标及间距策略暂保留，不预设沿海/内陆配额。
+
+版本变化使宜居性、人口聚落及下游交通/文化/政体宗教缓存失效，自然和资源链仍可复用。新增 `environmentalSuitability`、`economicOpportunity`、`portPotential` 为阶段字段，不作为快照权威字段保存；公开生成函数输入相应扩展，详见 [世界数据契约](WORLD_DATA_CONTRACTS.md)。最初新增的 9 项合成输入回归及聚落用例已在 A/B 批测试中通过。C 批补充密度范围回归、历史尺度校准与高等级实测，见下方；更早 v2/v3 和交通 v3/v4 的算法对照未补做。年均温与年流量不能代表季节极端或枯水保障，港口代理、市场范围和供给潜力仍需专项校准。
+
+CIV-01 A 批的生产/运输能力使用 `CivilizationParameters.capabilities`，范围与默认值见 [世界数据契约](WORLD_DATA_CONTRACTS.md)。所有输入先由统一解析器补全并严格校验，再进入 Stage 签名；显式能力 1× 与省略能力必须得到相同签名。`habitability-v4` 只读取农业、工业和陆运能力；航海能力不影响先于实际交通生成的供给模型。`transport-network-v4` 读取陆运/航海能力，速度分别为基准 km/day 乘对应能力；陆路、海路及可达性行程预算保持基准值固定，不随速度缩放。航海 0× 跳过海路搜索。默认 1× 使用经人口尺度校准的承载系数，能力极值仍不能绕过淡水和地形约束。
+
+只改航海能力时，从交通向下失效，宜居性/人口缓存复用；农业、工业或陆运变化从宜居性向下失效；自然与资源链可复用。Stage 不读取预设名称或不属于自己的配置键，模型不反向依赖后续道路与航线。完整有效配置保存于 Schema 7 元数据，地图查询使用同一配置和 Planet 物理半径；分享链接为 v12。新增参数解析、能力效果、缓存失效、档案恢复查询与 Worker/分享回归；A 批最初交付时尚未运行检查；本轮已完成核心与 Web 测试、类型和构建验证，随后 B 批完成全仓验证与参数组合对照。原 v2/v3 宜居性、交通 v3/v4 的新旧版本对照未补做；当前 v4 的校准与高等级性能见 C 批记录，浏览器结果见进度记录。
+
+CIV-01 B 批在 Pipeline 解析阶段加入 `urbanConcentration`（现默认 0.65，募集公式基准仍为 0.5）、`polityDensity` / `culturalDiversity`（默认 1）与 `capabilities.administrativeCapacity`（现默认 0.75），移除旧 `polityCohesion`。新增参数在保存配置、校验、控件和分享中使用同一契约；Schema 7 不迁移旧版，分享链接随默认值更新升至 v13。
+
+- `population-settlements-v5` 的募集比例为 `min(0.56, 0.16 + 0.4 × scoreShare × urbanConcentration/0.5)`，募集半径再乘 `0.5+urbanConcentration`。0 表示弱聚居而非没有聚落；默认 0.5 对应旧募集公式。供体累计流出上限仍为原人口的 56%，所有迁入守恒。只读新增的聚居参数，格局变化不重算宜居性。
+- `peoples-cultures-v3` 的文化起源目标按 `culturalDiversity` 缩放，起源间距除以其平方根；原 12 个起源预算也按倍率缩放，最高 24，并受有效聚落与内容/命名约束。默认倍率 1 保持旧目标量级。
+- `polities-religions-v5` 用旧默认 0.6 的首都数量和间距公式作为基线，数量目标乘 `polityDensity`、间距除以其平方根。行政能力不参与这两个量，改为调节异文化惩罚：陆地 `1.08+(0.6-admin)×0.6`，交通捷径 `1.12+(0.6-admin)×0.6`，同文化分别保持 0.78/0.82；海路系数保持 `1.4−0.35×admin`。宗教起源间距使用未缩放的首都基线，近岸补全和全陆块归属规则不变。行政改变相对代价，不能仅把所有路径同比缩放。候选扩张成本统一到 Float32 后再比较和入队。
+- `polities-religions-v6` 在专名后接上所选政体的显示名，中文直接相连（如「维兰共和国」），不含汉字时用空格。随机流仍固定为 v5，领土、宗教和人口不变。已发布的旧名称保留到重新生成。
+- `peoples-cultures-v4` 沿用 v3 随机流与文化起源算法（按 `culturalDiversity` 缩放），仅在产物中新增暴露 `hearthRegions` 供下游评估文化中心特征。
+- `polities-religions-v8` 在阶段内实现无循环的 CIV-02 六步流水线并切换至 v8 随机流：① 宗教起源与传播前移至扩张前，产出 `religions` 与区域主导宗教；② 结合自然/资源/交通/文化起源/宗教与 5 项社会能力门控和同源演替（`craft ↔ industrial`、`tribal-kinship ↔ centralized` 等）评估 12 种城市特征并按社会分工收放槽位数（1–3 项）；③ 沿用现有规则选首都；④ 扩张前由首都（50%）、局部腹地聚落距离加权均值（25%）及各特征峰值（25%）（无腹地时仅首都）涌现 3 维正交国家特征（权力形态 1 项 + 治理取向 0–1 项 + 经济导向 1 项）；⑤ 将国家特征转为扩张速率与文化/宗教/地形/交通捷径系数调制主扩张 Dijkstra，Pass 1 近海无偏置、Pass 2 孤立有人大岛建国同步涌现岛国特征、Pass 3 远洋港口投送叠加每政体海权成本系数 `politySeaCostFactors`；⑥ 领土统计后以国家特征强加权对齐 `PolityArchetype`、收口首都特征槽位与守恒 `PopulationGroup[]`。`politiesReligionsStage` 显式追加依赖 `hydrology-h0`、`ecology-e0` 并读取 `urbanConcentration`、`industrialCapability`、`landTransportCapability`，不破坏上游参数局部失效边界。Schema 升至 8，分享链接维持 v13。**本次未运行 test/typecheck/lint/build 或固定 Seed 对照。**
+
+- `polities-religions-v9` 沿用 v8 随机流；国家特征目录由调用方通过 `CivilizationContentBundle.polityTraits` 注入。`PolityArchetype.requiredTraits` 筛除不满足要求的候选，`traitAffinities` 根据全部/排除特征及规模条件按序乘权，替代核心按政体形式的特征匹配分支。内置神权国要求 `theocratic`，无正权候选时明确失败。目录 ID/维度与匹配规则进入文明内容签名；完整包内容及翻译参与内容哈希。现有文明阶段共用 `civilization-content`，修改目录规则会重算文明链，自然与资源链仍可复用。Schema 8 / 分享 v13 不变。新增回归未运行，未做固定 Seed v8/v9 对照、性能或浏览器验证。
+
+- `polities-religions-v11` 修正 v10 默认世界几乎全部分权的问题。局部人口结构改为首都与最强腹地中心的相对规模（地方中心人口沿用距离衰减权重），不以腹地总人口稀释首都；商业特化用 `max(0, civicFunction−productiveCore)`，不再普遍抑制集权。权力候选按支持度通过独立 `power-structure:capitalId` 随机 fork 加权选择，零分禁用；游牧要求本地牧业评分领先农业/工业/林木/工坊。地形和文化继续影响支持度，能力门控保留，没有各类型配额。其余随机流仍为 v8。Stage 版本使政体宗教缓存失效，上游可复用，Schema 8 / 分享 v13 不变。已实测四 Seed L6 完整校验及诊断重放，1024 重跑一致；v10/v11 同配置三 Seed 对照与未覆盖范围见 [CIV-02 特征分布](benchmarks/CIV-02-trait-distribution.md)。
+
+- `polities-religions-v13` 以 `civilization.polityCount`（1–200 整数、默认 60）与 `politySizeVariation` 替换数量倍率。单个滑杆选择确切总数，核心不再随机抽取数量；候选聚落不足请求数时报错。陆地和现有可用交通捷径定义片区，按人口优先播种片区后以选址加权最远点补齐首都；孤岛计入预算，无后置追加国家。政治腹地采样限制在同一可达片区。目标陆地份额按片区归一化的 `rank^(-2*variation)` 分配，保留首都格面积；独立成本前沿按每国已占/目标面积调度扩张，地理、文化、宗教与路线成本决定该国方向。海路在零航海时禁用，近海/远洋投送保留但不增国。全局等面积不是保证；孤岛、阻塞、格网与投送可改变最终分布。面积统计排除湖面和海面，最终再对齐政体并守恒分组人口。Schema 10 / 分享 v15。三个 Seed/L6 的 15 组数量及面积、缓存、人口与重算对照见 [CIV-03](benchmarks/CIV-03-polity-layout.md)。
+
+- `polities-religions-v14` 增加政体 `allowedSizeClasses` 硬匹配；实际陆地面积决定小规模，移除单聚落豁免。内置自由领地、酋长领、自治公社和城邦仅匹配不超过 3 个参考支撑面积的 `city-state`，特征权重不能绕过。大领土选其他合格原型，无合格候选则失败，不改国家预算。完整快照校验重算实际面积和已归属人口份额，拒绝伪造规模。中英文政体包升至 1.2.0，限制进入内容哈希与文明签名；内容改变仍失效共用内容键的文明链，自然/资源链可复用。Schema 10 / 分享 v15 不变。三 Seed 九组前后对照见 [CIV-04](benchmarks/CIV-04-polity-size.md)。
+
+- 当前 `polities-religions-v15` 在划界后、候选政体匹配前按目录的 `territory` / `sizeClasses` 派生 `small-area`，四类小政体以 `requiredTraits` 引用，硬条件与偏好权重分离。保留原三维特征形成与扩张；总特征上限从 3 升为 4，Schema 升为 11（旧 1–10 拒绝），分享 v15 不变。目录升至 1.1.0、政体内容包升至 1.3.0，领土条件进入文明内容签名。实际面积、领土特征与必需引用均在完整快照校验中核对，方法和九组复验见 [CIV-04](benchmarks/CIV-04-polity-size.md)。
+
+- 政体内容包 1.4.0 调整基础权重及君主形态的王朝贵族/公民议政偏好；代码公式和阶段版本 `polities-religions-v15` 不变，以内容版本及签名记录结果变化。权重只作用于划界后的政体选择，不改变本轮人口、首都、国家特征和领土；共用文明内容签名仍会使文明链缓存失效，命名可能变化。实际 Web L7 及多预设/多 Seed 的 14 组前后对照见 [CIV-05](benchmarks/CIV-05-polity-weights.md)。
+
+缓存顺序：聚居改变从人口聚落向下失效；文化多样性从族群文化向下失效；确切国家数、面积差异或行政能力仅使政体宗教失效。参数校验拒绝显式旧字段、非法范围和非有限值，不靠隐藏常数补偿无效配置。全仓单元、类型和构建通过；核心整包及本次修改文件定向 lint 通过，其余既有 lint 错误见 [进度](PROGRESS.md)。16 组固定 Seed/L4 对照数据见 [参数对照](benchmarks/CIV-01-parameters.json)，可运行 `bun run --cwd packages/world-core bench:civilization` 复现；它使用测试内容，不代表历史校准或性能矩阵。B 批定向 Playwright 两项已通过真实 Worker/缓存/分享恢复与旧链接拒绝验证；完整旧版 E2E 与更早算法版本对照未运行。C 批增加预设浏览器验证与高等级矩阵。
+
+### C 批预设、人口尺度校准与性能口径
+
+Web 的 `civilization-presets.ts` 拥有四份完整参数表：农耕聚落、城邦商贸、区域王国、近代工业商贸（默认）。选择只替换待生成文明参数，保留 Seed、自然参数和文明开关；不自动生成。按全部有效数值匹配预设，编辑后显示自定义，分享/恢复后重新匹配。预设 ID 不进入核心配置、缓存键或世界事实，Schema 7 / 分享 v12 不变。文化多样性在四份表中保持 1×，不与发展阶段绑定。
+
+以联合国 1900 年约 16.5 亿人口、148.94 百万 km² 地球陆地面积为参照，比较 `人口 / 实际陆地面积 × 地球陆地面积`，只在离线基准中做面积换算，生成器不强制总人口。三个 L5 Seed 的旧平均约 110.98 亿，联合缩放系数约 0.14868；将原 145/45 系数的拟合值 21.56/6.69 取整为 22/7。校准后三样本平均 16.84 亿（+2.05%），独立 L6 Seed 18.36 亿（+11.28%）。拟合均值 ±15%、留出样本 ±25% 是工程验收范围，不是历史估计置信区间。工业相对权重没有独立识别；交通速度、聚落数量、国家/文化数量与城市规模分布未按历史拟合，已命名聚落人口占比不等于真实城镇化率。
+
+`habitability-v3 → v4` 使该阶段及所有文明下游缓存失效，自然与资源阶段保持可复用；旧世界人口不自动重分配。派生承载力仍按当前算法复算，不支持旧算法回放。生产内容的 L6/L7/L8 各三次独立冷进程运行，包含领域校验与快照装配；记录分阶段耗时及 `process.resourceUsage().maxRSS` 峰值，核对重复世界的关键事实指纹。它不覆盖浏览器 Worker 传输、GPU/制图或旧/新快照共存峰值。复现：`bun run --cwd apps/web bench:civilization:calibration` / `bench:civilization:performance`。详情与原始数据见 [校准与性能](benchmarks/CIV-01-calibration.md)。
+
+`transport-network-v2` 为陆路、海路及多源可达性搜索增加每轮已处理标记，并将候选成本统一到 Float32 精度后再比较、保存和入队；同一目标的旧堆条目不再重复消耗搜索名额。版本变化使交通及下游文化、政体/宗教缓存失效，上游人口聚落与自然链可复用。已有 Schema 4 快照保留已存路线，不在读取时重算。最初补充的确定性合成图回归已在后续 A/B 与 C 批核心测试中通过；固定 Seed `m2-civilization-seed` 的 v1/v2 旧版本对照未补做，当前版本性能见 C 批。
 
 前七项组成地质 Pipeline；Mesh Pipeline 只有 mesh；Terrain Pipeline 复用地质 Registry，再追加地形、地理分区与地名 Stage。Climate Pipeline 再追加 C0；Hydrology Pipeline 复用该分支并添加 I0/H0/L1；Ecology Pipeline 另建 C0 Registry 并追加 E0。两条调试分支共享 StageCache 的可复用上游产物，但 E0 单独计划不包含任何水文 Stage。Natural Pipeline 在同一 DAG 中包含 I0/H0/L1/E0，E0 仍直接依赖 Mesh/T0/C0，水文参数变化不会使 E0 Stage 失效。
 
@@ -87,7 +137,8 @@ H0 缓存签名包含蒸散系数、基准汇水面积、河网密度倍率和�
 | civilization.enabled | boolean，默认 true | `population-settlements`、`transport-network`、`peoples-cultures`、`polities-religions`（关闭仍保留自然链与 `resource-potential` / `habitability` 缓存） |
 | civilization.populationScale | [0.1,4]，默认 1 | `population-settlements` 及下游文明 Stage |
 | civilization.settlementDensity | [0.25,4]，默认 1 | `population-settlements` 及下游文明 Stage |
-| civilization.polityCohesion | [0,1]，默认 0.6 | 仅 `polities-religions` |
+| civilization.polityCount | 1–200 整数，默认 60；单滑杆选择确切数量 | 仅 `polities-religions` |
+| civilization.politySizeVariation | [0,1]，默认 0.5 | 仅 `polities-religions` |
 | 相机、配色、专题、线框 | ViewState | 不生成 |
 
 roughness 可调纹理强度按 `(roughness/0.4)³` 响应。`terrain.glacialErosion` 与 `terrain.hydraulicErosion` 范围 [0,1]，默认 0.5，阶段内 km 转换前运行；水力参数进入处理器前统一乘以 0.5，冰川参数不缩放。当前不读取气候/降雨。旧 `continentalUpliftKm` 参数即便为零也在计划/执行前报错，包括全缓存命中。

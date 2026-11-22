@@ -14,7 +14,7 @@ import { DeterministicRandom } from '#math/random'
 import { greatCircleDistanceKm } from '#math/spherical'
 import { REFERENCE_TRAVEL_KM_PER_DAY, SETTLEMENT_SUPPORT_AREA_KM2 } from './population-settlements'
 
-export const PEOPLES_CULTURES_VERSION = 'peoples-cultures-v2' as const
+export const PEOPLES_CULTURES_VERSION = 'peoples-cultures-v4' as const
 
 export interface RegionCultureShare {
   readonly cultureIndex: number
@@ -28,7 +28,9 @@ export interface PeoplesCulturesArtifact {
   readonly enabled: boolean
   readonly peoples: readonly People[]
   readonly cultures: readonly Culture[]
-  readonly namedSettlements: readonly Omit<Settlement, 'polityId'>[]
+  readonly namedSettlements: readonly Omit<Settlement, 'polityId' | 'features'>[]
+  /** Cultural hearth region indices corresponding to cultures[]. */
+  readonly hearthRegions: readonly number[]
   /** Indexed by regionId; empty when population[r] === 0. Shares sum to 1. */
   readonly regionCultures: readonly (readonly RegionCultureShare[])[]
   readonly dominantCultureIndex: Int32Array
@@ -119,9 +121,12 @@ export function generatePeoplesCultures(
   settlements: Pick<PopulationSettlementsArtifact, 'meshId' | 'enabled' | 'population' | 'settlementSites'>,
   transport: Pick<TransportNetworkArtifact, 'meshId' | 'enabled' | 'nodes' | 'routes'>,
   worldSeed: string,
+  culturalDiversity = 1,
   check?: (fraction: number) => void,
 ): PeoplesCulturesArtifact {
   const n = mesh.regionCount
+  if (!Number.isFinite(culturalDiversity) || culturalDiversity < 0.5 || culturalDiversity > 2)
+    throw new Error('Invalid cultural diversity')
   if (!n || terrain.meshId !== mesh.meshId || lakes.meshId !== mesh.meshId || resources.meshId !== mesh.meshId || habitability.meshId !== mesh.meshId || settlements.meshId !== mesh.meshId || transport.meshId !== mesh.meshId)
     throw new Error('Peoples and cultures stage received mismatched mesh artifacts')
   if (bundleSignature !== civilizationContentSignature(bundle))
@@ -138,6 +143,7 @@ export function generatePeoplesCultures(
       peoples: [],
       cultures: [],
       namedSettlements: [],
+      hearthRegions: [],
       regionCultures: Array.from({ length: n }, () => []),
       dominantCultureIndex,
       usedNames: [],
@@ -171,21 +177,23 @@ export function generatePeoplesCultures(
       peoples: [],
       cultures: [],
       namedSettlements: [],
+      hearthRegions: [],
       regionCultures: Array.from({ length: n }, () => []),
       dominantCultureIndex,
       usedNames: [],
     }
   }
 
-  const rng = new DeterministicRandom(JSON.stringify([worldSeed, PEOPLES_CULTURES_VERSION]))
+  // v4 only exposes hearthRegions on the artifact; keep the v3 random stream so cultures stay identical.
+  const rng = new DeterministicRandom(JSON.stringify([worldSeed, 'peoples-cultures-v3']))
   const allocator = new UniqueNameAllocator(worldSeed)
 
   // Pick well-spaced cultural hearth regions
   const sitesSorted: SettlementSite[] = [...settlements.settlementSites].sort((a, b) => (b.score !== a.score ? b.score - a.score : a.regionId - b.regionId))
   const targetCultureCount = sitesSorted.length === 0
     ? 1
-    : Math.max(1, Math.min(sitesSorted.length, Math.min(12, Math.max(2, Math.round(Math.sqrt(sitesSorted.length) * 1.1)))))
-  const hearthSpacingKm = Math.max(Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2) * 4, mesh.physicalRadiusKm * 0.25)
+    : Math.max(1, Math.min(sitesSorted.length, Math.min(Math.round(12 * culturalDiversity), Math.round(Math.max(2, Math.sqrt(sitesSorted.length) * 1.1) * culturalDiversity))))
+  const hearthSpacingKm = Math.max(Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2) * 4, mesh.physicalRadiusKm * 0.25) / Math.sqrt(culturalDiversity)
 
   const hearths: number[] = []
   const vecA = { x: 0, y: 0, z: 0 }
@@ -416,7 +424,7 @@ export function generatePeoplesCultures(
   }
 
   // Name every settlement using its dominant culture's NamingStyle
-  const namedSettlements: Omit<Settlement, 'polityId'>[] = settlements.settlementSites.map((site) => {
+  const namedSettlements: Omit<Settlement, 'polityId' | 'features'>[] = settlements.settlementSites.map((site) => {
     const domIdx = dominantCultureIndex[site.regionId]!
     const culture = cultures[domIdx >= 0 ? domIdx : 0]!
     const style = resolveStyle(bundle.namingStyles, culture.namingStyleId)
@@ -442,6 +450,7 @@ export function generatePeoplesCultures(
     peoples,
     cultures,
     namedSettlements,
+    hearthRegions: hearths,
     regionCultures,
     dominantCultureIndex,
     usedNames: allocator
@@ -460,7 +469,9 @@ export function validatePeoplesCulturesArtifact(output: PeoplesCulturesArtifact)
     throw new Error('Invalid peoples and cultures metadata')
   if (!(output.dominantCultureIndex instanceof Int32Array) || output.dominantCultureIndex.length !== n)
     throw new Error('Dominant culture index dtype or length mismatch')
-  if (!output.enabled && (output.peoples.length > 0 || output.cultures.length > 0 || output.namedSettlements.length > 0))
+  if (!Array.isArray(output.hearthRegions) || output.hearthRegions.length !== output.cultures.length || output.hearthRegions.some(r => !Number.isSafeInteger(r) || r < 0 || r >= n))
+    throw new Error('Invalid cultural hearth regions')
+  if (!output.enabled && (output.peoples.length > 0 || output.cultures.length > 0 || output.namedSettlements.length > 0 || output.hearthRegions.length > 0))
     throw new Error('Disabled civilization must emit empty peoples and cultures')
   const peopleIds = new Set(output.peoples.map(p => p.id))
   for (const culture of output.cultures) {

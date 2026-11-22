@@ -1,4 +1,5 @@
 import type { ContentPackV1 } from './schemas/content'
+import polityTraitsSource from '../data/society/polity-traits.json'
 import { calculateContentHash, createContentCatalog } from './catalog'
 import { loadBuiltinNamingStyles } from './names/builtin-naming-styles'
 import { createNamingStylePack } from './names/naming-style-pack'
@@ -75,13 +76,14 @@ const defaultGeographicNamingProfilePack = (() => {
   return pack
 })()
 
-const builtinSocietyPacks = loadBuiltinSocietyPacks(builtinNamingStylePacks)
+const polityTraitsPack = withHash(polityTraitsSource as Omit<ContentPackV1, 'manifest'> & { manifest: Omit<ContentPackV1['manifest'], 'contentHash'> })
+const builtinSocietyPacks = loadBuiltinSocietyPacks([...builtinNamingStylePacks, polityTraitsPack])
 const defaultChineseSocietyPacks = builtinSocietyPacks.filter(pack => pack.manifest.id.endsWith('-zh-cn'))
 
 export function loadBuiltinCatalog() {
-  return createContentCatalog([core, earthlike, ...builtinNamingStylePacks, ...builtinSocietyPacks])
+  return createContentCatalog([core, earthlike, polityTraitsPack, ...builtinNamingStylePacks, ...builtinSocietyPacks])
 }
 
 export function loadBuiltinGenerationCatalog() {
-  return createContentCatalog([core, earthlike, defaultGeographicNamingProfilePack, ...defaultChineseSocietyPacks])
+  return createContentCatalog([core, earthlike, polityTraitsPack, defaultGeographicNamingProfilePack, ...defaultChineseSocietyPacks])
 }

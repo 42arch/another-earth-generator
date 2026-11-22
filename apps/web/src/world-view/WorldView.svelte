@@ -29,6 +29,7 @@
     DEFAULT_TERRAIN_PARAMETERS,
   } from '@another-earth/world-core'
   import { onMount } from 'svelte'
+  import { t } from '@/lib/i18n'
   import AppUI from '@/ui/AppUI.svelte'
   import { climatePeriodForThematic } from '@/ui/hud/layer-presentation'
   import { applyShareHash, createShareUrl } from '@/ui/hud/share-link'
@@ -51,7 +52,7 @@
   let landformParameters = $state({ ...DEFAULT_LANDFORM_PARAMETERS })
   let climateParameters = $state({ ...DEFAULT_CLIMATE_PARAMETERS, axialTiltDegrees: 23.5, precipitationScale: 1.8 })
   let hydrologyParameters = $state({ ...DEFAULT_HYDROLOGY_PARAMETERS })
-  let civilizationParameters = $state({ ...DEFAULT_CIVILIZATION_PARAMETERS })
+  let civilizationParameters = $state({ ...DEFAULT_CIVILIZATION_PARAMETERS, capabilities: { ...DEFAULT_CIVILIZATION_PARAMETERS.capabilities } })
 
   let viewMode = $state<MapViewportMode>(DEFAULT_CARTOGRAPHY_VIEW_STATE.viewMode)
   let projectionId = $state<MapProjectionId>(DEFAULT_CARTOGRAPHY_VIEW_STATE.projectionId)
@@ -220,7 +221,15 @@
       civilizationEnabled: civilizationParameters.enabled,
       populationScale: civilizationParameters.populationScale,
       settlementDensity: civilizationParameters.settlementDensity,
-      polityCohesion: civilizationParameters.polityCohesion,
+      urbanConcentration: civilizationParameters.urbanConcentration,
+      polityCount: civilizationParameters.polityCount,
+      politySizeVariation: civilizationParameters.politySizeVariation,
+      culturalDiversity: civilizationParameters.culturalDiversity,
+      administrativeCapacity: civilizationParameters.capabilities.administrativeCapacity,
+      agriculturalProductivity: civilizationParameters.capabilities.agriculturalProductivity,
+      industrialCapability: civilizationParameters.capabilities.industrialCapability,
+      landTransportCapability: civilizationParameters.capabilities.landTransportCapability,
+      seafaringCapability: civilizationParameters.capabilities.seafaringCapability,
     }
   }
 
@@ -255,7 +264,15 @@
     civilizationParameters.enabled = Boolean(parameters.civilizationEnabled)
     civilizationParameters.populationScale = Number(parameters.populationScale)
     civilizationParameters.settlementDensity = Number(parameters.settlementDensity)
-    civilizationParameters.polityCohesion = Number(parameters.polityCohesion)
+    civilizationParameters.urbanConcentration = Number(parameters.urbanConcentration)
+    civilizationParameters.polityCount = Number(parameters.polityCount)
+    civilizationParameters.politySizeVariation = Number(parameters.politySizeVariation)
+    civilizationParameters.culturalDiversity = Number(parameters.culturalDiversity)
+    civilizationParameters.capabilities.administrativeCapacity = Number(parameters.administrativeCapacity)
+    civilizationParameters.capabilities.agriculturalProductivity = Number(parameters.agriculturalProductivity)
+    civilizationParameters.capabilities.industrialCapability = Number(parameters.industrialCapability)
+    civilizationParameters.capabilities.landTransportCapability = Number(parameters.landTransportCapability)
+    civilizationParameters.capabilities.seafaringCapability = Number(parameters.seafaringCapability)
   }
 
   function publishGeneratedShareUrl(parameters: ShareParameters, generationId: number): void {
@@ -569,7 +586,7 @@
           climate: { ...climateParameters },
           hydrology: { ...hydrologyParameters },
           ecology: true as const,
-          civilization: { ...civilizationParameters },
+          civilization: { ...civilizationParameters, capabilities: { ...civilizationParameters.capabilities } },
         },
         force,
       })
@@ -692,7 +709,9 @@
   onMount(() => {
     let disposed = false
     void (async () => {
-      const restored = await applyShareHash(window.location.hash)
+      const shareHash = window.location.hash
+      const restored = await applyShareHash(shareHash)
+      const rejectedShare = shareHash.startsWith('#w=') && !restored
       if (disposed)
         return
       if (restored)
@@ -726,7 +745,10 @@
           }
         })
 
-        if (new URLSearchParams(window.location.search).get('autogenerate') !== '0') {
+        if (rejectedShare) {
+          error = t('parameters.civilization.invalidShareLink')
+        }
+        else if (new URLSearchParams(window.location.search).get('autogenerate') !== '0') {
           requestAnimationFrame(() => void generate())
         }
       }

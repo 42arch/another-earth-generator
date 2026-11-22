@@ -17,6 +17,7 @@ const peopleArchetypeMap = new Map<string, PeopleArchetype>()
 const cultureArchetypeMap = new Map<string, CultureArchetype>()
 const religionArchetypeMap = new Map<string, ReligionArchetype>()
 const polityArchetypeMap = new Map<string, PolityArchetype>()
+const polityTraitMap = new Map(fullCatalog.packs.flatMap(pack => (pack.polityTraits ?? []).map(trait => [trait.id, trait] as const)))
 const resourceDefinitionMap = new Map<string, ResourceDefinition>()
 const contentTranslationsByLocale: Record<string, Record<string, string>> = {}
 
@@ -83,6 +84,7 @@ const builtinCivilizationContent = (() => {
     peoples: catalog.packs.flatMap(pack => pack.peoples),
     cultures: catalog.packs.flatMap(pack => pack.cultures),
     religions: catalog.packs.flatMap(pack => pack.religions),
+    polityTraits: catalog.packs.flatMap(pack => pack.polityTraits ?? []),
     polities: catalog.packs.flatMap(pack => pack.polities),
     namingStyles: catalog.packs.flatMap(pack => pack.namingStyles),
     translations,
@@ -109,4 +111,8 @@ export const builtinPipelineContent = {
     'resource-definitions': resourceDefinitionsSignature(builtinResources),
     'civilization-content': civilizationContentSignature(builtinCivilizationContent),
   },
+}
+
+export function findPolityTrait(id: string) {
+  return polityTraitMap.get(id)
 }

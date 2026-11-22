@@ -11,6 +11,7 @@ export function calculateContentHash(pack: ContentPackHashInput): string {
     cultures: pack.cultures,
     peoples: pack.peoples,
     polities: pack.polities,
+    polityTraits: pack.polityTraits,
     religions: pack.religions,
     resources: pack.resources,
     presets: pack.presets,
@@ -44,6 +45,14 @@ export function createContentCatalog(input: readonly ContentPack[]): ContentCata
     if (byId.has(pack.manifest.id))
       throw new Error(`Duplicate content pack: ${pack.manifest.id}`)
     byId.set(pack.manifest.id, pack)
+  }
+  const traitIds = new Set<string>()
+  for (const pack of packs) {
+    for (const trait of pack.polityTraits ?? []) {
+      if (traitIds.has(trait.id))
+        throw new Error(`Duplicate polity trait ID: ${trait.id}`)
+      traitIds.add(trait.id)
+    }
   }
   const contentIds = new Set<string>()
   for (const pack of packs) {

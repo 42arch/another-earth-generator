@@ -24,6 +24,7 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "test": "vitest run --config ../../vitest.config.ts --passWithNoTests",
+    "bench:civilization": "bun benchmarks/civilization-parameters.ts",
     "bench:mesh": "vitest run --config vitest.bench.config.ts --project mesh",
     "bench:generation": "vitest run --config vitest.bench.config.ts --project generation",
     "bench:geology": "vitest run --config vitest.bench.config.ts --project geology",

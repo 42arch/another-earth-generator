@@ -201,7 +201,7 @@ export class WorldStore {
       dominantCultureId: dominantCultureIndex >= 0 ? civilization.cultures[dominantCultureIndex].id : null,
       dominantReligionId: dominantReligionIndex >= 0 ? civilization.religions[dominantReligionIndex].id : null,
       dominantPolityId: dominantPolityIndex >= 0 ? civilization.polities[dominantPolityIndex].id : null,
-      settlements: Object.freeze(civilization.settlements.filter(s => s.regionId === region).map(s => Object.freeze({ ...s }))),
+      settlements: Object.freeze(civilization.settlements.filter(s => s.regionId === region).map(s => Object.freeze({ ...s, features: Object.freeze([...s.features]) }))),
       populationGroups: Object.freeze(civilization.populationGroups.filter(g => g.regionId === region).map(g => Object.freeze({ ...g }))),
     })
   }
@@ -253,12 +253,12 @@ export class WorldStore {
 
   polity(id: string) {
     const polity = this.#require().civilization.polities.find(item => item.id === id)
-    return polity ? Object.freeze({ ...polity }) : null
+    return polity ? Object.freeze({ ...polity, traits: Object.freeze([...polity.traits]) }) : null
   }
 
   settlement(id: string) {
     const settlement = this.#require().civilization.settlements.find(item => item.id === id)
-    return settlement ? Object.freeze({ ...settlement }) : null
+    return settlement ? Object.freeze({ ...settlement, features: Object.freeze([...settlement.features]) }) : null
   }
 
   transportRoute(id: string) {

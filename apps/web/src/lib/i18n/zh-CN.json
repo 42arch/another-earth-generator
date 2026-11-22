@@ -90,7 +90,7 @@
       "politicalAtlas": { "label": "政区地图", "description": "国家疆域 · 国界 · 聚落注记" },
       "minimalLight": { "label": "极简明亮", "description": "低饱和浅底 · 突出科学专题" },
       "minimalDark": { "label": "极简暗色", "description": "深岩灰暗底 · 契合环流高亮" },
-      "historicalParchment": { "label": "古典羊皮纸", "description": "暖羊皮纸色调 · 墨棕海岸" }
+      "historicalParchment": { "label": "古典羊皮纸", "description": "暖羊皮纸 · 墨线国界与聚落" }
     },
     "groups": {
       "geology": "地质",
@@ -190,16 +190,58 @@
     "highLevelWarning": "高等级网格包含大量区域，显存和内存占用较高。",
     "forceRegenerate": "强制重算",
     "civilization": {
-      "sectionTitle": "初始文明开关与规模",
+      "presets": {
+        "title": "社会背景预设",
+        "custom": "自定义",
+        "customHint": "当前参数为自定义组合。可选择预设重新填入社会能力与聚落/政体参数（保留人口规模与文化多样性）。",
+        "hint": "预设只填写社会能力与聚落/政体参数，保留人口规模与文化多样性；调整预设参数后自动识别为自定义。点击“开始生成”后生效。它们是静态社会情景，不代表历史演化。",
+        "agrarian": {
+          "label": "农耕聚落",
+          "description": "以农业和分散聚落为主，工业利用及远距离运输较弱。"
+        },
+        "mercantile-city-states": {
+          "label": "城邦商贸",
+          "description": "聚居与航海贸易较强，国家数量倾向较高，行政整合有限。"
+        },
+        "regional-kingdoms": {
+          "label": "区域王国",
+          "description": "以区域农业、陆路联系和较少的政治中心为主。"
+        },
+        "industrial-mercantile": {
+          "label": "近代工业商贸",
+          "description": "默认背景，以约 1900 年的生产与运输条件为参照；人口数量级经过校准。"
+        }
+      },
+      "urbanConcentration": "聚居倾向",
+      "urbanConcentrationDescription": "控制人口向聚落集中的强度和募集范围，默认 0.65（0.5 为募集公式基准）；人口转移守恒，供体至少保留 44%。不是精确城市化率。",
+      "polityCount": "国家数量",
+      "polityCountDescription": "生成的国家总数，含岛国；范围 1–200，默认 60。可用聚落不足时会提示错误。",
+      "politySizeVariation": "国家面积差异",
+      "politySizeVariationDescription": "0 尽量均衡，1 倾向少数大国与大量小国；实际面积仍受地形、岛屿和可达性约束。",
+      "culturalDiversity": "文化多样性",
+      "culturalDiversityDescription": "调整文化起源中心数量与间距；受有效起源点和命名资源限制（0.5–2×）。",
+      "administrativeCapacity": "行政整合能力",
+      "administrativeCapacityDescription": "降低跨文化与跨海整合的相对阻力，不直接改变国家数量目标（0–1，默认 0.75）。",
+      "capabilitiesTitle": "社会能力",
+      "capabilitiesDescription": "生产与运输的 1× 为当前近代基准；行政整合默认 0.75。地形、淡水和港口条件仍然有效。",
+      "societyTitle": "社会格局",
+      "agriculturalProductivity": "农业生产能力",
+      "agriculturalProductivityDescription": "调整相同农业潜力可供养的人口，不改变自然农业潜力（0.25–2×）。",
+      "industrialCapability": "工业利用能力",
+      "industrialCapabilityDescription": "调整能源利用和矿产、燃料组合的经济吸引力；0× 仍保留普通采矿（0–2×）。",
+      "landTransportCapability": "陆运能力",
+      "landTransportCapabilityDescription": "调整陆地食物、矿产腹地范围以及陆路、河运旅行成本（0.25–2×）。",
+      "seafaringCapability": "航海能力",
+      "seafaringCapabilityDescription": "调整港口间航行成本与可达范围；0× 不生成海路，不会创造港口（0–2×）。",
+      "invalidShareLink": "参数链接版本不受支持或内容无效。请检查参数后重新生成世界。",
+      "sectionTitle": "初始文明",
       "enabled": "生成初始文明",
       "enabledDescription": "开启后在自然世界之上生成人口、聚落、交通网络、族群、文化、宗教与国家政体。仅调整文明参数可复用全部自然链缓存。",
       "disabledHint": "当前仅生成自然世界及自然资源潜力，跳过人口、聚落与国家构建。",
       "populationScale": "人口规模倍率",
       "populationScaleDescription": "按环境承载力整体缩放初始总人口规模（0.1–4.0）。",
       "settlementDensity": "聚落密度倍率",
-      "settlementDensityDescription": "调节聚落数量与分布密度倍率（0.25–4.0）。",
-      "polityCohesion": "国家凝聚度",
-      "polityCohesionDescription": "越高则大帝国与王国越容易跨越边疆扩张并整合周边聚落；较低时保留更多城邦与边疆。"
+      "settlementDensityDescription": "调节聚落数量与分布密度倍率（0.25–4.0）。"
     },
     "footer": {
       "busy": "生成进行中…",
@@ -289,6 +331,22 @@
       "minorChanges": "功能更新",
       "majorChanges": "重大更新",
       "refactors": "重构"
+    }
+  },
+  "civilization": {
+    "settlementFeatures": {
+      "agrarian": "农耕中心",
+      "pastoral": "牧业聚落",
+      "industrial": "工业中心",
+      "craft": "手工工坊",
+      "mining": "矿业城镇",
+      "forestry": "林木工坊",
+      "fishery": "渔业港镇",
+      "maritime-trade": "商贸海港",
+      "trade-hub": "商路枢纽",
+      "cultural": "文化名城",
+      "religious": "宗教圣城",
+      "fortress": "要塞军镇"
     }
   }
 }

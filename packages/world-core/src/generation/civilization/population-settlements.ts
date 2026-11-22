@@ -7,13 +7,16 @@ import type { CivilizationParameters, SettlementTier } from './civilization-type
 import type { HabitabilityArtifact } from './habitability'
 import { DeterministicRandom } from '#math/random'
 import { greatCircleDistanceKm } from '#math/spherical'
+import { SETTLEMENT_SUPPORT_AREA_KM2 } from './civilization-scale'
 
-export const POPULATION_SETTLEMENTS_VERSION = 'population-settlements-v2' as const
+export { REFERENCE_TRAVEL_KM_PER_DAY, SETTLEMENT_SUPPORT_AREA_KM2 } from './civilization-scale'
 
-// Preserve the existing L6 Earthlike calibration as a physical area, rather
-// than treating the output mesh's cell count as a social unit.
-export const SETTLEMENT_SUPPORT_AREA_KM2 = (4 * Math.PI * 6371 ** 2) / (10 * 4 ** 6 + 2)
-export const REFERENCE_TRAVEL_KM_PER_DAY = Math.max(25, Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2) * 0.45)
+export const POPULATION_SETTLEMENTS_VERSION = 'population-settlements-v5' as const
+
+/** Sum of the site-score weights below. Dividing by it maps a score onto [0, 1]. */
+const SETTLEMENT_SCORE_WEIGHT_TOTAL = 1
+const MIN_IMMIGRATION_SHARE = 0.16
+const MAX_IMMIGRATION_SHARE = 0.56
 
 export interface SettlementSite {
   readonly id: string
@@ -40,12 +43,14 @@ export function generatePopulationSettlements(
   hydrology: Pick<HydrologyArtifact, 'meshId' | 'downstreamRegion' | 'riverIndex' | 'accumulatedAnnualFlowM3s'>,
   lakes: Pick<StaticLakeArtifact, 'meshId' | 'lakeIndex'>,
   resources: Pick<ResourcePotentialArtifact, 'meshId' | 'agriculturalPotential' | 'fisheryPotential' | 'mineralPotential'>,
-  habitability: Pick<HabitabilityArtifact, 'meshId' | 'habitability' | 'carryingCapacityPerKm2' | 'coastalMask' | 'lakeShoreMask'>,
-  params: Pick<CivilizationParameters, 'enabled' | 'populationScale' | 'settlementDensity'>,
+  habitability: Pick<HabitabilityArtifact, 'meshId' | 'habitability' | 'carryingCapacityPerKm2' | 'coastalMask' | 'lakeShoreMask' | 'portPotential'>,
+  params: Pick<CivilizationParameters, 'enabled' | 'populationScale' | 'settlementDensity' | 'urbanConcentration'>,
   worldSeed: string,
   check?: (fraction: number) => void,
 ): PopulationSettlementsArtifact {
   const n = mesh.regionCount
+  if (!Number.isFinite(params.urbanConcentration) || params.urbanConcentration < 0 || params.urbanConcentration > 1)
+    throw new Error('Invalid urban concentration')
   if (!n || terrain.meshId !== mesh.meshId || hydrology.meshId !== mesh.meshId || lakes.meshId !== mesh.meshId || resources.meshId !== mesh.meshId || habitability.meshId !== mesh.meshId)
     throw new Error('Population and settlements stage received mismatched mesh artifacts')
 
@@ -90,31 +95,13 @@ export function generatePopulationSettlements(
     inhabitedLandCount++
     inhabitedAreaKm2 += mesh.areaKm2[r]!
 
-    const isCoastal = habitability.coastalMask[r] === 1
-    let seaNeighbors = 0
-    if (isCoastal) {
-      for (let e = mesh.neighborOffsets[r]; e < mesh.neighborOffsets[r + 1]; e++) {
-        if (terrain.landMask[mesh.neighbors[e]] === 0)
-          seaNeighbors++
-      }
-    }
-    const hasRiver = hydrology.riverIndex[r] >= 0
     const isConfluence = upstreamRiverCount[r] >= 2
-    const isEstuary = isCoastal && hasRiver
-    const isPort = isCoastal && hab >= 0.14 && (seaNeighbors >= 1 || isEstuary)
+    const isPort = habitability.portPotential[r]! >= 0.5 && hab >= 0.14
 
-    const flatBonus = Math.max(0, 1 - terrain.slopeRadians[r] / 0.22)
-    const flowScore = hasRiver ? Math.min(1, Math.log10(Math.max(10, hydrology.accumulatedAnnualFlowM3s[r])) / 5.5) : 0
-    const score = hab * 0.36
-      + resources.agriculturalPotential[r] * 0.22
-      + resources.mineralPotential[r] * 0.1
-      + resources.fisheryPotential[r] * 0.08
-      + flatBonus * 0.08
-      + (isPort ? 0.12 : 0)
-      + (isConfluence ? 0.1 : 0)
-      + (isEstuary ? 0.09 : 0)
-      + (habitability.lakeShoreMask[r] ? 0.06 : 0)
-      + flowScore * 0.08
+    // Food, minerals, energy and access already enter the period-specific
+    // habitability. Do not reward the same coast/resource a second time.
+    const score = hab * 0.9
+      + (isConfluence ? 0.06 : 0)
       + rng.nextFloat() * 0.04
 
     if (hab >= 0.12 && (pop / mesh.areaKm2[r]!) * SETTLEMENT_SUPPORT_AREA_KM2 >= 40)
@@ -165,26 +152,22 @@ export function generatePopulationSettlements(
   selected.sort((a, b) => (b.score !== a.score ? b.score - a.score : a.region - b.region))
 
   const siteRng = rng.fork('settlement-sites')
-  const selectedRegions = new Set(selected.map(site => site.region))
+  // The support disc is about 63 km across. Searching twice as far covers an
+  // equal area of land even when only a quarter of the directions are land,
+  // so a straight coast can still fill the same target as an inland site.
   const supportRadiusKm = Math.sqrt(SETTLEMENT_SUPPORT_AREA_KM2 / Math.PI)
-  const settlementSites: SettlementSite[] = selected.map((site, index) => {
-    const localDensity = population[site.region]! / mesh.areaKm2[site.region]!
-    const rankFraction = selected.length <= 1 ? 0 : index / (selected.length - 1)
+  const maxRecruitRadiusKm = supportRadiusKm * 2
+  const baselinePopulation = population.slice()
+  const recruited = new Float64Array(n)
+  const settlementSites: SettlementSite[] = selected.map((site) => {
+    const localDensity = baselinePopulation[site.region]! / mesh.areaKm2[site.region]!
     const supportedPopulation = localDensity * SETTLEMENT_SUPPORT_AREA_KM2
-    const tier: SettlementSite['tier'] = rankFraction <= 0.16 && supportedPopulation >= 1200
-      ? 'city'
-      : rankFraction <= 0.52 && supportedPopulation >= 400
-        ? 'town'
-        : 'village'
-    const urbanShare = tier === 'city'
-      ? 0.42 + siteRng.nextFloat() * 0.14
-      : tier === 'town'
-        ? 0.28 + siteRng.nextFloat() * 0.12
-        : 0.16 + siteRng.nextFloat() * 0.1
-    const desiredPopulation = Math.max(10, Math.round(supportedPopulation * urbanShare))
-    // A city occupies one region in the snapshot. Move residents from its
-    // physical hinterland into that region before publishing the population
-    // field, without creating or destroying residents.
+    const scoreShare = Math.min(1, Math.max(0, site.score / SETTLEMENT_SCORE_WEIGHT_TOTAL))
+    const immigrationShare = Math.min(MAX_IMMIGRATION_SHARE, MIN_IMMIGRATION_SHARE + (MAX_IMMIGRATION_SHARE - MIN_IMMIGRATION_SHARE) * scoreShare * (params.urbanConcentration / 0.5))
+    const desiredPopulation = Math.max(10, Math.round(supportedPopulation * immigrationShare))
+    // Higher-scoring sites are served first and may search farther. Each donor
+    // keeps at least 44% of its original residents, so a city cannot empty the
+    // cells around it. Sea cells hold nobody and are walked past, not deducted.
     let needed = Math.max(0, desiredPopulation - population[site.region]!)
     if (needed > 0) {
       const seen = new Set<number>([site.region])
@@ -197,29 +180,47 @@ export function generatePopulationSettlements(
           if (seen.has(v))
             continue
           seen.add(v)
+          if (terrain.landMask[v] !== 1)
+            continue
           const distance = greatCircleDistanceKm(
             { x: mesh.centers[3 * site.region], y: mesh.centers[3 * site.region + 1], z: mesh.centers[3 * site.region + 2] },
             { x: mesh.centers[3 * v], y: mesh.centers[3 * v + 1], z: mesh.centers[3 * v + 2] },
             mesh.physicalRadiusKm,
           )
-          if (distance <= supportRadiusKm) {
-            frontier.push(v)
-            if (!selectedRegions.has(v) && population[v]! > 0)
-              donors.push({ region: v, distance })
-          }
+          if (distance > maxRecruitRadiusKm * scoreShare * (0.5 + params.urbanConcentration))
+            continue
+          frontier.push(v)
+          const available = Math.min(
+            baselinePopulation[v]! * immigrationShare,
+            baselinePopulation[v]! * MAX_IMMIGRATION_SHARE - recruited[v]!,
+          )
+          if (available > 0)
+            donors.push({ region: v, distance })
         }
       }
       donors.sort((a, b) => a.distance - b.distance || a.region - b.region)
       for (const donor of donors) {
-        const moved = Math.min(needed, population[donor.region]!)
+        const available = Math.min(
+          baselinePopulation[donor.region]! * immigrationShare,
+          baselinePopulation[donor.region]! * MAX_IMMIGRATION_SHARE - recruited[donor.region]!,
+        )
+        const moved = Math.min(needed, Math.max(0, available))
+        if (moved <= 0)
+          continue
         population[donor.region] = population[donor.region]! - moved
         population[site.region] = population[site.region]! + moved
+        recruited[donor.region] = recruited[donor.region]! + moved
         needed -= moved
         if (needed <= 0)
           break
       }
     }
     const settlementPop = Math.min(population[site.region]!, desiredPopulation)
+    const tier: SettlementSite['tier'] = settlementPop >= 1200
+      ? 'city'
+      : settlementPop >= 400
+        ? 'town'
+        : 'village'
     const foundedAtYear = -Math.round((120 + siteRng.nextInt(0, 1400)) * (tier === 'city' ? 1.25 : tier === 'town' ? 1.0 : 0.7))
     return {
       id: `settlement:${site.region}`,

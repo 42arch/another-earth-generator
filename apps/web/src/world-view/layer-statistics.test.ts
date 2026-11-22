@@ -70,8 +70,8 @@ describe('resource and civilization legend statistics', () => {
       resourceIds: ['core:resource/iron'],
       deposits: [{ id: 'dep-1', resourceId: 'core:resource/iron', regionId: 3, category: 'mineral', richness: 0.8, primaryFactor: 'orogen' }],
     }),
-    settlements: () => [{ id: 'set-1', name: '王都', foundedAtYear: 0, regionId: 2, polityId: 'pol-1', cultureId: 'cul-1', tier: 'capital', population: 1200 }],
-    polities: () => [{ id: 'pol-1', name: '奥斯帝国', foundedAtYear: 0, archetypeId: 'pack:polity/empire', cultureId: 'cul-1', capitalSettlementId: 'set-1', sizeClass: 'empire' }],
+    settlements: () => [{ id: 'set-1', name: '王都', foundedAtYear: 0, regionId: 2, polityId: 'pol-1', cultureId: 'cul-1', tier: 'capital', population: 1200, features: ['agrarian', 'cultural'] }],
+    polities: () => [{ id: 'pol-1', name: '奥斯帝国', foundedAtYear: 0, archetypeId: 'pack:polity/empire', cultureId: 'cul-1', capitalSettlementId: 'set-1', sizeClass: 'empire', traits: ['centralized', 'militaristic', 'agrarian-realm'] }],
     cultures: () => [
       { id: 'cul-1', name: '海滨文化', foundedAtYear: 0, archetypeId: 'pack:culture/coastal', peopleId: 'pep-1', namingStyleId: 'ns-1' },
       { id: 'cul-2', name: '高原文化', foundedAtYear: 0, archetypeId: 'pack:culture/highland', peopleId: 'pep-1', namingStyleId: 'ns-1' },

@@ -140,6 +140,7 @@ it('commits a validated natural candidate and keeps the old world after a reject
     climate: DEFAULT_CLIMATE_PARAMETERS,
     hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
     ecology: true as const,
+    civilization: { enabled: false },
   }
   const publication = { snapshotId: 'snapshot:controller-world', worldId: 'world:controller-world', name: 'Controller World', createdAt: '2026-11-12T00:00:00Z' }
   const first = controller.generate({ seed: input.seed, config, publication })
@@ -201,7 +202,7 @@ it('queries published civilization entities and resources via GenerationControll
     climate: DEFAULT_CLIMATE_PARAMETERS,
     hydrology: DEFAULT_HYDROLOGY_PARAMETERS,
     ecology: true as const,
-    civilization: DEFAULT_CIVILIZATION_PARAMETERS,
+    civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 1 },
   }
   const publication = { snapshotId: 'snapshot:controller-civ', worldId: 'world:controller-civ', name: 'Civ Controller World', createdAt: '2026-11-20T00:00:00Z' }
   const pending = controller.generate({ seed: '1024', config, publication })
@@ -234,6 +235,19 @@ it('queries published civilization entities and resources via GenerationControll
   const firstRoute = reader.transportRoutes()[0]
   if (firstRoute)
     expect(controller.queryWorldTransportRoute(firstRoute.id)?.id).toBe(firstRoute.id)
+
+  const originalWorld = controller.publishedWorld
+  const impossible = controller.generate({
+    seed: '1024',
+    config: { ...config, civilization: { ...config.civilization, polityCount: 200 } },
+    publication: { ...publication, snapshotId: 'snapshot:impossible-count', revision: 1 },
+  })
+  const rejected = expect(impossible).rejects.toThrow(/only .* distinct land settlements/)
+  await runtime.handle(worker.sent.at(-1)!)
+  await rejected
+  expect(controller.state.status).toBe('failed')
+  expect(controller.publishedWorld).toEqual(originalWorld)
+  expect(controller.publishedMapReader().identity.snapshotId).toBe(publication.snapshotId)
 
   controller.dispose()
 })

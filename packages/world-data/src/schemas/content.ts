@@ -42,8 +42,29 @@ export type PolityGovernmentOrganization
     | 'tribal-council' | 'theocratic-hierarchy' | 'merchant-council' | 'military-command'
     | 'rotating-delegation' | 'chartered-administration'
 export type PolitySuccession = 'hereditary' | 'elective' | 'appointed' | 'rotating' | 'collective' | 'mixed'
+export type PolityTraitDimension = 'power' | 'governance' | 'economy' | 'territory'
+/** Stable algorithm-facing ID, independent of the language of polity candidates. */
+export interface PolityTraitDefinition {
+  readonly id: string
+  readonly dimension: PolityTraitDimension
+  /** Territory traits are derived after expansion from these eligible size classes. */
+  readonly sizeClasses?: readonly ('city-state' | 'regional' | 'kingdom' | 'empire')[]
+  readonly displayNameKey: string
+  readonly descriptionKey: string
+}
+/** Matching entries multiply in document order; all listed traits must be present. */
+export interface PolityTraitAffinity {
+  readonly traits: readonly string[]
+  readonly excludedTraits?: readonly string[]
+  readonly sizeClasses?: readonly ('city-state' | 'regional' | 'kingdom' | 'empire')[]
+  readonly weight: number
+}
 /** Polity-level institutional archetype; this is not an instantiated world polity. */
 export interface PolityArchetype extends ContentDefinition {
+  /** Hard territory-size eligibility; omitted means unrestricted. */
+  readonly allowedSizeClasses?: readonly ('city-state' | 'regional' | 'kingdom' | 'empire')[]
+  readonly requiredTraits?: readonly string[]
+  readonly traitAffinities?: readonly PolityTraitAffinity[]
   readonly politicalForm: PolityPoliticalForm
   readonly governmentOrganization: PolityGovernmentOrganization
   readonly headOfStateTitle: string
@@ -65,6 +86,7 @@ export interface WorldPreset extends ContentDefinition {
   readonly seaLevelDatumKm: number
 }
 interface ContentPackBase {
+  readonly polityTraits?: readonly PolityTraitDefinition[]
   readonly names: readonly NamePool[]
   readonly religions: readonly ReligionArchetype[]
   readonly resources: readonly ResourceDefinition[]

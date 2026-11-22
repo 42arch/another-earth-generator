@@ -58,6 +58,35 @@ function createFixture(options: {
 }
 
 describe('transport network bounded searches', () => {
+  it('changes road reach and accessibility with a fixed travel-time budget', () => {
+    const input = createFixture({ angles: [0, 0.7, 1.4], edges: [[0, 1], [1, 2]], settlementRegions: [0, 2], movementCosts: [1, 1, 1] })
+    input[6] = { landTransportCapability: 0.5 }
+    const slow = generateTransportNetwork(...input)
+    input[6] = { landTransportCapability: 2 }
+    const fast = generateTransportNetwork(...input)
+    expect(slow.routes).toHaveLength(0)
+    expect(fast.routes.some(route => route.mode === 'road')).toBe(true)
+    expect(fast.accessibility[1]).toBeGreaterThan(slow.accessibility[1]!)
+    validateTransportNetworkArtifact(fast)
+  })
+
+  it('disables maritime routes at zero and changes their reach and cost otherwise', () => {
+    const input = createFixture({ angles: [0, 1.5, 3], edges: [[0, 1], [1, 2]], settlementRegions: [0, 2], movementCosts: [1, 1, 1], seaRegions: [1] })
+    input[6] = { seafaringCapability: 0 }
+    expect(generateTransportNetwork(...input).routes).toHaveLength(0)
+    input[6] = { seafaringCapability: 0.25 }
+    expect(generateTransportNetwork(...input).routes).toHaveLength(0)
+    input[6] = { seafaringCapability: 1 }
+    const normal = generateTransportNetwork(...input)
+    input[6] = { seafaringCapability: 2 }
+    const fast = generateTransportNetwork(...input)
+    expect(normal.routes[0]!.mode).toBe('sea')
+    expect(fast.routes[0]!.cost).toBeCloseTo(normal.routes[0]!.cost / 2, 5)
+    expect(fast.nodes).toEqual(normal.nodes)
+    expect(generateTransportNetwork(...input)).toEqual(fast)
+    validateTransportNetworkArtifact(fast)
+  })
+
   it('counts five distinct land targets despite an improved target being queued twice', () => {
     const input = createFixture({
       angles: [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.2, 0.07],

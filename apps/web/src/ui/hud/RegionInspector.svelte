@@ -1,5 +1,7 @@
 <script lang='ts'>
+  import type { PolityTraitId, SettlementFeatureId } from '@another-earth/world-core'
   import type { GenerationController } from '@/lib/generation/controller'
+  import type { MessageKey } from '@/lib/i18n'
   import { KOPPEN_CLASS_LABELS_ZH } from '@another-earth/cartography'
   import { KOPPEN_CODES } from '@another-earth/world-core'
   import { NATURAL_BIOME_DEFINITIONS, NATURAL_LAND_COVER_DEFINITIONS } from '@another-earth/world-data'
@@ -9,10 +11,12 @@
     findCultureArchetype,
     findPeopleArchetype,
     findPolityArchetype,
+    findPolityTrait,
     findReligionArchetype,
     findResourceDefinition,
     translateContentKey,
   } from '@/lib/generation/builtin-content'
+  import { t } from '@/lib/i18n'
   import Badge from '@/ui/components/Badge.svelte'
   import { appState } from '@/ui/state/app.svelte'
 
@@ -116,6 +120,20 @@
     return Math.round(value).toLocaleString(appState.locale)
   }
 
+  function formatSettlementFeature(featureId: SettlementFeatureId): string {
+    return t(`civilization.settlementFeatures.${featureId}` as MessageKey)
+  }
+
+  function formatPolityTrait(traitId: PolityTraitId): string {
+    const definition = findPolityTrait(traitId)
+    return definition ? translateContentKey(definition.displayNameKey, appState.locale) : traitId
+  }
+
+  function polityTraitDescription(traitId: PolityTraitId): string {
+    const definition = findPolityTrait(traitId)
+    return definition ? translateContentKey(definition.descriptionKey, appState.locale) : ''
+  }
+
   function formatResourceName(resourceId: string): string {
     const def = findResourceDefinition(resourceId)
     if (!def)
@@ -185,6 +203,13 @@
                     聚落：{info.pickedSettlement.name} · {settlementTierLabels[info.pickedSettlement.tier ?? 'town'] ?? '城镇'}{info.pickedSettlement.isPort ? ' · 港口' : ''}
                   </div>
                   <div class='text-obs-text-muted'>人口约 {formatPopulation(info.pickedSettlement.population)} · 建城于第 {info.pickedSettlement.foundedAtYear} 年</div>
+                  {#if info.pickedSettlement.features.length > 0}
+                    <div class='mt-1 flex flex-wrap gap-1'>
+                      {#each info.pickedSettlement.features as feature (feature)}
+                        <span class='rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-100'>{formatSettlementFeature(feature)}</span>
+                      {/each}
+                    </div>
+                  {/if}
                 </div>
               {/if}
               {#if info.pickedPolity}
@@ -193,8 +218,15 @@
                   <div class='font-semibold text-sky-200'>
                     政体：{info.pickedPolity.name}{info.pickedPolity.sizeClass ? ` · ${politySizeLabels[info.pickedPolity.sizeClass] ?? info.pickedPolity.sizeClass}` : ''}
                   </div>
+                  {#if info.pickedPolity.traits.length > 0}
+                    <div class='mt-1 flex flex-wrap gap-1'>
+                      {#each info.pickedPolity.traits as trait (trait)}
+                        <span class='rounded bg-sky-400/15 px-1.5 py-0.5 text-sky-100' title={polityTraitDescription(trait)}>{formatPolityTrait(trait)}</span>
+                      {/each}
+                    </div>
+                  {/if}
                   {#if pickedArch}
-                    <div class='text-obs-text-muted'>政体类型：{pickedArch.name} · {pickedArch.succession}</div>
+                    <div class='mt-0.5 text-obs-text-muted'>政体类型：{pickedArch.name} · {pickedArch.succession}</div>
                     <div class='text-obs-text-dim'>
                       元首：{pickedArch.headOfStateTitle}{pickedArch.headOfGovernmentTitle ? ` · 政府首脑：${pickedArch.headOfGovernmentTitle}` : ''}{pickedArch.legislatureTitle ? ` · 立法：${pickedArch.legislatureTitle}` : ''}
                     </div>
@@ -309,7 +341,7 @@
               {@const cultureArch = info.dominantCulture ? findCultureArchetype(info.dominantCulture.archetypeId) : null}
               {@const religionArch = info.dominantReligion ? findReligionArchetype(info.dominantReligion.archetypeId) : null}
               <dl class='grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-2 gap-y-1.5 border-t border-white/6 pt-2' aria-label='宜居与初始文明'>
-                <dt class='text-obs-text-dim'>宜居度 / 承载力</dt>
+                <dt class='text-obs-text-dim'>定居适宜度 / 承载力</dt>
                 <dd>{(info.regionFacts.habitability * 100).toFixed(0)}% · {info.regionFacts.carryingCapacityPerKm2.toFixed(1)} 人/km²</dd>
                 <dt class='text-obs-text-dim'>区域人口 / 密度</dt>
                 <dd>{formatPopulation(info.regionFacts.population)} 人 · {info.regionFacts.populationDensity.toFixed(1)} 人/km²</dd>
@@ -336,10 +368,17 @@
                 <dt class='text-obs-text-dim'>所属政体</dt>
                 <dd>
                   {#if info.dominantPolity}
-                    <div class='flex flex-col gap-0.5'>
+                    <div class='flex flex-col gap-1'>
                       <span>
                         {info.dominantPolity.name}{info.dominantPolity.sizeClass ? ` · ${politySizeLabels[info.dominantPolity.sizeClass] ?? info.dominantPolity.sizeClass}` : ''}
                       </span>
+                      {#if info.dominantPolity.traits.length > 0}
+                        <div class='flex flex-wrap gap-1 text-[10px]'>
+                          {#each info.dominantPolity.traits as trait (trait)}
+                            <span class='rounded bg-sky-400/15 px-1.5 py-0.5 text-sky-100' title={polityTraitDescription(trait)}>{formatPolityTrait(trait)}</span>
+                          {/each}
+                        </div>
+                      {/if}
                       {#if polityArch}
                         <span class='text-[10px] text-obs-text-muted'>
                           {polityArch.name} · {polityArch.succession} · 元首：{polityArch.headOfStateTitle}
@@ -355,11 +394,20 @@
                 </dd>
                 {#if info.regionFacts.settlements.length > 0}
                   <dt class='text-obs-text-dim'>本地聚落</dt>
-                  <dd class='flex flex-col gap-1'>
+                  <dd class='flex flex-col gap-1.5'>
                     {#each info.regionFacts.settlements as settlement (settlement.id)}
-                      <span>
-                        {settlement.name} · {settlementTierLabels[settlement.tier ?? 'town'] ?? '城镇'}{settlement.isPort ? ' · 港口' : ''} ({formatPopulation(settlement.population)} 人)
-                      </span>
+                      <div class='flex flex-col gap-0.5'>
+                        <span>
+                          {settlement.name} · {settlementTierLabels[settlement.tier ?? 'town'] ?? '城镇'}{settlement.isPort ? ' · 港口' : ''} ({formatPopulation(settlement.population)} 人)
+                        </span>
+                        {#if settlement.features.length > 0}
+                          <div class='flex flex-wrap gap-1 text-[10px]'>
+                            {#each settlement.features as feature (feature)}
+                              <span class='rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-100'>{formatSettlementFeature(feature)}</span>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
                     {/each}
                   </dd>
                 {/if}

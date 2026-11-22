@@ -11,7 +11,7 @@ import { parseSocietyPack } from './parse-society-pack'
 import { createSocietyPack } from './society-pack'
 
 /** Candidate definitions only; world generation decides their actual population and identity. */
-export function loadBuiltinSocietyPacks(namingStylePacks: readonly ContentPackV1[]): readonly ContentPackV1[] {
+export function loadBuiltinSocietyPacks(availablePacks: readonly ContentPackV1[]): readonly ContentPackV1[] {
   const sources = [
     peoplesEnglish,
     peoplesChinese,
@@ -27,7 +27,7 @@ export function loadBuiltinSocietyPacks(namingStylePacks: readonly ContentPackV1
     if (!parsed.valid)
       throw new TypeError(`Invalid built-in society pack at ${parsed.issues[0].path}: ${parsed.issues[0].message}`)
     const dependencies = parsed.value.dependencies.map((dependency) => {
-      const pack = namingStylePacks.find(candidate => candidate.manifest.id === dependency.id)
+      const pack = availablePacks.find(candidate => candidate.manifest.id === dependency.id)
       if (!pack || pack.manifest.version !== dependency.version)
         throw new TypeError(`Missing built-in society dependency ${dependency.id}@${dependency.version}`)
       return pack

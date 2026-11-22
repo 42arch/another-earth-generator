@@ -52,10 +52,12 @@ describe('content pack validation', () => {
   })
 
   it('validates polity archetype fields as part of the current v1 contract', () => {
-    const polityPack = loadBuiltinCatalog().get('builtin-polities-en')!
+    const catalog = loadBuiltinCatalog()
+    const polityPack = catalog.get('builtin-polities-en')!
+    const dependencies = [catalog.get('builtin-polity-traits')!]
     expect(polityPack.manifest.schemaVersion).toBe(1)
-    expect(validateContentPack(polityPack).valid).toBe(true)
-    expect(validateContentPack({ ...polityPack, polities: [{ ...polityPack.polities[0], governmentOrganization: 'invalid' as typeof polityPack.polities[number]['governmentOrganization'] }, ...polityPack.polities.slice(1)] }).issues).toContainEqual(expect.objectContaining({ path: 'polities[0].governmentOrganization', code: 'range' }))
+    expect(validateContentPack(polityPack, dependencies).valid).toBe(true)
+    expect(validateContentPack({ ...polityPack, polities: [{ ...polityPack.polities[0], governmentOrganization: 'invalid' as typeof polityPack.polities[number]['governmentOrganization'] }, ...polityPack.polities.slice(1)] }, dependencies).issues).toContainEqual(expect.objectContaining({ path: 'polities[0].governmentOrganization', code: 'range' }))
   })
 
   it('resolves dependencies only through exact declared versions', () => {

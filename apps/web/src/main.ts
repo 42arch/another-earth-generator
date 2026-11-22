@@ -16,4 +16,6 @@ if (typeof posthogKey === 'string' && posthogKey.length > 0) {
 }
 
 const target = document.getElementById('app')!
+// The static intro stays in the HTML for crawlers, then yields to the app.
+target.replaceChildren()
 mount(App, { target })
