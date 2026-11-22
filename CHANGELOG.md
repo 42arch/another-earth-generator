@@ -1,5 +1,13 @@
 # another-earth-generator
 
+## v2.1.0
+
+### 🚀 Enhancements
+
+- Add preliminary civilization generation stage. (添加初步的文明生成阶段。)
+- Add initial civilization features and adjust layer display. (添加初步的文明特征，并调整图层展示。)
+
+
 ## v2.0.2
 
 ### Enhancements
