@@ -3,6 +3,7 @@ import type { MapPickResult } from '#picking/map-picker'
 import type { MapProjectionId } from '#projections/map-projections'
 import type { GlobeLayerFilterState } from '#rendering/globe-view'
 import type { GpuResourceCounts } from '#rendering/gpu-resource-tracker'
+import type { SelectionState } from '#rendering/layers/selection-layer'
 import type { WorldViewportOptions } from '#rendering/viewport'
 import type { CompiledMapStyle } from '#styles/compiler'
 import type { LegendDescriptor, MapFontFaceDescriptor, MapStyleDocument, MapViewportMode } from '#styles/spec'
@@ -40,10 +41,7 @@ export interface CartographyViewState {
     dayNight: boolean
     polarIce: boolean
   }>
-  readonly selection: Readonly<{
-    regionId: number | null
-    featureId?: string | null
-  }>
+  readonly selection: SelectionState
 }
 
 export const DEFAULT_CARTOGRAPHY_VIEW_STATE: CartographyViewState = Object.freeze({

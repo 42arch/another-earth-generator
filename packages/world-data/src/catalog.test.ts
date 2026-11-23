@@ -33,7 +33,7 @@ describe('builtin content catalog', () => {
     ].sort((a, b) => a.localeCompare(b)))
     const profile = first.get('builtin:naming-style/western-zh-cn')
     expect(profile && 'namingStyles' in profile ? profile.namingStyles[0] : undefined).toMatchObject({ style: 'western', language: 'zh-CN' })
-    expect(profile && 'namingStyles' in profile ? profile.namingStyles[0].pools.continent.every(entry => /^[㐀-鿿]+$/u.test(entry.value)) : false).toBe(true)
+    expect(profile && 'namingStyles' in profile ? profile.namingStyles[0].pools.continent.every(entry => /^\p{Script=Han}+$/u.test(entry.value)) : false).toBe(true)
     expect(first.get('geography')).toBeUndefined()
     expect(first.get('geography-zh')).toBeUndefined()
     expect(first.packs.every(pack => validateContentPack(pack, first.packs.filter(other => other !== pack)).valid)).toBe(true)

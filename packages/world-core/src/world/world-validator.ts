@@ -779,8 +779,9 @@ export function validateWorldSnapshot(world: WorldSnapshot, packs: readonly Cont
   }
   const polityCount = config.civilization?.polityCount
   if (config.civilizationEnabled && polityCount !== undefined && (c.polities.length > 0 || c.populationGroups.some(group => group.population > 0))
-    && c.polities.length !== polityCount)
+    && c.polities.length !== polityCount) {
     add('range', 'civilization.polities', 'Polity count does not match the saved exact count')
+  }
   if (!config.civilizationEnabled && (entities.some(e => e.length > 0) || c.populationGroups.length > 0 || c.territoryPolityIndex.values.some(v => v !== -1) || (c.transport?.nodes.length ?? 0) > 0 || (c.transport?.routes.length ?? 0) > 0))
     add('population', 'civilization', 'Civilization disabled in generation configuration')
   if (full) {

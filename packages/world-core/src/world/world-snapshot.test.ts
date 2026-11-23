@@ -134,9 +134,7 @@ describe('worldSnapshot public contract', () => {
   })
   it('rejects a polity count that differs from the saved exact count', () => {
     const world = snapshot(true)
-    const wrongCount = { ...world, metadata: { ...world.metadata, generationConfig: { ...world.metadata.generationConfig,
-      civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 2 },
-    } } }
+    const wrongCount = { ...world, metadata: { ...world.metadata, generationConfig: { ...world.metadata.generationConfig, civilization: { ...DEFAULT_CIVILIZATION_PARAMETERS, polityCount: 2 } } } }
     expect(validate(wrongCount).issues).toContainEqual(expect.objectContaining({ path: 'civilization.polities', code: 'range' }))
   })
 

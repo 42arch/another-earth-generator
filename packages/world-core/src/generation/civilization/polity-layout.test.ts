@@ -11,8 +11,12 @@ function grid(width = 20, height = 10) {
   const offsets = new Uint32Array(n + 1)
   adjacency.forEach((list, i) => offsets[i + 1] = offsets[i]! + list.length)
   return {
-    regionCount: n, centers: Float64Array.from(Array.from({ length: n }, (_, i) => [Math.sin(i / 1000), 0, Math.cos(i / 1000)]).flat()),
-    physicalRadiusKm: 1000, areaKm2: new Float64Array(n).fill(10), neighborOffsets: offsets, neighbors: Uint32Array.from(adjacency.flat()),
+    regionCount: n,
+    centers: Float64Array.from(Array.from({ length: n }, (_, i) => [Math.sin(i / 1000), 0, Math.cos(i / 1000)]).flat()),
+    physicalRadiusKm: 1000,
+    areaKm2: new Float64Array(n).fill(10),
+    neighborOffsets: offsets,
+    neighbors: Uint32Array.from(adjacency.flat()),
   }
 }
 
@@ -79,8 +83,14 @@ describe('polity count and territory size budgets', () => {
     const lakes = new Int32Array(9).fill(-1)
     const components = buildTerritoryComponents(mesh, land, lakes, new Float64Array(9).fill(1), new Map())
     const run = (mountain: number) => growPolityTerritories({
-      mesh, landMask: land, lakeIndex: lakes, capitalRegions: [0, 8], targetAreasKm2: createPolityAreaTargets(mesh, [0, 8], components, 0, [1, 0]), shortcuts: new Map(),
-      landStepCost: (_p, _u, v) => v === mountain ? 100 : 1, shortcutCost: () => 1,
+      mesh,
+      landMask: land,
+      lakeIndex: lakes,
+      capitalRegions: [0, 8],
+      targetAreasKm2: createPolityAreaTargets(mesh, [0, 8], components, 0, [1, 0]),
+      shortcuts: new Map(),
+      landStepCost: (_p, _u, v) => v === mountain ? 100 : 1,
+      shortcutCost: () => 1,
     })
     expect([...run(1)]).not.toEqual([...run(3)])
   })

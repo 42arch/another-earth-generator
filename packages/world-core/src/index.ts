@@ -1,7 +1,8 @@
 export const packageId = '@another-earth/world-core' as const
 export { civilizationContentSignature, ecologyVocabularySignature, resourceDefinitionsSignature } from './content/content-port'
-export type { CivilizationContentBundle, ContentId, ContentPackView, ContentPort, ContentValidationIssue, ContentValidationResult, CultureArchetypeView, EcologyClassView, EcologyVocabulary, NamePoolView, NamingPartView, NamingRuleView, NamingStyleView, PeopleArchetypeView, PolityArchetypeView, PolityTraitAffinityView, PolityTraitDefinitionView, PolityTraitDimension, PolityGovernmentOrganization, PolityPoliticalForm, PolitySuccession, ReligionArchetypeView, ResourceDefinitionView } from './content/content-port'
+export type { CivilizationContentBundle, ContentId, ContentPackView, ContentPort, ContentValidationIssue, ContentValidationResult, CultureArchetypeView, EcologyClassView, EcologyVocabulary, NamePoolView, NamingPartView, NamingRuleView, NamingStyleView, PeopleArchetypeView, PolityArchetypeView, PolityGovernmentOrganization, PolityPoliticalForm, PolitySuccession, PolityTraitAffinityView, PolityTraitDefinitionView, PolityTraitDimension, ReligionArchetypeView, ResourceDefinitionView } from './content/content-port'
 export { CIVILIZATION_CAPABILITY_RANGES, CIVILIZATION_SOCIETY_RANGES, resolveCivilizationCapabilities, resolveCivilizationParameters } from './generation/civilization/civilization-parameters'
+export type { PolityPowerDiagnostic } from './generation/civilization/civilization-traits'
 export { DEFAULT_CIVILIZATION_CAPABILITIES, DEFAULT_CIVILIZATION_PARAMETERS, POLITY_TRAIT_IDS, SETTLEMENT_FEATURE_IDS } from './generation/civilization/civilization-types'
 export type * from './generation/civilization/civilization-types'
 export { generateHabitability, HABITABILITY_VERSION, validateHabitabilityArtifact } from './generation/civilization/habitability'
@@ -10,7 +11,6 @@ export { generatePeoplesCultures, PEOPLES_CULTURES_VERSION, validatePeoplesCultu
 export type { PeoplesCulturesArtifact, RegionCultureShare } from './generation/civilization/peoples-cultures'
 export { generatePolitiesReligions, POLITIES_RELIGIONS_VERSION, validatePolitiesReligionsArtifact } from './generation/civilization/polities-religions'
 export type { PolitiesReligionsArtifact, PolitiesReligionsExtraContext } from './generation/civilization/polities-religions'
-export type { PolityPowerDiagnostic } from './generation/civilization/civilization-traits'
 export { generatePopulationSettlements, POPULATION_SETTLEMENTS_VERSION, validatePopulationSettlementsArtifact } from './generation/civilization/population-settlements'
 export type { PopulationSettlementsArtifact, SettlementSite } from './generation/civilization/population-settlements'
 export { generateTransportNetwork, TRANSPORT_NETWORK_VERSION, validateTransportNetworkArtifact } from './generation/civilization/transport-network'

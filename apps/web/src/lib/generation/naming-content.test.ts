@@ -88,9 +88,9 @@ describe('naming content public API integration', () => {
       expect(generateName({ ...input, rule: 'continent' }).length).toBeGreaterThan(0)
       return name
     })
-    expect(names[0]).toMatch(/^[一-鿿]+·[一-鿿]+$/u)
+    expect(names[0]).toMatch(/^\p{Script=Han}+·\p{Script=Han}+$/u)
     expect(names[0]).not.toContain(' ')
-    expect(names[1]).toMatch(/^[A-Za-z]+ [A-Za-z]+$/)
+    expect(names[1]).toMatch(/^[A-Z]+ [A-Z]+$/i)
     expect(createContentCatalog([...packs, culturePack].reverse()).contentSignature).toBe(catalog.contentSignature)
   })
 

@@ -283,8 +283,16 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
     ])
 
     const compiled = new StyleCompiler().compile(preset)
+    const territoryHit = compiled.layersById.get('overlay-polity-territory-hit')!
+    expect(territoryHit.interactive).toBe(true)
+    expect(territoryHit.overlayId).toBe('polity-borders')
+    expect(territoryHit.paint['fill-opacity']!.evaluate({ zoom: 2, properties: {} })).toBe(0)
+    expect(compiled.layers.findIndex(layer => layer.id === 'overlay-polity-territory-hit'))
+      .toBeLessThan(compiled.layers.findIndex(layer => layer.id === 'overlay-polity-borders'))
+    expect(BUILTIN_MAP_STYLE_PRESETS['political-atlas'].layers.some(layer => layer.id === 'overlay-polity-territory-hit')).toBe(false)
+
     const borders = compiled.layersById.get('overlay-polity-borders')!
-    expect(borders.paint['line-color']!.evaluate({ zoom: 2, properties: { isFrontier: false } })).toBe('#3b2816')
+    expect(borders.paint['line-color']!.evaluate({ zoom: 2, properties: { isFrontier: false } })).toBe('#6f5642')
 
     const symbols = compiled.layersById.get('overlay-settlements')!
     const symbolColor = (tier: string) => symbols.paint['circle-color']!.evaluate({ zoom: 4, properties: { tier } })
@@ -340,5 +348,36 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
     expect(labelOpacityAt(2.4, 'city')).toBeGreaterThan(0.9)
     expect(labelOpacityAt(near, 'town')).toBeGreaterThan(0.9)
     expect(labels.layout['text-offset']!.evaluate({ zoom: far, properties: { tier: 'capital' } })).toEqual([0, -0.78])
+  })
+
+  it('recolors political territories and ocean without changing the rest of the atlas', () => {
+    const preset = BUILTIN_MAP_STYLE_PRESETS['political-atlas']
+    expect(preset.tokens.background).toBe('#2f86d6')
+    expect(preset.tokens.polityBorder).toBe('#5c6b7a')
+    expect(preset.tokens.waterBody).toBe('#488cb0')
+
+    const palette = preset.tokens.groupPalette
+    expect(Array.isArray(palette)).toBe(true)
+    if (!Array.isArray(palette))
+      return
+    for (const color of palette) {
+      const red = Number.parseInt(color.slice(1, 3), 16)
+      const green = Number.parseInt(color.slice(3, 5), 16)
+      const blue = Number.parseInt(color.slice(5, 7), 16)
+      expect((red + green + blue) / 3).toBeGreaterThan(175)
+    }
+
+    const compiled = new StyleCompiler().compile(preset)
+    const surface = compiled.layersById.get('base-political-atlas-surface')!
+    expect(surface.paint['raster-hillshade']!.evaluate({ zoom: 2, properties: {} })).toBe(0.25)
+    expect(surface.paint['raster-color']!.evaluate({
+      zoom: 2,
+      properties: { landMask: 0, elevationKm: -8 },
+    })).toBe('#2a7fd0')
+    const borders = compiled.layersById.get('overlay-polity-borders')!
+    expect(borders.paint['line-width']!.evaluate({ zoom: 0, properties: { isFrontier: false } })).toBe(1.15)
+    const labels = compiled.layersById.get('overlay-polity-labels')!
+    expect(String(labels.layout['text-font']!.evaluate({ zoom: 2, properties: {} }))).toContain('PingFang SC')
+    expect(labels.layout['text-size']!.evaluate({ zoom: 0, properties: {} })).toBe(14)
   })
 })

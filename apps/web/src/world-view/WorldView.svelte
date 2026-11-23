@@ -10,6 +10,7 @@
   } from '@another-earth/cartography'
   import type { StagePlan, WorldMapReader } from '@another-earth/world-core'
   import type { ComponentProps } from 'svelte'
+  import type { PolityCensus } from './polity-census'
   import type GenerationLoading from '@/ui/hud/GenerationLoading.svelte'
   import type OverviewPanel from '@/ui/hud/OverviewPanel.svelte'
   import type RegionInspector from '@/ui/hud/RegionInspector.svelte'
@@ -32,10 +33,18 @@
   import { t } from '@/lib/i18n'
   import AppUI from '@/ui/AppUI.svelte'
   import { climatePeriodForThematic } from '@/ui/hud/layer-presentation'
+  import {
+    describeGraticuleFeature,
+    describePlateBoundary,
+    findGeographicSubject,
+    parseFeatureIndexPair,
+    resolveProbeFocus,
+  } from '@/ui/hud/probe-focus'
   import { applyShareHash, createShareUrl } from '@/ui/hud/share-link'
   import { appState, setExclusivePanel } from '@/ui/state/app.svelte'
   import { GenerationCancelledError, GenerationController } from '../lib/generation/controller'
   import { buildLayerStatisticsFromReader, formatLayerStatistics } from './layer-statistics'
+  import { polityCensusForReader } from './polity-census'
 
   type WorldPerformanceStats = NonNullable<ComponentProps<typeof OverviewPanel>['stats']>
   type RegionInspectionData = ComponentProps<typeof RegionInspector>['inspection']
@@ -68,9 +77,10 @@
   let showAtmosphere = $state(true)
   let showDayNight = $state(true)
   let showPolarIce = $state(true)
-  let selection = $state<{ regionId: number | null, featureId: string | null }>({
+  let selection = $state<{ regionId: number | null, featureId: string | null, sourceId: string | null }>({
     regionId: null,
     featureId: null,
+    sourceId: null,
   })
   let lastPickResult = $state.raw<MapPickResult | null>(null)
 
@@ -398,33 +408,45 @@
         neighbors.push(neighbor)
       })
       const slopeDeg = activeReader.field('slopeDeg').get(regionId)
-      const contributingAreaKm2 = activeReader.field('contributingAreaKm2').get(regionId)
-      const accumulatedFlowM3s = activeReader.field('accumulatedAnnualFlowM3s').get(regionId)
+      const focus = resolveProbeFocus({
+        featureHit: lastPickResult?.featureHit ?? null,
+        activeThematicId,
+      })
+      const featureId = lastPickResult?.featureHit?.featureId
+      const entityId = lastPickResult?.entityId ?? lastPickResult?.featureHit?.entityId
 
       const geo = activeReader.geographicRegions()
       let continentLabel = regionFacts.land ? '陆地' : '海洋'
+      let geographicAreaKm2: number | null = null
       if (geo) {
         const cIdx = activeReader.field('continentIndex').get(regionId)
         const oIdx = activeReader.field('oceanIndex').get(regionId)
         const sIdx = activeReader.field('seaIndex').get(regionId)
         if (cIdx >= 0) {
           continentLabel = formatContinentDisplayName(geo.continents[cIdx]?.name, cIdx)
+          geographicAreaKm2 = geo.continents[cIdx]?.areaKm2 ?? null
         }
         else if (oIdx >= 0) {
           continentLabel = formatOceanDisplayName(geo.oceans[oIdx]?.name, oIdx)
+          geographicAreaKm2 = geo.oceans[oIdx]?.areaKm2 ?? null
         }
         else if (sIdx >= 0) {
           continentLabel = `海 ${sIdx + 1}`
+          geographicAreaKm2 = geo.seas[sIdx]?.areaKm2 ?? null
         }
       }
 
       let wind: { east: number, north: number } | null = null
       let ocean: { east: number, north: number, warmth: number } | null = null
+      let annualWindSpeedMps: number | null = null
+      let annualOceanSpeedMps: number | null = null
       if (activeReader.capabilities.hasCirculation) {
         wind = {
           east: activeReader.monthlyField('windEastMps', climateMonth).get(regionId),
           north: activeReader.monthlyField('windNorthMps', climateMonth).get(regionId),
         }
+        annualWindSpeedMps = activeReader.field('annualWindSpeedMps').get(regionId)
+        annualOceanSpeedMps = activeReader.field('annualOceanSpeedMps').get(regionId)
 
         const oceanAvail = activeReader.field('oceanAvailable').get(regionId) !== 0 && !regionFacts.land
         if (oceanAvail) {
@@ -436,98 +458,124 @@
         }
       }
 
-      const basin = regionFacts.basinId ? activeController.queryWorldBasin(regionFacts.basinId) : null
-      const hitId = lastPickResult?.featureHit?.featureId
-      const riverIdToQuery = hitId && lastPickResult?.featureHit?.sourceId.startsWith('river-')
-        ? hitId
-        : regionFacts.riverId
-      const lakeIdToQuery = hitId && lastPickResult?.featureHit?.sourceId === 'lake-polygons'
-        ? hitId
-        : regionFacts.lakeId
-
-      const river = riverIdToQuery ? activeController.queryWorldRiver(riverIdToQuery) : null
-      const lake = lakeIdToQuery ? activeController.queryWorldLake(lakeIdToQuery) : null
+      const basinFocus = focus.kind === 'thematic' && focus.id === 'basins'
+      const riverFocus = focus.kind === 'overlay' && focus.id === 'rivers'
+      const lakeFocus = focus.kind === 'overlay' && focus.id === 'lakes'
+      const basin = basinFocus && regionFacts.basinId ? activeController.queryWorldBasin(regionFacts.basinId) : null
+      const river = riverFocus && featureId ? activeController.queryWorldRiver(featureId) : null
+      const lake = lakeFocus && featureId ? activeController.queryWorldLake(featureId) : null
 
       const { hasResources, hasCivilization } = activeReader.capabilities
-      const entityId = lastPickResult?.entityId ?? lastPickResult?.featureHit?.entityId
-      const sourceId = lastPickResult?.featureHit?.sourceId
-      const dominantPeople = hasCivilization && regionFacts.dominantPeopleId
-        ? activeController.queryWorldPeople(regionFacts.dominantPeopleId)
-        : null
-      const dominantCulture = hasCivilization && regionFacts.dominantCultureId
-        ? activeController.queryWorldCulture(regionFacts.dominantCultureId)
-        : null
-      const dominantReligion = hasCivilization && regionFacts.dominantReligionId
-        ? activeController.queryWorldReligion(regionFacts.dominantReligionId)
-        : null
-      const dominantPolity = hasCivilization && regionFacts.dominantPolityId
-        ? activeController.queryWorldPolity(regionFacts.dominantPolityId)
-        : null
-      const dominantPolityCapitalName = dominantPolity?.capitalSettlementId
-        ? activeController.queryWorldSettlement(dominantPolity.capitalSettlementId)?.name ?? null
-        : null
+      const polityFocus = (focus.kind === 'thematic' && focus.id === 'polity-territory')
+        || (focus.kind === 'overlay' && (focus.id === 'polity-borders' || focus.id === 'polity-labels'))
+      const cultureFocus = focus.kind === 'thematic' && focus.id === 'culture-dominant'
+      const religionFocus = focus.kind === 'thematic' && focus.id === 'religion-dominant'
+      const settlementFocus = focus.kind === 'overlay' && (focus.id === 'settlements' || focus.id === 'settlement-labels')
+      const transportFocus = focus.kind === 'overlay' && focus.id === 'transport-routes'
 
-      const pickedSettlement = hasCivilization && entityId && (sourceId === 'settlements' || sourceId === 'settlement-labels')
+      const censusByPolity = hasCivilization && polityFocus ? polityCensusForReader(activeReader) : null
+      const polityCard = (id: string) => {
+        const polity = activeController.queryWorldPolity(id)
+        if (!polity)
+          return null
+        const capitalName = polity.capitalSettlementId
+          ? activeController.queryWorldSettlement(polity.capitalSettlementId)?.name ?? null
+          : null
+        return { polity, capitalName, census: censusByPolity?.get(id) ?? null }
+      }
+
+      const politySubjects: {
+        polity: NonNullable<ReturnType<typeof activeController.queryWorldPolity>>
+        capitalName: string | null
+        census: PolityCensus | null
+      }[] = []
+      let polityUnassigned = false
+      let polityFrontier = false
+      if (hasCivilization && polityFocus) {
+        if (focus.kind === 'overlay' && focus.id === 'polity-borders') {
+          const pair = featureId ? parseFeatureIndexPair(featureId, 'polity-border') : null
+          const ids: string[] = []
+          if (pair) {
+            polityFrontier = pair.a < 0 || pair.b < 0
+            const polities = activeReader.polities()
+            for (const index of [pair.a, pair.b]) {
+              const id = index >= 0 ? polities[index]?.id : undefined
+              if (id && !ids.includes(id))
+                ids.push(id)
+            }
+          }
+          if (ids.length === 0 && entityId)
+            ids.push(entityId)
+          for (const id of ids) {
+            const card = polityCard(id)
+            if (card)
+              politySubjects.push(card)
+          }
+        }
+        else if (featureId === 'polity:unassigned') {
+          polityUnassigned = true
+        }
+        else {
+          const id = entityId ?? (lastPickResult?.featureHit ? null : regionFacts.dominantPolityId)
+          const card = id ? polityCard(id) : null
+          if (card)
+            politySubjects.push(card)
+        }
+      }
+
+      const cultureId = hasCivilization && cultureFocus
+        ? (entityId ?? (lastPickResult?.featureHit ? null : regionFacts.dominantCultureId))
+        : null
+      const religionId = hasCivilization && religionFocus
+        ? (entityId ?? (lastPickResult?.featureHit ? null : regionFacts.dominantReligionId))
+        : null
+      const culture = cultureId ? activeController.queryWorldCulture(cultureId) : null
+      const religion = religionId ? activeController.queryWorldReligion(religionId) : null
+      const settlement = hasCivilization && settlementFocus && entityId
         ? activeController.queryWorldSettlement(entityId)
         : null
-      const pickedPolity = hasCivilization && entityId && (sourceId === 'polity-territory' || sourceId === 'polity-borders' || sourceId === 'polity-labels')
-        ? activeController.queryWorldPolity(entityId)
-        : null
-      const pickedPolityCapitalName = pickedPolity?.capitalSettlementId
-        ? activeController.queryWorldSettlement(pickedPolity.capitalSettlementId)?.name ?? null
-        : null
-      const pickedTransportRoute = hasCivilization && entityId && sourceId === 'transport-routes'
+      const transportRoute = hasCivilization && transportFocus && entityId
         ? activeController.queryWorldTransportRoute(entityId)
         : null
-      const pickedCulture = hasCivilization && entityId && sourceId === 'culture-dominant'
-        ? activeController.queryWorldCulture(entityId)
-        : null
-      const pickedReligion = hasCivilization && entityId && sourceId === 'religion-dominant'
-        ? activeController.queryWorldReligion(entityId)
-        : null
 
-      const regionPopulationGroups = hasCivilization
-        ? [...regionFacts.populationGroups]
-          .sort((a, b) => b.population - a.population)
-          .map(group => ({
-            population: group.population,
-            peopleName: activeController.queryWorldPeople(group.peopleId)?.name ?? group.peopleId,
-            cultureName: activeController.queryWorldCulture(group.cultureId)?.name ?? group.cultureId,
-            religionName: group.religionId ? (activeController.queryWorldReligion(group.religionId)?.name ?? group.religionId) : null,
-            polityName: group.polityId ? (activeController.queryWorldPolity(group.polityId)?.name ?? group.polityId) : null,
-          }))
-        : []
+      const labelSubject = focus.kind === 'overlay' && focus.id === 'labels' && featureId
+        ? findGeographicSubject(geo, featureId)
+        : null
+      const plateBoundaryLabels = focus.kind === 'overlay' && focus.id === 'plate-boundaries' && featureId
+        ? describePlateBoundary(activeReader.plates(), featureId)
+        : null
+      const graticuleLabel = focus.kind === 'overlay' && focus.id === 'graticule' && featureId
+        ? describeGraticuleFeature(featureId)
+        : null
 
       return {
         regionId,
         coordinates: lastPickResult?.coordinates ?? { longitudeDegrees: 0, latitudeDegrees: 0 },
-        entityId,
-        featureHit: lastPickResult?.featureHit,
+        focus,
         neighbors,
         slopeDeg,
         regionFacts,
         continentLabel,
+        geographicAreaKm2,
         basin,
         river,
         lake,
         wind,
         ocean,
-        contributingAreaKm2,
-        accumulatedFlowM3s,
+        annualWindSpeedMps,
+        annualOceanSpeedMps,
         hasResources,
         hasCivilization,
-        dominantPeople,
-        dominantCulture,
-        dominantReligion,
-        dominantPolity,
-        dominantPolityCapitalName,
-        pickedPolity,
-        pickedPolityCapitalName,
-        pickedSettlement,
-        pickedTransportRoute,
-        pickedCulture,
-        pickedReligion,
-        regionPopulationGroups,
+        settlement,
+        culture,
+        religion,
+        politySubjects,
+        polityUnassigned,
+        polityFrontier,
+        transportRoute,
+        labelSubject,
+        plateBoundaryLabels,
+        graticuleLabel,
       }
     }
     catch {
@@ -542,6 +590,7 @@
     selection = {
       regionId: result.regionId,
       featureId: result.featureHit?.featureId ?? null,
+      sourceId: result.featureHit?.sourceId ?? null,
     }
     setExclusivePanel('inspector')
     applySessionViewState()
@@ -601,7 +650,7 @@
 
       const prepStart = performance.now()
       const candidateReader = controller.candidateMapReader(candidateSnapshotId)
-      const nextSelection = { regionId: null, featureId: null }
+      const nextSelection = { regionId: null, featureId: null, sourceId: null }
       const nextViewState: CartographyViewState = {
         ...buildViewState(),
         selection: nextSelection,

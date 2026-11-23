@@ -1373,7 +1373,9 @@ export class FillLayer {
         this.colorBuffer[offset + 1] = 0
         this.colorBuffer[offset + 2] = 0
         this.colorBuffer[offset + 3] = 0
-        this.visibleByFeature[i] = 0
+        // Interactive fills may be fully transparent so a style can be picked
+        // without painting over the base map. The shader discards zero alpha.
+        this.visibleByFeature[i] = this.interactive ? 1 : 0
         continue
       }
 
