@@ -694,9 +694,10 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
         interiorLakePoints.push(...ring.map(coord => [coord[0], coord[1]] as [number, number]))
     }
     else if (interiorLake?.geometry.type === 'MultiPolygon') {
-      for (const polygon of interiorLake.geometry.coordinates)
+      for (const polygon of interiorLake.geometry.coordinates) {
         for (const ring of polygon)
           interiorLakePoints.push(...ring.map(coord => [coord[0], coord[1]] as [number, number]))
+      }
     }
     expect(interiorLakePoints.length).toBeGreaterThan(0)
     for (const point of interiorLakePoints)

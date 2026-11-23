@@ -194,6 +194,41 @@ function buildGoldenAnglePalette(count: number): readonly string[] {
 
 export const CATEGORICAL_GROUP_PALETTE_HEX: readonly string[] = buildGoldenAnglePalette(64)
 
+function srgbChannelHex(value: number): string {
+  return Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, '0')
+}
+
+function hslToHex(hue: number, saturation: number, lightness: number): string {
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation
+  const sector = hue / 60
+  const x = chroma * (1 - Math.abs(sector % 2 - 1))
+  const match = lightness - chroma / 2
+  const hueSector = Math.floor(sector) % 6
+  const rgb = [
+    [chroma, x, 0],
+    [x, chroma, 0],
+    [0, chroma, x],
+    [0, x, chroma],
+    [x, 0, chroma],
+    [chroma, 0, x],
+  ][hueSector]!
+  return `#${srgbChannelHex(rgb[0] + match)}${srgbChannelHex(rgb[1] + match)}${srgbChannelHex(rgb[2] + match)}`
+}
+
+/** Low-saturation fills for the political atlas. Golden-angle hues stay distinguishable without the saturated categorical rainbow. */
+function buildPoliticalPastelPalette(count: number): readonly string[] {
+  const result: string[] = []
+  for (let i = 0; i < count; i++) {
+    const hue = (i * 137.508) % 360
+    const saturation = 0.28 + (i % 5) * 0.045
+    const lightness = 0.78 + (i % 4) * 0.03
+    result.push(hslToHex(hue, saturation, lightness))
+  }
+  return Object.freeze(result)
+}
+
+const POLITICAL_PASTEL_PALETTE_HEX: readonly string[] = buildPoliticalPastelPalette(64)
+
 const SHARED_CIVILIZATION_TOKENS: Readonly<Record<string, StyleTokenValue>> = Object.freeze({
   polityBorder: '#1e293b',
   transportLand: '#a16207',
@@ -1249,7 +1284,6 @@ function buildSharedOverlayLayers(): readonly MapStyleLayer[] {
       source: 'polity-labels',
       slot: 'overlay',
       overlayId: 'polity-labels',
-      interactive: true,
       layout: {
         'visibility': 'visible',
         'text-field': ['get', 'displayName'],
@@ -1284,7 +1318,6 @@ function buildSharedOverlayLayers(): readonly MapStyleLayer[] {
       source: 'settlement-labels',
       slot: 'overlay',
       overlayId: 'settlement-labels',
-      interactive: true,
       layout: {
         'visibility': 'visible',
         'text-field': ['get', 'displayName'],
@@ -1356,6 +1389,33 @@ function composePresetLayers(
     ...buildSharedThematicLayers(),
     ...buildSharedOverlayLayers(),
   ]
+}
+
+/** Invisible polity fill. Parchment draws ink borders, not country colors, so this is what a click inside a realm hits. */
+const PARCHMENT_POLITY_HIT_LAYER: MapStyleLayer = {
+  id: 'overlay-polity-territory-hit',
+  type: 'fill',
+  source: 'polity-territory',
+  slot: 'overlay',
+  overlayId: 'polity-borders',
+  interactive: true,
+  layout: {
+    visibility: 'visible',
+  },
+  paint: {
+    'fill-color': '#000000',
+    'fill-opacity': 0,
+  },
+}
+
+function insertLayerBeforeOverlays(
+  layers: readonly MapStyleLayer[],
+  layer: MapStyleLayer,
+): readonly MapStyleLayer[] {
+  const index = layers.findIndex(item => item.slot === 'overlay')
+  if (index < 0)
+    return [...layers, layer]
+  return [...layers.slice(0, index), layer, ...layers.slice(index)]
 }
 
 export const SATELLITE_STYLE_PRESET: MapStyleDocument = Object.freeze({
@@ -1704,7 +1764,7 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
     labelFontWeight: '600',
     // Shared civilization defaults are a modern atlas palette (slate borders, neon red
     // capitals, near-white towns). Those disappear or clash on warm paper.
-    polityBorder: '#3b2816',
+    polityBorder: '#6f5642',
     polityLabel: '#3b2816',
     settlementLabel: '#3b2816',
     settlementCapital: '#8f3d2c',
@@ -1712,7 +1772,7 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
     settlementTown: '#3b2816',
     settlementStroke: '#24160e',
   },
-  layers: composePresetLayers([
+  layers: insertLayerBeforeOverlays(composePresetLayers([
     {
       id: 'base-parchment-surface',
       type: 'raster',
@@ -1752,7 +1812,7 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
         'raster-hillshade': 0.45,
       },
     },
-  ]),
+  ]), PARCHMENT_POLITY_HIT_LAYER),
 })
 
 export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
@@ -1764,9 +1824,10 @@ export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
   defaultGlobeEffects: ATLAS_GLOBE_EFFECTS,
   tokens: {
     ...SHARED_THEMATIC_TOKENS,
-    background: '#b8d7e8',
-    oceanDeep: '#9bc4da',
-    oceanShallow: '#c2dfee',
+    groupPalette: POLITICAL_PASTEL_PALETTE_HEX,
+    background: '#2f86d6',
+    oceanDeep: '#2a7fd0',
+    oceanShallow: '#6eb6ea',
     coastline: '#335d75',
     waterBody: '#488cb0',
     plateBoundary: '#dc2626',
@@ -1775,7 +1836,7 @@ export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
     continentLabel: '#334155',
     oceanLabel: '#1d4ed8',
     labelHalo: '#f8fafc',
-    polityBorder: '#1e293b',
+    polityBorder: '#5c6b7a',
     polityLabel: '#0f172a',
     settlementLabel: '#1e293b',
     settlementCapital: '#dc2626',
@@ -1803,9 +1864,9 @@ export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
             ['linear'],
             ['get', 'elevationKm'],
             -8,
-            '#9bc4da',
+            '#2a7fd0',
             0,
-            '#c2dfee',
+            '#6eb6ea',
           ],
           '#e7e5df',
         ],

@@ -12,8 +12,8 @@ import {
   emergePolityTraitsForCapitals,
   evaluateSettlementFeatures,
 } from './civilization-traits'
-import { generatePolitiesReligions, validatePolitiesReligionsArtifact } from './polities-religions'
 import { SETTLEMENT_FEATURE_IDS } from './civilization-types'
+import { generatePolitiesReligions, validatePolitiesReligionsArtifact } from './polities-religions'
 import { SETTLEMENT_SUPPORT_AREA_KM2 } from './population-settlements'
 
 const DIM1_TRAITS = new Set<PolityTraitId>(['centralized', 'city-state-civic', 'decentralized', 'tribal-kinship', 'nomadic-pastoral'])
@@ -60,8 +60,7 @@ describe('settlement features and polity traits', () => {
   })
 
   it('excludes disallowed territory sizes even when every affinity strongly favors the candidate', () => {
-    const arch = { ...testContentPack.polities[0]!, allowedSizeClasses: ['city-state' as const],
-      traitAffinities: [{ traits: ['decentralized'], weight: 1000 }] }
+    const arch = { ...testContentPack.polities[0]!, allowedSizeClasses: ['city-state' as const], traitAffinities: [{ traits: ['decentralized'], weight: 1000 }] }
     expect(applyPolityTraitArchetypeWeight(5, arch, ['decentralized', 'agrarian-realm'], 'city-state')).toBe(5000)
     for (const size of ['regional', 'kingdom', 'empire'] as const)
       expect(applyPolityTraitArchetypeWeight(5, arch, ['decentralized', 'agrarian-realm'], size)).toBe(0)
@@ -106,7 +105,7 @@ describe('settlement features and polity traits', () => {
     const civic: PolityTraitContext = {
       ...base,
       habitability: { ...base.habitability, coastalMask: Uint8Array.from([1, 0, 0, 0]) },
-      settlementProfiles: new Map(base.settlementProfiles).set(cap.id, profile({ agrarian: 0.1, 'maritime-trade': 1, 'trade-hub': 1, cultural: 0.8 })),
+      settlementProfiles: new Map(base.settlementProfiles).set(cap.id, profile({ 'agrarian': 0.1, 'maritime-trade': 1, 'trade-hub': 1, 'cultural': 0.8 })),
     }
     const fragmented: PolityTraitContext = {
       ...base,
@@ -119,7 +118,10 @@ describe('settlement features and polity traits', () => {
     for (let seed = 0; seed < 12; seed++) {
       const evaluate = (ctx: PolityTraitContext, capitals = [cap, remote]) => {
         let diagnostic: PolityPowerDiagnostic | undefined
-        const traits = emergePolityTraitsForCapitals(capitals, { ...ctx, onPowerEvaluated(value) { if (value.capitalSettlementId === cap.id) diagnostic = value } }, new DeterministicRandom(`local-power:${seed}`), 300)[0]!
+        const traits = emergePolityTraitsForCapitals(capitals, { ...ctx, onPowerEvaluated(value) {
+          if (value.capitalSettlementId === cap.id)
+            diagnostic = value
+        } }, new DeterministicRandom(`local-power:${seed}`), 300)[0]!
         return { traits, diagnostic: diagnostic! }
       }
       expect(evaluate(base).diagnostic.scores[0]!.id).toBe('centralized')
@@ -144,10 +146,16 @@ describe('settlement features and polity traits', () => {
     const choices = new Set<PolityTraitId>()
     let diagnostic: PolityPowerDiagnostic | undefined
     const ctx: PolityTraitContext = {
-      mesh, terrain: { elevationKm: new Float32Array(11) }, habitability: { coastalMask: new Uint8Array(11) },
-      capabilities: { industrialCapability: 1, seafaringCapability: 1, administrativeCapacity: 0.75 }, urbanConcentration: 0.65,
-      namedSettlements: sites, settlementProfiles: new Map(sites.map(site => [site.id, profile])),
-      regionCultures: Array.from({ length: 11 }, () => [{ cultureIndex: 0, share: 1 }]), dominantReligionIndex: new Int32Array(11).fill(-1), religionArchetypes: [],
+      mesh,
+      terrain: { elevationKm: new Float32Array(11) },
+      habitability: { coastalMask: new Uint8Array(11) },
+      capabilities: { industrialCapability: 1, seafaringCapability: 1, administrativeCapacity: 0.75 },
+      urbanConcentration: 0.65,
+      namedSettlements: sites,
+      settlementProfiles: new Map(sites.map(site => [site.id, profile])),
+      regionCultures: Array.from({ length: 11 }, () => [{ cultureIndex: 0, share: 1 }]),
+      dominantReligionIndex: new Int32Array(11).fill(-1),
+      religionArchetypes: [],
       onPowerEvaluated(value) { diagnostic = value },
     }
     for (let seed = 0; seed < 128; seed++)

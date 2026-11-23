@@ -25,8 +25,9 @@ export function validatePolityTraitReferences(
       add('required', field, 'At least one trait is required')
     const ids: string[] = []
     for (const [i, id] of value.entries()) {
-      if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))
+      if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) {
         add('reference', `${field}[${i}]`, 'Expected a stable trait ID')
+      }
       else {
         if (ids.includes(id))
           add('duplicate', `${field}[${i}]`, 'Duplicate trait reference')

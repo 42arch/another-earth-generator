@@ -2,6 +2,7 @@ import type { WorldMapReader } from '@another-earth/world-core'
 import type { MapProjection } from '#projections/map-projections'
 import type { LonLatTuple, Vec3Tuple } from '#projections/spherical-math'
 import type { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
+import type { GeoJsonPolygonCoordinates } from '#rendering/layers/fill-layer'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { GeoJsonFeature } from '#sources/types'
 import * as THREE from 'three'
@@ -14,25 +15,39 @@ import {
   sphericalAngleRad,
   unwrapLongitudeDegNear,
 } from '#projections/spherical-math'
+import { triangulateAtlasPolygon, triangulateSphericalPolygon } from '#rendering/layers/fill-layer'
+import { BUILTIN_MAP_SOURCE_SCHEMAS } from '#sources/types'
+
+const FEATURE_SOURCE_IDS = Object.values(BUILTIN_MAP_SOURCE_SCHEMAS)
+  .filter(schema => schema.kind === 'geojson')
+  .map(schema => schema.id)
+const POINT_HALO_STEPS = 20
+const POINT_HALO_RADIUS = 0.012
+const LABEL_SOURCE_IDS = new Set(['geographic-labels', 'polity-labels', 'settlement-labels'])
+const POLYGON_HIGHLIGHT_RADIUS = 1.00155
 
 export interface SelectionState {
   readonly regionId: number | null
   readonly featureId?: string | null
+  /** Source that owns `featureId`. Avoids scanning every vector source on each pick. */
+  readonly sourceId?: string | null
 }
 
 /**
- * Built-in highlight layer for the active `selection` (`regionId` dual Voronoi cell ring
- * and optional `featureId` vector outline/marker) in both 3D `GlobeView` and 2D `AtlasView`.
+ * Highlights the picked map element. Lines are stroked, polygons are filled, and
+ * point symbols get a ring. Text labels are not highlighted. A blank raster or
+ * surface click outlines the Voronoi cell, without a center dot.
  */
 export class SelectionLayer {
   readonly group = new THREE.Group()
   private readonly reader: WorldMapReader
   private readonly projection?: MapProjection
   private readonly regionRingLine: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>
-  private readonly regionCenterDot: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>
   private readonly featureHighlightLine: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>
+  private readonly featureHighlightFill: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>
   private lastRegionId: number | null = null
-  private lastFeatureId: string | null = null
+  private lastFeatureKey = ''
+  private regionRingAvailable = false
   private disposed = false
 
   constructor(
@@ -63,22 +78,6 @@ export class SelectionLayer {
     this.regionRingLine.visible = false
     this.group.add(this.regionRingLine)
 
-    const dotGeom = new THREE.SphereGeometry(0.0055, 12, 10)
-    tracker?.trackGeometry(dotGeom)
-    const dotMat = new THREE.MeshBasicMaterial({
-      color: 0x6EE7B7,
-      transparent: true,
-      opacity: 0.95,
-      depthTest: true,
-      depthWrite: false,
-    })
-    tracker?.trackMaterial(dotMat)
-
-    this.regionCenterDot = new THREE.Mesh(dotGeom, dotMat)
-    this.regionCenterDot.renderOrder = 102
-    this.regionCenterDot.visible = false
-    this.group.add(this.regionCenterDot)
-
     const featGeom = new THREE.BufferGeometry()
     featGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3))
     tracker?.trackGeometry(featGeom)
@@ -92,9 +91,30 @@ export class SelectionLayer {
     tracker?.trackMaterial(featMat)
 
     this.featureHighlightLine = new THREE.LineSegments(featGeom, featMat)
-    this.featureHighlightLine.renderOrder = 100
+    this.featureHighlightLine.renderOrder = 97
     this.featureHighlightLine.visible = false
     this.group.add(this.featureHighlightLine)
+
+    const fillGeom = new THREE.BufferGeometry()
+    fillGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3))
+    tracker?.trackGeometry(fillGeom)
+    const fillMat = new THREE.MeshBasicMaterial({
+      color: 0xFDE68A,
+      transparent: true,
+      opacity: 0.42,
+      depthTest: true,
+      depthWrite: false,
+      side: THREE.FrontSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    })
+    tracker?.trackMaterial(fillMat)
+    this.featureHighlightFill = new THREE.Mesh(fillGeom, fillMat)
+    this.featureHighlightFill.name = 'FeatureHighlightFill'
+    this.featureHighlightFill.renderOrder = 96
+    this.featureHighlightFill.visible = false
+    this.group.add(this.featureHighlightFill)
   }
 
   updateSelection(
@@ -107,40 +127,43 @@ export class SelectionLayer {
 
     const regionId = selection.regionId
     const featureId = selection.featureId ?? null
+    const sourceId = selection.sourceId ?? null
 
     if (regionId !== this.lastRegionId) {
       this.lastRegionId = regionId
       this.rebuildRegionRing(regionId)
     }
 
-    if (featureId !== this.lastFeatureId) {
-      this.lastFeatureId = featureId
-      this.rebuildFeatureHighlight(featureId, registry, month)
+    const featureKey = `${sourceId ?? ''}\0${featureId ?? ''}\0${month}`
+    if (featureKey !== this.lastFeatureKey) {
+      this.lastFeatureKey = featureKey
+      this.rebuildFeatureHighlight(featureId, sourceId, registry, month)
     }
+
+    this.regionRingLine.visible = this.isFeatureHighlighted() ? false : this.regionRingAvailable
   }
 
   private rebuildRegionRing(regionId: number | null): void {
     if (regionId === null || !Number.isInteger(regionId) || regionId < 0 || regionId >= this.reader.identity.regionCount) {
+      this.regionRingAvailable = false
       this.regionRingLine.visible = false
-      this.regionCenterDot.visible = false
       return
     }
 
     const mesh = this.reader.mesh
     const degree = mesh.getRegionDegree(regionId)
     if (degree < 3) {
+      this.regionRingAvailable = false
       this.regionRingLine.visible = false
-      this.regionCenterDot.visible = false
       return
     }
 
-    const centerOut = { x: 0, y: 0, z: 0 }
-    mesh.getRegionCenter(regionId, centerOut)
-    const [cx, cy, cz] = normalizeVec3(centerOut.x, centerOut.y, centerOut.z)
-
     if (this.projection) {
+      const centerOut = { x: 0, y: 0, z: 0 }
+      mesh.getRegionCenter(regionId, centerOut)
+      const [cx, cy, cz] = normalizeVec3(centerOut.x, centerOut.y, centerOut.z)
       const zOffset = 0.0085
-      const [centerLon, centerLat] = cartesianToLonLatDeg(cx, cy, cz)
+      const [centerLon] = cartesianToLonLatDeg(cx, cy, cz)
       const cornerOut = { x: 0, y: 0, z: 0 }
       const unwrapped: [number, number][] = []
       let minLon = Infinity
@@ -180,11 +203,8 @@ export class SelectionLayer {
         new THREE.BufferAttribute(new Float32Array(segmentPositions), 3),
       )
       this.regionRingLine.geometry.computeBoundingSphere()
-      this.regionRingLine.visible = segmentPositions.length > 0
-
-      const [dotX, dotY] = this.projection.project(centerLon, centerLat)
-      this.regionCenterDot.position.set(dotX, dotY, zOffset)
-      this.regionCenterDot.visible = true
+      this.regionRingAvailable = segmentPositions.length > 0
+      this.regionRingLine.visible = this.regionRingAvailable
       return
     }
 
@@ -212,54 +232,25 @@ export class SelectionLayer {
 
     this.regionRingLine.geometry.setAttribute('position', new THREE.BufferAttribute(segmentPositions, 3))
     this.regionRingLine.geometry.computeBoundingSphere()
+    this.regionRingAvailable = true
     this.regionRingLine.visible = true
-
-    this.regionCenterDot.position.set(cx * radius, cy * radius, cz * radius)
-    this.regionCenterDot.visible = true
   }
 
   private rebuildFeatureHighlight(
     featureId: string | null,
+    sourceId: string | null,
     registry?: MapSourceRegistry,
     month = 0,
   ): void {
-    if (!featureId || !registry) {
-      this.featureHighlightLine.visible = false
+    if (!featureId || !registry || (sourceId !== null && LABEL_SOURCE_IDS.has(sourceId))) {
+      this.clearFeatureHighlight()
       return
     }
 
-    const candidateSources = [
-      'settlements',
-      'transport-routes',
-      'polity-borders',
-      'polity-territory',
-      'culture-dominant',
-      'religion-dominant',
-      'river-centerlines',
-      'lake-polygons',
-      'continent-areas',
-      'plate-areas',
-      'koppen-areas',
-      'biome-areas',
-      'land-cover-areas',
-      'plate-boundaries',
-      'coastlines',
-    ]
-
-    let matchedFeature: GeoJsonFeature | null = null
-    for (const sourceId of candidateSources) {
-      const src = registry.getSource(sourceId, { month })
-      if (!src.unavailable && src.kind === 'geojson') {
-        const hit = src.data.features.find(f => f.id === featureId)
-        if (hit) {
-          matchedFeature = hit
-          break
-        }
-      }
-    }
+    const matchedFeature = this.findFeature(featureId, sourceId, registry, month)
 
     if (!matchedFeature) {
-      this.featureHighlightLine.visible = false
+      this.clearFeatureHighlight()
       return
     }
 
@@ -301,8 +292,12 @@ export class SelectionLayer {
       }
     }
 
+    const fillPositions: number[] = []
     const geom = matchedFeature.geometry
-    if (geom.type === 'LineString') {
+    if (geom.type === 'Point') {
+      this.appendPointHalo(geom.coordinates, segmentPositions)
+    }
+    else if (geom.type === 'LineString') {
       appendLine(geom.coordinates)
     }
     else if (geom.type === 'MultiLineString') {
@@ -310,27 +305,116 @@ export class SelectionLayer {
         appendLine(line)
     }
     else if (geom.type === 'Polygon') {
-      for (const ring of geom.coordinates)
-        appendLine(ring)
+      // Territory polygons are split into spherical tiles. Stroking every ring
+      // draws those tile seams inside the selected area.
+      this.appendPolygonFill(geom.coordinates, fillPositions)
     }
     else if (geom.type === 'MultiPolygon') {
-      for (const poly of geom.coordinates) {
-        for (const ring of poly)
-          appendLine(ring)
-      }
+      for (const poly of geom.coordinates)
+        this.appendPolygonFill(poly, fillPositions)
     }
 
-    if (segmentPositions.length === 0) {
-      this.featureHighlightLine.visible = false
+    this.showPositions(this.featureHighlightLine, segmentPositions)
+    this.showPositions(this.featureHighlightFill, fillPositions)
+  }
+
+  private clearFeatureHighlight(): void {
+    this.featureHighlightLine.visible = false
+    this.featureHighlightFill.visible = false
+  }
+
+  private showPositions(object: THREE.LineSegments | THREE.Mesh, positions: number[]): void {
+    if (positions.length === 0) {
+      object.visible = false
+      return
+    }
+    object.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
+    object.geometry.computeBoundingSphere()
+    object.visible = true
+  }
+
+  private appendPolygonFill(coordinates: GeoJsonPolygonCoordinates, positions: number[]): void {
+    const result = this.projection
+      ? triangulateAtlasPolygon(coordinates, this.projection, { zOffset: 0.0076 })
+      : triangulateSphericalPolygon(coordinates, { radius: POLYGON_HIGHLIGHT_RADIUS })
+    const values = result.positions
+    for (let i = 0; i < values.length; i++)
+      positions.push(values[i])
+  }
+
+  private findFeature(
+    featureId: string,
+    sourceId: string | null,
+    registry: MapSourceRegistry,
+    month: number,
+  ): GeoJsonFeature | null {
+    const sourceIds = sourceId ? [sourceId] : FEATURE_SOURCE_IDS
+    for (const id of sourceIds) {
+      let resolved
+      try {
+        resolved = registry.getSource(id, { month })
+      }
+      catch {
+        continue
+      }
+      if (resolved.unavailable || resolved.kind !== 'geojson')
+        continue
+      const hit = resolved.data.features.find(feature => feature.id === featureId)
+      if (hit)
+        return hit
+    }
+    return null
+  }
+
+  private appendPointHalo(coordinates: LonLatTuple, segmentPositions: number[]): void {
+    const [lon, lat] = coordinates
+    if (this.projection) {
+      const zOffset = 0.0082
+      const [cx, cy] = this.projection.project(lon, lat)
+      for (let i = 0; i < POINT_HALO_STEPS; i++) {
+        const a0 = (i / POINT_HALO_STEPS) * Math.PI * 2
+        const a1 = ((i + 1) / POINT_HALO_STEPS) * Math.PI * 2
+        segmentPositions.push(
+          cx + Math.cos(a0) * POINT_HALO_RADIUS,
+          cy + Math.sin(a0) * POINT_HALO_RADIUS,
+          zOffset,
+          cx + Math.cos(a1) * POINT_HALO_RADIUS,
+          cy + Math.sin(a1) * POINT_HALO_RADIUS,
+          zOffset,
+        )
+      }
       return
     }
 
-    this.featureHighlightLine.geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array(segmentPositions), 3),
-    )
-    this.featureHighlightLine.geometry.computeBoundingSphere()
-    this.featureHighlightLine.visible = true
+    const [cx, cy, cz] = lonLatDegToCartesian(lon, lat)
+    const helper: Vec3Tuple = Math.abs(cz) < 0.9 ? [0, 0, 1] : [0, 1, 0]
+    const ux = cy * helper[2] - cz * helper[1]
+    const uy = cz * helper[0] - cx * helper[2]
+    const uz = cx * helper[1] - cy * helper[0]
+    const ulen = Math.hypot(ux, uy, uz) || 1
+    const u0 = ux / ulen
+    const u1 = uy / ulen
+    const u2 = uz / ulen
+    const v0 = cy * u2 - cz * u1
+    const v1 = cz * u0 - cx * u2
+    const v2 = cx * u1 - cy * u0
+    const drawRadius = 1.0042
+    const points: Vec3Tuple[] = []
+    for (let i = 0; i < POINT_HALO_STEPS; i++) {
+      const angle = (i / POINT_HALO_STEPS) * Math.PI * 2
+      const ca = Math.cos(angle) * POINT_HALO_RADIUS
+      const sa = Math.sin(angle) * POINT_HALO_RADIUS
+      const x = cx + u0 * ca + v0 * sa
+      const y = cy + u1 * ca + v1 * sa
+      const z = cz + u2 * ca + v2 * sa
+      const len = Math.hypot(x, y, z) || 1
+      points.push([x / len * drawRadius, y / len * drawRadius, z / len * drawRadius])
+    }
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i]
+      const b = points[(i + 1) % points.length]
+      segmentPositions.push(a[0], a[1], a[2], b[0], b[1], b[2])
+    }
   }
 
   isRegionHighlighted(): boolean {
@@ -338,7 +422,7 @@ export class SelectionLayer {
   }
 
   isFeatureHighlighted(): boolean {
-    return this.featureHighlightLine.visible
+    return this.featureHighlightLine.visible || this.featureHighlightFill.visible
   }
 
   dispose(): void {
@@ -348,9 +432,9 @@ export class SelectionLayer {
     this.group.clear()
     this.regionRingLine.geometry.dispose()
     this.regionRingLine.material.dispose()
-    this.regionCenterDot.geometry.dispose()
-    this.regionCenterDot.material.dispose()
     this.featureHighlightLine.geometry.dispose()
     this.featureHighlightLine.material.dispose()
+    this.featureHighlightFill.geometry.dispose()
+    this.featureHighlightFill.material.dispose()
   }
 }

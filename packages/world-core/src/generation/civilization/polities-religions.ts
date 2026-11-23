@@ -5,9 +5,9 @@ import type { HydrologyArtifact } from '#generation/nature/hydrology/hydrology'
 import type { StaticLakeArtifact } from '#generation/nature/hydrology/lakes'
 import type { ResourcePotentialArtifact } from '#generation/nature/resources/resource-potential'
 import type { SphericalMesh } from '#mesh/spherical-mesh'
+import type { PolityPowerDiagnostic } from './civilization-traits'
 import type { CivilizationParameters, Polity, PolitySizeClass, PolityTraitId, PopulationGroup, Religion, Settlement } from './civilization-types'
 import type { HabitabilityArtifact } from './habitability'
-import type { PolityPowerDiagnostic } from './civilization-traits'
 import type { PeoplesCulturesArtifact } from './peoples-cultures'
 import type { PopulationSettlementsArtifact } from './population-settlements'
 import type { TransportNetworkArtifact } from './transport-network'
@@ -17,6 +17,7 @@ import { IndexPriorityQueue } from '#generation/nature/common/priority-queue'
 import { DeterministicRandom } from '#math/random'
 import { greatCircleDistanceKm } from '#math/spherical'
 import { resolveCivilizationParameters } from './civilization-parameters'
+import { classifyPolitySize } from './civilization-scale'
 import {
   applyPolityTraitArchetypeWeight,
   computePolityExpansionModifiers,
@@ -26,9 +27,8 @@ import {
   selectSettlementFeatures,
   SETTLEMENT_FEATURE_SET,
 } from './civilization-traits'
-import { classifyPolitySize } from './civilization-scale'
-import { buildTerritoryComponents, checkPolityCountBudget, createPolityAreaTargets, growPolityTerritories, selectPolityCapitals } from './polity-layout'
 import { claimMaritimeTerritory } from './nearshore-territory'
+import { buildTerritoryComponents, checkPolityCountBudget, createPolityAreaTargets, growPolityTerritories, selectPolityCapitals } from './polity-layout'
 import { REFERENCE_TRAVEL_KM_PER_DAY, SETTLEMENT_SUPPORT_AREA_KM2 } from './population-settlements'
 
 export const POLITIES_RELIGIONS_VERSION = 'polities-religions-v15' as const
@@ -89,7 +89,7 @@ function appendPoliticalForm(properName: string, formTitle: string): string {
   const form = formTitle.trim()
   if (!form || properName.endsWith(form))
     return properName
-  return /[\u3400-\u9fff]/.test(`${properName}${form}`) ? `${properName}${form}` : `${properName} ${form}`
+  return /[\u3400-\u9FFF]/.test(`${properName}${form}`) ? `${properName}${form}` : `${properName} ${form}`
 }
 
 function scorePolityArchetype(
@@ -474,8 +474,7 @@ export function generatePolitiesReligions(
   // Step 5. Trait-modulated multi-source territory expansion and maritime projection
   const capitalCultureIndices = capitals.map(cap => cultureMap.get(cap.cultureId)?.index ?? -1)
   const capitalReligionIndices = capitals.map(cap => dominantReligionIndex[cap.regionId]!)
-  const targetAreasKm2 = createPolityAreaTargets(mesh, capitals.map(cap => cap.regionId), components, politySizeVariation,
-    capitals.map((cap, p) => rng.fork(`polity-area-rank:${cap.id}`).nextFloat() * polityModifiers[p]!.baseRate))
+  const targetAreasKm2 = createPolityAreaTargets(mesh, capitals.map(cap => cap.regionId), components, politySizeVariation, capitals.map((cap, p) => rng.fork(`polity-area-rank:${cap.id}`).nextFloat() * polityModifiers[p]!.baseRate))
   const culturalCost = (p: number, v: number, shortcut: boolean) => {
     const mod = polityModifiers[p]!
     return peoplesCultures.dominantCultureIndex[v] === capitalCultureIndices[p]

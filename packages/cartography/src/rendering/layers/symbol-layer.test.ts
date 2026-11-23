@@ -127,7 +127,7 @@ describe('settlement label text-offset', () => {
 
     const farLift = liftAtDistance(3)
     const nearLift = liftAtDistance(1.35)
-    const expectedLift = -OFFSET_EM_Y * TEXT_SIZE_PX * 1.15
+    const expectedLift = -OFFSET_EM_Y * TEXT_SIZE_PX * 1.15 * 0.85
 
     expect(farLift).toBeCloseTo(expectedLift, 0)
     expect(nearLift).toBeCloseTo(expectedLift, 0)

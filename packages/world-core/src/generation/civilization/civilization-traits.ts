@@ -3,8 +3,8 @@ import type { EcologyArtifact } from '#generation/nature/ecology/ecology'
 import type { TerrainArtifact } from '#generation/nature/geography'
 import type { HydrologyArtifact } from '#generation/nature/hydrology/hydrology'
 import type { ResourcePotentialArtifact } from '#generation/nature/resources/resource-potential'
-import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type { DeterministicRandom } from '#math/random'
+import type { SphericalMesh } from '#mesh/spherical-mesh'
 import type {
   CivilizationCapabilities,
   PolitySizeClass,
@@ -549,17 +549,17 @@ export function emergePolityTraitsForCapitals(
         id: 'centralized',
         score: adminCap >= 0.45
           ? (0.25 + 0.3 * administrativeReach + 0.45 * productiveCore)
-            * (0.5 + 0.5 * capitalPrimacy)
-            * (1 - 0.45 * coreCulturalDiversity)
-            * (1 - 0.4 * geographicFragmentation) * jitter()
+          * (0.5 + 0.5 * capitalPrimacy)
+          * (1 - 0.45 * coreCulturalDiversity)
+          * (1 - 0.4 * geographicFragmentation) * jitter()
           : 0,
       },
       {
         id: 'city-state-civic',
         score: urbanConcentration >= 0.3
           ? civicFunction * (0.5 + 0.5 * civicSpecialization)
-            * lerpBand(urbanConcentration, 0.3, 0.8, 0.75, 1.0)
-            * (0.65 + 0.35 * capitalPrimacy) * jitter()
+          * lerpBand(urbanConcentration, 0.3, 0.8, 0.75, 1.0)
+          * (0.65 + 0.35 * capitalPrimacy) * jitter()
           : 0,
       },
       {
@@ -790,12 +790,12 @@ export function applyPolityTraitArchetypeWeight(
 ): number {
   if (arch.allowedSizeClasses && !arch.allowedSizeClasses.includes(sizeClass))
     return 0
-  if (arch.requiredTraits?.some(id => !traits.some(trait => trait === id)))
+  if (arch.requiredTraits?.some(id => !traits.includes(id)))
     return 0
   let score = baseScore
   for (const affinity of arch.traitAffinities ?? []) {
-    if (affinity.traits.every(id => traits.some(trait => trait === id))
-      && !affinity.excludedTraits?.some(id => traits.some(trait => trait === id))
+    if (affinity.traits.every(id => traits.includes(id))
+      && !affinity.excludedTraits?.some(id => traits.includes(id))
       && (!affinity.sizeClasses || affinity.sizeClasses.includes(sizeClass))) {
       score *= affinity.weight
       if (!Number.isFinite(score))

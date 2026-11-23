@@ -24,8 +24,11 @@ export const GLOBE_SYMBOL_BACKFACE_DOT_THRESHOLD = 0.12
 export const DEFAULT_SYMBOL_FONT_FAMILY = '"PingFang SC", "Noto Sans SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
 export const DEFAULT_SYMBOL_FONT_WEIGHT = '600'
 
-/** 2D labels are screen-sized; this lifts them slightly above the shared style size. */
-const ATLAS_TEXT_SCALE = 1.3
+/** Pulls both 2D and 3D labels a little under the style size. */
+const LABEL_SCREEN_SCALE = 0.85
+const ATLAS_TEXT_SCALE = LABEL_SCREEN_SCALE
+/** Globe used 1.15 so curved glyphs stayed readable; it now shrinks with the same factor. */
+const GLOBE_TEXT_SCALE = 1.15 * LABEL_SCREEN_SCALE
 /** Center spacing as a fraction of the drawn glyph quad. Ink fills about 0.62 of that quad. */
 const ATLAS_GLYPH_TRACKING = 0.8
 
@@ -988,10 +991,10 @@ export class SymbolLayer {
         continue
       }
 
-      // Globe glyphs stay at the requested screen size while zooming in.
-      // Atlas glyphs are slightly larger, and their step is a screen-pixel gap rather than a fixed angle.
+      // Both views draw under the style size. Globe stays screen-sized while zooming in.
+      // Atlas spacing is a screen-pixel gap rather than a fixed angle.
       const glyphWorldSize = this.isGlobe
-        ? Math.min(0.075, textSizePx * worldUnitsPerPixelAtSubcamera * 1.15)
+        ? Math.min(0.075, textSizePx * worldUnitsPerPixelAtSubcamera * GLOBE_TEXT_SCALE)
         : textSizePx * ATLAS_TEXT_SCALE
       const renderedTextPx = this.isGlobe
         ? glyphWorldSize / Math.max(worldUnitsPerPixelAtSubcamera, 1e-6)
@@ -999,19 +1002,19 @@ export class SymbolLayer {
       const glyphStepRad = this.isGlobe
         ? Math.min(0.055, Math.max(1e-4, glyphWorldSize * 0.88))
         : Math.max(1e-5, renderedTextPx * ATLAS_GLYPH_TRACKING * atlasWorldUnitsPerPixel * (
-          this.projection
-            ? atlasRadiansPerWorldUnit(this.projection, spine.anchorCoordinates[0], spine.anchorCoordinates[1])
-            : 1
-        ))
+            this.projection
+              ? atlasRadiansPerWorldUnit(this.projection, spine.anchorCoordinates[0], spine.anchorCoordinates[1])
+              : 1
+          ))
       const offsetPxX = offsetEmX * renderedTextPx
       const offsetPxY = offsetEmY * renderedTextPx
 
       const entryViewRight = globeViewRight ?? buildTangentBasis(spine.anchorPosition).east
       let glyphs = useSpine
         ? sampleSpineGlyphAnchors(spine, text, entryViewRight, {
-          glyphStepRad,
-          layout: this.isGlobe ? 'fitted' : 'tracked',
-        })
+            glyphStepRad,
+            layout: this.isGlobe ? 'fitted' : 'tracked',
+          })
         : this.buildPointGlyphAnchors(spine, text, entryViewRight, glyphStepRad)
 
       // In 2D AtlasView, if a curved spine crosses the ±180° antimeridian, fall back to point placement at the interior anchor

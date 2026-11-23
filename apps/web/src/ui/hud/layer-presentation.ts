@@ -25,7 +25,7 @@ export const STYLE_PRESET_CARDS: readonly StylePresetPresentation[] = [
   { id: 'satellite', label: '仿真卫星', subtitle: '地表微纹理 · 晕渲 · 水面', swatch: 'linear-gradient(135deg, #0b2648 0%, #245c6e 45%, #4b703d 75%, #e2eaf0 100%)' },
   { id: 'standard-atlas', label: '标准地图', subtitle: '柔和分级 · 清晰河湖与地名', swatch: 'linear-gradient(135deg, #74bce0 0%, #a2d8f2 45%, #d6eac9 75%, #dfcba6 100%)' },
   { id: 'physical-relief', label: '自然地理', subtitle: '海深陆高色阶 · 地形晕渲', swatch: 'linear-gradient(135deg, #0b2545 0%, #367eae 40%, #2f8544 70%, #c45943 100%)' },
-  { id: 'political-atlas', label: '政区地图', subtitle: '国家疆域 · 国界 · 聚落注记', swatch: 'linear-gradient(135deg, #275e8e 0%, #d96b43 35%, #519e72 70%, #c79f46 100%)' },
+  { id: 'political-atlas', label: '政区地图', subtitle: '国家疆域 · 国界 · 聚落注记', swatch: 'linear-gradient(135deg, #2f86d6 0%, #d7e4c8 38%, #f3c9d4 68%, #f0d7b0 100%)' },
   { id: 'minimal-light', label: '极简明亮', subtitle: '低饱和浅底 · 突出科学专题', swatch: 'linear-gradient(135deg, #dce6ef 0%, #eef2f6 50%, #f7f6f2 100%)' },
   { id: 'minimal-dark', label: '极简暗色', subtitle: '深岩灰暗底 · 契合环流高亮', swatch: 'linear-gradient(135deg, #090f1d 0%, #111c33 50%, #1e293b 100%)' },
   { id: 'historical-parchment', label: '古典羊皮纸', subtitle: '暖羊皮纸 · 墨线国界与聚落', swatch: 'linear-gradient(135deg, #bfb191 0%, #d8ceb4 50%, #e8dec3 100%)' },

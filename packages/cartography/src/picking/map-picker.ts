@@ -109,7 +109,7 @@ export function screenPointToAtlasWorldCoordinates(
 /**
  * Unified picking engine (`MapPicker`):
  * 1. Tests visible vector layers in reverse style layer order (topmost layer first):
- *    - `circle` / `symbol` (`<= radius + 6px`)
+ *    - `circle`, and `symbol` only when `interactive` (`<= radius + 6px`). Text labels are not pickable.
  *    - `line` (`<= lineWidth * 0.5 + 5px`)
  *    - `fill` with `interactive: true` (point-in-polygon on Gnomonic patch)
  * 2. Falls back to unit-sphere intersection (3D) or `projection.invert` (2D) + `reader.mesh.locateRegion(x, y, z)`.

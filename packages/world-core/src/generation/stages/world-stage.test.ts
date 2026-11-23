@@ -148,8 +148,8 @@ describe('world civilization pipeline (M2 Batch 2)', () => {
       { id: 'decentralized', dimension: 'power' as const, displayNameKey: 'decentralized', descriptionKey: 'decentralized.description' },
       { id: 'tribal-kinship', dimension: 'power' as const, displayNameKey: 'tribal-kinship', descriptionKey: 'tribal-kinship.description' },
       { id: 'nomadic-pastoral', dimension: 'power' as const, displayNameKey: 'nomadic-pastoral', descriptionKey: 'nomadic-pastoral.description' },
-      ...['theocratic', 'democratic', 'militaristic', 'dynastic-aristocratic', 'ancestral-ritual'].map(id => ({ id, dimension: 'governance' as const, displayNameKey: id, descriptionKey: id + '.description' })),
-      ...['mercantile', 'agrarian-realm', 'industrial-power', 'artisan-craft', 'cultural-patron'].map(id => ({ id, dimension: 'economy' as const, displayNameKey: id, descriptionKey: id + '.description' })),
+      ...['theocratic', 'democratic', 'militaristic', 'dynastic-aristocratic', 'ancestral-ritual'].map(id => ({ id, dimension: 'governance' as const, displayNameKey: id, descriptionKey: `${id}.description` })),
+      ...['mercantile', 'agrarian-realm', 'industrial-power', 'artisan-craft', 'cultural-patron'].map(id => ({ id, dimension: 'economy' as const, displayNameKey: id, descriptionKey: `${id}.description` })),
       { id: 'small-area', dimension: 'territory' as const, sizeClasses: ['city-state' as const], displayNameKey: 'small-area', descriptionKey: 'small-area.description' },
     ] }))
     expect(validateWorldSnapshot(worldA, territorialPacks, testContentPort).valid).toBe(true)

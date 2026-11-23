@@ -5,6 +5,7 @@ import type { GpuResourceTracker } from '#rendering/gpu-resource-tracker'
 import type { CircleLayer } from '#rendering/layers/circle-layer'
 import type { FillLayer } from '#rendering/layers/fill-layer'
 import type { LineLayer } from '#rendering/layers/line-layer'
+import type { SelectionState } from '#rendering/layers/selection-layer'
 import type { SymbolLayer } from '#rendering/layers/symbol-layer'
 import type { MapSourceRegistry } from '#sources/registry'
 import type { CompiledMapStyle, CompiledMapStyleLayer } from '#styles/compiler'
@@ -47,10 +48,7 @@ export interface GlobeLayerFilterState {
   readonly enabledOverlayIds: readonly string[]
   readonly climateMonth: number
   readonly globeEffects: GlobeEffectsConfig
-  readonly selection: Readonly<{
-    regionId: number | null
-    featureId?: string | null
-  }>
+  readonly selection: SelectionState
 }
 
 /**
@@ -669,7 +667,7 @@ export class GlobeView {
 
     if (compiledLayer.type === 'symbol') {
       const inst = createSymbolLayerFromRegistry(compiledLayer, this.registry, state.climateMonth, {
-        renderOrder,
+        renderOrder: Math.max(renderOrder, 120),
         surfaceOffset: LAYER_STACK.symbolOffset + orderIndex * 0.00002,
         tracker: this.tracker,
       })
@@ -796,7 +794,7 @@ export class GlobeView {
       if (runtime.type === 'circle') {
         out.push({ kind: 'circle', layer: runtime.instance })
       }
-      else if (runtime.type === 'symbol') {
+      else if (runtime.type === 'symbol' && runtime.compiled.interactive) {
         out.push({ kind: 'symbol', layer: runtime.instance })
       }
       else if (runtime.type === 'line') {

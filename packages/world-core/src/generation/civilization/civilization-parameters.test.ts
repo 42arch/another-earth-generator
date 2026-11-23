@@ -51,7 +51,7 @@ describe('civilization capability resolution', () => {
     { polityCount: 2.5 },
     { polityCount: Infinity },
     { polityCount: Number.NaN },
-    { polityCount: "60" },
+    { polityCount: '60' },
     { polityCount: { min: 20, max: 30 } },
     { polityCount: null },
     { politySizeVariation: -0.1 },

@@ -592,7 +592,7 @@ export class AtlasView {
 
     if (compiledLayer.type === 'symbol') {
       const inst = createSymbolLayerFromRegistry(compiledLayer, this.registry, state.climateMonth, {
-        renderOrder,
+        renderOrder: Math.max(renderOrder, 120),
         surfaceOffset: 0.005 + orderIndex * 0.00002,
         projection: this.projection,
         tracker: this.tracker,
@@ -691,7 +691,7 @@ export class AtlasView {
       if (runtime.type === 'circle') {
         out.push({ kind: 'circle', layer: runtime.instance as CircleLayer })
       }
-      else if (runtime.type === 'symbol') {
+      else if (runtime.type === 'symbol' && runtime.compiled.interactive) {
         out.push({ kind: 'symbol', layer: runtime.instance as SymbolLayer })
       }
       else if (runtime.type === 'line') {

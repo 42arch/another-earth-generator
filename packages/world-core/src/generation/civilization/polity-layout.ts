@@ -1,6 +1,6 @@
 import type { SphericalMesh } from '#mesh/spherical-mesh'
-import { InvalidStageInputError } from '#generation/pipeline/errors'
 import { IndexPriorityQueue } from '#generation/nature/common/priority-queue'
+import { InvalidStageInputError } from '#generation/pipeline/errors'
 import { greatCircleDistanceKm } from '#math/spherical'
 
 export interface TerritoryShortcut {
