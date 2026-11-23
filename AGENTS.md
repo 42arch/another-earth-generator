@@ -27,19 +27,18 @@
 - `@another-earth/cartography` 拥有数据源、样式、图层及 2D/3D 渲染；只读取 `world-core` 的世界查询契约，不修改世界事实。地图内置样式属于此包。
 - `apps/web` 负责 UI、Worker 编排、浏览器存储和导入导出；不绕过核心公开 API 修改世界数组。
 - 跨包只使用 Package `exports`，不深度导入其他包的 `internal` 文件，不引入循环依赖；无实际需求时不增设独立算法 Package、插件引擎或抽象层。
-- 区分 `ContentDefinition`（内容候选）、`GenerationArtifact`（阶段产物）、`WorldSnapshot`（已确认事实）与 `MapStyle` / `ViewState`（显示交互）。GeoJSON、GPU Buffer 和图层颜色不能成为世界事实来源；显示状态不进入生成缓存签名。
 
-## 实现底线
 
-- 候选 `WorldSnapshot` 通过完整领域校验后才能原子发布；失败、取消或传输错误须保留最后一个有效世界。已发布 TypedArray 不向视图暴露可修改引用，变更通过受控的新快照完成。
-- Dense Field、Graph 和 Entity 须遵循同一网格的索引、单位、有效引用与稳定 ID 约定；人口、水量等守恒约束按领域契约验证。更换 Mesh 后显式重建区域映射。
-- Generation Stage 显式声明依赖、版本及实际读取的配置和内容；缓存按依赖失效。同 Seed、配置、算法与内容版本的结果应可复现，不使用隐式随机或时间输入。算法结果变化须记录版本、固定 Seed 对照与原因。
-- Worker 的 Buffer 转移须明确所有权；不能重用已转移的数组。样式、月份、相机及图层开关不修改快照，也不触发世界生成。
-- 优先交付从参数、生成、快照到地图、查询和保存的可运行切片。性能结论须有可复现的基准，不以规划规模或帧率代替实测。
+## Agent skills
 
-## 按任务查阅
+### Issue tracker
 
-- 世界字段、单位、实体、人口、内容包、快照校验与档案现状：[世界数据契约](docs/WORLD_DATA_CONTRACTS.md)；阶段字段细节按需查看其参考快照。
-- Stage DAG、签名、随机流、缓存与 Buffer 所有权现状：[Generation Pipeline](docs/GENERATION_PIPELINE.md)。
-- 自然与文明算法、制图、Worker、存档及 M0–M5 设计：[技术设计](docs/TECHNICAL_DESIGN.md)；历史算法和详细设计快照按需查阅。
-- 当前实现与待办：[当前进度](docs/PROGRESS.md)。目标文档中的示例接口或目录不等于已实现代码。
+Issues and specs live as markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five default roles: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` at the repo root and ADRs in `docs/adr/`, created lazily when terms or decisions are resolved. See `docs/agents/domain.md`.
