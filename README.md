@@ -1,8 +1,10 @@
 # Another Earth Generator
 
-[English](README.md) | [Simplified Chinese](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 Generate a fictional Earth-like planet in your browser, and explore its nature, climate, and evolving civilization on 3D and 2D maps.
+
+Play it at [another-earth.starllow.com](https://another-earth.starllow.com).
 
 ## Features
 

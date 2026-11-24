@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Relative so the same build works at a domain root and inside itch.io's game folder.
+  base: './',
   plugins: [
     svelte(),
     tailwindcss(),
