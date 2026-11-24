@@ -790,7 +790,7 @@ export function applyPolityTraitArchetypeWeight(
 ): number {
   if (arch.allowedSizeClasses && !arch.allowedSizeClasses.includes(sizeClass))
     return 0
-  // Content traits are plain strings; compare by value so includes stays on PolityTraitId.
+  // Content traits are plain strings; compare by value against the selected PolityTraitId list.
   const hasTrait = (id: string) => traits.some(trait => trait === id)
   if (arch.requiredTraits?.some(id => !hasTrait(id)))
     return 0

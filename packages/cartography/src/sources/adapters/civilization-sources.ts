@@ -1,5 +1,5 @@
 import type { WorldMapReader } from '@another-earth/world-core'
-import type { LonLatTuple } from '#projections/spherical-math'
+import type { LonLatTuple, Vec3Tuple } from '#projections/spherical-math'
 import type { DerivedRiverFeature } from '#sources/topology/hydrography-buffer'
 import type { SharedBoundaryRelaxation } from '#sources/topology/spherical-smooth'
 import type {
@@ -15,7 +15,7 @@ import type {
   TerritorySpineMetadata,
 } from '#sources/types'
 import { cartesianToLonLatDeg, lonLatDegToCartesian, sphericalAngleRad } from '#projections/spherical-math'
-import { DISPLAYED_RIVER_MIN_STRAHLER, buildHydrographyRivers } from '#sources/topology/hydrography-buffer'
+import { buildHydrographyRivers, DISPLAYED_RIVER_MIN_STRAHLER } from '#sources/topology/hydrography-buffer'
 import { traceClassificationRings } from '#sources/topology/ring-tracer'
 import { alignInlandBoundariesToCoastline, catmullRomSmoothOpenPath } from '#sources/topology/spherical-smooth'
 import { computeTerritorySpine } from '#sources/topology/territory-spine'
@@ -608,7 +608,7 @@ function unclaimedRouteRuns(regions: readonly number[], mode: string, claimed: S
 function smoothTransportRoute(coords: readonly LonLatTuple[]): LonLatTuple[] {
   if (coords.length < 3)
     return [...coords]
-  const controls = []
+  const controls: Vec3Tuple[] = []
   for (const [lon, lat] of coords) {
     const point = lonLatDegToCartesian(lon, lat)
     const previous = controls.at(-1)
@@ -713,8 +713,9 @@ function takeRiverSpans(
   let current = [steps[0]!]
   for (let i = 1; i < steps.length; i++) {
     const next = steps[i]!
-    if (riverGapOpen(feature, current.at(-1)!, next, claimed))
+    if (riverGapOpen(feature, current.at(-1)!, next, claimed)) {
       current.push(next)
+    }
     else {
       groups.push(current)
       current = [next]

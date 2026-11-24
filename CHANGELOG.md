@@ -1,5 +1,12 @@
 # another-earth-generator
 
+## v2.1.2
+
+### 🚀 Enhancements
+
+- Optimize layer styles and 2D view display. (优化图层样式和2D视图显示。)
+
+
 ## v2.1.1
 
 ### Enhancements
