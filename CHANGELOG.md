@@ -1,8 +1,17 @@
 # another-earth-generator
 
+## v2.1.1
+
+### Enhancements
+
+- Adjust the detection feature to support picking layer features. (调整侦测功能，支持拾取图层要素)
+
+- fine-tune some layer styles. (微调部分图层样式。)
+
+
 ## v2.1.0
 
-### 🚀 Enhancements
+### Enhancements
 
 - Add preliminary civilization generation stage. (添加初步的文明生成阶段。)
 - Add initial civilization features and adjust layer display. (添加初步的文明特征，并调整图层展示。)

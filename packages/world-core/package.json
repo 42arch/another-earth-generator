@@ -1,7 +1,7 @@
 {
   "name": "@another-earth/world-core",
   "type": "module",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": true,
   "imports": {
     "#generation/nature/common": "./src/generation/nature/common/index.ts",
