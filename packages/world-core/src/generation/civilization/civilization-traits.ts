@@ -790,12 +790,14 @@ export function applyPolityTraitArchetypeWeight(
 ): number {
   if (arch.allowedSizeClasses && !arch.allowedSizeClasses.includes(sizeClass))
     return 0
-  if (arch.requiredTraits?.some(id => !traits.includes(id)))
+  // Content traits are plain strings; compare by value so includes stays on PolityTraitId.
+  const hasTrait = (id: string) => traits.some(trait => trait === id)
+  if (arch.requiredTraits?.some(id => !hasTrait(id)))
     return 0
   let score = baseScore
   for (const affinity of arch.traitAffinities ?? []) {
-    if (affinity.traits.every(id => traits.includes(id))
-      && !affinity.excludedTraits?.some(id => traits.includes(id))
+    if (affinity.traits.every(hasTrait)
+      && !affinity.excludedTraits?.some(hasTrait)
       && (!affinity.sizeClasses || affinity.sizeClasses.includes(sizeClass))) {
       score *= affinity.weight
       if (!Number.isFinite(score))
