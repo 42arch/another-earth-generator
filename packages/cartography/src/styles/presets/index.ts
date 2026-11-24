@@ -1,4 +1,5 @@
 import type { MapStyleDocument, MapStyleLayer, StyleTokenValue } from '../spec'
+import { DISPLAYED_RIVER_MIN_STRAHLER } from '#sources/topology/hydrography-buffer'
 import { linearRgbToHex } from '../compiler'
 
 /**
@@ -937,7 +938,7 @@ function buildSharedOverlayLayers(): readonly MapStyleLayer[] {
       slot: 'overlay',
       overlayId: 'rivers',
       interactive: true,
-      filter: ['>=', ['get', 'strahlerOrder'], 2],
+      filter: ['>=', ['get', 'strahlerOrder'], DISPLAYED_RIVER_MIN_STRAHLER],
       layout: {
         'visibility': 'visible',
         'line-cap': 'round',
@@ -964,7 +965,7 @@ function buildSharedOverlayLayers(): readonly MapStyleLayer[] {
       slot: 'overlay',
       overlayId: 'rivers',
       interactive: true,
-      filter: ['>=', ['get', 'strahlerOrder'], 2],
+      filter: ['>=', ['get', 'strahlerOrder'], DISPLAYED_RIVER_MIN_STRAHLER],
       layout: {
         visibility: 'visible',
       },
@@ -1216,7 +1217,7 @@ function buildSharedOverlayLayers(): readonly MapStyleLayer[] {
           'match',
           ['get', 'mode'],
           'sea',
-          [4, 3],
+          [8, 2.25],
           [1, 0],
         ],
       },
@@ -1405,6 +1406,87 @@ const PARCHMENT_POLITY_HIT_LAYER: MapStyleLayer = {
   paint: {
     'fill-color': '#000000',
     'fill-opacity': 0,
+  },
+}
+
+function replaceStyleLayer(
+  layers: readonly MapStyleLayer[],
+  replacement: MapStyleLayer,
+): readonly MapStyleLayer[] {
+  return layers.map(layer => layer.id === replacement.id ? replacement : layer)
+}
+
+/** Political routes stay off the gray borders and blue coastline. Every mode uses the same dash. */
+const POLITICAL_TRANSPORT_LAYER: MapStyleLayer = {
+  id: 'overlay-transport-routes',
+  type: 'line',
+  source: 'transport-routes',
+  slot: 'overlay',
+  overlayId: 'transport-routes',
+  interactive: true,
+  layout: {
+    'visibility': 'visible',
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
+  paint: {
+    'line-color': [
+      'match',
+      ['get', 'mode'],
+      'sea',
+      '#e2b340',
+      'river',
+      '#1f8a62',
+      '#ffffff',
+    ],
+    'line-opacity': 0.92,
+    'line-width': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      ['match', ['get', 'mode'], 'road', 0.425, 'river', 0.45, 0.475],
+      6,
+      ['match', ['get', 'mode'], 'road', 0.675, 'river', 0.725, 0.75],
+    ],
+    'line-dasharray': [1.6, 1.6],
+  },
+}
+
+/** Ink routes on warm paper: lighter than the brown borders, and not the shared atlas cyan. */
+const PARCHMENT_TRANSPORT_LAYER: MapStyleLayer = {
+  id: 'overlay-transport-routes',
+  type: 'line',
+  source: 'transport-routes',
+  slot: 'overlay',
+  overlayId: 'transport-routes',
+  interactive: true,
+  layout: {
+    'visibility': 'visible',
+    'line-cap': 'round',
+    'line-join': 'round',
+  },
+  paint: {
+    'line-color': [
+      'match',
+      ['get', 'mode'],
+      'sea',
+      '#5c6c78',
+      'river',
+      '#3f6158',
+      '#8d6a45',
+    ],
+    'line-opacity': 0.88,
+    'line-width': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      ['match', ['get', 'mode'], 'road', 0.425, 'river', 0.45, 0.475],
+      6,
+      ['match', ['get', 'mode'], 'road', 0.675, 'river', 0.725, 0.75],
+    ],
+    'line-dasharray': [1.6, 1.6],
   },
 }
 
@@ -1772,7 +1854,7 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
     settlementTown: '#3b2816',
     settlementStroke: '#24160e',
   },
-  layers: insertLayerBeforeOverlays(composePresetLayers([
+  layers: insertLayerBeforeOverlays(replaceStyleLayer(composePresetLayers([
     {
       id: 'base-parchment-surface',
       type: 'raster',
@@ -1812,7 +1894,7 @@ export const HISTORICAL_PARCHMENT_STYLE_PRESET: MapStyleDocument = Object.freeze
         'raster-hillshade': 0.45,
       },
     },
-  ]), PARCHMENT_POLITY_HIT_LAYER),
+  ]), PARCHMENT_TRANSPORT_LAYER), PARCHMENT_POLITY_HIT_LAYER),
 })
 
 export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
@@ -1844,7 +1926,7 @@ export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
     settlementTown: '#f8fafc',
     settlementStroke: '#0f172a',
   },
-  layers: composePresetLayers([
+  layers: replaceStyleLayer(composePresetLayers([
     {
       id: 'base-political-atlas-surface',
       type: 'raster',
@@ -1874,7 +1956,7 @@ export const POLITICAL_ATLAS_STYLE_PRESET: MapStyleDocument = Object.freeze({
         'raster-hillshade': 0.25,
       },
     },
-  ]),
+  ]), POLITICAL_TRANSPORT_LAYER),
 })
 
 export const BUILTIN_MAP_STYLE_PRESETS: Readonly<Record<BuiltinMapStylePresetId, MapStyleDocument>> = Object.freeze({

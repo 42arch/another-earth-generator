@@ -4,6 +4,8 @@
 
 Generate a fictional Earth-like planet in your browser, and explore its nature, climate, and evolving civilization on 3D and 2D maps.
 
+![Several views of one generated planet](docs/images/readme-maps.jpg)
+
 Play it at [another-earth.starllow.com](https://another-earth.starllow.com).
 
 ## Features

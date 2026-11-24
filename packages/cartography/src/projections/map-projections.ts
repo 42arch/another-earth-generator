@@ -208,6 +208,35 @@ export function computeAtlasVisibleWorldHeight(
 }
 
 /**
+ * Extra span at atlas zoom 0 so the projection border is not clipped by the viewport edge.
+ * `1` would fit the world bounds exactly; a little slack keeps the silhouette stroke on screen.
+ */
+export const ATLAS_WORLD_FIT_PADDING = 1.02
+
+/**
+ * Orthographic frustum for `AtlasView`.
+ * Zoom `0` contains the full projected world in the current viewport aspect (letterboxing the
+ * shorter axis). Each +1 halves that fitted span. A 16:9 fullscreen is narrower than a 2:1
+ * world map, so fitting height alone would crop the eastern and western edges.
+ */
+export function computeAtlasFittedFrustum(
+  styleZoom: number,
+  viewportAspect: number,
+  projection: MapProjection = EQUAL_EARTH_PROJECTION,
+  padding = ATLAS_WORLD_FIT_PADDING,
+): { readonly visibleWidth: number, readonly visibleHeight: number } {
+  const aspect = Math.max(1e-4, viewportAspect)
+  const safePadding = Math.max(1, padding)
+  const containHeight = Math.max(projection.worldHeight, projection.worldWidth / aspect) * safePadding
+  const clampedZoom = Math.max(0, Math.min(12, styleZoom))
+  const visibleHeight = containHeight / (2 ** clampedZoom)
+  return {
+    visibleHeight,
+    visibleWidth: visibleHeight * aspect,
+  }
+}
+
+/**
  * Builds the outer boundary silhouette ring in 2D projected world coordinates for backdrop rendering.
  */
 export function buildProjectionSilhouettePoints(

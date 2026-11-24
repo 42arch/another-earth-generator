@@ -1,5 +1,6 @@
 import type { WorldMapReader } from '@another-earth/world-core'
 import type { LonLatTuple } from '#projections/spherical-math'
+import type { DerivedRiverFeature } from '#sources/topology/hydrography-buffer'
 import type { SharedBoundaryRelaxation } from '#sources/topology/spherical-smooth'
 import type {
   GeoJsonFeature,
@@ -13,9 +14,10 @@ import type {
   SourceUnavailable,
   TerritorySpineMetadata,
 } from '#sources/types'
-import { cartesianToLonLatDeg } from '#projections/spherical-math'
+import { cartesianToLonLatDeg, lonLatDegToCartesian, sphericalAngleRad } from '#projections/spherical-math'
+import { DISPLAYED_RIVER_MIN_STRAHLER, buildHydrographyRivers } from '#sources/topology/hydrography-buffer'
 import { traceClassificationRings } from '#sources/topology/ring-tracer'
-import { alignInlandBoundariesToCoastline } from '#sources/topology/spherical-smooth'
+import { alignInlandBoundariesToCoastline, catmullRomSmoothOpenPath } from '#sources/topology/spherical-smooth'
 import { computeTerritorySpine } from '#sources/topology/territory-spine'
 import { BUILTIN_MAP_SOURCE_SCHEMAS } from '#sources/types'
 import { buildTiledSmoothedGroupPolygons, makePolygonGeometry } from './area-sources'
@@ -567,9 +569,318 @@ export function buildPolityBordersSource(
   })
 }
 
+/**
+ * Several routes often share the same coastal or road cells. Each dashed copy
+ * starts its pattern at a different distance, so the gaps of one fill the dashes
+ * of another and the stack looks solid. Draw each undirected step once.
+ */
+function undirectedStepKey(mode: string, a: number, b: number): string {
+  return a < b ? `${mode}:${a}:${b}` : `${mode}:${b}:${a}`
+}
+
+function unclaimedRouteRuns(regions: readonly number[], mode: string, claimed: Set<string>): number[][] {
+  const runs: number[][] = []
+  let current: number[] = []
+  const flush = () => {
+    if (current.length >= 2)
+      runs.push(current)
+    current = []
+  }
+  for (let i = 0; i < regions.length - 1; i++) {
+    const a = regions[i]!
+    const b = regions[i + 1]!
+    const key = undirectedStepKey(mode, a, b)
+    if (claimed.has(key)) {
+      flush()
+      continue
+    }
+    claimed.add(key)
+    if (current.length === 0) {
+      current.push(a)
+    }
+    current.push(b)
+  }
+  flush()
+  return runs
+}
+
+/** Region-center chains are angular. A spherical Catmull-Rom keeps the endpoints and rounds each bend. */
+function smoothTransportRoute(coords: readonly LonLatTuple[]): LonLatTuple[] {
+  if (coords.length < 3)
+    return [...coords]
+  const controls = []
+  for (const [lon, lat] of coords) {
+    const point = lonLatDegToCartesian(lon, lat)
+    const previous = controls.at(-1)
+    if (!previous || sphericalAngleRad(previous, point) > 1e-4)
+      controls.push(point)
+  }
+  if (controls.length < 3)
+    return controls.map(point => cartesianToLonLatDeg(point[0], point[1], point[2]))
+  return catmullRomSmoothOpenPath(controls, undefined, 4).points.map(point => cartesianToLonLatDeg(point[0], point[1], point[2]))
+}
+
+interface RiverPlacement {
+  readonly feature: DerivedRiverFeature
+  readonly step: number
+}
+
+interface RouteStroke {
+  readonly mode: string
+  readonly coordinates: LonLatTuple[]
+}
+
+interface RiverRunSegment {
+  readonly kind: 'river' | 'road'
+  readonly regions: number[]
+}
+
+function displayedRiverPlacements(rivers: readonly DerivedRiverFeature[]): Map<number, RiverPlacement> {
+  const placements = new Map<number, RiverPlacement>()
+  for (const feature of rivers) {
+    if (feature.strahlerOrder < DISPLAYED_RIVER_MIN_STRAHLER)
+      continue
+    for (let step = 0; step < feature.regionIds.length; step++)
+      placements.set(feature.regionIds[step]!, { feature, step })
+  }
+  return placements
+}
+
+function regionCenterLine(
+  mesh: WorldMapReader['mesh'],
+  regions: readonly number[],
+  centerOut: { x: number, y: number, z: number },
+): LonLatTuple[] {
+  return regions.map((region) => {
+    mesh.getRegionCenter(region, centerOut)
+    return cartesianToLonLatDeg(centerOut.x, centerOut.y, centerOut.z)
+  })
+}
+
+function copyCoord(coord: LonLatTuple): LonLatTuple {
+  return [coord[0], coord[1]]
+}
+
+/** Adjacent steps belong to this run. A longer gap is open only when no earlier route already drew it. */
+function riverGapOpen(feature: DerivedRiverFeature, fromStep: number, toStep: number, claimed: Set<string>): boolean {
+  const lo = Math.min(fromStep, toStep)
+  const hi = Math.max(fromStep, toStep)
+  if (hi - lo <= 1)
+    return true
+  for (let step = lo; step < hi; step++) {
+    if (claimed.has(undirectedStepKey('river', feature.regionIds[step]!, feature.regionIds[step + 1]!)))
+      return false
+  }
+  return true
+}
+
+function sliceDisplayedCenterline(feature: DerivedRiverFeature, steps: readonly number[]): LonLatTuple[] {
+  let lo = steps[0]!
+  let hi = steps[0]!
+  for (const step of steps) {
+    if (step < lo)
+      lo = step
+    if (step > hi)
+      hi = step
+  }
+  const from = Math.min(feature.centerlineVertexIndex[lo]!, feature.centerlineVertexIndex[hi]!)
+  const to = Math.max(feature.centerlineVertexIndex[lo]!, feature.centerlineVertexIndex[hi]!)
+  const coords = feature.centerlineCoords.slice(from, to + 1).map(copyCoord)
+  if (steps[steps.length - 1]! < steps[0]!)
+    coords.reverse()
+  return coords
+}
+
+function claimRiverSteps(feature: DerivedRiverFeature, steps: readonly number[], claimed: Set<string>): void {
+  let lo = steps[0]!
+  let hi = steps[0]!
+  for (const step of steps) {
+    if (step < lo)
+      lo = step
+    if (step > hi)
+      hi = step
+  }
+  for (let step = lo; step < hi; step++)
+    claimed.add(undirectedStepKey('river', feature.regionIds[step]!, feature.regionIds[step + 1]!))
+}
+
+function takeRiverSpans(
+  feature: DerivedRiverFeature,
+  steps: readonly number[],
+  claimed: Set<string>,
+): { steps: number[], coordinates: LonLatTuple[] }[] {
+  const groups: number[][] = []
+  let current = [steps[0]!]
+  for (let i = 1; i < steps.length; i++) {
+    const next = steps[i]!
+    if (riverGapOpen(feature, current.at(-1)!, next, claimed))
+      current.push(next)
+    else {
+      groups.push(current)
+      current = [next]
+    }
+  }
+  groups.push(current)
+  const spans: { steps: number[], coordinates: LonLatTuple[] }[] = []
+  for (const group of groups) {
+    if (new Set(group).size < 2)
+      continue
+    spans.push({ steps: group, coordinates: sliceDisplayedCenterline(feature, group) })
+    claimRiverSteps(feature, group, claimed)
+  }
+  return spans
+}
+
+function stitchDisplayedRiverCells(
+  regions: readonly number[],
+  placements: Map<number, RiverPlacement>,
+  claimed: Set<string>,
+): LonLatTuple[] {
+  const coords: LonLatTuple[] = []
+  const push = (coord: LonLatTuple) => {
+    const last = coords.at(-1)
+    if (!last || last[0] !== coord[0] || last[1] !== coord[1])
+      coords.push(coord)
+  }
+  const pushExtension = (feature: DerivedRiverFeature, reverse: boolean) => {
+    const mouthStep = feature.regionIds.length - 1
+    const mouthVertex = feature.centerlineVertexIndex[mouthStep]
+    const downVertex = feature.downstreamVertexIndex
+    if (mouthVertex === undefined || downVertex < 0 || downVertex <= mouthVertex)
+      return
+    const points = feature.centerlineCoords.slice(mouthVertex, downVertex + 1)
+    if (reverse) {
+      for (let point = points.length - 1; point >= 0; point--)
+        push(copyCoord(points[point]!))
+    }
+    else {
+      for (const point of points)
+        push(copyCoord(point))
+    }
+  }
+
+  let index = 0
+  while (index < regions.length) {
+    const current = placements.get(regions[index]!)
+    if (!current)
+      break
+    let end = index + 1
+    while (end < regions.length && placements.get(regions[end]!)?.feature === current.feature)
+      end++
+    const steps = regions.slice(index, end).map(region => placements.get(region)!.step)
+    const previousRegion = index > 0 ? regions[index - 1] : undefined
+    const mouthStep = current.feature.regionIds.length - 1
+    if (previousRegion === current.feature.downstreamRegionId && steps[0] === mouthStep)
+      pushExtension(current.feature, true)
+    if (new Set(steps).size >= 2) {
+      for (const span of takeRiverSpans(current.feature, steps, claimed)) {
+        for (const coord of span.coordinates)
+          push(coord)
+      }
+    }
+    else {
+      const vertex = current.feature.centerlineVertexIndex[steps[0]!]
+      const point = vertex === undefined ? undefined : current.feature.centerlineCoords[vertex]
+      if (point)
+        push(copyCoord(point))
+    }
+    const nextRegion = regions[end]
+    if (nextRegion === current.feature.downstreamRegionId && steps.at(-1) === mouthStep)
+      pushExtension(current.feature, false)
+    index = end
+  }
+  return coords
+}
+
+/**
+ * River strokes follow the centerlines the map draws, including across confluences.
+ * A displayed river is split into a new segment at every tributary, and many of
+ * those segments are a single cell. Cells off those rivers are drawn as roads.
+ */
+function riverStrokesForRun(
+  run: readonly number[],
+  placements: Map<number, RiverPlacement>,
+  claimed: Set<string>,
+  mesh: WorldMapReader['mesh'],
+  centerOut: { x: number, y: number, z: number },
+): RouteStroke[] {
+  const segments: RiverRunSegment[] = []
+  for (const region of run) {
+    const placement = placements.get(region)
+    const last = segments.at(-1)
+    if (placement && last?.kind === 'river') {
+      last.regions.push(region)
+      continue
+    }
+    if (!placement && last?.kind === 'road') {
+      last.regions.push(region)
+      continue
+    }
+    segments.push(placement
+      ? { kind: 'river', regions: [region] }
+      : { kind: 'road', regions: [region] })
+  }
+
+  const normalized: RiverRunSegment[] = []
+  for (const segment of segments) {
+    const kind = segment.kind === 'river' && segment.regions.length >= 2 ? 'river' : 'road'
+    const last = normalized.at(-1)
+    if (kind === 'road' && last?.kind === 'road') {
+      last.regions.push(...segment.regions)
+      continue
+    }
+    normalized.push({
+      kind,
+      regions: [...segment.regions],
+    })
+  }
+
+  const strokes: RouteStroke[] = []
+  for (let i = 0; i < normalized.length; i++) {
+    const segment = normalized[i]!
+    if (segment.kind === 'river') {
+      const line = stitchDisplayedRiverCells(segment.regions, placements, claimed)
+      if (line.length >= 2)
+        strokes.push({ mode: 'river', coordinates: line })
+      continue
+    }
+    const regions = [...segment.regions]
+    const previous = normalized[i - 1]
+    const next = normalized[i + 1]
+    if (previous?.kind === 'river')
+      regions.unshift(previous.regions.at(-1)!)
+    if (next?.kind === 'river')
+      regions.push(next.regions[0]!)
+    let open: number[] = []
+    const flushRoad = () => {
+      if (open.length >= 2) {
+        strokes.push({
+          mode: 'road',
+          coordinates: smoothTransportRoute(regionCenterLine(mesh, open, centerOut)),
+        })
+      }
+      open = []
+    }
+    for (let edge = 0; edge < regions.length - 1; edge++) {
+      const key = undirectedStepKey('road', regions[edge]!, regions[edge + 1]!)
+      if (claimed.has(key)) {
+        flushRoad()
+        continue
+      }
+      claimed.add(key)
+      if (open.length === 0)
+        open.push(regions[edge]!)
+      open.push(regions[edge + 1]!)
+    }
+    flushRoad()
+  }
+  return strokes
+}
+
 export function buildTransportRoutesSource(
   reader: WorldMapReader,
   cacheKey: string,
+  derivedRivers?: readonly DerivedRiverFeature[],
 ): GeoJsonSource<GeoJsonLineStringGeometry> | SourceUnavailable {
   if (!reader.capabilities.hasCivilization) {
     return unavailableSource('transport-routes', reader, cacheKey, 'Civilization data is unavailable in this world snapshot')
@@ -579,33 +890,42 @@ export function buildTransportRoutesSource(
   const routes = reader.transportRoutes()
   const centerOut = { x: 0, y: 0, z: 0 }
   const features: GeoJsonFeature<GeoJsonLineStringGeometry>[] = []
+  const claimedSteps = new Set<string>()
+  const placements = displayedRiverPlacements(derivedRivers ?? buildHydrographyRivers(reader))
 
   for (let i = 0; i < routes.length; i++) {
     const route = routes[i]
-    const coords: LonLatTuple[] = []
-    reader.forEachTransportRouteRegion(i, (region) => {
-      mesh.getRegionCenter(region, centerOut)
-      coords.push(cartesianToLonLatDeg(centerOut.x, centerOut.y, centerOut.z))
-    })
-    if (coords.length < 2)
-      continue
-    features.push({
-      type: 'Feature',
-      id: route.id,
-      geometry: {
-        type: 'LineString',
-        coordinates: coords,
-      },
-      properties: {
-        id: route.id,
-        entityId: route.id,
-        mode: route.mode,
-        fromNodeId: route.fromNodeId,
-        toNodeId: route.toNodeId,
-        cost: route.cost,
-        trafficScore: route.trafficScore,
-      },
-    })
+    const regions: number[] = []
+    reader.forEachTransportRouteRegion(i, region => regions.push(region))
+    const runs = unclaimedRouteRuns(regions, route.mode, claimedSteps)
+    const strokes: RouteStroke[] = []
+    for (const run of runs) {
+      if (route.mode === 'river')
+        strokes.push(...riverStrokesForRun(run, placements, claimedSteps, mesh, centerOut))
+      else
+        strokes.push({ mode: route.mode, coordinates: smoothTransportRoute(regionCenterLine(mesh, run, centerOut)) })
+    }
+    const visible = strokes.filter(stroke => stroke.coordinates.length >= 2)
+    for (let part = 0; part < visible.length; part++) {
+      const stroke = visible[part]!
+      features.push({
+        type: 'Feature',
+        id: visible.length === 1 ? route.id : `${route.id}#${part}`,
+        geometry: {
+          type: 'LineString',
+          coordinates: stroke.coordinates,
+        },
+        properties: {
+          id: route.id,
+          entityId: route.id,
+          mode: stroke.mode,
+          fromNodeId: route.fromNodeId,
+          toNodeId: route.toNodeId,
+          cost: route.cost,
+          trafficScore: route.trafficScore,
+        },
+      })
+    }
   }
 
   return Object.freeze({

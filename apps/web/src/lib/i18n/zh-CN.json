@@ -7,7 +7,7 @@
     "globe": "3D 星球",
     "mapProjection": "地图投影",
     "projections": {
-      "equalEarth": "Equal Earth（等面积自然地球）",
+      "equalEarth": "等面积地球",
       "equirectangular": "等距圆柱",
       "mercator": "墨卡托"
     },

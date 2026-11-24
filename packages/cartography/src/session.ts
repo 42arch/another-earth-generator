@@ -190,8 +190,7 @@ export function createCartographySession(options: CartographySessionOptions = {}
         tracker: prepared.tracker,
       })
       atlasView.resize(size.width, size.height, size.pixelRatio)
-      const pose = prepared.globeView.getCenterCoordinates()
-      atlasView.setCenterCoordinates(pose.longitudeDegrees, pose.latitudeDegrees, pose.styleZoom)
+      atlasView.frameWorld()
       atlasView.applyStyleAndState(compiledStyle, layerFilterFromViewState(viewState))
       prepared.atlasView = atlasView
     }
@@ -311,8 +310,7 @@ export function createCartographySession(options: CartographySessionOptions = {}
           tracker,
         })
         atlasView.resize(size.width, size.height, size.pixelRatio)
-        const pose = globeView.getCenterCoordinates()
-        atlasView.setCenterCoordinates(pose.longitudeDegrees, pose.latitudeDegrees, pose.styleZoom)
+        atlasView.frameWorld()
         atlasView.applyStyleAndState(compiledStyle, layerFilterFromViewState(viewState))
       }
 
@@ -453,6 +451,7 @@ export function createCartographySession(options: CartographySessionOptions = {}
       return
     activePrepared.globeView.resetCamera()
     activePrepared.atlasView?.resetCamera()
+    viewport.forgetSavedGlobePose()
     if (!isContextLost) {
       viewport.renderFrame()
     }

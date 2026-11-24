@@ -241,7 +241,7 @@ export class MapSourceRegistry {
       case 'polity-borders':
         return buildPolityBordersSource(this.#reader, cacheKey, this.#ensureCornerPositions())
       case 'transport-routes':
-        return buildTransportRoutesSource(this.#reader, cacheKey)
+        return buildTransportRoutesSource(this.#reader, cacheKey, this.#ensureHydrographyRivers())
       case 'settlements':
         return buildSettlementsSource(this.#reader, cacheKey)
       case 'polity-labels':

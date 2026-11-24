@@ -12,8 +12,7 @@ import type { CompiledMapStyle, CompiledMapStyleLayer } from '#styles/compiler'
 import * as THREE from 'three'
 import {
   buildProjectionSilhouettePoints,
-  computeAtlasStyleZoom,
-  computeAtlasVisibleWorldHeight,
+  computeAtlasFittedFrustum,
   EQUAL_EARTH_PROJECTION,
   getMapProjection,
 } from '#projections/map-projections'
@@ -88,7 +87,7 @@ function createProjectionSilhouetteMesh(
 
 /**
  * 2D `AtlasView` scene controller:
- * - Orthographic camera with pan/zoom interaction and unified logarithmic `styleZoom` (`0..12`).
+ * - Orthographic camera with pan/zoom. `styleZoom` `0` fits the whole map in the viewport; each +1 halves that span (`0..12`).
  * - Supports real-time switching among `equirectangular`, `equal-earth`, and `mercator` projections.
  * - Mounts horizontal wraparound clones (`[-worldWidth, +worldWidth]`) sharing GPU buffers & materials
  *   for cylindrical projections (`supportsHorizontalWrap === true`), wrapping camera X seamlessly across `±180°`.
@@ -135,7 +134,7 @@ export class AtlasView {
 
   private centerX = 0
   private centerY = 0
-  private styleZoom = 0.25
+  private styleZoom = 0
   private viewportWidth = 1280
   private viewportHeight = 720
   private pixelRatio = 1
@@ -239,13 +238,17 @@ export class AtlasView {
   setPlanarCenter(worldX: number, worldY: number): void {
     const halfW = this.projection.worldWidth * 0.5
     const halfH = this.projection.worldHeight * 0.5
+    const aspect = this.viewportWidth / Math.max(1, this.viewportHeight)
+    const { visibleWidth, visibleHeight } = computeAtlasFittedFrustum(this.styleZoom, aspect, this.projection)
     if (this.projection.supportsHorizontalWrap) {
       this.centerX = (((worldX + halfW) % this.projection.worldWidth) + this.projection.worldWidth) % this.projection.worldWidth - halfW
     }
     else {
-      this.centerX = Math.max(-halfW, Math.min(halfW, worldX))
+      const maxPanX = Math.max(0, halfW - visibleWidth * 0.5)
+      this.centerX = Math.max(-maxPanX, Math.min(maxPanX, worldX))
     }
-    this.centerY = Math.max(-halfH, Math.min(halfH, worldY))
+    const maxPanY = Math.max(0, halfH - visibleHeight * 0.5)
+    this.centerY = Math.max(-maxPanY, Math.min(maxPanY, worldY))
     this.updateCameraFrustum()
   }
 
@@ -322,7 +325,17 @@ export class AtlasView {
   }
 
   getStyleZoom(): number {
-    return computeAtlasStyleZoom(this.camera.top - this.camera.bottom, this.projection)
+    return this.styleZoom
+  }
+
+  /** Center the projection and zoom out until the whole map fits the current viewport. */
+  frameWorld(): void {
+    if (this.disposed)
+      return
+    this.styleZoom = 0
+    this.centerX = 0
+    this.centerY = 0
+    this.updateCameraFrustum()
   }
 
   setStyleZoom(nextZoom: number): void {
@@ -358,14 +371,12 @@ export class AtlasView {
   }
 
   resetCamera(): void {
-    this.styleZoom = 0.25
-    this.setPlanarCenter(0, 0)
+    this.frameWorld()
   }
 
   private updateCameraFrustum(): void {
     const aspect = this.viewportWidth / Math.max(1, this.viewportHeight)
-    const visibleHeight = computeAtlasVisibleWorldHeight(this.styleZoom, this.projection)
-    const visibleWidth = visibleHeight * aspect
+    const { visibleWidth, visibleHeight } = computeAtlasFittedFrustum(this.styleZoom, aspect, this.projection)
 
     this.camera.left = -visibleWidth * 0.5
     this.camera.right = visibleWidth * 0.5

@@ -33,6 +33,7 @@ export class WorldViewport {
   private activeGlobeView: GlobeView | null = null
   private activeAtlasView: AtlasView | null = null
   private activeViewMode: MapViewportMode = 'globe'
+  private savedGlobePose: { longitudeDegrees: number, latitudeDegrees: number, styleZoom: number } | null = null
   private widthCssPx: number
   private heightCssPx: number
   private pixelRatio: number
@@ -183,15 +184,18 @@ export class WorldViewport {
       return
 
     if (nextMode === 'atlas' && this.activeGlobeView && this.activeAtlasView) {
-      const pose = this.activeGlobeView.getCenterCoordinates()
-      this.activeAtlasView.setCenterCoordinates(pose.longitudeDegrees, pose.latitudeDegrees, pose.styleZoom)
+      this.savedGlobePose = this.activeGlobeView.getCenterCoordinates()
+      this.activeAtlasView.frameWorld()
       if (this.activeGlobeView.controls) {
         this.activeGlobeView.controls.enabled = false
       }
     }
-    else if (nextMode === 'globe' && this.activeAtlasView && this.activeGlobeView) {
-      const pose = this.activeAtlasView.getCenterCoordinates()
-      this.activeGlobeView.setCenterCoordinates(pose.longitudeDegrees, pose.latitudeDegrees, pose.styleZoom)
+    else if (nextMode === 'globe' && this.activeGlobeView) {
+      if (this.savedGlobePose) {
+        const pose = this.savedGlobePose
+        this.savedGlobePose = null
+        this.activeGlobeView.setCenterCoordinates(pose.longitudeDegrees, pose.latitudeDegrees, pose.styleZoom)
+      }
       if (this.activeGlobeView.controls) {
         this.activeGlobeView.controls.enabled = true
       }
@@ -202,6 +206,11 @@ export class WorldViewport {
 
   getViewMode(): MapViewportMode {
     return this.activeViewMode
+  }
+
+  /** Drop the globe pose captured on entering the atlas, so a later return keeps the globe where it is now. */
+  forgetSavedGlobePose(): void {
+    this.savedGlobePose = null
   }
 
   getCenterCoordinates(): { longitudeDegrees: number, latitudeDegrees: number, styleZoom: number } | null {

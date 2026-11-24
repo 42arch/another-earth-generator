@@ -113,6 +113,31 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
       expect(civActive).toContain('thematic-polity-territory')
       expect(civActive).toContain('overlay-polity-borders')
       expect(civActive).toContain('overlay-transport-routes')
+      const transport = compiled.layersById.get('overlay-transport-routes')!
+      const dash = (mode: string) => transport.paint['line-dasharray']!.evaluate({ zoom: 2, properties: { mode } })
+      const color = (mode: string) => transport.paint['line-color']!.evaluate({ zoom: 2, properties: { mode } })
+      if (preset.id === 'political-atlas') {
+        expect(dash('sea')).toEqual([1.6, 1.6])
+        expect(dash('road')).toEqual([1.6, 1.6])
+        expect(dash('river')).toEqual([1.6, 1.6])
+        expect(color('sea')).toBe('#e2b340')
+        expect(color('road')).toBe('#ffffff')
+        expect(color('river')).toBe('#1f8a62')
+        expect(transport.paint['line-width']!.evaluate({ zoom: 0, properties: { mode: 'road' } })).toBe(0.425)
+      }
+      else if (preset.id === 'historical-parchment') {
+        expect(dash('sea')).toEqual([1.6, 1.6])
+        expect(dash('road')).toEqual([1.6, 1.6])
+        expect(dash('river')).toEqual([1.6, 1.6])
+        expect(color('sea')).toBe('#5c6c78')
+        expect(color('road')).toBe('#8d6a45')
+        expect(color('river')).toBe('#3f6158')
+        expect(transport.paint['line-width']!.evaluate({ zoom: 0, properties: { mode: 'road' } })).toBe(0.425)
+      }
+      else {
+        expect(dash('sea')).toEqual([8, 2.25])
+        expect(dash('road')).toEqual([1, 0])
+      }
       expect(civActive).toContain('overlay-settlements')
       expect(civActive).toContain('overlay-polity-labels')
       expect(civActive).toContain('overlay-settlement-labels')
@@ -293,6 +318,14 @@ describe('styleCompiler, expression evaluation & built-in presets (Slice 2)', ()
 
     const borders = compiled.layersById.get('overlay-polity-borders')!
     expect(borders.paint['line-color']!.evaluate({ zoom: 2, properties: { isFrontier: false } })).toBe('#6f5642')
+
+    const transport = compiled.layersById.get('overlay-transport-routes')!
+    const routeColor = (mode: string) => transport.paint['line-color']!.evaluate({ zoom: 2, properties: { mode } })
+    expect(routeColor('road')).toBe('#8d6a45')
+    expect(routeColor('river')).toBe('#3f6158')
+    expect(routeColor('sea')).toBe('#5c6c78')
+    expect(transport.paint['line-dasharray']!.evaluate({ zoom: 2, properties: { mode: 'road' } })).toEqual([1.6, 1.6])
+    expect(transport.paint['line-width']!.evaluate({ zoom: 0, properties: { mode: 'road' } })).toBe(0.425)
 
     const symbols = compiled.layersById.get('overlay-settlements')!
     const symbolColor = (tier: string) => symbols.paint['circle-color']!.evaluate({ zoom: 4, properties: { tier } })

@@ -380,7 +380,7 @@ export const BUILTIN_MAP_SOURCE_SCHEMAS: Readonly<Record<BuiltinMapSourceId, Map
     kind: 'geojson',
     geometryKind: 'line',
     monthly: false,
-    adapterVersion: 'transport-routes-v1',
+    adapterVersion: 'transport-routes-v5',
     properties: ['id', 'entityId', 'mode', 'fromNodeId', 'toNodeId', 'cost', 'trafficScore'],
   },
   'settlements': {

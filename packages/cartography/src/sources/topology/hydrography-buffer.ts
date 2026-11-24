@@ -10,6 +10,11 @@ import {
 import { ringPointsToClosedLonLat } from './ring-tracer'
 import { catmullRomSmoothOpenPath, offsetSphericalPoint } from './spherical-smooth'
 
+/** Centerlines and ribbons below this Strahler order stay in the source but are not drawn. */
+export const DISPLAYED_RIVER_MIN_STRAHLER = 2
+
+const RIVER_CENTERLINE_SUBDIVISIONS = 4
+
 export interface DerivedRiverFeature {
   readonly id: string
   readonly strahlerOrder: number
@@ -18,6 +23,14 @@ export interface DerivedRiverFeature {
   readonly areaKm2: number
   readonly centerline3D: readonly Vec3Tuple[]
   readonly centerlineCoords: readonly LonLatTuple[]
+  /** Source-to-mouth region ids. Parallel to `centerlineVertexIndex`. */
+  readonly regionIds: readonly number[]
+  /** Index into `centerlineCoords` for each region center in `regionIds`. */
+  readonly centerlineVertexIndex: readonly number[]
+  /** Next river cell the centerline is extended toward, or -1. */
+  readonly downstreamRegionId: number
+  /** Index into `centerlineCoords` for `downstreamRegionId`, or -1. */
+  readonly downstreamVertexIndex: number
   /** Polygon or MultiPolygon outer rings (main channel ribbon + optional confluence cap). */
   readonly polygonsCoords: readonly (readonly (readonly LonLatTuple[])[])[]
 }
@@ -203,6 +216,7 @@ export function buildHydrographyRivers(reader: WorldMapReader): DerivedRiverFeat
       continue
 
     const controlPoints: Vec3Tuple[] = pathRegions.map(regionCenter3D)
+    const regionControlIndex = pathRegions.map((_, index) => index)
     const controlFlows: number[] = pathRegions.map(r => Math.max(summary.annualMeanDischargeM3s * 0.25, flowField.get(r)))
     for (let i = 1; i < controlFlows.length; i++) {
       // Ensure non-decreasing flow along a single river segment from source to mouth
@@ -220,6 +234,8 @@ export function buildHydrographyRivers(reader: WorldMapReader): DerivedRiverFeat
             fromLakeSpill = true
             controlPoints.unshift(shoreMid)
             controlFlows.unshift(controlFlows[0])
+            for (let index = 0; index < regionControlIndex.length; index++)
+              regionControlIndex[index]++
           }
         }
       })
@@ -229,8 +245,12 @@ export function buildHydrographyRivers(reader: WorldMapReader): DerivedRiverFeat
     const mouthRegion = summary.mouthRegion
     const downstream = downstreamField.get(mouthRegion)
     let extendedSingleRegion = false
+    let downstreamRegionId = -1
+    let downstreamControlIndex = -1
     if (downstream >= 0 && downstream < count) {
       if (riverIndexField.get(downstream) >= 0) {
+        downstreamRegionId = downstream
+        downstreamControlIndex = controlPoints.length
         controlPoints.push(regionCenter3D(downstream))
         controlFlows.push(Math.max(controlFlows.at(-1)!, flowField.get(downstream)))
       }
@@ -264,10 +284,12 @@ export function buildHydrographyRivers(reader: WorldMapReader): DerivedRiverFeat
       controlPoints.push(offsetSphericalPoint(c, dir, baseCellAngleRad * 0.25))
       controlFlows.unshift(controlFlows[0])
       controlFlows.push(controlFlows[0])
+      for (let index = 0; index < regionControlIndex.length; index++)
+        regionControlIndex[index]++
     }
 
     const isHeadwater = !fromLakeSpill && !extendedSingleRegion && upstreamRiverCount[sourceRegion] === 0
-    const smoothed = catmullRomSmoothOpenPath(controlPoints, controlFlows, 4)
+    const smoothed = catmullRomSmoothOpenPath(controlPoints, controlFlows, RIVER_CENTERLINE_SUBDIVISIONS)
     let distFromSourceRad = 0
     const halfWidthsRad = smoothed.scalars.map((flow, idx) => {
       if (idx > 0) {
@@ -312,6 +334,10 @@ export function buildHydrographyRivers(reader: WorldMapReader): DerivedRiverFeat
     }
 
     const centerlineCoords = smoothed.points.map(pt => cartesianToLonLatDeg(pt[0], pt[1], pt[2]))
+    const centerlineVertexIndex = regionControlIndex.map(index => index * RIVER_CENTERLINE_SUBDIVISIONS)
+    const downstreamVertexIndex = downstreamControlIndex >= 0
+      ? downstreamControlIndex * RIVER_CENTERLINE_SUBDIVISIONS
+      : -1
     features.push({
       id: summary.id,
       strahlerOrder: summary.strahlerOrder,
@@ -320,6 +346,10 @@ export function buildHydrographyRivers(reader: WorldMapReader): DerivedRiverFeat
       areaKm2,
       centerline3D: smoothed.points,
       centerlineCoords,
+      regionIds: pathRegions,
+      centerlineVertexIndex,
+      downstreamRegionId,
+      downstreamVertexIndex,
       polygonsCoords,
     })
   }

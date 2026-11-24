@@ -202,8 +202,8 @@ export interface WorldMapReader {
   - `GlobeView`：单位球（半径 `1.0`）透视相机，自定义球面拖拽旋转、滚轮指数缩放、可选平滑自转。自转绕行星极轴转动地球本身，相机、星空和太阳方向保持不动，因此晨昏线不随地表移动；拖拽灵敏度仍随相机离地高度自适应衰减（拉近看局部细节时不漂移）。
   - `AtlasView`：正交相机平面视图，内置三种可实时切换的地图投影：**`equirectangular`（等距圆柱）**、**`equal-earth`（等面积自然地球）**、**`mercator`（墨卡托，纬度截断 `±85.05°`）**。对于支持水平环绕的投影（如等距圆柱），在主地图左右两侧挂载共享材质与缓冲的环绕副本（`[-worldWidth, 0, +worldWidth]`），平移越过 `±180°` 时相机坐标无缝回绕。
 - **统一 `styleZoom`（`0`–`12`）与视角保持**：
-  - 定义 `visibleArcRadians` 为当前视口垂直高度所覆盖的行星表面弧度：$\text{styleZoom} = \text{clamp}(\log_2(\pi / \text{visibleArcRadians}), 0, 12)$。
-  - 在 `GlobeView` ↔ `AtlasView` 切换或切换 2D 投影时，自动读取当前视口中心的地理经纬度 `(lon, lat)` 与 `styleZoom`，对向视图精准对齐同一地理位置与视觉比例尺。
+  - 3D：`visibleArcRadians` 为当前视口垂直高度所覆盖的行星表面弧度，$\text{styleZoom} = \text{clamp}(\log_2(\pi / \text{visibleArcRadians}), 0, 12)$。
+  - 2D：`styleZoom = 0` 把整幅投影放进当前视口（按宽高比取较大的一维，避免 16:9 全屏裁掉 2:1 地图的左右边缘），每增加 1 级把该取景范围减半。进入 2D 时回到这幅全图；返回 3D 时恢复进入前的星球相机。切换 2D 投影时保持当前中心与缩放，并按新投影重新适配全图。
 
 ### 5.2 五类渲染原语（Renderers）技术规格
 
@@ -406,5 +406,5 @@ packages/cartography/src/
 | **Slice 1：Core 数据闭环与 `WorldMapReader`** | 1. `ClimateState.circulation` 月度风/洋流字段组装、校验与存档编解码兼容；<br>2. `WorldMapReader` 对偶 Voronoi 边界重建、坡度与确定性卫星微纹理派生、邻域爬山 `locateRegion`；<br>3. `WorldStore.mapReader()` 与 Web `candidateMapReader`。 | • 对偶边界恢复与原始 `SphericalMesh` 角点/绕向一致性断言；<br>• `locateRegion` 随机 1,000 点与暴力最近点 100% 一致；<br>• 新快照含环流往返编解码通过，旧无环流快照兼容读取且 `hasCirculation === false`；<br>• 零可变 TypedArray 泄漏测试。 |
 | **Slice 2：Source 体系、水系面化、PCA 脊线与 `StyleCompiler`** | 1. `MapSourceRegistry` 与全部内置自然 Source Adapters；<br>2. 河道变宽缓冲多边形（`river-polygons`）、平滑湖泊（`lake-polygons`）、带孔陆地/分区多边形与 PCA 中文脊线提取；<br>3. `StyleCompiler` 预编译求值、静态校验、6 套内置 JSON 预设与结构化图例导出。 | • 所有派生 Polygon 外环逆时针/内孔顺时针、闭合且坐标有限；<br>• 河道多边形面积正比于流量单调递增，汇流口无断裂；<br>• 切换样式不触发 Source 重算，切换月份仅重算月度 Source；<br>• 非法 JSON 算子、缺源、几何类型错配被准确拦截；6 套内置 Preset 100% 通过编译校验。 |
 | **Slice 3：3D `GlobeView` + 5 类 GPU 批处理渲染器** | 1. `RasterLayer`（`DataTexture` 查表 + `Satellite` 地表/水面/大气/昼夜）；<br>2. `FillLayer`、`LineLayer`（连续 Miter SDF + 虚线）、`CircleLayer`（实例 SDF）、`SymbolLayer`（Troika 中文静态字体 + 脊线弯曲 + `CollisionGrid` 避让）；<br>3. 3D 拾取、`SelectionLayer` 与 `CartographySession` 原子生命周期。 | • Gnomonic 带孔大面球面细分无退化/翻转三角形，大圆弦高受控；<br>• 连续折线扩边拐角无裂口、跨段虚线距离连续；<br>• `CollisionGrid` 优先级避让、背面剔除与中文字符正读方向测试；<br>• `prepareWorld` 取消/异常时旧世界保持激活且 GPU 对象释放计数归零。 |
-| **Slice 4：2D `AtlasView` 多投影与反经线裁切** | 1. Equirectangular / Equal Earth / Mercator 正逆投影与统一 `styleZoom` 换算；<br>2. `±180°` 反经线与极区多边形/折线裁切器、水平无缝环绕副本；<br>3. `WorldViewport` 3D ↔ 2D 无缝切换与 2D 统一拾取。 | • 正逆投影往返精度误差 `< 1e-6`；<br>• 跨越 `±180°` 的多边形、河道面与海岸线裁切后不产生横穿全图的伪影线段，虚线相位保持连续；<br>• 同一地理要素在 3D 与 2D 下拾取返回相同的 `regionId` 与 `featureId`；切换视图中心经纬度保持不变。 |
+| **Slice 4：2D `AtlasView` 多投影与反经线裁切** | 1. Equirectangular / Equal Earth / Mercator 正逆投影与统一 `styleZoom` 换算；<br>2. `±180°` 反经线与极区多边形/折线裁切器、水平无缝环绕副本；<br>3. `WorldViewport` 3D ↔ 2D 无缝切换与 2D 统一拾取。 | • 正逆投影往返精度误差 `< 1e-6`；<br>• 跨越 `±180°` 的多边形、河道面与海岸线裁切后不产生横穿全图的伪影线段，虚线相位保持连续；<br>• 同一地理要素在 3D 与 2D 下拾取返回相同的 `regionId` 与 `featureId`；进入 2D 显示整幅地图，返回 3D 恢复进入前的相机。 |
 | **Slice 5：`apps/web` 单轨收口、UI 升级与旧代码清理** | 1. 移除前 6 个旧单阶段生成 UI，全面切换至 `CartographySession`；<br>2. 接入 3D/2D 切换、投影切换、6 套风格 Preset、三层图层面板、动态图例统计与侦测面板；<br>3. 删除旧 `world-scene.ts` / `map-render-data.ts` / `map-theme-data.ts` / `map-overlay-data.ts`。 | • 生成成功、取消、失败回滚全流程 Controller 与 UI 状态测试；<br>• 切换风格/专题/覆盖层/月份/2D↔3D 绝不触发 Worker 重新生成世界；<br>• 全仓无残留阶段调试死代码与跨包私有路径导入。 |

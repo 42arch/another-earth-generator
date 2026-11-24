@@ -38,6 +38,7 @@ import {
   signedPlanarUnwrappedRingArea,
   sphericalAngleRad,
 } from '../index'
+import { DISPLAYED_RIVER_MIN_STRAHLER } from './topology/hydrography-buffer'
 
 const styleId = 'builtin:naming-style/western-zh-cn'
 const namingCatalog = createContentCatalog([
@@ -724,11 +725,61 @@ describe('mapSourceRegistry & natural source adapters (Slice 2)', () => {
 
     const routes = registry.getGeoJsonSource('transport-routes')
     expect(routes.geometryKind).toBe('line')
+    expect(routes.adapterVersion).toBe('transport-routes-v5')
     expect(routes.data.features.length).toBeGreaterThan(0)
+    const displayedRiverPoints = new Set<string>()
+    for (const river of registry.getGeoJsonSource('river-centerlines').data.features) {
+      if (Number(river.properties.strahlerOrder) < DISPLAYED_RIVER_MIN_STRAHLER || river.geometry.type !== 'LineString')
+        continue
+      for (const coord of river.geometry.coordinates)
+        displayedRiverPoints.add(`${coord[0]},${coord[1]}`)
+    }
+    const displayedRiverByRegion = new Map<number, { riverId: string, step: number }>()
+    const riverSummaries = civReader.rivers()
+    for (let riverIndex = 0; riverIndex < riverSummaries.length; riverIndex++) {
+      const river = riverSummaries[riverIndex]!
+      if (river.strahlerOrder < DISPLAYED_RIVER_MIN_STRAHLER)
+        continue
+      civReader.forEachRiverRegion(riverIndex, (region, step) => {
+        displayedRiverByRegion.set(region, { riverId: river.id, step })
+      })
+    }
+    let followsDisplayedRiver = false
+    const transportRoutes = civReader.transportRoutes()
+    for (let routeIndex = 0; routeIndex < transportRoutes.length; routeIndex++) {
+      if (transportRoutes[routeIndex]!.mode !== 'river')
+        continue
+      let previous: { riverId: string, step: number } | undefined
+      civReader.forEachTransportRouteRegion(routeIndex, (region) => {
+        const hit = displayedRiverByRegion.get(region)
+        if (hit && previous && previous.riverId === hit.riverId && hit.step !== previous.step)
+          followsDisplayedRiver = true
+        previous = hit
+      })
+    }
+    const routeSummaries = new Map(transportRoutes.map(route => [route.id, route.regionCount]))
+    let smoothedLongRoute = false
+    let riverRouteOnCenterline = false
     for (const route of routes.data.features) {
       expect(typeof route.properties.entityId).toBe('string')
       expect(['road', 'river', 'sea']).toContain(route.properties.mode)
+      if (route.properties.mode === 'river') {
+        expect(displayedRiverPoints.size).toBeGreaterThan(0)
+        expect(route.geometry.type).toBe('LineString')
+        if (route.geometry.type !== 'LineString')
+          continue
+        for (const coord of route.geometry.coordinates)
+          expect(displayedRiverPoints.has(`${coord[0]},${coord[1]}`)).toBe(true)
+        riverRouteOnCenterline = true
+        continue
+      }
+      const regionCount = routeSummaries.get(String(route.properties.id)) ?? 0
+      if (regionCount >= 4 && route.geometry.coordinates.length > regionCount)
+        smoothedLongRoute = true
     }
+    if (followsDisplayedRiver)
+      expect(riverRouteOnCenterline).toBe(true)
+    expect(smoothedLongRoute || riverRouteOnCenterline).toBe(true)
 
     const settlements = registry.getGeoJsonSource('settlements')
     expect(settlements.geometryKind).toBe('point')

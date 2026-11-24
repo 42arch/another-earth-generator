@@ -17,8 +17,10 @@ export type {
 } from './picking/map-picker'
 
 export {
+  ATLAS_WORLD_FIT_PADDING,
   buildProjectionSilhouettePoints,
   BUILTIN_MAP_PROJECTIONS,
+  computeAtlasFittedFrustum,
   computeAtlasStyleZoom,
   computeAtlasVisibleWorldHeight,
   EQUAL_EARTH_PROJECTION,

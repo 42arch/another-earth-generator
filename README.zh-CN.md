@@ -4,6 +4,8 @@
 
 在浏览器里生成一颗架空的类地星球，并在3D和2D地图中探索它的自然、气候和文明演化。
 
+![同一颗星球的几种地图](docs/images/readme-maps.jpg)
+
 在线体验：[another-earth.starllow.com](https://another-earth.starllow.com)。
 
 ## 目前能力
